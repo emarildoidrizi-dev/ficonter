@@ -1,11 +1,22 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Pencil, Plus, Target, Trash2, X } from "lucide-react";
+import {
+  CalendarDays,
+  Coins,
+  History,
+  Pencil,
+  Plus,
+  Target,
+  Trash2,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { notifyLumeraDataChange } from "@/lib/lumeraRealtime";
 import styles from "./GoalsManager.module.css";
 
 type GoalStatus = "active" | "completed" | "paused";
+
 type Goal = {
   id: string;
   user_id: string;
@@ -18,49 +29,660 @@ type Goal = {
   updated_at: string;
 };
 
-const money=(value:number|string)=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"}).format(Number(value)||0);
+type GoalInvestment = {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  amount: number | string;
+  invested_at: string;
+  notes: string | null;
+  transaction_id: string;
+  created_at: string;
+};
 
-export function GoalsManager({userId,initialGoals,initialError}:{userId:string;initialGoals:Goal[];initialError:string}){
-  const supabase=useMemo(()=>createClient(),[]);
-  const [goals,setGoals]=useState(initialGoals);
-  const [open,setOpen]=useState(false);
-  const [editing,setEditing]=useState<Goal|null>(null);
-  const [deleting,setDeleting]=useState<Goal|null>(null);
-  const [busy,setBusy]=useState(false);
-  const [notice,setNotice]=useState(initialError);
+const money = (value: number | string) =>
+  new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value) || 0);
 
-  useEffect(()=>{if(!notice)return;const t=window.setTimeout(()=>setNotice(""),3500);return()=>window.clearTimeout(t)},[notice]);
-  useEffect(()=>{
-    const channel=supabase.channel(`goals-${userId}`).on("postgres_changes",{event:"*",schema:"public",table:"goals",filter:`user_id=eq.${userId}`},payload=>{
-      setGoals(current=>{
-        if(payload.eventType==="DELETE")return current.filter(goal=>goal.id!==(payload.old as {id?:string}).id);
-        const next=payload.new as Goal;
-        return [next,...current.filter(goal=>goal.id!==next.id)].sort((a,b)=>a.created_at.localeCompare(b.created_at));
-      });
-    }).subscribe();
-    return()=>{void supabase.removeChannel(channel)};
-  },[supabase,userId]);
+const today = () => new Date().toISOString().slice(0, 10);
 
-  async function saveGoal(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();setBusy(true);setNotice("");
-    const form=new FormData(event.currentTarget);
-    const payload={user_id:userId,name:String(form.get("name")??"").trim(),target_amount:Number(form.get("target_amount")),current_amount:Number(form.get("current_amount")),target_date:String(form.get("target_date")??"")||null,status:String(form.get("status")??"active") as GoalStatus,updated_at:new Date().toISOString()};
-    const query=editing?supabase.from("goals").update(payload).eq("id",editing.id).eq("user_id",userId):supabase.from("goals").insert(payload);
-    const {data,error}=await query.select("*").single();
-    if(error)setNotice(error.message);else if(data){setGoals(current=>[data as Goal,...current.filter(goal=>goal.id!==data.id)]);setOpen(false);setEditing(null);setNotice(editing?"Goal updated.":"Goal created.");}
+export function GoalsManager({
+  userId,
+  initialGoals,
+  initialInvestments,
+  initialError,
+}: {
+  userId: string;
+  initialGoals: Goal[];
+  initialInvestments: GoalInvestment[];
+  initialError: string;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const [goals, setGoals] = useState(initialGoals);
+  const [investments, setInvestments] = useState(initialInvestments);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Goal | null>(null);
+  const [deleting, setDeleting] = useState<Goal | null>(null);
+  const [investmentGoal, setInvestmentGoal] = useState<Goal | null>(null);
+  const [reversing, setReversing] = useState<GoalInvestment | null>(null);
+  const [historyGoal, setHistoryGoal] = useState<Goal | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(initialError);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`goals-module-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "goals",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          setGoals((current) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id?: string }).id;
+              return current.filter((goal) => goal.id !== id);
+            }
+            const next = payload.new as Goal;
+            return [
+              next,
+              ...current.filter((goal) => goal.id !== next.id),
+            ].sort((a, b) => a.created_at.localeCompare(b.created_at));
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "goal_investments",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          setInvestments((current) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id?: string }).id;
+              return current.filter((item) => item.id !== id);
+            }
+            const next = payload.new as GoalInvestment;
+            return [
+              next,
+              ...current.filter((item) => item.id !== next.id),
+            ].sort(
+              (a, b) =>
+                new Date(b.invested_at).getTime() -
+                new Date(a.invested_at).getTime(),
+            );
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase, userId]);
+
+  async function saveGoal(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setNotice("");
+
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      user_id: userId,
+      name: String(form.get("name") ?? "").trim(),
+      target_amount: Number(form.get("target_amount")),
+      current_amount: editing ? Number(editing.current_amount) : 0,
+      target_date: String(form.get("target_date") ?? "") || null,
+      status: String(form.get("status") ?? "active") as GoalStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    const query = editing
+      ? supabase
+          .from("goals")
+          .update(payload)
+          .eq("id", editing.id)
+          .eq("user_id", userId)
+      : supabase.from("goals").insert(payload);
+
+    const { data, error } = await query.select("*").single();
+
+    if (error) {
+      setNotice(error.message);
+    } else if (data) {
+      setGoals((current) => [
+        data as Goal,
+        ...current.filter((goal) => goal.id !== data.id),
+      ]);
+      setOpen(false);
+      setEditing(null);
+      setNotice(editing ? "Goal updated." : "Goal created.");
+      notifyLumeraDataChange("all");
+    }
+
     setBusy(false);
   }
 
-  async function deleteGoal(){if(!deleting)return;setBusy(true);const {error}=await supabase.from("goals").delete().eq("id",deleting.id).eq("user_id",userId);if(error)setNotice(error.message);else{setGoals(current=>current.filter(goal=>goal.id!==deleting.id));setDeleting(null);setNotice("Goal deleted.");}setBusy(false)}
-  const totalTarget=goals.reduce((sum,g)=>sum+Number(g.target_amount),0);
-  const totalSaved=goals.reduce((sum,g)=>sum+Number(g.current_amount),0);
+  async function recordInvestment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!investmentGoal) return;
 
-  return <section className={styles.workspace}>
-    <header className={styles.header}><div><span>GOALS</span><h1>Financial goals</h1><p>Create targets, record progress and keep the Monthly Planner synchronized.</p></div><button onClick={()=>{setEditing(null);setOpen(true)}}><Plus size={17}/>Add goal</button></header>
-    {notice&&<div className={styles.notice}>{notice}</div>}
-    <div className={styles.summary}><article><span>Total target</span><strong>{money(totalTarget)}</strong></article><article><span>Total saved</span><strong>{money(totalSaved)}</strong></article><article><span>Overall progress</span><strong>{totalTarget?`${Math.min(100,totalSaved/totalTarget*100).toFixed(1)}%`:"0%"}</strong></article></div>
-    <div className={styles.grid}>{goals.length?goals.map(goal=>{const target=Number(goal.target_amount);const current=Number(goal.current_amount);const progress=target?Math.min(100,current/target*100):0;return <article className={styles.card} key={goal.id}><div className={styles.cardTop}><span className={styles.icon}><Target size={19}/></span><div><h2>{goal.name}</h2><p>{goal.status.replace("_"," ")}</p></div><div className={styles.actions}><button onClick={()=>{setEditing(goal);setOpen(true)}} aria-label="Edit goal"><Pencil size={16}/></button><button onClick={()=>setDeleting(goal)} aria-label="Delete goal"><Trash2 size={16}/></button></div></div><div className={styles.amounts}><div><span>Saved</span><strong>{money(current)}</strong></div><div><span>Target</span><strong>{money(target)}</strong></div></div><div className={styles.progress}><i style={{width:`${progress}%`}}/></div><footer><span>{progress.toFixed(1)}% complete</span><span>{goal.target_date?<><CalendarDays size={13}/>{new Date(`${goal.target_date}T12:00:00`).toLocaleDateString("en-GB")}</>:"No deadline"}</span></footer></article>}):<div className={styles.empty}>No goals yet. Add your first financial target.</div>}</div>
-    {open&&<div className={styles.backdrop} onMouseDown={()=>!busy&&setOpen(false)}><form className={styles.modal} onSubmit={saveGoal} onMouseDown={e=>e.stopPropagation()}><button type="button" className={styles.close} onClick={()=>setOpen(false)}><X size={18}/></button><span>GOAL DETAILS</span><h2>{editing?"Edit goal":"Create goal"}</h2><label>Goal name<input name="name" defaultValue={editing?.name??""} required/></label><div className={styles.two}><label>Target amount<input name="target_amount" type="number" min="0.01" step="0.01" defaultValue={editing?.target_amount??""} required/></label><label>Saved amount<input name="current_amount" type="number" min="0" step="0.01" defaultValue={editing?.current_amount??0} required/></label></div><div className={styles.two}><label>Target date<input name="target_date" type="date" defaultValue={editing?.target_date??""}/></label><label>Status<select name="status" defaultValue={editing?.status??"active"}><option value="active">Active</option><option value="completed">Completed</option><option value="paused">Paused</option></select></label></div><button className={styles.save} disabled={busy}>{busy?"Saving…":"Save goal"}</button></form></div>}
-    {deleting&&<div className={styles.backdrop}><div className={`${styles.modal} ${styles.confirm}`}><span>PERMANENT ACTION</span><h2>Delete goal?</h2><p>“{deleting.name}” will be removed from Goals and the Monthly Planner.</p><div className={styles.confirmActions}><button onClick={()=>setDeleting(null)}>Cancel</button><button className={styles.danger} onClick={deleteGoal} disabled={busy}>{busy?"Deleting…":"Delete goal"}</button></div></div></div>}
-  </section>
+    setBusy(true);
+    setNotice("");
+
+    const form = new FormData(event.currentTarget);
+    const amount = Number(form.get("amount"));
+    const investmentDate = String(form.get("invested_at") ?? "");
+    const notes = String(form.get("notes") ?? "").trim();
+
+    const { data, error } = await supabase.rpc("record_goal_investment", {
+      p_goal_id: investmentGoal.id,
+      p_amount: amount,
+      p_invested_at: `${investmentDate}T12:00:00.000Z`,
+      p_notes: notes || null,
+    });
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      const result = data as { goal?: Goal; investment?: GoalInvestment };
+      if (result.goal) {
+        setGoals((current) =>
+          current.map((goal) =>
+            goal.id === result.goal?.id ? result.goal : goal,
+          ),
+        );
+      }
+      if (result.investment) {
+        setInvestments((current) => [
+          result.investment as GoalInvestment,
+          ...current.filter(
+            (item) => item.id !== result.investment?.id,
+          ),
+        ]);
+      }
+      setInvestmentGoal(null);
+      setNotice("Investment recorded and deducted from cash flow.");
+      notifyLumeraDataChange("all");
+    }
+
+    setBusy(false);
+  }
+
+  async function reverseInvestment() {
+    if (!reversing) return;
+
+    setBusy(true);
+    setNotice("");
+
+    const { data, error } = await supabase.rpc("reverse_goal_investment", {
+      p_investment_id: reversing.id,
+    });
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      const result = data as { goal?: Goal };
+      if (result.goal) {
+        setGoals((current) =>
+          current.map((goal) =>
+            goal.id === result.goal?.id ? result.goal : goal,
+          ),
+        );
+      }
+      setInvestments((current) =>
+        current.filter((item) => item.id !== reversing.id),
+      );
+      setReversing(null);
+      setNotice("Investment reversed and cash flow restored.");
+      notifyLumeraDataChange("all");
+    }
+
+    setBusy(false);
+  }
+
+  async function deleteGoal() {
+    if (!deleting) return;
+
+    setBusy(true);
+
+    const { error } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", deleting.id)
+      .eq("user_id", userId);
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      setGoals((current) =>
+        current.filter((goal) => goal.id !== deleting.id),
+      );
+      setInvestments((current) =>
+        current.filter((item) => item.goal_id !== deleting.id),
+      );
+      setDeleting(null);
+      setNotice("Goal deleted.");
+      notifyLumeraDataChange("all");
+    }
+
+    setBusy(false);
+  }
+
+  const totalTarget = goals.reduce(
+    (sum, goal) => sum + Number(goal.target_amount),
+    0,
+  );
+  const totalSaved = goals.reduce(
+    (sum, goal) => sum + Number(goal.current_amount),
+    0,
+  );
+
+  const investmentHistory = historyGoal
+    ? investments.filter((item) => item.goal_id === historyGoal.id)
+    : [];
+
+  return (
+    <section className={styles.workspace}>
+      <header className={styles.header}>
+        <div>
+          <span>GOALS</span>
+          <h1>Financial goals</h1>
+          <p>
+            Create targets, record investments and keep cash flow synchronized.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          <Plus size={17} />
+          Add goal
+        </button>
+      </header>
+
+      {notice ? <div className={styles.notice}>{notice}</div> : null}
+
+      <div className={styles.summary}>
+        <article>
+          <span>Total target</span>
+          <strong>{money(totalTarget)}</strong>
+        </article>
+        <article>
+          <span>Total invested</span>
+          <strong>{money(totalSaved)}</strong>
+        </article>
+        <article>
+          <span>Overall progress</span>
+          <strong>
+            {totalTarget
+              ? `${Math.min(100, (totalSaved / totalTarget) * 100).toFixed(1)}%`
+              : "0%"}
+          </strong>
+        </article>
+      </div>
+
+      <div className={styles.grid}>
+        {goals.length ? (
+          goals.map((goal) => {
+            const target = Number(goal.target_amount);
+            const current = Number(goal.current_amount);
+            const progress = target
+              ? Math.min(100, (current / target) * 100)
+              : 0;
+            const goalInvestments = investments.filter(
+              (item) => item.goal_id === goal.id,
+            );
+
+            return (
+              <article className={styles.card} key={goal.id}>
+                <div className={styles.cardTop}>
+                  <span className={styles.icon}>
+                    <Target size={19} />
+                  </span>
+                  <div>
+                    <h2>{goal.name}</h2>
+                    <p>{goal.status.replace("_", " ")}</p>
+                  </div>
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(goal);
+                        setOpen(true);
+                      }}
+                      aria-label="Edit goal"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleting(goal)}
+                      aria-label="Delete goal"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.amounts}>
+                  <div>
+                    <span>Invested</span>
+                    <strong>{money(current)}</strong>
+                  </div>
+                  <div>
+                    <span>Target</span>
+                    <strong>{money(target)}</strong>
+                  </div>
+                </div>
+
+                <div className={styles.progress}>
+                  <i style={{ width: `${progress}%` }} />
+                </div>
+
+                <footer>
+                  <span>{progress.toFixed(1)}% complete</span>
+                  <span>
+                    {goal.target_date ? (
+                      <>
+                        <CalendarDays size={13} />
+                        {new Date(
+                          `${goal.target_date}T12:00:00`,
+                        ).toLocaleDateString("en-GB")}
+                      </>
+                    ) : (
+                      "No deadline"
+                    )}
+                  </span>
+                </footer>
+
+                <div className={styles.cardCommands}>
+                  <button
+                    className={styles.investButton}
+                    type="button"
+                    disabled={goal.status === "completed"}
+                    onClick={() => setInvestmentGoal(goal)}
+                  >
+                    <Coins size={16} />
+                    Record investment
+                  </button>
+                  <button
+                    className={styles.historyButton}
+                    type="button"
+                    onClick={() => setHistoryGoal(goal)}
+                  >
+                    <History size={16} />
+                    {goalInvestments.length}
+                  </button>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className={styles.empty}>
+            No goals yet. Add your first financial target.
+          </div>
+        )}
+      </div>
+
+      {open ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={() => !busy && setOpen(false)}
+        >
+          <form
+            className={styles.modal}
+            onSubmit={saveGoal}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.close}
+              onClick={() => setOpen(false)}
+            >
+              <X size={18} />
+            </button>
+            <span>GOAL DETAILS</span>
+            <h2>{editing ? "Edit goal" : "Create goal"}</h2>
+            <label>
+              Goal name
+              <input
+                name="name"
+                defaultValue={editing?.name ?? ""}
+                required
+              />
+            </label>
+            <label>
+              Target amount
+              <input
+                name="target_amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                defaultValue={editing?.target_amount ?? ""}
+                required
+              />
+            </label>
+            <div className={styles.two}>
+              <label>
+                Target date
+                <input
+                  name="target_date"
+                  type="date"
+                  defaultValue={editing?.target_date ?? ""}
+                />
+              </label>
+              <label>
+                Status
+                <select
+                  name="status"
+                  defaultValue={editing?.status ?? "active"}
+                >
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </label>
+            </div>
+            <button className={styles.save} disabled={busy}>
+              {busy ? "Saving…" : "Save goal"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {investmentGoal ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={() => !busy && setInvestmentGoal(null)}
+        >
+          <form
+            className={`${styles.modal} ${styles.investmentModal}`}
+            onSubmit={recordInvestment}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.close}
+              onClick={() => setInvestmentGoal(null)}
+            >
+              <X size={18} />
+            </button>
+
+            <span className={styles.modalIcon}>
+              <Coins size={22} />
+            </span>
+            <span>RECORD INVESTMENT</span>
+            <h2>{investmentGoal.name}</h2>
+            <p className={styles.outstanding}>
+              Remaining:{" "}
+              {money(
+                Math.max(
+                  0,
+                  Number(investmentGoal.target_amount) -
+                    Number(investmentGoal.current_amount),
+                ),
+              )}
+            </p>
+
+            <label>
+              Investment amount (EUR)
+              <input
+                name="amount"
+                type="number"
+                min="0.01"
+                max={Math.max(
+                  0.01,
+                  Number(investmentGoal.target_amount) -
+                    Number(investmentGoal.current_amount),
+                )}
+                step="0.01"
+                required
+                autoFocus
+              />
+            </label>
+
+            <label>
+              Investment date
+              <input
+                name="invested_at"
+                type="date"
+                defaultValue={today()}
+                required
+              />
+            </label>
+
+            <label>
+              Notes
+              <textarea name="notes" placeholder="Optional" rows={4} />
+            </label>
+
+            <button className={styles.save} disabled={busy}>
+              {busy ? "Recording…" : "Record investment"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {historyGoal ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={() => setHistoryGoal(null)}
+        >
+          <div
+            className={`${styles.modal} ${styles.historyModal}`}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.close}
+              onClick={() => setHistoryGoal(null)}
+            >
+              <X size={18} />
+            </button>
+            <span>INVESTMENT HISTORY</span>
+            <h2>{historyGoal.name}</h2>
+
+            <div className={styles.historyList}>
+              {investmentHistory.length ? (
+                investmentHistory.map((investment) => (
+                  <article key={investment.id}>
+                    <div>
+                      <strong>{money(investment.amount)}</strong>
+                      <span>
+                        {new Date(
+                          investment.invested_at,
+                        ).toLocaleDateString("en-GB")}
+                      </span>
+                      {investment.notes ? <p>{investment.notes}</p> : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReversing(investment)}
+                    >
+                      <Trash2 size={15} />
+                      Reverse
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <div className={styles.emptyHistory}>
+                  No investments recorded yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleting ? (
+        <div className={styles.backdrop}>
+          <div className={`${styles.modal} ${styles.confirm}`}>
+            <span>PERMANENT ACTION</span>
+            <h2>Delete goal?</h2>
+            <p>
+              “{deleting.name}” and its investment history will be removed.
+              Linked cash-flow transactions will also be deleted.
+            </p>
+            <div className={styles.confirmActions}>
+              <button type="button" onClick={() => setDeleting(null)}>
+                Cancel
+              </button>
+              <button
+                className={styles.danger}
+                type="button"
+                onClick={deleteGoal}
+                disabled={busy}
+              >
+                {busy ? "Deleting…" : "Delete goal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reversing ? (
+        <div className={styles.backdrop}>
+          <div className={`${styles.modal} ${styles.confirm}`}>
+            <span>REVERSE INVESTMENT</span>
+            <h2>Reverse {money(reversing.amount)}?</h2>
+            <p>
+              The goal progress will decrease and the linked cash-flow
+              transaction will be removed.
+            </p>
+            <div className={styles.confirmActions}>
+              <button type="button" onClick={() => setReversing(null)}>
+                Cancel
+              </button>
+              <button
+                className={styles.danger}
+                type="button"
+                onClick={reverseInvestment}
+                disabled={busy}
+              >
+                {busy ? "Reversing…" : "Reverse investment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }

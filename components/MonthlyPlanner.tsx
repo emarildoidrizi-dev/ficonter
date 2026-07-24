@@ -277,11 +277,24 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         );
       })}
 
-    <article className={`${styles.tableCard} ${styles.goals} ${styles.compactCard}`}>
+    <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
       <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
-      <div className={`${styles.tableHead} ${styles.goalTable}`}><span>Item</span><span>Saved</span><span>Target</span></div>
-      {goals.length?goals.map(goal=><div className={`${styles.row} ${styles.goalTable}`} key={goal.id}><span>{goal.name}</span><span>{eur(Number(goal.current_amount))}</span><span>{eur(Number(goal.target_amount))}</span></div>):<div className={styles.compactEmpty}>No goals created yet.</div>}
-      <footer className={styles.goalFooter}><span>Total</span><b>{eur(goals.reduce((sum,goal)=>sum+Number(goal.current_amount),0))}</b><b>{eur(goals.reduce((sum,goal)=>sum+Number(goal.target_amount),0))}</b></footer>
+      {(() => {
+        const invested = goals.reduce((sum, goal) => sum + Number(goal.current_amount), 0);
+        const target = goals.reduce((sum, goal) => sum + Number(goal.target_amount), 0);
+        const progress = target ? Math.min(100, invested / target * 100) : 0;
+        return <div className={styles.goalSummaryBody}>
+          <div className={styles.goalSummaryAmounts}>
+            <span>Invested<b>{eur(invested)}</b></span>
+            <span>Target<b>{eur(target)}</b></span>
+          </div>
+          <div className={styles.goalSummaryProgress}><i style={{width:`${progress}%`}}/></div>
+          <div className={styles.goalSummaryFooter}>
+            <strong>{progress.toFixed(1)}% complete</strong>
+            <a href="/dashboard/goals">View goals</a>
+          </div>
+        </div>;
+      })()}
     </article>
     </div>
     <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div>{monthTx.filter(t=>t.type!=="income").slice(0,15).map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{eur(Number(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</article><article className={styles.spending}><h3>Spending breakdown</h3>{monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{}) && Object.entries(monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{})).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=><div key={k}><span>{k}</span><b>{eur(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>

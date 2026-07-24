@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/admin/access";
 import { Sidebar } from "@/components/Sidebar";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
+import { createServiceClient } from "@/lib/admin/access";
 
 export default async function DashboardLayout({
   children,

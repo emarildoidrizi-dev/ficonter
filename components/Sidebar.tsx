@@ -12,13 +12,13 @@ import {
   ShieldCheck,
   Target,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Brand } from "./Brand";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./SidebarNavigation.module.css";
 
-const links = [
+const standardLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
   ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
   ["/dashboard/bills", ReceiptText, "Bills"],
@@ -31,10 +31,19 @@ const links = [
 
 export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const visibleLinks = useMemo(() => isAdmin ? [...links, ["/dashboard/admin", ShieldCheck, "Admin"] as const] : links, [isAdmin]);
-  const routeHrefs = useMemo(() => visibleLinks.map(([href]) => href), [visibleLinks]);
+
+  const links = useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...standardLinks.slice(0, -1),
+            ["/dashboard/admin", ShieldCheck, "Admin"] as const,
+            standardLinks.at(-1)!,
+          ]
+        : standardLinks,
+    [isAdmin],
+  );
 
   useEffect(() => setPendingHref(null), [pathname]);
 
@@ -48,27 +57,27 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     <aside className="sidebar">
       <Brand href="/dashboard" />
       <nav className="side-nav" aria-label="Private finance navigation">
-        {visibleLinks.map(([href, Icon, label]) => {
-          const isActive =
+        {links.map(([href, Icon, label]) => {
+          const active =
             href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-          const isPending = pendingHref === href;
+          const pending = pendingHref === href;
 
           return (
             <Link
-              className={`side-link ${styles.link}${isActive ? " active" : ""}${
-                isPending ? ` ${styles.pending}` : ""
+              className={`side-link ${styles.link}${active ? " active" : ""}${
+                pending ? ` ${styles.pending}` : ""
               }`}
               href={href}
               key={href}
               prefetch={false}
-              aria-current={isActive ? "page" : undefined}
+              aria-current={active ? "page" : undefined}
               onClick={() => {
-                if (!isActive) setPendingHref(href);
+                if (!active) setPendingHref(href);
               }}
             >
               <Icon size={18} aria-hidden="true" />
               <span>{label}</span>
-              {isPending ? (
+              {pending ? (
                 <span className={styles.spinner} aria-label="Opening page" />
               ) : null}
             </Link>
@@ -76,6 +85,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
         })}
         <SignOutButton />
       </nav>
+
       <div
         className={`${styles.progress}${
           pendingHref ? ` ${styles.progressVisible}` : ""

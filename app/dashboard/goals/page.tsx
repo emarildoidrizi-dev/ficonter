@@ -1,1 +1,14 @@
-export default function Page(){return <><header className="topbar"><div className="page-title"><h1>Goals</h1><p>This module is prepared for Sprint 2.</p></div></header><section className="panel"><div className="empty">The secure account foundation is live. We will connect this module to its own private database table next.</div></section></>}
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { GoalsManager } from "@/components/GoalsManager";
+
+export const dynamic="force-dynamic";
+export const revalidate=0;
+
+export default async function GoalsPage(){
+  const supabase=await createClient();
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)redirect("/login");
+  const {data,error}=await supabase.from("goals").select("*").eq("user_id",user.id).order("created_at",{ascending:true});
+  return <GoalsManager userId={user.id} initialGoals={data??[]} initialError={error?.message??""}/>;
+}

@@ -39,3 +39,5 @@
 .compactCard .compactTable{
   grid-template-columns:minmax(0,1fr) minmax(150px,.55fr);
 }
+
+.tableCard.goals header{background:#e5dcf1}.goalTable{grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr);gap:14px}.goalTable span:nth-child(2),.goalTable span:nth-child(3){text-align:right;font-weight:700}.goalFooter{display:grid!important;grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr)!important;gap:14px!important}.goalFooter b{text-align:right}@media(max-width:650px){.goalTable,.goalFooter{grid-template-columns:minmax(0,1fr) 100px 100px!important}}

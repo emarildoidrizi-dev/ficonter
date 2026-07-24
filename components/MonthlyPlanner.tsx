@@ -10,6 +10,7 @@ type Tx = { id:string; user_id:string; description:string; amount_eur:number|str
 type Bill = { id:string; user_id:string; name:string; category:string; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
 type Plan = { id:string; user_id:string; month:string; start_balance:number|string; created_at:string; updated_at:string };
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
+type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 
 const compactSections = new Set<Section>(["income","bills","savings","debt"]);
 const sections: {key:Section; title:string}[] = [
@@ -29,13 +30,14 @@ const classify=(tx:Tx):Section=>{
   return "expenses";
 };
 
-export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[]}){
+export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[]}){
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
   const [transactions,setTransactions]=useState(initialTransactions);
   const [bills,setBills]=useState(initialBills);
   const [plans,setPlans]=useState(initialPlans);
   const [items,setItems]=useState(initialItems);
+  const [goals,setGoals]=useState(initialGoals);
   const [notice,setNotice]=useState("");
   const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
 
@@ -58,6 +60,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       .on("postgres_changes",{event:"*",schema:"public",table:"bills",filter:`user_id=eq.${userId}`},p=>setBills(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Bill,...c.filter(x=>x.id!==(p.new as any).id)]))
       .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_plans",filter:`user_id=eq.${userId}`},p=>setPlans(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Plan,...c.filter(x=>x.id!==(p.new as any).id)]))
       .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_items",filter:`user_id=eq.${userId}`},p=>setItems(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Item,...c.filter(x=>x.id!==(p.new as any).id)]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"goals",filter:`user_id=eq.${userId}`},p=>setGoals(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Goal,...c.filter(x=>x.id!==(p.new as any).id)]))
       .subscribe();
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);
@@ -273,6 +276,13 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
           </article>
         );
       })}
+
+    <article className={`${styles.tableCard} ${styles.goals} ${styles.compactCard}`}>
+      <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
+      <div className={`${styles.tableHead} ${styles.goalTable}`}><span>Item</span><span>Saved</span><span>Target</span></div>
+      {goals.length?goals.map(goal=><div className={`${styles.row} ${styles.goalTable}`} key={goal.id}><span>{goal.name}</span><span>{eur(Number(goal.current_amount))}</span><span>{eur(Number(goal.target_amount))}</span></div>):<div className={styles.compactEmpty}>No goals created yet.</div>}
+      <footer className={styles.goalFooter}><span>Total</span><b>{eur(goals.reduce((sum,goal)=>sum+Number(goal.current_amount),0))}</b><b>{eur(goals.reduce((sum,goal)=>sum+Number(goal.target_amount),0))}</b></footer>
+    </article>
     </div>
     <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div>{monthTx.filter(t=>t.type!=="income").slice(0,15).map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{eur(Number(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</article><article className={styles.spending}><h3>Spending breakdown</h3>{monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{}) && Object.entries(monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{})).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=><div key={k}><span>{k}</span><b>{eur(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
   </section>

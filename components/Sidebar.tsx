@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ReceiptText,
   Settings,
+  ShieldCheck,
   Target,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,11 +29,12 @@ const links = [
   ["/dashboard/settings", Settings, "Settings"],
 ] as const;
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const routeHrefs = useMemo(() => links.map(([href]) => href), []);
+  const visibleLinks = useMemo(() => isAdmin ? [...links, ["/dashboard/admin", ShieldCheck, "Admin"] as const] : links, [isAdmin]);
+  const routeHrefs = useMemo(() => visibleLinks.map(([href]) => href), [visibleLinks]);
 
   useEffect(() => setPendingHref(null), [pathname]);
 
@@ -46,7 +48,7 @@ export function Sidebar() {
     <aside className="sidebar">
       <Brand href="/dashboard" />
       <nav className="side-nav" aria-label="Private finance navigation">
-        {links.map(([href, Icon, label]) => {
+        {visibleLinks.map(([href, Icon, label]) => {
           const isActive =
             href === "/dashboard" ? pathname === href : pathname.startsWith(href);
           const isPending = pendingHref === href;

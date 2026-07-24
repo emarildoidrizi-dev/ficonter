@@ -22,6 +22,7 @@ const eur=(v:number)=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
+const isGoalInvestment=(tx:Tx)=>tx.description.startsWith("Goal investment ·");
 const classify=(tx:Tx):Section=>{
   if(tx.type==="income") return "income";
   const c=tx.category.toLowerCase();
@@ -71,16 +72,24 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const previousTransactions=transactions.filter(t=>inMonth(t.transaction_date,previousMonth)||inMonth(t.occurred_at,previousMonth));
   const previousPaidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
   const previousActual:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
-  previousTransactions.forEach(t=>{if(previousPaidBillTxIds.has(t.id))return;previousActual[classify(t)]+=Number(t.amount_eur)||0});
+  let previousGoalInvestments=0;
+  previousTransactions.forEach(t=>{
+    if(previousPaidBillTxIds.has(t.id))return;
+    if(isGoalInvestment(t)){previousGoalInvestments+=Number(t.amount_eur)||0;return;}
+    previousActual[classify(t)]+=Number(t.amount_eur)||0;
+  });
   bills.filter(b=>b.status==="paid"&&(inMonth(b.paid_at,previousMonth)||inMonth(b.due_date,previousMonth))).forEach(b=>previousActual.bills+=Number(b.amount_eur)||0);
-  const previousLeft=Number(previousPlan?.start_balance??0)+previousActual.income-previousActual.bills-previousActual.expenses-previousActual.savings-previousActual.debt;
+  const previousLeft=Number(previousPlan?.start_balance??0)+previousActual.income-previousActual.bills-previousActual.expenses-previousActual.savings-previousActual.debt-previousGoalInvestments;
   const derivedStartBalance=startBalanceBehavior==="carry-forward"?previousLeft:0;
   const startBalance=Number(plan?.start_balance??derivedStartBalance);
   const paidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
   const monthTx=transactions.filter(t=>inMonth(t.transaction_date,month)||inMonth(t.occurred_at,month));
   const actualBySection=useMemo(()=>{
     const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
-    monthTx.forEach(t=>{ if(paidBillTxIds.has(t.id))return; totals[classify(t)]+=Number(t.amount_eur)||0; });
+    monthTx.forEach(t=>{
+      if(paidBillTxIds.has(t.id)||isGoalInvestment(t))return;
+      totals[classify(t)]+=Number(t.amount_eur)||0;
+    });
     bills.filter(b=>b.status==="paid"&&(inMonth(b.paid_at,month)||inMonth(b.due_date,month))).forEach(b=>totals.bills+=Number(b.amount_eur)||0);
     return totals;
   },[monthTx,bills,month]);
@@ -88,9 +97,12 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const planned=(s:Section)=>monthItems.filter(i=>i.section===s).reduce((a,b)=>a+Number(b.planned_amount),0);
   const actual=(s:Section)=>actualBySection[s];
   const totalIncome=actual("income");
-  const totalOut=actual("bills")+actual("expenses")+actual("savings")+actual("debt");
-  // Single source of truth for remaining monthly money.
-  // The top "Available Capital" widget mirrors Cash Flow → Left exactly.
+  const goalInvestments=monthTx
+    .filter(isGoalInvestment)
+    .reduce((sum,transaction)=>sum+(Number(transaction.amount_eur)||0),0);
+  const totalOut=actual("bills")+actual("expenses")+actual("savings")+actual("debt")+goalInvestments;
+  // Goal investments reduce available cash independently.
+  // They never update the Monthly Planner Savings card.
   const left=startBalance+totalIncome-totalOut;
   const leftToBudget=left;
   const availableCash=startBalance+totalIncome;
@@ -111,7 +123,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       <article className={styles.bars}><h3>Budget vs actual</h3>{sections.map(s=>{const max=Math.max(planned(s.key),actual(s.key),1);return <div key={s.key}><span>{s.title}</span><i><b style={{width:`${planned(s.key)/max*100}%`}}/><em style={{width:`${actual(s.key)/max*100}%`}}/></i></div>})}</article>
       <article className={styles.breakdown}><h3>Breakdown</h3><div className={styles.pie} style={{background:gradient}}/><div>{spendingParts.map((p,i)=><span key={p.key}><i style={{background:palette[i%palette.length]}}/>{p.key} {totalOut?Math.round(p.value/totalOut*100):0}%</span>)}</div></article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Start balance<b>{eur(startBalance)}</b></span><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Start balance<b>{eur(startBalance)}</b></span><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);

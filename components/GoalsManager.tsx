@@ -260,11 +260,9 @@ export function GoalsManager({
 
     setBusy(true);
 
-    const { error } = await supabase
-      .from("goals")
-      .delete()
-      .eq("id", deleting.id)
-      .eq("user_id", userId);
+    const { error } = await supabase.rpc("delete_goal_with_investments", {
+      p_goal_id: deleting.id,
+    });
 
     if (error) {
       setNotice(error.message);
@@ -276,7 +274,7 @@ export function GoalsManager({
         current.filter((item) => item.goal_id !== deleting.id),
       );
       setDeleting(null);
-      setNotice("Goal deleted.");
+      setNotice("Goal and linked investments deleted.");
       notifyLumeraDataChange("all");
     }
 
@@ -354,12 +352,20 @@ export function GoalsManager({
             return (
               <article className={styles.card} key={goal.id}>
                 <div className={styles.cardTop}>
-                  <span className={styles.icon}>
-                    <Target size={19} />
+                  <span
+                    className={styles.progressRing}
+                    style={{
+                      background: `conic-gradient(#9c7cc6 ${progress * 3.6}deg, #ece8e2 0deg)`,
+                    }}
+                    aria-label={`${progress.toFixed(1)} percent complete`}
+                  >
+                    <span>
+                      <Target size={17} />
+                    </span>
                   </span>
                   <div>
                     <h2>{goal.name}</h2>
-                    <p>{goal.status.replace("_", " ")}</p>
+                    <p className={`${styles.status} ${styles[goal.status]}`}>{goal.status.replace("_", " ")}</p>
                   </div>
                   <div className={styles.actions}>
                     <button
@@ -386,6 +392,10 @@ export function GoalsManager({
                   <div>
                     <span>Invested</span>
                     <strong>{money(current)}</strong>
+                  </div>
+                  <div>
+                    <span>Remaining</span>
+                    <strong>{money(Math.max(0, target - current))}</strong>
                   </div>
                   <div>
                     <span>Target</span>

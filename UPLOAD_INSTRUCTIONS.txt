@@ -1,15 +1,30 @@
-LUMERA — MIRROR CASH FLOW LEFT AT TOP
+FICONTER GOALS WEALTH ENGINE v2
 
-Upload only:
-- components/MonthlyPlanner.tsx
+Run first in Supabase SQL Editor:
+supabase/goals_wealth_engine_v2.sql
+
+This fixes the current RLS investment error and makes every Goals financial
+operation atomic.
+
+Then upload or replace in GitHub:
+1. app/dashboard/goals/page.tsx
+2. app/dashboard/budget/page.tsx
+3. components/GoalsManager.tsx
+4. components/GoalsManager.module.css
+5. components/MonthlyPlanner.tsx
+6. components/MonthlyPlanner.module.css
+
+Included:
+- Record Investment works through a secure database function
+- Goal progress and Saving transaction are created together or not at all
+- Cash Flow, Savings Rate, Monthly Planner and Health Score update from the
+  shared transaction record
+- Reverse Investment safely restores cash flow and goal progress
+- Delete Goal removes its linked investment transactions atomically
+- Direct writes to goal_investments are blocked to prevent data desynchronization
+- Users can access only their own goals and investment history
+- Premium progress rings, remaining amount and refined status styling
+- Monthly Planner remains summary-only
 
 Commit message:
-Mirror cash flow left in top budget widget
-
-Changes:
-- Cash Flow → Left remains the single calculation.
-- Left to Budget displays exactly the same amount.
-- Both values update together from the same live state.
-- The circular progress uses current available cash only for visualization.
-
-No Supabase or SQL changes are required.
+feat(goals): promote goals to atomic wealth planning engine

@@ -164,9 +164,11 @@ function applyInterface(preferences: Preferences) {
   localStorage.setItem("ficonter-density", preferences.density);
 }
 
-async function compressProfilePhoto(file: File): Promise<string> {
+async function compressProfilePhoto(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
-  if (file.size > 8 * 1024 * 1024) throw new Error("Choose an image smaller than 8 MB.");
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("Choose an image smaller than 8 MB.");
+  }
 
   const image = document.createElement("img");
   const objectUrl = URL.createObjectURL(file);
@@ -182,14 +184,32 @@ async function compressProfilePhoto(file: File): Promise<string> {
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
+
     const context = canvas.getContext("2d");
     if (!context) throw new Error("The image could not be processed.");
 
     const scale = Math.max(size / image.width, size / image.height);
     const width = image.width * scale;
     const height = image.height * scale;
-    context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+
+    context.drawImage(
+      image,
+      (size - width) / 2,
+      (size - height) / 2,
+      width,
+      height,
+    );
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("The image could not be compressed."));
+        },
+        "image/jpeg",
+        0.82,
+      );
+    });
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -201,7 +221,12 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const [active, setActive] = useState<SectionId>("profile");
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
-  const [profilePhoto, setProfilePhoto] = useState(String(metadata.avatar_data_url ?? ""));
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const [profilePhotoPath, setProfilePhotoPath] = useState(
+    String(metadata.avatar_path ?? ""),
+  );
+  const [pendingPhoto, setPendingPhoto] = useState<Blob | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [accountEmail, setAccountEmail] = useState(email);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
   const [rememberDevice, setRememberDevice] = useState(false);
@@ -223,6 +248,36 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     applyInterface(preferences);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadProfilePhoto() {
+      if (!profilePhotoPath) {
+        setProfilePhoto("");
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(profilePhotoPath, 60 * 60);
+
+      if (!mounted) return;
+
+      if (error) {
+        setProfilePhoto("");
+        return;
+      }
+
+      setProfilePhoto(data.signedUrl);
+    }
+
+    void loadProfilePhoto();
+
+    return () => {
+      mounted = false;
+    };
+  }, [profilePhotoPath, supabase]);
+
   function showSuccess(text: string) {
     setMessage({ type: "success", text });
     window.setTimeout(() => setMessage(null), 3600);
@@ -233,9 +288,21 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   }
 
   async function saveMetadata(nextData: Metadata) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const current = user?.user_metadata ?? metadata;
-    const { error } = await supabase.auth.updateUser({ data: { ...current, ...nextData } });
+    const { avatar_data_url: _legacyAvatar, ...safeCurrent } = current;
+
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...safeCurrent,
+        ...nextData,
+        avatar_data_url: null,
+      },
+    });
+
     if (error) throw error;
   }
 
@@ -243,13 +310,65 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
+
     try {
+      let nextPhotoPath = profilePhotoPath;
+
+      if (removePhoto && profilePhotoPath) {
+        const { error: removeError } = await supabase.storage
+          .from("profile-photos")
+          .remove([profilePhotoPath]);
+
+        if (removeError) throw removeError;
+        nextPhotoPath = "";
+      }
+
+      if (pendingPhoto) {
+        const uploadPath = `${userId}/avatar.jpg`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("profile-photos")
+          .upload(uploadPath, pendingPhoto, {
+            contentType: "image/jpeg",
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+        nextPhotoPath = uploadPath;
+      }
+
       await saveMetadata({
         full_name: fullName.trim(),
         display_name: displayName.trim(),
-        avatar_data_url: profilePhoto,
+        avatar_path: nextPhotoPath || null,
       });
-      window.dispatchEvent(new CustomEvent("ficonter:profile-updated", { detail: { fullName, displayName, profilePhoto } }));
+
+      setProfilePhotoPath(nextPhotoPath);
+      setPendingPhoto(null);
+      setRemovePhoto(false);
+
+      if (!nextPhotoPath) {
+        setProfilePhoto("");
+      } else {
+        const { data, error: signedUrlError } = await supabase.storage
+          .from("profile-photos")
+          .createSignedUrl(nextPhotoPath, 60 * 60);
+
+        if (signedUrlError) throw signedUrlError;
+        setProfilePhoto(data.signedUrl);
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("ficonter:profile-updated", {
+          detail: {
+            fullName,
+            displayName,
+            profilePhotoPath: nextPhotoPath,
+          },
+        }),
+      );
+
       showSuccess("Profile changes saved.");
     } catch (error) {
       showError(error, "Your profile could not be updated.");
@@ -261,11 +380,22 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+
     setLoading(true);
     setMessage(null);
+
     try {
-      setProfilePhoto(await compressProfilePhoto(file));
-      showSuccess("Photo prepared. Select Save changes to keep it.");
+      const compressed = await compressProfilePhoto(file);
+      const previewUrl = URL.createObjectURL(compressed);
+
+      setPendingPhoto(compressed);
+      setRemovePhoto(false);
+      setProfilePhoto((current) => {
+        if (current.startsWith("blob:")) URL.revokeObjectURL(current);
+        return previewUrl;
+      });
+
+      showSuccess("Photo prepared. Select Save changes to upload it securely.");
     } catch (error) {
       showError(error, "The profile photo could not be prepared.");
     } finally {
@@ -484,7 +614,11 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
           <form className={styles.form} onSubmit={saveProfile}>
             <div className={styles.photoEditor}>
               <div className={styles.largeAvatar}>{profilePhoto ? <img src={profilePhoto} alt="Profile preview" /> : avatarText}</div>
-              <div><h3>Profile photo</h3><p>Upload a clear square image. Ficonter compresses it before saving.</p><div className={styles.inlineActions}><button type="button" className={styles.secondaryButton} onClick={() => photoInput.current?.click()}><Camera size={16} />Choose photo</button>{profilePhoto ? <button type="button" className={styles.textButton} onClick={() => setProfilePhoto("")}>Remove</button> : null}</div></div>
+              <div><h3>Profile photo</h3><p>Upload a clear square image. Ficonter compresses it and stores it securely.</p><div className={styles.inlineActions}><button type="button" className={styles.secondaryButton} onClick={() => photoInput.current?.click()}><Camera size={16} />Choose photo</button>{profilePhoto ? <button type="button" className={styles.textButton} onClick={() => {
+  setPendingPhoto(null);
+  setRemovePhoto(true);
+  setProfilePhoto("");
+}}>Remove</button> : null}</div></div>
               <input ref={photoInput} className={styles.hiddenInput} type="file" accept="image/*" onChange={choosePhoto} />
             </div>
             <div className={styles.formGrid}>

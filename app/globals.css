@@ -150,25 +150,3 @@ html[data-density="compact"] .kpi{padding:17px}
 html[data-density="compact"] .panel{padding:19px}
 html[data-density="compact"] .side-link{padding:9px 12px}
 html[data-density="compact"] table th,html[data-density="compact"] table td{padding-top:9px;padding-bottom:9px}
-
-
-/* Persistent authenticated account header */
-.account-header{
-  position:sticky;
-  top:0;
-  z-index:70;
-  min-height:58px;
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  margin:-18px -8px 8px;
-  padding:8px 8px 4px;
-  pointer-events:none;
-}
-.account-header>*{pointer-events:auto}
-@media(max-width:640px){
-  .account-header{
-    margin:-10px -2px 8px;
-    padding-top:4px;
-  }
-}

@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   Bell,
   Camera,
@@ -198,7 +197,6 @@ async function compressProfilePhoto(file: File): Promise<string> {
 
 export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const searchParams = useSearchParams();
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>("profile");
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
@@ -215,17 +213,6 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  useEffect(() => {
-    const requestedSection = searchParams.get("section");
-    const validSection = sections.some(
-      (section) => section.id === requestedSection,
-    );
-
-    if (validSection) {
-      setActive(requestedSection as SectionId);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     const trusted = document.cookie

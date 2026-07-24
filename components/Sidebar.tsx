@@ -8,6 +8,7 @@ import {
   Landmark,
   LayoutDashboard,
   ReceiptText,
+  Settings,
   Target,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +25,7 @@ const links = [
   ["/dashboard/goals", Target, "Goals"],
   ["/dashboard/debt", CreditCard, "Debt"],
   ["/dashboard/net-worth", Landmark, "Net worth"],
+  ["/dashboard/settings", Settings, "Settings"],
 ] as const;
 
 export function Sidebar() {

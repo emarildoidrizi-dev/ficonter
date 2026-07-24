@@ -37,8 +37,21 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const [plans,setPlans]=useState(initialPlans);
   const [items,setItems]=useState(initialItems);
   const [notice,setNotice]=useState("");
+  const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
 
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
+  useEffect(()=>{
+    let active=true;
+    async function loadPlannerPreference(){
+      const {data:{user}}=await supabase.auth.getUser();
+      const prefs=user?.user_metadata?.ficonter_preferences as {plannerStartBalance?:string}|undefined;
+      if(active)setStartBalanceBehavior(prefs?.plannerStartBalance??"manual");
+    }
+    void loadPlannerPreference();
+    const handle=()=>void loadPlannerPreference();
+    window.addEventListener("ficonter:preferences-updated",handle);
+    return()=>{active=false;window.removeEventListener("ficonter:preferences-updated",handle)};
+  },[supabase]);
   useEffect(()=>{
     const channel=supabase.channel(`planner-${userId}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},p=>setTransactions(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Tx,...c.filter(x=>x.id!==(p.new as any).id)]))
@@ -50,7 +63,16 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   },[supabase,userId]);
 
   const plan=plans.find(p=>p.month===month);
-  const startBalance=Number(plan?.start_balance??0);
+  const previousMonth=(()=>{const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()-1);return monthKey(d)})();
+  const previousPlan=plans.find(p=>p.month===previousMonth);
+  const previousTransactions=transactions.filter(t=>inMonth(t.transaction_date,previousMonth)||inMonth(t.occurred_at,previousMonth));
+  const previousPaidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
+  const previousActual:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
+  previousTransactions.forEach(t=>{if(previousPaidBillTxIds.has(t.id))return;previousActual[classify(t)]+=Number(t.amount_eur)||0});
+  bills.filter(b=>b.status==="paid"&&(inMonth(b.paid_at,previousMonth)||inMonth(b.due_date,previousMonth))).forEach(b=>previousActual.bills+=Number(b.amount_eur)||0);
+  const previousLeft=Number(previousPlan?.start_balance??0)+previousActual.income-previousActual.bills-previousActual.expenses-previousActual.savings-previousActual.debt;
+  const derivedStartBalance=startBalanceBehavior==="carry-forward"?previousLeft:0;
+  const startBalance=Number(plan?.start_balance??derivedStartBalance);
   const paidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
   const monthTx=transactions.filter(t=>inMonth(t.transaction_date,month)||inMonth(t.occurred_at,month));
   const actualBySection=useMemo(()=>{
@@ -81,7 +103,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your full monthly budget, actual spending and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
-      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input defaultValue={startBalance} type="number" step="0.01" onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
+      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
       <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{eur(left)}</strong></div></article>
       <article className={styles.bars}><h3>Budget vs actual</h3>{sections.map(s=>{const max=Math.max(planned(s.key),actual(s.key),1);return <div key={s.key}><span>{s.title}</span><i><b style={{width:`${planned(s.key)/max*100}%`}}/><em style={{width:`${actual(s.key)/max*100}%`}}/></i></div>})}</article>
       <article className={styles.breakdown}><h3>Breakdown</h3><div className={styles.pie} style={{background:gradient}}/><div>{spendingParts.map((p,i)=><span key={p.key}><i style={{background:palette[i%palette.length]}}/>{p.key} {totalOut?Math.round(p.value/totalOut*100):0}%</span>)}</div></article>

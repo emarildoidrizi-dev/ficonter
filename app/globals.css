@@ -126,3 +126,27 @@ th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacin
 .transaction-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.transaction-form-grid-amount{grid-template-columns:minmax(140px,.75fr) minmax(220px,1.25fr)}@media(max-width:700px){.transaction-form-grid,.transaction-form-grid-amount{grid-template-columns:1fr}}
 
 .fx-preview{display:grid;gap:4px;margin:-2px 0 16px;padding:14px 16px;border:1px solid #dfd5c7;border-radius:14px;background:#f7f1e7}.fx-preview>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.fx-preview span,.fx-preview small{color:#756f67}.fx-preview strong{font-size:20px;color:#25282a}.fx-preview-error{color:#925b5b!important}@media(max-width:650px){.fx-preview>div{align-items:flex-start;flex-direction:column}}
+
+/* Ficonter account appearance preferences */
+html[data-theme="dark"]{
+  --ink:#f3efe8;
+  --charcoal:#d7d0c6;
+  --ivory:#171a1c;
+  --paper:#212528;
+  --gold:#c8aa78;
+  --gold-soft:#3b3429;
+  --sage:#91aa9f;
+  --sage-soft:#273a34;
+  --burgundy:#c18484;
+  --muted:#aaa39a;
+  --line:#3b4043;
+  --shadow:0 24px 70px rgba(0,0,0,.26);
+}
+html[data-theme="dark"] body{background:var(--ivory);color:var(--ink)}
+html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{color-scheme:dark}
+@media(prefers-color-scheme:dark){html[data-theme="system"]{--ink:#f3efe8;--charcoal:#d7d0c6;--ivory:#171a1c;--paper:#212528;--gold:#c8aa78;--gold-soft:#3b3429;--sage:#91aa9f;--sage-soft:#273a34;--burgundy:#c18484;--muted:#aaa39a;--line:#3b4043;--shadow:0 24px 70px rgba(0,0,0,.26)}html[data-theme="system"] body{background:var(--ivory);color:var(--ink)}html[data-theme="system"] input,html[data-theme="system"] select,html[data-theme="system"] textarea{color-scheme:dark}}
+html[data-density="compact"] .app-main{padding:24px}
+html[data-density="compact"] .kpi{padding:17px}
+html[data-density="compact"] .panel{padding:19px}
+html[data-density="compact"] .side-link{padding:9px 12px}
+html[data-density="compact"] table th,html[data-density="compact"] table td{padding-top:9px;padding-bottom:9px}

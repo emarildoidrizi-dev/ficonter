@@ -1,25 +1,45 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
 import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Link from "next/link";
+import {
+  Bell,
+  Camera,
   Check,
   ChevronRight,
   CircleUserRound,
+  CreditCard,
   Database,
   Download,
   Eye,
   EyeOff,
+  FileText,
   Globe2,
   KeyRound,
+  Languages,
   LayoutTemplate,
   LockKeyhole,
+  LogOut,
+  Mail,
+  Monitor,
   Palette,
+  ReceiptText,
   Save,
   ShieldCheck,
-  SlidersHorizontal,
+  Smartphone,
+  Trash2,
   UserRound,
+  WalletCards,
+  X,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, saveTrustedDevicePreference } from "@/lib/supabase/client";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -27,8 +47,10 @@ type SectionId =
   | "profile"
   | "security"
   | "financial"
+  | "notifications"
   | "appearance"
   | "privacy"
+  | "subscription"
   | "language";
 
 type Preferences = {
@@ -36,9 +58,17 @@ type Preferences = {
   numberFormat: string;
   dateFormat: string;
   weekStart: string;
-  density: string;
-  appearance: string;
-  language: string;
+  plannerStartBalance: string;
+  density: "comfortable" | "compact";
+  appearance: "light" | "dark" | "system";
+  language: "en";
+  notifications: {
+    billReminders: boolean;
+    upcomingPayments: boolean;
+    goalProgress: boolean;
+    monthlySummary: boolean;
+    emailEnabled: boolean;
+  };
 };
 
 type Props = {
@@ -47,12 +77,16 @@ type Props = {
   metadata: Metadata;
 };
 
+type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
+
 const sections = [
-  { id: "profile", label: "Profile", description: "Personal details", icon: UserRound },
-  { id: "security", label: "Account & security", description: "Email and password", icon: LockKeyhole },
-  { id: "financial", label: "Financial preferences", description: "Currency and formats", icon: SlidersHorizontal },
-  { id: "appearance", label: "Appearance", description: "Workspace presentation", icon: Palette },
-  { id: "privacy", label: "Data & privacy", description: "Export your records", icon: Database },
+  { id: "profile", label: "Profile", description: "Identity and profile photo", icon: UserRound },
+  { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
+  { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
+  { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
+  { id: "appearance", label: "Appearance", description: "Theme and layout density", icon: Palette },
+  { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
+  { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
   { id: "language", label: "Language", description: "English by default", icon: Globe2 },
 ] as const;
 
@@ -61,9 +95,17 @@ const defaultPreferences: Preferences = {
   numberFormat: "de-DE",
   dateFormat: "DD/MM/YYYY",
   weekStart: "monday",
+  plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
   language: "en",
+  notifications: {
+    billReminders: true,
+    upcomingPayments: true,
+    goalProgress: true,
+    monthlySummary: true,
+    emailEnabled: true,
+  },
 };
 
 function readPreferences(metadata: Metadata): Preferences {
@@ -73,7 +115,14 @@ function readPreferences(metadata: Metadata): Preferences {
       ? (metadata.ficonter_preferences as Partial<Preferences>)
       : {};
 
-  return { ...defaultPreferences, ...stored };
+  return {
+    ...defaultPreferences,
+    ...stored,
+    notifications: {
+      ...defaultPreferences.notifications,
+      ...(stored.notifications ?? {}),
+    },
+  };
 }
 
 function downloadFile(filename: string, content: string, type: string) {
@@ -82,32 +131,97 @@ function downloadFile(filename: string, content: string, type: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  document.body.appendChild(anchor);
   anchor.click();
+  anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function csvCell(value: unknown) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function currentDeviceLabel() {
+  if (typeof navigator === "undefined") return "Current browser";
+  const platform = navigator.platform || "Device";
+  const browser = navigator.userAgent.includes("Chrome")
+    ? "Chrome"
+    : navigator.userAgent.includes("Safari")
+      ? "Safari"
+      : navigator.userAgent.includes("Firefox")
+        ? "Firefox"
+        : "Browser";
+  return `${browser} on ${platform}`;
+}
+
+function applyInterface(preferences: Preferences) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.dataset.theme = preferences.appearance;
+  root.dataset.density = preferences.density;
+  root.style.colorScheme = preferences.appearance === "dark" ? "dark" : "light";
+  localStorage.setItem("ficonter-appearance", preferences.appearance);
+  localStorage.setItem("ficonter-density", preferences.density);
+}
+
+async function compressProfilePhoto(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > 8 * 1024 * 1024) throw new Error("Choose an image smaller than 8 MB.");
+
+  const image = document.createElement("img");
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("The image could not be read."));
+      image.src = objectUrl;
+    });
+
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The image could not be processed.");
+
+    const scale = Math.max(size / image.width, size / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>("profile");
-  const [fullName, setFullName] = useState(
-    String(metadata.full_name ?? metadata.name ?? ""),
-  );
-  const [displayName, setDisplayName] = useState(
-    String(metadata.display_name ?? metadata.full_name ?? ""),
-  );
+  const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
+  const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
+  const [profilePhoto, setProfilePhoto] = useState(String(metadata.avatar_data_url ?? ""));
   const [accountEmail, setAccountEmail] = useState(email);
-  const [preferences, setPreferences] = useState<Preferences>(() =>
-    readPreferences(metadata),
-  );
+  const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const [rememberDevice, setRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const trusted = document.cookie
+      .split(";")
+      .map((item) => item.trim())
+      .includes("lumera_trusted_device=1");
+    setRememberDevice(trusted);
+    applyInterface(preferences);
+  }, []);
 
   function showSuccess(text: string) {
     setMessage({ type: "success", text });
@@ -115,20 +229,13 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   }
 
   function showError(error: unknown, fallback: string) {
-    setMessage({
-      type: "error",
-      text: error instanceof Error ? error.message : fallback,
-    });
+    setMessage({ type: "error", text: error instanceof Error ? error.message : fallback });
   }
 
   async function saveMetadata(nextData: Metadata) {
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        ...metadata,
-        ...nextData,
-      },
-    });
-
+    const { data: { user } } = await supabase.auth.getUser();
+    const current = user?.user_metadata ?? metadata;
+    const { error } = await supabase.auth.updateUser({ data: { ...current, ...nextData } });
     if (error) throw error;
   }
 
@@ -136,13 +243,14 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
-
     try {
       await saveMetadata({
         full_name: fullName.trim(),
         display_name: displayName.trim(),
+        avatar_data_url: profilePhoto,
       });
-      showSuccess("Profile details saved.");
+      window.dispatchEvent(new CustomEvent("ficonter:profile-updated", { detail: { fullName, displayName, profilePhoto } }));
+      showSuccess("Profile changes saved.");
     } catch (error) {
       showError(error, "Your profile could not be updated.");
     } finally {
@@ -150,23 +258,32 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     }
   }
 
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      setProfilePhoto(await compressProfilePhoto(file));
+      showSuccess("Photo prepared. Select Save changes to keep it.");
+    } catch (error) {
+      showError(error, "The profile photo could not be prepared.");
+    } finally {
+      setLoading(false);
+      event.target.value = "";
+    }
+  }
+
   async function updateEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
-
     try {
       const nextEmail = accountEmail.trim().toLowerCase();
       if (!nextEmail) throw new Error("Enter a valid email address.");
-
       const { error } = await supabase.auth.updateUser({ email: nextEmail });
       if (error) throw error;
-
-      showSuccess(
-        nextEmail === email
-          ? "Your email address is unchanged."
-          : "Confirmation links were sent. Complete the email change from your inbox.",
-      );
+      showSuccess(nextEmail === email ? "Your email address is unchanged." : "Confirmation links were sent to complete the email change.");
     } catch (error) {
       showError(error, "Your email address could not be updated.");
     } finally {
@@ -177,38 +294,20 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   async function updatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
-
-    if (newPassword.length < 8) {
-      setMessage({
-        type: "error",
-        text: "Use at least eight characters for your new password.",
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "The new passwords do not match." });
-      return;
-    }
-
+    if (newPassword.length < 8) return setMessage({ type: "error", text: "Use at least eight characters." });
+    if (newPassword !== confirmPassword) return setMessage({ type: "error", text: "The new passwords do not match." });
     setLoading(true);
-
     try {
       if (currentPassword) {
-        const { error: verifyError } = await supabase.auth.signInWithPassword({
-          email,
-          password: currentPassword,
-        });
-        if (verifyError) throw new Error("Your current password is incorrect.");
+        const { error } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+        if (error) throw new Error("Your current password is incorrect.");
       }
-
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showSuccess("Your password has been changed successfully.");
+      showSuccess("Your password has been changed.");
     } catch (error) {
       showError(error, "Your password could not be changed.");
     } finally {
@@ -216,16 +315,71 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     }
   }
 
-  async function savePreferences(next: Preferences, successText: string) {
+  async function savePreferences(next: Preferences, text: string) {
     setLoading(true);
     setMessage(null);
-
     try {
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
-      showSuccess(successText);
+      applyInterface(next);
+      window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
+      showSuccess(text);
     } catch (error) {
       showError(error, "Your preferences could not be saved.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveRememberDevice(enabled: boolean) {
+    setRememberDevice(enabled);
+    saveTrustedDevicePreference(enabled);
+    showSuccess(enabled ? "This device will keep you signed in." : "Persistent login was disabled for this device.");
+  }
+
+  async function signOutOtherSessions() {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "others" });
+      if (error) throw error;
+      showSuccess("Other sessions were signed out.");
+    } catch (error) {
+      showError(error, "Other sessions could not be signed out.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signOutEverywhere() {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "global" });
+      if (error) throw error;
+      window.location.assign("/login");
+    } catch (error) {
+      showError(error, "You could not be signed out from all devices.");
+      setLoading(false);
+    }
+  }
+
+  async function exportTransactions() {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("transaction_date", { ascending: false });
+      if (error) throw error;
+      const rows = (data ?? []) as Record<string, unknown>[];
+      const columns = rows.length ? Object.keys(rows[0]) : ["No transactions"];
+      const csv = [columns.map(csvCell).join(","), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\n");
+      downloadFile(`ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+      showSuccess("Transaction export downloaded.");
+    } catch (error) {
+      showError(error, "Transactions could not be exported.");
     } finally {
       setLoading(false);
     }
@@ -234,88 +388,84 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   async function exportAccountData() {
     setLoading(true);
     setMessage(null);
-
     try {
-      const tables = [
-        "transactions",
-        "bills",
-        "debts",
-        "debt_payments",
-        "monthly_budget_plans",
-        "monthly_budget_items",
-      ] as const;
-
-      const results = await Promise.all(
-        tables.map(async (table) => {
-          const { data, error } = await supabase
-            .from(table)
-            .select("*")
-            .eq("user_id", userId);
-
-          return [table, error ? [] : data ?? []] as const;
-        }),
-      );
-
+      const tables = ["transactions", "bills", "debts", "debt_payments", "monthly_budget_plans", "monthly_budget_items"] as const;
+      const results = await Promise.all(tables.map(async (table) => {
+        const { data, error } = await supabase.from(table).select("*").eq("user_id", userId);
+        return [table, error ? [] : data ?? []] as const;
+      }));
       const payload = {
         exported_at: new Date().toISOString(),
-        account: {
-          id: userId,
-          email,
-          full_name: fullName,
-          display_name: displayName,
-        },
+        account: { id: userId, email, full_name: fullName, display_name: displayName },
         preferences,
         data: Object.fromEntries(results),
       };
-
-      downloadFile(
-        `ficonter-account-export-${new Date().toISOString().slice(0, 10)}.json`,
-        JSON.stringify(payload, null, 2),
-        "application/json;charset=utf-8",
-      );
-      showSuccess("Your private account export has been downloaded.");
+      downloadFile(`ficonter-account-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+      showSuccess("Account data export downloaded.");
     } catch (error) {
-      showError(error, "Your account export could not be created.");
+      showError(error, "Your account data could not be exported.");
     } finally {
       setLoading(false);
     }
   }
 
+  async function deleteFinancialRecords() {
+    if (confirmation !== "DELETE RECORDS") return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const tables = ["debt_payments", "monthly_budget_items", "monthly_budget_plans", "bills", "debts", "transactions"] as const;
+      for (const table of tables) {
+        const { error } = await supabase.from(table).delete().eq("user_id", userId);
+        if (error) throw error;
+      }
+      setDialog(null);
+      setConfirmation("");
+      window.dispatchEvent(new CustomEvent("ficonter:data-change", { detail: "all" }));
+      showSuccess("All financial records were deleted. Your account remains active.");
+    } catch (error) {
+      showError(error, "Financial records could not be deleted.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (confirmation !== "DELETE ACCOUNT") return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/account/delete", { method: "DELETE" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Account deletion failed.");
+      await supabase.auth.signOut({ scope: "global" });
+      window.location.assign("/");
+    } catch (error) {
+      showError(error, "Your account could not be deleted.");
+      setLoading(false);
+    }
+  }
+
   const activeSection = sections.find((section) => section.id === active)!;
+  const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
     <div className={styles.workspace}>
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
           <div className={styles.avatar}>
-            <CircleUserRound size={24} />
+            {profilePhoto ? <img src={profilePhoto} alt="Profile" /> : avatarText}
           </div>
           <div>
             <strong>{displayName || fullName || "Ficonter member"}</strong>
             <span>{email}</span>
           </div>
         </div>
-
         <div className={styles.sectionList}>
           {sections.map(({ id, label, description, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className={`${styles.sectionButton}${
-                active === id ? ` ${styles.sectionActive}` : ""
-              }`}
-              onClick={() => {
-                setActive(id);
-                setMessage(null);
-              }}
-            >
-              <span className={styles.sectionIcon}>
-                <Icon size={17} />
-              </span>
-              <span>
-                <strong>{label}</strong>
-                <small>{description}</small>
-              </span>
+            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); }}>
+              <span className={styles.sectionIcon}><Icon size={17} /></span>
+              <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
             </button>
           ))}
@@ -324,393 +474,131 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
 
       <main className={styles.panel}>
         <header className={styles.panelHeader}>
-          <div>
-            <span className={styles.eyebrow}>Account preferences</span>
-            <h2>{activeSection.label}</h2>
-            <p>{activeSection.description}</p>
-          </div>
-          <div className={styles.secureBadge}>
-            <ShieldCheck size={16} />
-            Private
-          </div>
+          <div><span className={styles.eyebrow}>Account preferences</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
+          <div className={styles.secureBadge}><ShieldCheck size={16} />Private</div>
         </header>
 
-        {message ? (
-          <div
-            className={`${styles.message} ${
-              message.type === "error" ? styles.error : styles.success
-            }`}
-          >
-            {message.type === "success" ? <Check size={17} /> : null}
-            {message.text}
-          </div>
-        ) : null}
+        {message ? <div className={`${styles.message} ${message.type === "error" ? styles.error : styles.success}`}>{message.type === "success" ? <Check size={17} /> : null}{message.text}</div> : null}
 
         {active === "profile" ? (
           <form className={styles.form} onSubmit={saveProfile}>
+            <div className={styles.photoEditor}>
+              <div className={styles.largeAvatar}>{profilePhoto ? <img src={profilePhoto} alt="Profile preview" /> : avatarText}</div>
+              <div><h3>Profile photo</h3><p>Upload a clear square image. Ficonter compresses it before saving.</p><div className={styles.inlineActions}><button type="button" className={styles.secondaryButton} onClick={() => photoInput.current?.click()}><Camera size={16} />Choose photo</button>{profilePhoto ? <button type="button" className={styles.textButton} onClick={() => setProfilePhoto("")}>Remove</button> : null}</div></div>
+              <input ref={photoInput} className={styles.hiddenInput} type="file" accept="image/*" onChange={choosePhoto} />
+            </div>
             <div className={styles.formGrid}>
-              <label>
-                <span>Full name</span>
-                <input
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  autoComplete="name"
-                  placeholder="Your full name"
-                />
-              </label>
-              <label>
-                <span>Display name</span>
-                <input
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="Name shown inside Ficonter"
-                />
-              </label>
+              <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" /></label>
+              <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
             </div>
-
-            <div className={styles.infoStrip}>
-              <UserRound size={18} />
-              <div>
-                <strong>Profile identity</strong>
-                <span>
-                  Your display name is used for greetings and account-facing
-                  personalization only.
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.actions}>
-              <button className={styles.primaryButton} disabled={loading}>
-                <Save size={16} />
-                {loading ? "Saving…" : "Save profile"}
-              </button>
-            </div>
+            <label><span>Email address</span><input value={email} disabled /></label>
+            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save changes"}</button></div>
           </form>
         ) : null}
 
         {active === "security" ? (
           <div className={styles.stack}>
             <form className={styles.formCard} onSubmit={updateEmail}>
-              <div className={styles.cardHeading}>
-                <KeyRound size={19} />
-                <div>
-                  <h3>Email address</h3>
-                  <p>Your email is also your secure login identity.</p>
-                </div>
-              </div>
-              <label>
-                <span>Account email</span>
-                <input
-                  type="email"
-                  value={accountEmail}
-                  onChange={(event) => setAccountEmail(event.target.value)}
-                  autoComplete="email"
-                  required
-                />
-              </label>
-              <div className={styles.actions}>
-                <button className={styles.secondaryButton} disabled={loading}>
-                  Update email
-                </button>
-              </div>
+              <div className={styles.cardHeading}><Mail size={19} /><div><h3>Email address</h3><p>Your email is your login identity.</p></div></div>
+              <label><span>Account email</span><input type="email" value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} required /></label>
+              <div className={styles.actions}><button className={styles.secondaryButton} disabled={loading}>Update email</button></div>
             </form>
-
             <form className={styles.formCard} onSubmit={updatePassword}>
-              <div className={styles.cardHeading}>
-                <LockKeyhole size={19} />
-                <div>
-                  <h3>Change password</h3>
-                  <p>Use a strong password that you do not use elsewhere.</p>
-                </div>
-              </div>
-
-              <label>
-                <span>Current password</span>
-                <div className={styles.passwordField}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(event) => setCurrentPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder="Recommended for verification"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((current) => !current)}
-                    aria-label={showPassword ? "Hide passwords" : "Show passwords"}
-                  >
-                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </button>
-                </div>
-              </label>
-
-              <div className={styles.formGrid}>
-                <label>
-                  <span>New password</span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    minLength={8}
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    autoComplete="new-password"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Confirm new password</span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    autoComplete="new-password"
-                    required
-                  />
-                </label>
-              </div>
-
-              <div className={styles.actions}>
-                <button className={styles.primaryButton} disabled={loading}>
-                  Change password
-                </button>
-              </div>
+              <div className={styles.cardHeading}><KeyRound size={19} /><div><h3>Change password</h3><p>Use at least eight characters.</p></div></div>
+              <label><span>Current password</span><div className={styles.passwordField}><input type={showPassword ? "text" : "password"} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+              <div className={styles.formGrid}><label><span>New password</span><input type={showPassword ? "text" : "password"} minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></label><label><span>Confirm password</span><input type={showPassword ? "text" : "password"} minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></label></div>
+              <div className={styles.cardActions}><Link className={styles.textLink} href="/recover-account?mode=password">Forgot password?</Link><button className={styles.primaryButton} disabled={loading}>Change password</button></div>
             </form>
+            <div className={styles.formCard}>
+              <div className={styles.cardHeading}><Smartphone size={19} /><div><h3>Remember this device</h3><p>Keep your login active only on a private device.</p></div></div>
+              <Toggle checked={rememberDevice} onChange={saveRememberDevice} label="Persistent login on this device" />
+            </div>
+            <div className={styles.formCard}>
+              <div className={styles.cardHeading}><Monitor size={19} /><div><h3>Active sessions</h3><p>Supabase exposes the current browser session to the app. Other sessions can be revoked securely.</p></div></div>
+              <div className={styles.sessionRow}><span className={styles.sessionIcon}><Monitor size={17} /></span><div><strong>{currentDeviceLabel()}</strong><small>Current session · active now</small></div><span className={styles.currentBadge}>Current</span></div>
+              <div className={styles.cardActions}><button type="button" className={styles.secondaryButton} onClick={signOutOtherSessions} disabled={loading}>Sign out other sessions</button><button type="button" className={styles.dangerOutline} onClick={signOutEverywhere} disabled={loading}><LogOut size={16} />Log out from all devices</button></div>
+            </div>
           </div>
         ) : null}
 
         {active === "financial" ? (
-          <form
-            className={styles.form}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void savePreferences(
-                preferences,
-                "Financial preferences saved.",
-              );
-            }}
-          >
+          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
             <div className={styles.formGrid}>
-              <label>
-                <span>Default currency</span>
-                <select
-                  value={preferences.currency}
-                  onChange={(event) =>
-                    setPreferences((current) => ({
-                      ...current,
-                      currency: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="CHF">CHF — Swiss Franc</option>
-                  <option value="ALL">ALL — Albanian Lek</option>
-                </select>
-              </label>
-              <label>
-                <span>Number format</span>
-                <select
-                  value={preferences.numberFormat}
-                  onChange={(event) =>
-                    setPreferences((current) => ({
-                      ...current,
-                      numberFormat: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="de-DE">1.234,56</option>
-                  <option value="en-US">1,234.56</option>
-                  <option value="fr-FR">1 234,56</option>
-                </select>
-              </label>
-              <label>
-                <span>Date format</span>
-                <select
-                  value={preferences.dateFormat}
-                  onChange={(event) =>
-                    setPreferences((current) => ({
-                      ...current,
-                      dateFormat: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
-              </label>
-              <label>
-                <span>First day of the week</span>
-                <select
-                  value={preferences.weekStart}
-                  onChange={(event) =>
-                    setPreferences((current) => ({
-                      ...current,
-                      weekStart: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="monday">Monday</option>
-                  <option value="sunday">Sunday</option>
-                </select>
-              </label>
+              <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
+              <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
+              <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
+              <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
             </div>
-
-            <div className={styles.infoStrip}>
-              <LayoutTemplate size={18} />
-              <div>
-                <strong>Calculation currency remains EUR</strong>
-                <span>
-                  Ficonter continues to preserve original currencies and use
-                  historical EUR equivalents for calculations.
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.actions}>
-              <button className={styles.primaryButton} disabled={loading}>
-                <Save size={16} />
-                Save preferences
-              </button>
-            </div>
+            <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
+            <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
+            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
           </form>
         ) : null}
 
-        {active === "appearance" ? (
-          <form
-            className={styles.form}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void savePreferences(preferences, "Appearance preferences saved.");
-            }}
-          >
-            <fieldset className={styles.optionGroup}>
-              <legend>Interface appearance</legend>
-              <div className={styles.optionGrid}>
-                {[
-                  ["light", "Light", "The current refined Ficonter workspace"],
-                  ["system", "System", "Follow your device appearance"],
-                  ["dark", "Dark", "Prepared for a future interface release"],
-                ].map(([value, label, description]) => (
-                  <label className={styles.optionCard} key={value}>
-                    <input
-                      type="radio"
-                      name="appearance"
-                      value={value}
-                      checked={preferences.appearance === value}
-                      onChange={() =>
-                        setPreferences((current) => ({
-                          ...current,
-                          appearance: value,
-                        }))
-                      }
-                    />
-                    <span className={styles.optionPreview} data-theme={value} />
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className={styles.optionGroup}>
-              <legend>Layout density</legend>
-              <div className={styles.segmented}>
-                {[
-                  ["comfortable", "Comfortable"],
-                  ["compact", "Compact"],
-                ].map(([value, label]) => (
-                  <label key={value}>
-                    <input
-                      type="radio"
-                      name="density"
-                      value={value}
-                      checked={preferences.density === value}
-                      onChange={() =>
-                        setPreferences((current) => ({
-                          ...current,
-                          density: value,
-                        }))
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <div className={styles.actions}>
-              <button className={styles.primaryButton} disabled={loading}>
-                <Save size={16} />
-                Save appearance
-              </button>
+        {active === "notifications" ? (
+          <div className={styles.stack}>
+            <div className={styles.formCard}><div className={styles.cardHeading}><Bell size={19} /><div><h3>Notification preferences</h3><p>These preferences are stored on your account and ready for Ficonter notification delivery.</p></div></div>
+              <Toggle checked={preferences.notifications.emailEnabled} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, emailEnabled: value } }))} label="Email notifications" />
+              <Toggle checked={preferences.notifications.billReminders} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, billReminders: value } }))} label="Bill reminders" disabled={!preferences.notifications.emailEnabled} />
+              <Toggle checked={preferences.notifications.upcomingPayments} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, upcomingPayments: value } }))} label="Upcoming payment alerts" disabled={!preferences.notifications.emailEnabled} />
+              <Toggle checked={preferences.notifications.goalProgress} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, goalProgress: value } }))} label="Goal progress alerts" disabled={!preferences.notifications.emailEnabled} />
+              <Toggle checked={preferences.notifications.monthlySummary} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, monthlySummary: value } }))} label="Monthly financial summary" disabled={!preferences.notifications.emailEnabled} />
+              <div className={styles.actions}><button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.")}><Save size={16} />Save notifications</button></div>
             </div>
+          </div>
+        ) : null}
+
+        {active === "appearance" ? (
+          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
+            <fieldset className={styles.optionGroup}><legend>Theme</legend><div className={styles.optionGrid}>{[['light','Light','Bright private workspace'],['dark','Dark','Low-light interface'],['system','System default','Follow device preference']].map(([value,label,description]) => <label className={styles.optionCard} key={value}><input type="radio" checked={preferences.appearance === value} onChange={() => { const next = { ...preferences, appearance: value as Preferences['appearance'] }; setPreferences(next); applyInterface(next); }} /><span className={styles.optionPreview} data-theme={value} /><strong>{label}</strong><small>{description}</small></label>)}</div></fieldset>
+            <fieldset className={styles.optionGroup}><legend>Layout density</legend><div className={styles.segmented}>{(['comfortable','compact'] as const).map((value) => <label key={value}><input type="radio" checked={preferences.density === value} onChange={() => { const next = { ...preferences, density: value }; setPreferences(next); applyInterface(next); }} /><span>{value === 'comfortable' ? 'Comfortable' : 'Compact'}</span></label>)}</div></fieldset>
+            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
           </form>
         ) : null}
 
         {active === "privacy" ? (
           <div className={styles.stack}>
-            <div className={styles.privacyCard}>
-              <div className={styles.cardHeading}>
-                <Download size={19} />
-                <div>
-                  <h3>Export account data</h3>
-                  <p>
-                    Download a private JSON archive of the financial records
-                    currently connected to your account.
-                  </p>
-                </div>
-              </div>
-              <button
-                className={styles.primaryButton}
-                type="button"
-                onClick={() => void exportAccountData()}
-                disabled={loading}
-              >
-                <Download size={16} />
-                {loading ? "Preparing…" : "Download account export"}
-              </button>
-            </div>
+            <ActionCard icon={ReceiptText} title="Export all transaction data" description="Download your full transaction history as CSV." button="Export transactions" onClick={exportTransactions} disabled={loading} />
+            <ActionCard icon={Download} title="Export account data" description="Download profile, preferences and available financial records as JSON." button="Export account data" onClick={exportAccountData} disabled={loading} />
+            <div className={styles.infoGrid}><button type="button" onClick={() => setDialog("privacy")}><ShieldCheck size={18} /><span><strong>Privacy information</strong><small>How Ficonter handles your records</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setDialog("retention")}><FileText size={18} /><span><strong>Data retention</strong><small>When records remain or are removed</small></span><ChevronRight size={16} /></button></div>
+            <div className={styles.dangerZone}><div><span className={styles.eyebrow}>Danger zone</span><h3>Permanent data controls</h3><p>These actions require a custom confirmation and cannot be undone.</p></div><div className={styles.dangerActions}><button type="button" className={styles.dangerOutline} onClick={() => { setDialog("delete-records"); setConfirmation(""); }}><Trash2 size={16} />Delete financial records</button><button type="button" className={styles.dangerButton} onClick={() => { setDialog("delete-account"); setConfirmation(""); }}><Trash2 size={16} />Delete account</button></div></div>
+          </div>
+        ) : null}
 
-            <div className={styles.privacyCard}>
-              <div className={styles.cardHeading}>
-                <ShieldCheck size={19} />
-                <div>
-                  <h3>Private by design</h3>
-                  <p>
-                    Your account is authenticated through Supabase and your
-                    records remain isolated by account-level access policies.
-                  </p>
-                </div>
-              </div>
-              <div className={styles.privacyFacts}>
-                <span><Check size={15} /> No advertising profile</span>
-                <span><Check size={15} /> No sale of financial records</span>
-                <span><Check size={15} /> Account-scoped data access</span>
-              </div>
-            </div>
+        {active === "subscription" ? (
+          <div className={styles.stack}>
+            <div className={styles.planCard}><div><span className={styles.eyebrow}>Current plan</span><h3>Ficonter Preview</h3><p>Your account currently uses the development preview plan.</p></div><span className={styles.defaultBadge}>Active</span></div>
+            <div className={styles.disabledGrid}>{['Billing cycle','Upgrade plan','Cancel subscription','Invoices'].map((label) => <div key={label}><CreditCard size={17} /><strong>{label}</strong><small>Available when paid subscriptions launch</small><button disabled>Coming soon</button></div>)}</div>
           </div>
         ) : null}
 
         {active === "language" ? (
-          <div className={styles.languageCard}>
-            <div className={styles.languageIcon}>
-              <Globe2 size={26} />
-            </div>
-            <div>
-              <span className={styles.eyebrow}>Standard language</span>
-              <h3>English</h3>
-              <p>
-                Every new Ficonter account uses English by default. Additional
-                languages will be introduced after the complete translation
-                system is ready.
-              </p>
-            </div>
-            <span className={styles.defaultBadge}>Default</span>
-          </div>
+          <div className={styles.languageCard}><span className={styles.languageIcon}><Languages size={25} /></span><div><h3>English — Default</h3><p>English is the standard language for every new Ficonter account. More languages will be added after the translation system is connected.</p></div><span className={styles.defaultBadge}>Disabled for now</span></div>
         ) : null}
       </main>
+
+      {dialog ? <Modal title={dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
+        {dialog === "privacy" ? <div className={styles.modalCopy}><p>Ficonter stores the profile and financial records required to provide your private finance workspace. Account preferences are stored in your authenticated user metadata. Financial data is protected by Supabase row-level access controls.</p><p>Ficonter does not become a bank, move funds or provide credit decisions.</p></div> : null}
+        {dialog === "retention" ? <div className={styles.modalCopy}><p>Your records remain available while your account is active. You may export them at any time. Deleting financial records removes the selected financial tables while preserving your login. Deleting your account removes the account and associated data permanently.</p></div> : null}
+        {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, debt records and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
+        {dialog === "delete-account" ? <div className={styles.modalCopy}><p>This permanently removes your Ficonter account and all associated records. This action cannot be undone.</p><label>Type <strong>DELETE ACCOUNT</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className={styles.dangerButton} disabled={confirmation !== "DELETE ACCOUNT" || loading} onClick={deleteAccount}>{loading ? "Deleting…" : "Delete account permanently"}</button></div> : null}
+      </Modal> : null}
     </div>
   );
+}
+
+function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (value: boolean) => void | Promise<void>; label: string; disabled?: boolean }) {
+  return <label className={`${styles.toggleRow}${disabled ? ` ${styles.toggleDisabled}` : ""}`}><span>{label}</span><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => void onChange(event.target.checked)} /><i aria-hidden="true" /></label>;
+}
+
+function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: [string,string][] }) {
+  return <label><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}</select></label>;
+}
+
+function ActionCard({ icon: Icon, title, description, button, onClick, disabled }: { icon: typeof Download; title: string; description: string; button: string; onClick: () => void | Promise<void>; disabled: boolean }) {
+  return <div className={styles.privacyCard}><div className={styles.cardHeading}><Icon size={19} /><div><h3>{title}</h3><p>{description}</p></div></div><button type="button" className={styles.secondaryButton} onClick={() => void onClick()} disabled={disabled}><Download size={16} />{button}</button></div>;
+}
+
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return <div className={styles.backdrop} onMouseDown={onClose}><div className={styles.modal} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}><button className={styles.close} type="button" onClick={onClose}><X size={18} /></button><span className={styles.eyebrow}>Ficonter settings</span><h2>{title}</h2>{children}</div></div>;
 }

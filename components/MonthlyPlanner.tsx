@@ -123,7 +123,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       <article className={styles.bars}><h3>Budget vs actual</h3>{sections.map(s=>{const max=Math.max(planned(s.key),actual(s.key),1);return <div key={s.key}><span>{s.title}</span><i><b style={{width:`${planned(s.key)/max*100}%`}}/><em style={{width:`${actual(s.key)/max*100}%`}}/></i></div>})}</article>
       <article className={styles.breakdown}><h3>Breakdown</h3><div className={styles.pie} style={{background:gradient}}/><div>{spendingParts.map((p,i)=><span key={p.key}><i style={{background:palette[i%palette.length]}}/>{p.key} {totalOut?Math.round(p.value/totalOut*100):0}%</span>)}</div></article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Start balance<b>{eur(startBalance)}</b></span><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);
@@ -177,7 +177,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 .filter(
                   (transaction) =>
                     transaction.type !== "income" &&
-                    classify(transaction) === "savings",
+                    classify(transaction) === "savings" &&
+                    !isGoalInvestment(transaction),
                 )
                 .reduce<Record<string, number>>((rows, transaction) => {
                   rows[transaction.description] =

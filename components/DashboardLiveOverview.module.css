@@ -49,7 +49,25 @@
 .liveTable {
   display: grid;
   gap: 0;
+  max-height: 900px;
   margin-top: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 6px;
+}
+
+.liveTable:focus-visible {
+  outline: 2px solid #b69a6a;
+  outline-offset: 4px;
+  border-radius: 14px;
+}
+
+.scrollHint {
+  margin: 10px 0 0;
+  color: #89837b;
+  font-size: 0.75rem;
+  text-align: right;
 }
 
 .transactionRow {
@@ -57,6 +75,7 @@
   grid-template-columns: 42px minmax(0, 1fr) minmax(145px, auto);
   gap: 13px;
   align-items: center;
+  min-height: 90px;
   padding: 16px 4px;
   border-bottom: 1px solid rgba(31, 35, 38, 0.08);
 }
@@ -184,3 +203,5 @@
 :global(html[data-resolved-theme="dark"]) :is(.transactionMain span,.transactionMain small,.transactionAmount span,.infoCard p,.kpiNote) { color: var(--text-secondary) !important; }
 :global(html[data-resolved-theme="dark"]) .incomeIcon { background: #263b34 !important; color: #a7c9b7 !important; }
 :global(html[data-resolved-theme="dark"]) .expenseIcon { background: #412a2d !important; color: #e6a4a4 !important; }
+
+:global(html[data-resolved-theme="dark"]) .scrollHint { color: var(--text-secondary) !important; }

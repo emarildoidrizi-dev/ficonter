@@ -187,7 +187,7 @@ export function DashboardLiveOverview({
   const savingsRate = totals.income
     ? Math.max(0, (cashFlow / totals.income) * 100)
     : 0;
-  const recent = transactions.slice(0, 8);
+  const recent = transactions;
 
   return (
     <>
@@ -261,7 +261,12 @@ export function DashboardLiveOverview({
           </div>
 
           {recent.length ? (
-            <div className={styles.liveTable}>
+            <>
+            <div
+              className={styles.liveTable}
+              tabIndex={recent.length > 10 ? 0 : undefined}
+              aria-label="Live transaction history. The newest ten transactions are visible first; scroll for older records."
+            >
               {recent.map((transaction) => {
                 const currency = transaction.currency || "EUR";
                 const originalAmount = Number(transaction.amount);
@@ -302,6 +307,8 @@ export function DashboardLiveOverview({
                 );
               })}
             </div>
+            {recent.length > 10 && <p className={styles.scrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}
+            </>
           ) : (
             <div className="empty">
               Your financial story begins with your first transaction.

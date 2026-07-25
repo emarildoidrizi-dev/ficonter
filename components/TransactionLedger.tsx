@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Download,
+  FileText,
   Pencil,
   RotateCcw,
   Search,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
 import {
   CATEGORY_GROUPS,
   CURRENCY_CODES,
@@ -106,6 +108,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
   const [editRateLoading, setEditRateLoading] = useState(false);
   const [editRateError, setEditRateError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -276,6 +279,44 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     window.setTimeout(() => setNotice(""), 2600);
   }
 
+  async function exportPdf() {
+    if (!visible.length || exportingPdf) return;
+    setExportingPdf(true);
+    setError("");
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Your account could not be verified for this export.");
+
+      const metadata = user.user_metadata as Record<string, unknown> | undefined;
+      const ownerName = String(
+        metadata?.display_name ?? metadata?.full_name ?? user.email ?? "FICONTER account holder",
+      );
+      const exportedAt = new Date().toISOString();
+      const pdf = await createTransactionsPdf(
+        visible.map((transaction) => ({
+          description: transaction.description,
+          category: transaction.category,
+          type: typeLabel(transaction.type),
+          direction: directionOf(transaction.type),
+          currency: transaction.currency || "EUR",
+          amount: Number(transaction.amount),
+          amount_eur: Number(transaction.amount_eur ?? transaction.amount),
+          occurred_at: transaction.occurred_at ?? `${transaction.transaction_date}T00:00:00`,
+        })),
+        { ownerName, email: user.email ?? "", locale: "en-US", exportedAt },
+      );
+
+      triggerDownload(`ficonter-transactions-${exportedAt.slice(0, 10)}.pdf`, pdf);
+      setNotice("PDF export downloaded.");
+      window.setTimeout(() => setNotice(""), 2600);
+    } catch (pdfError) {
+      setError(pdfError instanceof Error ? pdfError.message : "The PDF export could not be created.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   function openEdit(transaction: Transaction) {
     const isKnownCategory = CATEGORY_GROUPS.some((group) => group.items.includes(transaction.category));
     setEditCategory(isKnownCategory ? transaction.category : "Other / custom");
@@ -412,6 +453,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         </label>
         <button className={styles.secondaryAction} type="button" onClick={clearFilters}><RotateCcw size={16} /> Reset</button>
         <button className={styles.exportButton} type="button" onClick={exportCsv} disabled={!visible.length}><Download size={16} /> Export CSV</button>
+        <button className={styles.exportButton} type="button" onClick={() => void exportPdf()} disabled={!visible.length || exportingPdf}><FileText size={16} /> {exportingPdf ? "Preparing PDF…" : "Export PDF"}</button>
       </div>
 
       <div className={`${styles.toolbar} ${styles.toolbarFive}`}>
@@ -436,7 +478,12 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       {notice && <div className={styles.notice}>{notice}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
-      <div className={styles.list}>
+      <div
+        className={styles.listViewport}
+        tabIndex={visible.length > 10 ? 0 : undefined}
+        aria-label="Transaction history. The newest ten transactions are visible first; scroll for older records."
+      >
+        <div className={styles.list}>
         {visible.map((transaction) => {
           const direction = directionOf(transaction.type);
           return (
@@ -451,7 +498,9 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             </article>
           );
         })}
+        </div>
       </div>
+      {visible.length > 10 && <div className={styles.scrollHint}>Showing 10 transactions at a time · Scroll for {visible.length - 10} older matching records</div>}
       {!visible.length && <div className={styles.empty}>No transactions match your filters.</div>}
 
       {editTarget && (

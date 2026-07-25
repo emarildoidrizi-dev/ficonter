@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { notifyLumeraDataChange } from "@/lib/lumeraRealtime";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import {
   CATEGORY_GROUPS,
   CURRENCY_CODES,
@@ -156,9 +156,7 @@ export function TransactionForm() {
         throw new Error("Please enter a description.");
       }
 
-      const now = new Date().toISOString();
-      const optimisticTransaction = {
-        id: crypto.randomUUID(),
+      const payload = {
         user_id: user.id,
         description,
         amount: originalAmount,
@@ -171,14 +169,22 @@ export function TransactionForm() {
         category: finalCategory,
         transaction_date: occurredAt.slice(0, 10),
         occurred_at: localInstant.toISOString(),
-        created_at: now,
       };
 
-      // Update the ledger and reset the form immediately. The database write
-      // continues in the background, so the button never remains stuck.
+      const { data: savedTransaction, error: insertError } = await supabase
+        .from("transactions")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (insertError) throw insertError;
+      if (!savedTransaction) {
+        throw new Error("The saved transaction could not be returned.");
+      }
+
       window.dispatchEvent(
-        new CustomEvent("lumera:transaction-created", {
-          detail: optimisticTransaction,
+        new CustomEvent("ficonter:transaction-created", {
+          detail: savedTransaction,
         }),
       );
 
@@ -189,24 +195,10 @@ export function TransactionForm() {
       setOccurredAt(localDateTimeValue());
       setCategory("Groceries");
       setCustomCategory("");
-      setLoading(false);
-
-      const { error: insertError } = await supabase
-        .from("transactions")
-        .insert(optimisticTransaction);
-
-      if (insertError) {
-        window.dispatchEvent(
-          new CustomEvent("lumera:transaction-save-failed", {
-            detail: { id: optimisticTransaction.id },
-          }),
-        );
-        throw insertError;
-      }
-
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save this transaction.");
+    } finally {
       setLoading(false);
     }
   }

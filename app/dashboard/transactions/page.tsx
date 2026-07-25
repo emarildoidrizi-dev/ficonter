@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionLedger } from "@/components/TransactionLedger";
@@ -7,9 +8,16 @@ export const revalidate = 0;
 
 export default async function TransactionsPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
   const { data, error } = await supabase
     .from("transactions")
     .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
+    .eq("user_id", user.id)
     .order("occurred_at", { ascending: false });
 
   return (

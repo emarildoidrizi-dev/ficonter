@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { lumeraRealtimeKeys } from "@/lib/lumeraRealtime";
+import { ficonterRealtimeKeys } from "@/lib/ficonterRealtime";
 
 export function RealtimeRefreshBridge() {
   const router = useRouter();
@@ -23,21 +23,21 @@ export function RealtimeRefreshBridge() {
     }
 
     function onStorage(event: StorageEvent) {
-      if (event.key === lumeraRealtimeKeys.storage) refreshSoon();
+      if (event.key === ficonterRealtimeKeys.storage) refreshSoon();
     }
 
     function onVisibility() {
       if (document.visibilityState === "visible") refreshSoon();
     }
 
-    window.addEventListener("lumera:data-changed", onCustomEvent);
+    window.addEventListener("ficonter:data-changed", onCustomEvent);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", refreshSoon);
     document.addEventListener("visibilitychange", onVisibility);
 
     let channel: BroadcastChannel | null = null;
     try {
-      channel = new BroadcastChannel(lumeraRealtimeKeys.channel);
+      channel = new BroadcastChannel(ficonterRealtimeKeys.channel);
       channel.addEventListener("message", refreshSoon);
     } catch {
       channel = null;
@@ -45,7 +45,7 @@ export function RealtimeRefreshBridge() {
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
-      window.removeEventListener("lumera:data-changed", onCustomEvent);
+      window.removeEventListener("ficonter:data-changed", onCustomEvent);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", refreshSoon);
       document.removeEventListener("visibilitychange", onVisibility);

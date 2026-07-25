@@ -35,7 +35,7 @@ export function AccountRecoveryForm({
     setMessage(null);
 
     try {
-      const redirectTo = `${window.location.origin}/update-password`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=/update-password`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,

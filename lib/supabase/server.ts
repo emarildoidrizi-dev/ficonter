@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
-const TRUST_COOKIE = "lumera_trusted_device";
+const TRUST_COOKIE = "ficonter_trusted_device";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -13,7 +13,8 @@ export async function createClient() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const keepSignedIn = cookieStore.get(TRUST_COOKIE)?.value === "1";
+  const keepSignedIn =
+    cookieStore.get(TRUST_COOKIE)?.value === "1";
 
   return createServerClient(url, key, {
     cookieOptions: {

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
 
@@ -10,11 +11,14 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) redirect("/login");
+
   const { data: transactions, error } = await supabase
     .from("transactions")
     .select(
       "id,user_id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,type,category,transaction_date,occurred_at,created_at",
     )
+    .eq("user_id", user.id)
     .order("occurred_at", { ascending: false })
     .limit(250);
 
@@ -24,7 +28,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardLiveOverview
-      userId={user?.id ?? ""}
+      userId={user.id}
       name={name}
       initialTransactions={transactions ?? []}
       initialError={error?.message ?? ""}

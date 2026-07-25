@@ -115,16 +115,16 @@ export function DashboardLiveOverview({
       setTransactions((current) => current.filter((item) => item.id !== id));
     }
 
-    window.addEventListener("lumera:transaction-created", upsert);
-    window.addEventListener("lumera:transaction-upserted", upsert);
-    window.addEventListener("lumera:transaction-deleted", remove);
-    window.addEventListener("lumera:transaction-save-failed", remove);
+    window.addEventListener("ficonter:transaction-created", upsert);
+    window.addEventListener("ficonter:transaction-upserted", upsert);
+    window.addEventListener("ficonter:transaction-deleted", remove);
+    window.addEventListener("ficonter:transaction-save-failed", remove);
 
     return () => {
-      window.removeEventListener("lumera:transaction-created", upsert);
-      window.removeEventListener("lumera:transaction-upserted", upsert);
-      window.removeEventListener("lumera:transaction-deleted", remove);
-      window.removeEventListener("lumera:transaction-save-failed", remove);
+      window.removeEventListener("ficonter:transaction-created", upsert);
+      window.removeEventListener("ficonter:transaction-upserted", upsert);
+      window.removeEventListener("ficonter:transaction-deleted", remove);
+      window.removeEventListener("ficonter:transaction-save-failed", remove);
     };
   }, []);
 

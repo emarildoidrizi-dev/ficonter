@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
-const TRUST_COOKIE = "lumera_trusted_device";
+const TRUST_COOKIE = "ficonter_trusted_device";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -14,7 +14,8 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
-  const keepSignedIn = request.cookies.get(TRUST_COOKIE)?.value === "1";
+  const keepSignedIn =
+    request.cookies.get(TRUST_COOKIE)?.value === "1";
 
   const supabase = createServerClient(url, key, {
     cookieOptions: {

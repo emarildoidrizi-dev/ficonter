@@ -164,7 +164,7 @@ export function TransactionForm() {
       // Update the ledger and reset the form immediately. The database write
       // continues in the background, so the button never remains stuck.
       window.dispatchEvent(
-        new CustomEvent("lumera:transaction-created", {
+        new CustomEvent("ficonter:transaction-created", {
           detail: optimisticTransaction,
         }),
       );
@@ -183,7 +183,7 @@ export function TransactionForm() {
 
       if (insertError) {
         window.dispatchEvent(
-          new CustomEvent("lumera:transaction-save-failed", {
+          new CustomEvent("ficonter:transaction-save-failed", {
             detail: { id: optimisticTransaction.id },
           }),
         );

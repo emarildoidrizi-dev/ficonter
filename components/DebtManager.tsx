@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import {
   CURRENCY_CODES,
   currencyName,
@@ -126,9 +127,9 @@ async function convertToEur(amount: number, currency: string) {
     throw new Error(`EUR conversion is unavailable for ${currency}.`);
   }
 
-  const data = await response.json();
-  const eur = Number(data?.convertedAmount ?? data?.amount_eur ?? data?.result);
-  const rate = Number(data?.rate ?? (eur / amount));
+  const data = await response.json().catch(() => null);
+  const rate = Number(data?.rate);
+  const eur = Number(data?.convertedAmount ?? amount * rate);
 
   if (!Number.isFinite(eur) || !Number.isFinite(rate) || rate <= 0) {
     throw new Error("The exchange rate could not be calculated.");
@@ -365,6 +366,7 @@ export function DebtManager({
         setNotice("Debt added.");
       }
 
+      notifyFiconterDataChange("debts");
       resetDebtForm();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Debt could not be saved.");
@@ -400,29 +402,8 @@ export function DebtManager({
       const conversion = await convertToEur(amount, debt.currency);
       const occurredAt = new Date(`${paidAt}T12:00:00`).toISOString();
 
-      const { data: transaction, error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: userId,
-          description: `Debt payment · ${debt.name}`,
-          amount,
-          currency: debt.currency,
-          amount_eur: Number(conversion.eur.toFixed(2)),
-          exchange_rate_to_eur: Number(conversion.rate.toFixed(10)),
-          exchange_rate_date: paidAt,
-          exchange_rate_source: "Debt payment conversion",
-          type: "expense",
-          category: "Debt repayment",
-          transaction_date: paidAt,
-          occurred_at: occurredAt,
-        })
-        .select("id")
-        .single();
-
-      if (transactionError) throw transactionError;
-
       const { data: result, error: paymentError } = await supabase.rpc(
-        "record_debt_payment",
+        "record_debt_payment_atomic",
         {
           p_debt_id: debt.id,
           p_amount: amount,
@@ -430,18 +411,11 @@ export function DebtManager({
           p_exchange_rate: Number(conversion.rate.toFixed(10)),
           p_paid_at: occurredAt,
           p_notes: notes || null,
-          p_transaction_id: transaction.id,
+          p_exchange_rate_date: paidAt,
         },
       );
 
-      if (paymentError) {
-        await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", transaction.id)
-          .eq("user_id", userId);
-        throw paymentError;
-      }
+      if (paymentError) throw paymentError;
 
       const updatedDebt = (result as { debt?: Debt })?.debt;
       const newPayment = (result as { payment?: DebtPayment })?.payment;
@@ -456,6 +430,7 @@ export function DebtManager({
       }
 
       setPaymentDebt(null);
+      notifyFiconterDataChange("all");
       setNotice("Payment recorded and added to Transactions.");
     } catch (error) {
       setNotice(
@@ -472,22 +447,24 @@ export function DebtManager({
     setBusy(`delete-payment-${payment.id}`);
 
     try {
-      const { error } = await supabase.rpc("reverse_debt_payment", {
-        p_payment_id: payment.id,
-      });
+      const { data: result, error } = await supabase.rpc(
+        "reverse_debt_payment_atomic",
+        { p_payment_id: payment.id },
+      );
       if (error) throw error;
 
-      if (payment.transaction_id) {
-        const { error: txError } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", payment.transaction_id)
-          .eq("user_id", userId);
-        if (txError) throw txError;
+      const restoredDebt = (result as { debt?: Debt } | null)?.debt;
+      if (restoredDebt) {
+        setDebts((current) =>
+          current.map((item) =>
+            item.id === restoredDebt.id ? restoredDebt : item,
+          ),
+        );
       }
 
       setPayments((current) => current.filter((item) => item.id !== payment.id));
       setDeletingPayment(null);
+      notifyFiconterDataChange("all");
       setNotice("Payment deleted and debt balance restored.");
     } catch (error) {
       setNotice(
@@ -504,25 +481,9 @@ export function DebtManager({
     setBusy(`delete-debt-${debt.id}`);
 
     try {
-      const linkedPayments = payments.filter((payment) => payment.debt_id === debt.id);
-      const transactionIds = linkedPayments
-        .map((payment) => payment.transaction_id)
-        .filter(Boolean) as string[];
-
-      if (transactionIds.length) {
-        const { error: transactionError } = await supabase
-          .from("transactions")
-          .delete()
-          .in("id", transactionIds)
-          .eq("user_id", userId);
-        if (transactionError) throw transactionError;
-      }
-
-      const { error } = await supabase
-        .from("debts")
-        .delete()
-        .eq("id", debt.id)
-        .eq("user_id", userId);
+      const { error } = await supabase.rpc("delete_debt_with_payments", {
+        p_debt_id: debt.id,
+      });
       if (error) throw error;
 
       setDebts((current) => current.filter((item) => item.id !== debt.id));
@@ -530,6 +491,7 @@ export function DebtManager({
         current.filter((payment) => payment.debt_id !== debt.id),
       );
       setDeletingDebt(null);
+      notifyFiconterDataChange("all");
       setNotice("Debt and linked payment history deleted.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Debt could not be deleted.");
@@ -544,7 +506,7 @@ export function DebtManager({
         <div>
           <h1>Debt</h1>
           <p>
-            Track every liability, record repayments and keep Lumera synchronized
+            Track every liability, record repayments and keep Ficonter synchronized
             across Transactions, Monthly Planner and Net Worth.
           </p>
         </div>

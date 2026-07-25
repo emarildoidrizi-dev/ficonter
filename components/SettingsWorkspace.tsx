@@ -40,6 +40,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient, saveTrustedDevicePreference } from "@/lib/supabase/client";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -159,7 +160,10 @@ function applyInterface(preferences: Preferences) {
   const root = document.documentElement;
   root.dataset.theme = preferences.appearance;
   root.dataset.density = preferences.density;
-  root.style.colorScheme = preferences.appearance === "dark" ? "dark" : "light";
+  root.style.colorScheme =
+    preferences.appearance === "system"
+      ? "light dark"
+      : preferences.appearance;
   localStorage.setItem("ficonter-appearance", preferences.appearance);
   localStorage.setItem("ficonter-density", preferences.density);
 }
@@ -240,10 +244,10 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    const trusted = document.cookie
+    const cookies = document.cookie
       .split(";")
-      .map((item) => item.trim())
-      .includes("lumera_trusted_device=1");
+      .map((item) => item.trim());
+    const trusted = cookies.includes("ficonter_trusted_device=1");
     setRememberDevice(trusted);
     applyInterface(preferences);
   }, []);
@@ -519,11 +523,26 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     setLoading(true);
     setMessage(null);
     try {
-      const tables = ["transactions", "bills", "debts", "debt_payments", "monthly_budget_plans", "monthly_budget_items"] as const;
-      const results = await Promise.all(tables.map(async (table) => {
-        const { data, error } = await supabase.from(table).select("*").eq("user_id", userId);
-        return [table, error ? [] : data ?? []] as const;
-      }));
+      const tables = [
+        "transactions",
+        "bills",
+        "goals",
+        "goal_investments",
+        "debts",
+        "debt_payments",
+        "monthly_budget_plans",
+        "monthly_budget_items",
+      ] as const;
+      const results = await Promise.all(
+        tables.map(async (table) => {
+          const { data, error } = await supabase
+            .from(table)
+            .select("*")
+            .eq("user_id", userId);
+          if (error) throw error;
+          return [table, data ?? []] as const;
+        }),
+      );
       const payload = {
         exported_at: new Date().toISOString(),
         account: { id: userId, email, full_name: fullName, display_name: displayName },
@@ -544,15 +563,15 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     setLoading(true);
     setMessage(null);
     try {
-      const tables = ["debt_payments", "monthly_budget_items", "monthly_budget_plans", "bills", "debts", "transactions"] as const;
-      for (const table of tables) {
-        const { error } = await supabase.from(table).delete().eq("user_id", userId);
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc("delete_all_financial_records");
+      if (error) throw error;
+
       setDialog(null);
       setConfirmation("");
-      window.dispatchEvent(new CustomEvent("ficonter:data-change", { detail: "all" }));
-      showSuccess("All financial records were deleted. Your account remains active.");
+      notifyFiconterDataChange("all");
+      showSuccess(
+        "All transactions, bills, goals, debts and planner records were deleted. Your account remains active.",
+      );
     } catch (error) {
       showError(error, "Financial records could not be deleted.");
     } finally {
@@ -565,7 +584,11 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch("/api/account/delete", { method: "DELETE" });
+      const response = await fetch("/api/account/delete", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Account deletion failed.");
       await supabase.auth.signOut({ scope: "global" });
@@ -714,7 +737,7 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
       {dialog ? <Modal title={dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
         {dialog === "privacy" ? <div className={styles.modalCopy}><p>Ficonter stores the profile and financial records required to provide your private finance workspace. Account preferences are stored in your authenticated user metadata. Financial data is protected by Supabase row-level access controls.</p><p>Ficonter does not become a bank, move funds or provide credit decisions.</p></div> : null}
         {dialog === "retention" ? <div className={styles.modalCopy}><p>Your records remain available while your account is active. You may export them at any time. Deleting financial records removes the selected financial tables while preserving your login. Deleting your account removes the account and associated data permanently.</p></div> : null}
-        {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, debt records and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
+        {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, goals, debt records and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
         {dialog === "delete-account" ? <div className={styles.modalCopy}><p>This permanently removes your Ficonter account and all associated records. This action cannot be undone.</p><label>Type <strong>DELETE ACCOUNT</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className={styles.dangerButton} disabled={confirmation !== "DELETE ACCOUNT" || loading} onClick={deleteAccount}>{loading ? "Deleting…" : "Delete account permanently"}</button></div> : null}
       </Modal> : null}
     </div>

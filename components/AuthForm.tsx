@@ -43,9 +43,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       );
 
       if (mode === "register") {
-        const redirectTo = `${window.location.origin}/auth/callback`;
+        const redirectTo = `${window.location.origin}/auth/callback?next=/dashboard`;
 
-        const { error } = await supabase.auth.signUp({
+        if (!fullName) {
+          throw new Error("Enter your full name.");
+        }
+
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -55,6 +59,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         });
 
         if (error) throw error;
+
+        if (data.session) {
+          window.location.assign("/dashboard");
+          return;
+        }
 
         setMessage({
           type: "success",

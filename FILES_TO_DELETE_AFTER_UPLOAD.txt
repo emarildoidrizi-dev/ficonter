@@ -1,0 +1,7 @@
+Delete this obsolete file from the GitHub main branch after the bulk upload:
+
+lib/lumeraRealtime.ts
+
+It has been replaced by:
+
+lib/ficonterRealtime.ts

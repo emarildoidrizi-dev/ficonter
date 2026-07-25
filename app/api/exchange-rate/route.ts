@@ -11,12 +11,7 @@ type FrankfurterRate = {
   rate?: number;
 };
 
-const SUPPORTED_CODES = new Set([
-  "AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP",
-  "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
-  "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD",
-  "ZAR",
-]);
+const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -34,9 +29,22 @@ export async function GET(request: NextRequest) {
   const from = (request.nextUrl.searchParams.get("from") ?? "EUR").toUpperCase();
   const to = (request.nextUrl.searchParams.get("to") ?? "EUR").toUpperCase();
 
-  if (!SUPPORTED_CODES.has(from) || !SUPPORTED_CODES.has(to)) {
+  if (!CURRENCY_PATTERN.test(from) || !CURRENCY_PATTERN.test(to)) {
     return NextResponse.json(
-      { error: "Unsupported currency code." },
+      { error: "Use valid three-letter ISO currency codes." },
+      { status: 400, headers: noStoreHeaders() },
+    );
+  }
+
+  const amountParam = request.nextUrl.searchParams.get("amount");
+  const amount = amountParam === null ? null : Number(amountParam);
+
+  if (
+    amount !== null &&
+    (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000)
+  ) {
+    return NextResponse.json(
+      { error: "Use a valid positive conversion amount." },
       { status: 400, headers: noStoreHeaders() },
     );
   }
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
         base: from,
         quote: to,
         rate: 1,
+        convertedAmount: amount,
         date: new Date().toISOString().slice(0, 10),
         source: "identity",
       },
@@ -86,6 +95,8 @@ export async function GET(request: NextRequest) {
         base: data.base ?? from,
         quote: data.quote ?? to,
         rate,
+        convertedAmount:
+          amount === null ? null : Number((amount * rate).toFixed(6)),
         date: data.date ?? new Date().toISOString().slice(0, 10),
         source: "Frankfurter",
       },

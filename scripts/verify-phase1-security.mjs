@@ -56,7 +56,7 @@ assertCheck(
 );
 assertCheck(
   exchangeRate.includes("auth.getUser") &&
-    exchangeRate.includes("SUPPORTED_CODES") &&
+    exchangeRate.includes("CURRENCY_PATTERN") &&
     exchangeRate.includes("AbortSignal.timeout"),
   "Exchange-rate endpoint requires authentication, validates input, and times out upstream calls.",
 );

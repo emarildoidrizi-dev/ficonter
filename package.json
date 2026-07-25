@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "verify:phase1": "node scripts/verify-phase1-security.mjs"
+    "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { notifyLumeraDataChange } from "@/lib/lumeraRealtime";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import styles from "./BillsManager.module.css";
 
 type BillStatus = "pending" | "paid" | "cancelled";
@@ -102,18 +102,27 @@ async function convertToEur(amount: number, currency: string) {
   if (currency === "EUR") return { rate: 1, eur: amount };
 
   const response = await fetch(
-    `https://api.frankfurter.app/latest?amount=${encodeURIComponent(amount)}&from=${currency}&to=EUR`,
+    `/api/exchange-rate?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(
+      currency,
+    )}&to=EUR`,
     { cache: "no-store" },
   );
+  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(`Live EUR conversion is unavailable for ${currency}.`);
+    throw new Error(
+      data?.error || `Live EUR conversion is unavailable for ${currency}.`,
+    );
   }
 
-  const data = await response.json();
-  const eur = Number(data?.rates?.EUR);
-  if (!Number.isFinite(eur)) throw new Error("The exchange rate could not be calculated.");
-  return { rate: eur / amount, eur };
+  const rate = Number(data?.rate);
+  const eur = Number(data?.convertedAmount ?? amount * rate);
+
+  if (!Number.isFinite(eur) || !Number.isFinite(rate) || rate <= 0) {
+    throw new Error("The exchange rate could not be calculated.");
+  }
+
+  return { rate, eur };
 }
 
 export function BillsManager({
@@ -320,7 +329,7 @@ export function BillsManager({
       }
 
       setMessage(editingId ? "Bill updated." : "Bill added.");
-      notifyLumeraDataChange("bills");
+      notifyFiconterDataChange("bills");
       resetForm();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The bill could not be saved.");
@@ -361,7 +370,7 @@ export function BillsManager({
       );
 
       setMessage("Bill marked paid and added to Transactions.");
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -386,30 +395,15 @@ export function BillsManager({
     setMessage("");
 
     try {
-      // A paid bill may have created a linked transaction. Delete that first so
-      // Transactions, Overview and every subscribed tab update immediately.
-      if (bill.transaction_id) {
-        const { error: transactionError } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", bill.transaction_id)
-          .eq("user_id", userId);
+      const { error } = await supabase.rpc("delete_bill_with_transaction", {
+        p_bill_id: bill.id,
+      });
 
-        if (transactionError) throw transactionError;
-      }
+      if (error) throw error;
 
-      const { error: billError } = await supabase
-        .from("bills")
-        .delete()
-        .eq("id", bill.id)
-        .eq("user_id", userId);
-
-      if (billError) throw billError;
-
-      // Update this page immediately; Realtime handles other tabs and sections.
       setBills((current) => current.filter((item) => item.id !== bill.id));
       setBillPendingDeletion(null);
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
       setMessage(
         bill.transaction_id
           ? "Bill and linked transaction deleted."

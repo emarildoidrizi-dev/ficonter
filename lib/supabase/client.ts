@@ -1,15 +1,13 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
-const TRUST_COOKIE = "lumera_trusted_device";
+const TRUST_COOKIE = "ficonter_trusted_device";
 
 function readTrustedDevicePreference(): boolean {
   if (typeof document === "undefined") return false;
 
-  return document.cookie
-    .split(";")
-    .map((part) => part.trim())
-    .includes(`${TRUST_COOKIE}=1`);
+  const cookies = document.cookie.split(";").map((part) => part.trim());
+  return cookies.includes(`${TRUST_COOKIE}=1`);
 }
 
 export function saveTrustedDevicePreference(keepSignedIn: boolean): void {

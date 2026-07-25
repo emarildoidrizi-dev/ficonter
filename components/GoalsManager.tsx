@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { notifyLumeraDataChange } from "@/lib/lumeraRealtime";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import styles from "./GoalsManager.module.css";
 
 type GoalStatus = "active" | "completed" | "paused";
@@ -137,33 +137,47 @@ export function GoalsManager({
 
   async function saveGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
+
     setBusy(true);
     setNotice("");
 
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      user_id: userId,
-      name: String(form.get("name") ?? "").trim(),
-      target_amount: Number(form.get("target_amount")),
-      current_amount: editing ? Number(editing.current_amount) : 0,
-      target_date: String(form.get("target_date") ?? "") || null,
-      status: String(form.get("status") ?? "active") as GoalStatus,
-      updated_at: new Date().toISOString(),
-    };
+    try {
+      const form = new FormData(event.currentTarget);
+      const name = String(form.get("name") ?? "").trim();
+      const targetAmount = Number(form.get("target_amount"));
+      const targetDate = String(form.get("target_date") ?? "");
 
-    const query = editing
-      ? supabase
-          .from("goals")
-          .update(payload)
-          .eq("id", editing.id)
-          .eq("user_id", userId)
-      : supabase.from("goals").insert(payload);
+      if (!name) throw new Error("Enter a goal name.");
+      if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+        throw new Error("Enter a target amount greater than zero.");
+      }
+      if (targetDate && Number.isNaN(new Date(`${targetDate}T00:00:00`).getTime())) {
+        throw new Error("Choose a valid target date.");
+      }
 
-    const { data, error } = await query.select("*").single();
+      const payload = {
+        user_id: userId,
+        name,
+        target_amount: targetAmount,
+        current_amount: editing ? Number(editing.current_amount) : 0,
+        target_date: targetDate || null,
+        status: String(form.get("status") ?? "active") as GoalStatus,
+        updated_at: new Date().toISOString(),
+      };
 
-    if (error) {
-      setNotice(error.message);
-    } else if (data) {
+      const query = editing
+        ? supabase
+            .from("goals")
+            .update(payload)
+            .eq("id", editing.id)
+            .eq("user_id", userId)
+        : supabase.from("goals").insert(payload);
+
+      const { data, error } = await query.select("*").single();
+      if (error) throw error;
+      if (!data) throw new Error("The saved goal could not be returned.");
+
       setGoals((current) => [
         data as Goal,
         ...current.filter((goal) => goal.id !== data.id),
@@ -171,76 +185,94 @@ export function GoalsManager({
       setOpen(false);
       setEditing(null);
       setNotice(editing ? "Goal updated." : "Goal created.");
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The goal could not be saved.");
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   async function recordInvestment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!investmentGoal) return;
+    if (!investmentGoal || busy) return;
 
     setBusy(true);
     setNotice("");
 
-    const form = new FormData(event.currentTarget);
-    const amount = Number(form.get("amount"));
-    const investmentDate = String(form.get("invested_at") ?? "");
-    const notes = String(form.get("notes") ?? "").trim();
+    try {
+      const form = new FormData(event.currentTarget);
+      const amount = Number(form.get("amount"));
+      const investmentDate = String(form.get("invested_at") ?? "");
+      const notes = String(form.get("notes") ?? "").trim();
+      const remaining = Math.max(
+        0,
+        Number(investmentGoal.target_amount) - Number(investmentGoal.current_amount),
+      );
 
-    const { data, error } = await supabase.rpc("record_goal_investment", {
-      p_goal_id: investmentGoal.id,
-      p_amount: amount,
-      p_invested_at: `${investmentDate}T12:00:00.000Z`,
-      p_notes: notes || null,
-    });
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Enter an investment amount greater than zero.");
+      }
+      if (amount > remaining) {
+        throw new Error("Investment cannot exceed the remaining goal amount.");
+      }
+      if (!investmentDate || Number.isNaN(new Date(`${investmentDate}T12:00:00.000Z`).getTime())) {
+        throw new Error("Choose a valid investment date.");
+      }
 
-    if (error) {
-      setNotice(error.message);
-    } else {
+      const { data, error } = await supabase.rpc("record_goal_investment", {
+        p_goal_id: investmentGoal.id,
+        p_amount: amount,
+        p_invested_at: `${investmentDate}T12:00:00.000Z`,
+        p_notes: notes || null,
+      });
+      if (error) throw error;
+
       const result = data as { goal?: Goal; investment?: GoalInvestment };
-      if (result.goal) {
-        setGoals((current) =>
-          current.map((goal) =>
-            goal.id === result.goal?.id ? result.goal : goal,
-          ),
-        );
+      if (!result.goal || !result.investment) {
+        throw new Error("The database did not return the completed investment.");
       }
-      if (result.investment) {
-        setInvestments((current) => [
-          result.investment as GoalInvestment,
-          ...current.filter(
-            (item) => item.id !== result.investment?.id,
-          ),
-        ]);
-      }
+
+      setGoals((current) =>
+        current.map((goal) =>
+          goal.id === result.goal?.id ? (result.goal as Goal) : goal,
+        ),
+      );
+      setInvestments((current) => [
+        result.investment as GoalInvestment,
+        ...current.filter((item) => item.id !== result.investment?.id),
+      ]);
       setInvestmentGoal(null);
       setNotice("Investment recorded and deducted from cash flow.");
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "The investment could not be recorded.",
+      );
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   async function reverseInvestment() {
-    if (!reversing) return;
+    if (!reversing || busy) return;
 
     setBusy(true);
     setNotice("");
 
-    const { data, error } = await supabase.rpc("reverse_goal_investment", {
-      p_investment_id: reversing.id,
-    });
+    try {
+      const { data, error } = await supabase.rpc("reverse_goal_investment", {
+        p_investment_id: reversing.id,
+      });
+      if (error) throw error;
 
-    if (error) {
-      setNotice(error.message);
-    } else {
       const result = data as { goal?: Goal };
       if (result.goal) {
         setGoals((current) =>
           current.map((goal) =>
-            goal.id === result.goal?.id ? result.goal : goal,
+            goal.id === result.goal?.id ? (result.goal as Goal) : goal,
           ),
         );
       }
@@ -249,24 +281,30 @@ export function GoalsManager({
       );
       setReversing(null);
       setNotice("Investment reversed and cash flow restored.");
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "The investment could not be reversed.",
+      );
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   async function deleteGoal() {
-    if (!deleting) return;
+    if (!deleting || busy) return;
 
     setBusy(true);
+    setNotice("");
 
-    const { error } = await supabase.rpc("delete_goal_with_investments", {
-      p_goal_id: deleting.id,
-    });
+    try {
+      const { error } = await supabase.rpc("delete_goal_with_investments", {
+        p_goal_id: deleting.id,
+      });
+      if (error) throw error;
 
-    if (error) {
-      setNotice(error.message);
-    } else {
       setGoals((current) =>
         current.filter((goal) => goal.id !== deleting.id),
       );
@@ -275,10 +313,12 @@ export function GoalsManager({
       );
       setDeleting(null);
       setNotice("Goal and linked investments deleted.");
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The goal could not be deleted.");
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   const totalTarget = goals.reduce(

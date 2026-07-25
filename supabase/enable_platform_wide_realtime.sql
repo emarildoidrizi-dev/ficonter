@@ -1,4 +1,4 @@
--- Lumera platform-wide realtime verification
+-- Ficonter platform-wide realtime verification
 -- Safe to run more than once.
 
 alter table public.transactions replica identity full;

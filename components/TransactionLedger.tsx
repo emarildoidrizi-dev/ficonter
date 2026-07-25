@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { notifyLumeraDataChange } from "@/lib/lumeraRealtime";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import {
   CATEGORY_GROUPS,
   CURRENCY_CODES,
@@ -137,11 +137,11 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setError("The transaction could not be saved. Please try again.");
     }
 
-    window.addEventListener("lumera:transaction-created", handleCreated);
-    window.addEventListener("lumera:transaction-save-failed", handleSaveFailed);
+    window.addEventListener("ficonter:transaction-created", handleCreated);
+    window.addEventListener("ficonter:transaction-save-failed", handleSaveFailed);
     return () => {
-      window.removeEventListener("lumera:transaction-created", handleCreated);
-      window.removeEventListener("lumera:transaction-save-failed", handleSaveFailed);
+      window.removeEventListener("ficonter:transaction-created", handleCreated);
+      window.removeEventListener("ficonter:transaction-save-failed", handleSaveFailed);
     };
   }, []);
 
@@ -269,7 +269,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `lumera-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = `ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
     setNotice("CSV export downloaded.");
@@ -329,7 +329,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     else {
       setTransactions((current) => current.filter((item) => item.id !== deleteTarget.id));
       setDeleteTarget(null);
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
       setNotice("Transaction deleted.");
       window.setTimeout(() => setNotice(""), 2600);
     }
@@ -360,8 +360,19 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       return;
     }
     const originalAmount = Number(form.get("amount"));
+    const description = String(form.get("description") ?? "").trim();
+    if (!description) {
+      setError("Please enter a description.");
+      setLoading(false);
+      return;
+    }
+    if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+      setError("Please enter an amount greater than zero.");
+      setLoading(false);
+      return;
+    }
     const update = {
-      description: String(form.get("description") ?? "").trim(),
+      description,
       amount: originalAmount,
       currency: editCurrency,
       amount_eur: Number((originalAmount * editRate.rate).toFixed(6)),
@@ -383,7 +394,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     else if (data) {
       setTransactions((current) => current.map((item) => (item.id === data.id ? data : item)));
       setEditTarget(null);
-      notifyLumeraDataChange("all");
+      notifyFiconterDataChange("all");
       setNotice("Transaction updated.");
       window.setTimeout(() => setNotice(""), 2600);
     }

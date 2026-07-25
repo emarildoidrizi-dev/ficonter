@@ -136,11 +136,11 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setError("The transaction could not be saved. Please try again.");
     }
 
-    window.addEventListener("lumera:transaction-created", handleCreated);
-    window.addEventListener("lumera:transaction-save-failed", handleSaveFailed);
+    window.addEventListener("ficonter:transaction-created", handleCreated);
+    window.addEventListener("ficonter:transaction-save-failed", handleSaveFailed);
     return () => {
-      window.removeEventListener("lumera:transaction-created", handleCreated);
-      window.removeEventListener("lumera:transaction-save-failed", handleSaveFailed);
+      window.removeEventListener("ficonter:transaction-created", handleCreated);
+      window.removeEventListener("ficonter:transaction-save-failed", handleSaveFailed);
     };
   }, []);
 
@@ -287,7 +287,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `lumera-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = `ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
     setNotice("CSV export downloaded.");

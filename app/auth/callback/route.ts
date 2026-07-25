@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-function safeNextPath(value: string | null): string {
+function safeNextPath(value: string | null, fallback = "/dashboard"): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/update-password";
+    return fallback;
   }
 
   return value;

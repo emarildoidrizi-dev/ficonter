@@ -16,6 +16,7 @@ export default async function BillsPage() {
   const { data: bills, error } = await supabase
     .from("bills")
     .select("*")
+    .eq("user_id", user.id)
     .order("due_date", { ascending: true });
 
   return (

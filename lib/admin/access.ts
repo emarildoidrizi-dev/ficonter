@@ -1,5 +1,7 @@
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import "server-only";
+
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 export type AdminRole = "admin" | "super_admin";
 
@@ -12,36 +14,24 @@ export function getPrimarySuperAdminEmail(): string {
   );
 }
 
-export function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !key) {
-    throw new Error("Missing Supabase admin environment variables.");
-  }
-
-  return createAdminClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+export function isPrimarySuperAdminEmail(
+  email: string | null | undefined,
+): boolean {
+  return email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
 }
 
 export async function requireAdmin() {
   const supabase = await createClient();
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
     return { user: null, admin: null };
   }
 
-  const isPrimarySuperAdmin =
-    user.email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
-
-  if (isPrimarySuperAdmin) {
+  if (isPrimarySuperAdminEmail(user.email)) {
     return {
       user,
       admin: {
@@ -51,34 +41,66 @@ export async function requireAdmin() {
     };
   }
 
-  const { data: authenticatedAdmin } = await supabase
-    .from("admin_users")
-    .select("user_id,role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  try {
+    const service = createServiceClient();
+    const { data, error } = await service
+      .from("admin_users")
+      .select("user_id,role")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (authenticatedAdmin) {
+    if (error) {
+      console.error("Admin role verification failed", {
+        userId: user.id,
+        code: error.code,
+      });
+      return { user, admin: null };
+    }
+
     return {
       user,
-      admin: authenticatedAdmin as {
+      admin: data as {
         user_id: string;
         role: AdminRole;
-      },
+      } | null,
     };
+  } catch (error) {
+    console.error("Admin role verification could not initialize", {
+      userId: user.id,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return { user, admin: null };
   }
+}
 
-  const service = createServiceClient();
-  const { data: serviceAdmin } = await service
-    .from("admin_users")
-    .select("user_id,role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+export async function isProtectedSuperAdminAccount(
+  userId: string,
+  email: string | null | undefined,
+): Promise<boolean> {
+  if (isPrimarySuperAdminEmail(email)) return true;
 
-  return {
-    user,
-    admin: serviceAdmin as {
-      user_id: string;
-      role: AdminRole;
-    } | null,
-  };
+  try {
+    const service = createServiceClient();
+    const { data, error } = await service
+      .from("admin_users")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Super-admin protection check failed", {
+        userId,
+        code: error.code,
+      });
+      return true;
+    }
+
+    return data?.role === "super_admin";
+  } catch (error) {
+    console.error("Super-admin protection check could not initialize", {
+      userId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return true;
+  }
 }

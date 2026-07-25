@@ -31,6 +31,11 @@ import {
   type AdminRole,
   type AdminUserRow,
 } from "@/lib/admin/snapshot";
+import type {
+  HealthServiceKey,
+  HealthStatus,
+  PlatformHealthSnapshot,
+} from "@/lib/admin/health-shared";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./AdminDashboard.module.css";
 
@@ -40,7 +45,6 @@ type PatchAction =
   | "promote_admin"
   | "demote_admin";
 type UserAction = PatchAction | "delete_user";
-type SystemStatus = "operational" | "degraded" | "configured";
 type Toast = {
   id: string;
   type: "success" | "error";
@@ -63,6 +67,26 @@ type ActionCopy = {
 };
 
 const TOAST_DURATION_MS = 5000;
+const HEALTH_REFRESH_INTERVAL_MS = 60_000;
+const HEALTH_SERVICE_ORDER: HealthServiceKey[] = [
+  "auth",
+  "database",
+  "storage",
+  "realtime",
+];
+
+function formatHealthTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function statusLabel(status: HealthStatus) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "Never";
@@ -180,14 +204,14 @@ export function AdminDashboard({
   initialUsers,
   initialLogs,
   initialCounts,
-  system,
+  initialHealth,
 }: {
   currentAdminId: string;
   currentRole: AdminRole;
   initialUsers: AdminUserRow[];
   initialLogs: AdminAuditRow[];
   initialCounts: AdminCounts;
-  system: Record<string, SystemStatus>;
+  initialHealth: PlatformHealthSnapshot;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState(initialUsers);
@@ -198,9 +222,12 @@ export function AdminDashboard({
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [health, setHealth] = useState(initialHealth);
+  const [healthRefreshing, setHealthRefreshing] = useState(false);
   const toastTimers = useRef(new Map<string, number>());
   const refreshTimer = useRef<number | null>(null);
   const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
+  const realtimeStartedAt = useRef<number | null>(null);
 
   const dismissToast = useCallback((id: string) => {
     const timer = toastTimers.current.get(id);
@@ -267,6 +294,79 @@ export function AdminDashboard({
     [showToast],
   );
 
+  const refreshHealth = useCallback(
+    async (showFailure = false) => {
+      setHealthRefreshing(true);
+      try {
+        const response = await fetch("/api/admin/health", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        const data = (await response.json().catch(() => null)) as
+          | PlatformHealthSnapshot
+          | { error?: string }
+          | null;
+
+        if (!response.ok || !data || !("services" in data)) {
+          const message =
+            data && "error" in data && typeof data.error === "string"
+              ? data.error
+              : "Platform health could not be refreshed.";
+          throw new Error(message);
+        }
+
+        setHealth((current) => ({
+          ...data,
+          services: {
+            ...data.services,
+            realtime: current.services.realtime,
+          },
+        }));
+      } catch (error) {
+        const checkedAt = new Date().toISOString();
+        setHealth((current) => ({
+          checkedAt,
+          services: {
+            auth: {
+              status: "offline",
+              latencyMs: null,
+              checkedAt,
+              message: "The automatic health check could not reach this service.",
+            },
+            database: {
+              status: "offline",
+              latencyMs: null,
+              checkedAt,
+              message: "The automatic health check could not reach this service.",
+            },
+            storage: {
+              status: "offline",
+              latencyMs: null,
+              checkedAt,
+              message: "The automatic health check could not reach this service.",
+            },
+            realtime: current.services.realtime,
+          },
+        }));
+
+        if (showFailure) {
+          showToast(
+            "error",
+            "Health check failed",
+            error instanceof Error
+              ? error.message
+              : "Platform health could not be refreshed.",
+          );
+        }
+      } finally {
+        setHealthRefreshing(false);
+      }
+    },
+    [showToast],
+  );
+
   const scheduleDirectoryRefresh = useCallback(() => {
     if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
     refreshTimer.current = window.setTimeout(() => {
@@ -275,6 +375,9 @@ export function AdminDashboard({
   }, [refreshDirectory]);
 
   useEffect(() => {
+    let active = true;
+    realtimeStartedAt.current = performance.now();
+
     const channel = supabase
       .channel("admin-user-management-live")
       .on(
@@ -302,15 +405,73 @@ export function AdminDashboard({
           scheduleDirectoryRefresh();
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (!active) return;
+
+        const checkedAt = new Date().toISOString();
+        const latencyMs = realtimeStartedAt.current
+          ? Math.max(0, Math.round(performance.now() - realtimeStartedAt.current))
+          : null;
+
+        if (status !== "SUBSCRIBED") {
+          realtimeStartedAt.current = performance.now();
+        }
+
+        const realtimeStatus: HealthStatus =
+          status === "SUBSCRIBED"
+            ? latencyMs !== null && latencyMs >= 2_500
+              ? "degraded"
+              : "healthy"
+            : status === "TIMED_OUT"
+              ? "degraded"
+              : "offline";
+
+        setHealth((current) => ({
+          ...current,
+          checkedAt,
+          services: {
+            ...current.services,
+            realtime: {
+              status: realtimeStatus,
+              latencyMs: status === "SUBSCRIBED" ? latencyMs : null,
+              checkedAt,
+              message:
+                status === "SUBSCRIBED"
+                  ? realtimeStatus === "healthy"
+                    ? "The live Realtime channel is connected."
+                    : "The live Realtime channel connected slowly."
+                  : status === "TIMED_OUT"
+                    ? "The live Realtime connection timed out."
+                    : "The live Realtime channel is disconnected.",
+            },
+          },
+        }));
+      });
 
     return () => {
+      active = false;
       if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
       toastTimers.current.forEach((timer) => window.clearTimeout(timer));
       toastTimers.current.clear();
       void supabase.removeChannel(channel);
     };
   }, [scheduleDirectoryRefresh, supabase]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void refreshHealth(false);
+    }, HEALTH_REFRESH_INTERVAL_MS);
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void refreshHealth(false);
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [refreshHealth]);
 
   useEffect(() => {
     if (!pending) return;
@@ -701,29 +862,61 @@ export function AdminDashboard({
 
         <aside className={styles.side}>
           <article className={styles.panel}>
-            <span>PLATFORM HEALTH</span>
-            <h2>Systems</h2>
+            <div className={styles.healthHeader}>
+              <div>
+                <span>PLATFORM HEALTH</span>
+                <h2>Systems</h2>
+              </div>
+              <button
+                type="button"
+                className={styles.healthRefresh}
+                onClick={() => void refreshHealth(true)}
+                disabled={healthRefreshing}
+                aria-label="Refresh platform health"
+                title="Run health checks now"
+              >
+                <RefreshCw
+                  size={15}
+                  className={healthRefreshing ? styles.spinning : undefined}
+                />
+              </button>
+            </div>
             <ul className={styles.systemList}>
-              {Object.entries(system).map(([name, status]) => (
-                <li key={name}>
-                  <span>
-                    {status === "degraded" ? (
-                      <XCircle size={16} />
-                    ) : (
-                      <CheckCircle2 size={16} />
-                    )}
-                    {name}
-                  </span>
-                  <b
-                    className={
-                      status === "degraded" ? styles.bad : styles.good
-                    }
-                  >
-                    {status}
-                  </b>
-                </li>
-              ))}
+              {HEALTH_SERVICE_ORDER.map((name) => {
+                const check = health.services[name];
+                return (
+                  <li key={name}>
+                    <span>
+                      {check.status === "healthy" ? (
+                        <CheckCircle2 size={16} />
+                      ) : check.status === "degraded" ? (
+                        <AlertTriangle size={16} />
+                      ) : (
+                        <XCircle size={16} />
+                      )}
+                      <span className={styles.healthName}>
+                        <strong>{name}</strong>
+                        <small>{check.message}</small>
+                      </span>
+                    </span>
+                    <span className={styles.healthResult}>
+                      <b className={styles[check.status]}>
+                        {statusLabel(check.status)}
+                      </b>
+                      <small>
+                        {check.latencyMs !== null
+                          ? `${check.latencyMs} ms`
+                          : "No response"}
+                      </small>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
+            <p className={styles.healthCheckedAt}>
+              Automatically checked at {formatHealthTime(health.checkedAt)}.
+              Rechecks every minute.
+            </p>
           </article>
 
           <article className={styles.panel}>

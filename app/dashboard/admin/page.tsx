@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { requireAdmin } from "@/lib/admin/access";
+import { loadPlatformHealth } from "@/lib/admin/health";
 import {
   loadAdminDirectorySnapshot,
   type AdminAuditRow,
@@ -18,19 +19,15 @@ export default async function AdminPage() {
 
   const supabase = await createClient();
 
-  const [snapshot, logsResult] = await Promise.all([
+  const [snapshot, logsResult, health] = await Promise.all([
     loadAdminDirectorySnapshot(supabase),
     supabase
       .from("admin_audit_logs")
       .select("id,admin_user_id,action,target_user_id,details,created_at")
       .order("created_at", { ascending: false })
       .limit(60),
+    loadPlatformHealth(),
   ]);
-
-  const dataOperational =
-    !snapshot.errors.directory &&
-    !snapshot.errors.overview &&
-    !logsResult.error;
 
   return (
     <AdminDashboard
@@ -39,12 +36,7 @@ export default async function AdminPage() {
       initialUsers={snapshot.users}
       initialLogs={(logsResult.data ?? []) as AdminAuditRow[]}
       initialCounts={snapshot.counts}
-      system={{
-        auth: snapshot.errors.directory ? "degraded" : "operational",
-        database: snapshot.errors.overview ? "degraded" : "operational",
-        storage: snapshot.errors.overview ? "degraded" : "operational",
-        realtime: dataOperational ? "operational" : "configured",
-      }}
+      initialHealth={health}
     />
   );
 }

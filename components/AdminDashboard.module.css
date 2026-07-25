@@ -422,11 +422,114 @@
   font-size: 12px;
 }
 
-.systemList li > span {
+.healthHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.healthHeader h2 {
+  margin-bottom: 16px;
+}
+
+.healthRefresh {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #ddd6cb;
+  border-radius: 10px;
+  background: #fff;
+  color: #6d665e;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.healthRefresh:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #c7b9a5;
+  background: #fbf8f3;
+}
+
+.healthRefresh:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.systemList li {
+  align-items: flex-start;
+}
+
+.systemList li > span:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
+}
+
+.systemList li > span:first-child > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.healthName {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.healthName strong {
+  color: #5f5a54;
+  font-size: 12px;
   text-transform: capitalize;
+}
+
+.healthName small {
+  color: #918a81;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.healthResult {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.healthResult b {
+  font-size: 10px;
+}
+
+.healthResult small {
+  color: #989188;
+  font-size: 9px;
+}
+
+.healthy {
+  color: #4e715f;
+}
+
+.degraded {
+  color: #9a7442;
+}
+
+.offline {
+  color: #9a5252;
+}
+
+.healthCheckedAt {
+  margin: 13px 0 0;
+  color: #938b82;
+  font-size: 9px;
+  line-height: 1.5;
 }
 
 .good {

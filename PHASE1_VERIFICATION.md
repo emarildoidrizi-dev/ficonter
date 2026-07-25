@@ -1,22 +1,38 @@
 # FICONTER Phase 1 Verification
 
+## Privacy boundary
+
 Admin may see account identity, account status, roles, sign-in timestamps,
-aggregate module record counts, storage-object counts, system status and admin
-audit actions.
+aggregate module record counts, storage-object counts, system status, response
+latency and admin audit actions.
 
 Admin must not see individual financial amounts, balances, transaction
-descriptions, bill values, goal values, debt balances, net worth, private notes,
+information, bill values, goal values, debt balances, net worth, private notes,
 passwords, tokens or recovery codes.
 
-After deployment:
+## Completed implementation checks
 
-1. Confirm Admin appears above Settings.
-2. Confirm `/dashboard/admin` opens only for an admin.
-3. Search an account.
-4. Suspend and restore a test account.
-5. Promote and demote a test admin.
-6. Confirm every action appears in Recent actions.
-7. Confirm the current super admin cannot suspend/delete itself.
-8. Confirm aggregate record counts update.
-9. Confirm no customer financial amounts appear.
-10. Smoke-test Transactions, Bills, Debt, Goals, Planner and Settings.
+- User Management: deployed and working.
+- Platform statistics: aggregate-only and live.
+- Platform Health: automatic real checks for Auth, Database, Storage and Realtime.
+- Audit: realtime, dated, timed and scrollable.
+- Privileged Supabase client: centralized in a server-only module.
+- Admin endpoints: authenticated and authorized.
+- Write endpoints: same-origin protected where applicable.
+
+## Required live QA before Phase 1 closure
+
+1. Transactions: create, edit, delete, persistence and linked-dashboard refresh.
+2. Bills: create, edit, delete, mark paid and transaction synchronization.
+3. Monthly Planner: create/update plan items and linked-module refresh.
+4. Goals: create, edit, contribute, delete and persistence.
+5. Debt: create, edit, record payment, delete and transaction synchronization.
+6. Net Worth: verify all linked totals update correctly.
+7. Settings: save, reload and responsive layout.
+8. Profile: update profile and profile photo.
+9. Registration: create a disposable account and verify confirmation behavior.
+10. Login: valid, invalid and suspended-account behavior.
+11. Password Reset: request, recovery link and password update.
+12. Admin: User Management, Platform Health, Audit, counts and privacy boundary.
+13. Desktop and mobile regression check.
+14. Run `npm run verify:phase1`, `npm run lint` and `npm run build`.

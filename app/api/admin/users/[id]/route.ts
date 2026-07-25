@@ -1,10 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createServiceClient,
-  requireAdmin,
-  type AdminRole,
-} from "@/lib/admin/access";
+import { requireAdmin, type AdminRole } from "@/lib/admin/access";
+import { createServiceClient } from "@/lib/supabase/admin";
 import type { AdminAuditRow } from "@/lib/admin/snapshot";
 import {
   isSameOriginRequest,

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { isProtectedSuperAdminAccount } from "@/lib/admin/access";
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
+import { createServiceClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+
+export const runtime = "nodejs";
 
 export async function DELETE(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
@@ -24,19 +27,27 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (await isProtectedSuperAdminAccount(user.id, user.email)) {
+    return NextResponse.json(
+      { error: "Protected super-admin accounts cannot be deleted." },
+      { status: 403, headers: noStoreHeaders() },
+    );
+  }
 
-  if (!url || !serviceRoleKey) {
+  let admin: ReturnType<typeof createServiceClient>;
+  try {
+    admin = createServiceClient();
+  } catch (error) {
+    console.error("Account deletion client initialization failed", {
+      userId: user.id,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+
     return NextResponse.json(
       { error: "Account deletion is unavailable." },
       { status: 503, headers: noStoreHeaders() },
     );
   }
-
-  const admin = createAdminClient(url, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
 
   const { error } = await admin.auth.admin.deleteUser(user.id);
 
@@ -53,8 +64,5 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(
-    { ok: true },
-    { headers: noStoreHeaders() },
-  );
+  return NextResponse.json({ ok: true }, { headers: noStoreHeaders() });
 }

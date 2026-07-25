@@ -20,7 +20,9 @@ import {
   Download,
   Eye,
   EyeOff,
+  FileJson,
   FileText,
+  FileType2,
   Globe2,
   KeyRound,
   Languages,
@@ -41,6 +43,12 @@ import {
 } from "lucide-react";
 import { createClient, saveTrustedDevicePreference } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import {
+  createAccountPdf,
+  triggerDownload,
+  type AccountExportPayload,
+  type AccountExportTable,
+} from "@/lib/accountExport";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -79,6 +87,7 @@ type Props = {
 };
 
 type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
+type ExportKind = null | "transactions" | "json" | "pdf";
 
 const sections = [
   { id: "profile", label: "Profile", description: "Identity and profile photo", icon: UserRound },
@@ -241,6 +250,7 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState<ExportKind>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -498,7 +508,7 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   }
 
   async function exportTransactions() {
-    setLoading(true);
+    setExporting("transactions");
     setMessage(null);
     try {
       const { data, error } = await supabase
@@ -511,50 +521,87 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
       const columns = rows.length ? Object.keys(rows[0]) : ["No transactions"];
       const csv = [columns.map(csvCell).join(","), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\n");
       downloadFile(`ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
-      showSuccess("Transaction export downloaded.");
+      showSuccess("Transaction CSV downloaded.");
     } catch (error) {
       showError(error, "Transactions could not be exported.");
     } finally {
-      setLoading(false);
+      setExporting(null);
     }
   }
 
-  async function exportAccountData() {
-    setLoading(true);
+  async function loadAccountExport(): Promise<AccountExportPayload> {
+    const tables: AccountExportTable[] = [
+      "transactions",
+      "bills",
+      "goals",
+      "goal_investments",
+      "debts",
+      "debt_payments",
+      "monthly_budget_plans",
+      "monthly_budget_items",
+    ];
+
+    const results = await Promise.all(
+      tables.map(async (table) => {
+        const { data, error } = await supabase
+          .from(table)
+          .select("*")
+          .eq("user_id", userId);
+        if (error) throw error;
+        return [table, (data ?? []) as Record<string, unknown>[]] as const;
+      }),
+    );
+
+    return {
+      schema_version: "1.1",
+      export_type: "ficonter-account-archive",
+      exported_at: new Date().toISOString(),
+      privacy: {
+        owner_only: true,
+        excludes_authentication_secrets: true,
+      },
+      account: {
+        id: userId,
+        email,
+        full_name: fullName,
+        display_name: displayName,
+      },
+      preferences: preferences as unknown as Record<string, unknown>,
+      data: Object.fromEntries(results) as AccountExportPayload["data"],
+    };
+  }
+
+  async function exportAccountJson() {
+    setExporting("json");
     setMessage(null);
     try {
-      const tables = [
-        "transactions",
-        "bills",
-        "goals",
-        "goal_investments",
-        "debts",
-        "debt_payments",
-        "monthly_budget_plans",
-        "monthly_budget_items",
-      ] as const;
-      const results = await Promise.all(
-        tables.map(async (table) => {
-          const { data, error } = await supabase
-            .from(table)
-            .select("*")
-            .eq("user_id", userId);
-          if (error) throw error;
-          return [table, data ?? []] as const;
-        }),
-      );
-      const payload = {
-        exported_at: new Date().toISOString(),
-        account: { id: userId, email, full_name: fullName, display_name: displayName },
-        preferences,
-        data: Object.fromEntries(results),
-      };
-      downloadFile(`ficonter-account-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
-      showSuccess("Account data export downloaded.");
+      const payload = await loadAccountExport();
+      const date = payload.exported_at.slice(0, 10);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      triggerDownload(`ficonter-account-data-${date}.json`, blob);
+      showSuccess("Complete account JSON downloaded.");
     } catch (error) {
-      showError(error, "Your account data could not be exported.");
+      showError(error, "Your JSON account archive could not be exported.");
     } finally {
-      setLoading(false);
+      setExporting(null);
+    }
+  }
+
+  async function exportAccountPdf() {
+    setExporting("pdf");
+    setMessage(null);
+    try {
+      const payload = await loadAccountExport();
+      const date = payload.exported_at.slice(0, 10);
+      const blob = await createAccountPdf(payload);
+      triggerDownload(`ficonter-private-financial-report-${date}.pdf`, blob);
+      showSuccess("Private financial PDF downloaded.");
+    } catch (error) {
+      showError(error, "Your PDF financial report could not be exported.");
+    } finally {
+      setExporting(null);
     }
   }
 
@@ -715,8 +762,13 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
 
         {active === "privacy" ? (
           <div className={styles.stack}>
-            <ActionCard icon={ReceiptText} title="Export all transaction data" description="Download your full transaction history as CSV." button="Export transactions" onClick={exportTransactions} disabled={loading} />
-            <ActionCard icon={Download} title="Export account data" description="Download profile, preferences and available financial records as JSON." button="Export account data" onClick={exportAccountData} disabled={loading} />
+            <ActionCard icon={ReceiptText} title="Export transaction history" description="Download your complete transaction ledger in spreadsheet-ready CSV format." button={exporting === "transactions" ? "Preparing CSV…" : "Download CSV"} onClick={exportTransactions} disabled={loading || exporting !== null} />
+            <ExportFormatCard
+              disabled={loading || exporting !== null}
+              exporting={exporting}
+              onJson={exportAccountJson}
+              onPdf={exportAccountPdf}
+            />
             <div className={styles.infoGrid}><button type="button" onClick={() => setDialog("privacy")}><ShieldCheck size={18} /><span><strong>Privacy information</strong><small>How Ficonter handles your records</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setDialog("retention")}><FileText size={18} /><span><strong>Data retention</strong><small>When records remain or are removed</small></span><ChevronRight size={16} /></button></div>
             <div className={styles.dangerZone}><div><span className={styles.eyebrow}>Danger zone</span><h3>Permanent data controls</h3><p>These actions require a custom confirmation and cannot be undone.</p></div><div className={styles.dangerActions}><button type="button" className={styles.dangerOutline} onClick={() => { setDialog("delete-records"); setConfirmation(""); }}><Trash2 size={16} />Delete financial records</button><button type="button" className={styles.dangerButton} onClick={() => { setDialog("delete-account"); setConfirmation(""); }}><Trash2 size={16} />Delete account</button></div></div>
           </div>
@@ -754,6 +806,39 @@ function Select({ label, value, onChange, options }: { label: string; value: str
 
 function ActionCard({ icon: Icon, title, description, button, onClick, disabled }: { icon: typeof Download; title: string; description: string; button: string; onClick: () => void | Promise<void>; disabled: boolean }) {
   return <div className={styles.privacyCard}><div className={styles.cardHeading}><Icon size={19} /><div><h3>{title}</h3><p>{description}</p></div></div><button type="button" className={styles.secondaryButton} onClick={() => void onClick()} disabled={disabled}><Download size={16} />{button}</button></div>;
+}
+
+
+function ExportFormatCard({
+  disabled,
+  exporting,
+  onJson,
+  onPdf,
+}: {
+  disabled: boolean;
+  exporting: ExportKind;
+  onJson: () => void | Promise<void>;
+  onPdf: () => void | Promise<void>;
+}) {
+  return (
+    <div className={styles.privacyCard}>
+      <div className={styles.cardHeading}>
+        <Download size={19} />
+        <div>
+          <h3>Export complete account data</h3>
+          <p>Keep a machine-readable JSON archive or download a polished private financial report as PDF.</p>
+        </div>
+      </div>
+      <div className={styles.exportActions}>
+        <button type="button" className={styles.secondaryButton} onClick={() => void onJson()} disabled={disabled}>
+          <FileJson size={16} />{exporting === "json" ? "Preparing JSON…" : "Download JSON"}
+        </button>
+        <button type="button" className={styles.primaryButton} onClick={() => void onPdf()} disabled={disabled}>
+          <FileType2 size={16} />{exporting === "pdf" ? "Building PDF…" : "Download PDF"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {

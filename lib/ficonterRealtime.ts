@@ -1,6 +1,16 @@
 "use client";
 
-export type FiconterDataScope = "transactions" | "bills" | "overview" | "all";
+export type FiconterDataScope =
+  | "transactions"
+  | "bills"
+  | "debts"
+  | "goals"
+  | "planner"
+  | "net-worth"
+  | "settings"
+  | "profile"
+  | "overview"
+  | "all";
 
 const STORAGE_KEY = "ficonter:data-change";
 const CHANNEL_NAME = "ficonter-platform-sync";

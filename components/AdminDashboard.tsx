@@ -63,14 +63,12 @@ function formatRelativeTime(value: string) {
     1,
     Math.floor((Date.now() - new Date(value).getTime()) / 1000),
   );
-
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function actionLabel(action: string) {
@@ -82,7 +80,6 @@ function actionLabel(action: string) {
     demote_admin: "Admin role removed",
     delete_user: "Account deleted",
   };
-
   return labels[action] ?? action.replaceAll("_", " ");
 }
 
@@ -159,7 +156,7 @@ export function AdminDashboard({
     [users],
   );
 
-  async function runAction(
+  async function requestAction(
     user: UserRow,
     action:
       | "suspend"
@@ -168,82 +165,113 @@ export function AdminDashboard({
       | "promote_super_admin"
       | "demote_admin",
   ) {
-    setBusy(user.id);
-    setMessage("");
-
-    const response = await fetch(`/api/admin/users/${user.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-
-    const data = (await response.json().catch(() => null)) as {
-      error?: string;
-      role?: AdminRole | null;
-      audit?: LogRow;
-    } | null;
-
-    if (!response.ok) {
-      setMessage(data?.error ?? "The action could not be completed.");
-      setBusy(null);
+    if (user.id === currentAdminId) {
+      setMessage(
+        "The current super-admin account is protected and cannot be changed here.",
+      );
       return;
     }
 
-    setUsers((current) =>
-      current.map((item) => {
-        if (item.id !== user.id) return item;
-        if (action === "suspend")
-          return { ...item, bannedUntil: "9999-12-31T00:00:00Z" };
-        if (action === "restore") return { ...item, bannedUntil: null };
-        return { ...item, role: data?.role ?? null };
-      }),
-    );
+    setBusy(user.id);
+    setMessage("");
 
-    if (data?.audit) {
-      setLogs((current) => [
-        data.audit as LogRow,
-        ...current.filter((item) => item.id !== data.audit?.id),
-      ]);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        role?: AdminRole | null;
+        audit?: LogRow;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? `Request failed (${response.status}).`);
+      }
+
+      setUsers((current) =>
+        current.map((item) => {
+          if (item.id !== user.id) return item;
+          if (action === "suspend") {
+            return { ...item, bannedUntil: "9999-12-31T00:00:00Z" };
+          }
+          if (action === "restore") {
+            return { ...item, bannedUntil: null };
+          }
+          return { ...item, role: data?.role ?? null };
+        }),
+      );
+
+      if (data?.audit) {
+        setLogs((current) => [
+          data.audit as LogRow,
+          ...current.filter((item) => item.id !== data.audit?.id),
+        ]);
+      }
+
+      setMessage("Admin action completed successfully.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "The admin action could not be completed.",
+      );
+    } finally {
+      setBusy(null);
     }
-
-    setMessage("Admin action completed.");
-    setBusy(null);
   }
 
   async function deleteAccount() {
     if (!deleteTarget) return;
 
     setBusy(deleteTarget.id);
+    setMessage("");
 
-    const response = await fetch(`/api/admin/users/${deleteTarget.id}`, {
-      method: "DELETE",
-    });
+    try {
+      const response = await fetch(`/api/admin/users/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
 
-    const data = (await response.json().catch(() => null)) as {
-      error?: string;
-      audit?: LogRow;
-    } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        audit?: LogRow;
+      } | null;
 
-    if (!response.ok) {
-      setMessage(data?.error ?? "The account could not be deleted.");
+      if (!response.ok) {
+        throw new Error(data?.error ?? `Request failed (${response.status}).`);
+      }
+
+      setUsers((current) =>
+        current.filter((item) => item.id !== deleteTarget.id),
+      );
+
+      if (data?.audit) {
+        setLogs((current) => [
+          data.audit as LogRow,
+          ...current.filter((item) => item.id !== data.audit?.id),
+        ]);
+      }
+
+      setDeleteTarget(null);
+      setMessage("Account permanently deleted.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "The account could not be deleted.",
+      );
+    } finally {
       setBusy(null);
-      return;
     }
-
-    setUsers((current) =>
-      current.filter((item) => item.id !== deleteTarget.id),
-    );
-
-    if (data?.audit) {
-      setLogs((current) => [
-        data.audit as LogRow,
-        ...current.filter((item) => item.id !== data.audit?.id),
-      ]);
-    }
-
-    setDeleteTarget(null);
-    setMessage("Account permanently deleted.");
-    setBusy(null);
   }
 
   const aggregateRecords =
@@ -273,47 +301,17 @@ export function AdminDashboard({
       {message ? <div className={styles.notice}>{message}</div> : null}
 
       <div className={styles.kpis}>
-        <article>
-          <Users />
-          <span>Registered users</span>
-          <strong>{users.length}</strong>
-          <small>{counts.new30Days} joined in 30 days</small>
-        </article>
-        <article>
-          <UserCheck />
-          <span>Active in 7 days</span>
-          <strong>{counts.active7Days}</strong>
-          <small>{counts.active30Days} active in 30 days</small>
-        </article>
-        <article>
-          <Activity />
-          <span>Platform records</span>
-          <strong>{aggregateRecords}</strong>
-          <small>Aggregate counts only</small>
-        </article>
-        <article>
-          <HardDrive />
-          <span>Storage objects</span>
-          <strong>{counts.storageObjects}</strong>
-          <small>Profile-photo objects</small>
-        </article>
+        <article><Users /><span>Registered users</span><strong>{users.length}</strong><small>{counts.new30Days} joined in 30 days</small></article>
+        <article><UserCheck /><span>Active in 7 days</span><strong>{counts.active7Days}</strong><small>{counts.active30Days} active in 30 days</small></article>
+        <article><Activity /><span>Platform records</span><strong>{aggregateRecords}</strong><small>Aggregate counts only</small></article>
+        <article><HardDrive /><span>Storage objects</span><strong>{counts.storageObjects}</strong><small>Profile-photo objects</small></article>
       </div>
 
       <div className={styles.grid}>
         <article className={styles.panel}>
           <div className={styles.panelHead}>
-            <div>
-              <span>USER MANAGEMENT</span>
-              <h2>Accounts</h2>
-            </div>
-            <label>
-              <Search size={16} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search account"
-              />
-            </label>
+            <div><span>USER MANAGEMENT</span><h2>Accounts</h2></div>
+            <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search account" /></label>
           </div>
 
           <div className={styles.privacyNote}>
@@ -323,12 +321,8 @@ export function AdminDashboard({
 
           <div className={styles.table}>
             <div className={styles.rowHead}>
-              <span>Account</span>
-              <span>Created</span>
-              <span>Last sign-in</span>
-              <span>Status</span>
-              <span>Role</span>
-              <span>Actions</span>
+              <span>Account</span><span>Created</span><span>Last sign-in</span>
+              <span>Status</span><span>Role</span><span>Actions</span>
             </div>
 
             {filtered.map((user, index) => {
@@ -342,93 +336,42 @@ export function AdminDashboard({
                 <div key={user.id}>
                   {showDivider ? (
                     <div className={styles.registeredDivider}>
-                      <span>Registered users</span>
-                      <i />
+                      <span>Registered users</span><i />
                     </div>
                   ) : null}
 
-                  <div
-                    className={`${styles.row}${
-                      user.role === "super_admin"
-                        ? ` ${styles.superAdminRow}`
-                        : ""
-                    }`}
-                  >
-                    <span>
-                      <strong>{user.displayName || "Unnamed user"}</strong>
-                      <small>{user.email}</small>
-                    </span>
+                  <div className={`${styles.row}${user.role === "super_admin" ? ` ${styles.superAdminRow}` : ""}`}>
+                    <span><strong>{user.displayName || "Unnamed user"}</strong><small>{user.email}</small></span>
                     <span>{formatDate(user.createdAt)}</span>
                     <span>{formatDate(user.lastSignInAt)}</span>
-                    <span>
-                      <b
-                        className={
-                          user.bannedUntil ? styles.suspended : styles.active
-                        }
-                      >
-                        {user.bannedUntil ? "Suspended" : "Active"}
-                      </b>
-                    </span>
-                    <span>
-                      <b className={user.role ? styles.role : styles.standard}>
-                        {user.role?.replace("_", " ") ?? "User"}
-                      </b>
-                    </span>
+                    <span><b className={user.bannedUntil ? styles.suspended : styles.active}>{user.bannedUntil ? "Suspended" : "Active"}</b></span>
+                    <span><b className={user.role ? styles.role : styles.standard}>{user.role?.replace("_", " ") ?? "User"}</b></span>
                     <span className={styles.actions}>
-                      {!isSelf ? (
+                      {isSelf ? (
+                        <span className={styles.you}>Protected account</span>
+                      ) : (
                         <>
-                          <button
-                            disabled={busy === user.id}
-                            onClick={() =>
-                              runAction(
-                                user,
-                                user.bannedUntil ? "restore" : "suspend",
-                              )
-                            }
-                          >
-                            {user.bannedUntil ? (
-                              <RefreshCw size={15} />
-                            ) : (
-                              <Ban size={15} />
-                            )}
+                          <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, user.bannedUntil ? "restore" : "suspend")}>
+                            {user.bannedUntil ? <RefreshCw size={15} /> : <Ban size={15} />}
                             {user.bannedUntil ? "Restore" : "Suspend"}
                           </button>
 
                           {currentRole === "super_admin" ? (
                             user.role ? (
-                              <button
-                                disabled={busy === user.id}
-                                onClick={() =>
-                                  runAction(user, "demote_admin")
-                                }
-                              >
-                                <UserCog size={15} />
-                                Remove admin
+                              <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, "demote_admin")}>
+                                <UserCog size={15} />Remove admin
                               </button>
                             ) : (
-                              <button
-                                disabled={busy === user.id}
-                                onClick={() =>
-                                  runAction(user, "promote_admin")
-                                }
-                              >
-                                <ShieldCheck size={15} />
-                                Make admin
+                              <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, "promote_admin")}>
+                                <ShieldCheck size={15} />Make admin
                               </button>
                             )
                           ) : null}
 
-                          <button
-                            className={styles.delete}
-                            disabled={busy === user.id}
-                            onClick={() => setDeleteTarget(user)}
-                          >
-                            <Trash2 size={15} />
-                            Delete
+                          <button type="button" className={styles.delete} disabled={busy === user.id} onClick={() => setDeleteTarget(user)}>
+                            <Trash2 size={15} />Delete
                           </button>
                         </>
-                      ) : (
-                        <span className={styles.you}>Current account</span>
                       )}
                     </span>
                   </div>
@@ -440,30 +383,19 @@ export function AdminDashboard({
 
         <aside className={styles.side}>
           <article className={styles.panel}>
-            <span>PLATFORM HEALTH</span>
-            <h2>Systems</h2>
+            <span>PLATFORM HEALTH</span><h2>Systems</h2>
             <ul className={styles.systemList}>
               {Object.entries(system).map(([name, status]) => (
                 <li key={name}>
-                  <span>
-                    {status === "degraded" ? (
-                      <XCircle size={16} />
-                    ) : (
-                      <CheckCircle2 size={16} />
-                    )}
-                    {name}
-                  </span>
-                  <b className={status === "degraded" ? styles.bad : styles.good}>
-                    {status}
-                  </b>
+                  <span>{status === "degraded" ? <XCircle size={16} /> : <CheckCircle2 size={16} />}{name}</span>
+                  <b className={status === "degraded" ? styles.bad : styles.good}>{status}</b>
                 </li>
               ))}
             </ul>
           </article>
 
           <article className={styles.panel}>
-            <span>MODULE COUNTS</span>
-            <h2>Usage</h2>
+            <span>MODULE COUNTS</span><h2>Usage</h2>
             <ul>
               <li>Transactions <b>{counts.transactions}</b></li>
               <li>Bills <b>{counts.bills}</b></li>
@@ -471,54 +403,30 @@ export function AdminDashboard({
               <li>Debt accounts <b>{counts.debts}</b></li>
               <li>Planner records <b>{counts.plannerRecords}</b></li>
             </ul>
-            <p className={styles.aggregateDisclaimer}>
-              Counts indicate usage only. No customer financial amounts are
-              shown.
-            </p>
+            <p className={styles.aggregateDisclaimer}>Counts indicate usage only. No customer financial amounts are shown.</p>
           </article>
 
           <article className={`${styles.panel} ${styles.auditPanel}`}>
-            <span>ADMIN AUDIT</span>
-            <h2>Recent actions</h2>
-
+            <span>ADMIN AUDIT</span><h2>Recent actions</h2>
             <div className={styles.logs}>
-              {logs.length ? (
-                logs.slice(0, 20).map((log) => {
-                  const actor = userMap.get(log.admin_user_id);
-                  const target = log.target_user_id
-                    ? userMap.get(log.target_user_id)
-                    : null;
-                  const targetEmail =
-                    String(log.details?.target_email ?? "") ||
-                    target?.email ||
-                    "account";
-
-                  return (
-                    <div key={log.id} className={styles.logItem}>
-                      <span className={styles.logIcon}>
-                        <ShieldAlert size={15} />
-                      </span>
-                      <span className={styles.logCopy}>
-                        <strong>{actionLabel(log.action)}</strong>
-                        <small>
-                          {targetEmail} · by{" "}
-                          {actor?.displayName || actor?.email || "Admin"}
-                        </small>
-                        <time title={new Date(log.created_at).toLocaleString()}>
-                          {formatRelativeTime(log.created_at)}
-                        </time>
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
+              {logs.length ? logs.slice(0, 20).map((log) => {
+                const actor = userMap.get(log.admin_user_id);
+                const target = log.target_user_id ? userMap.get(log.target_user_id) : null;
+                const targetEmail = String(log.details?.target_email ?? "") || target?.email || "account";
+                return (
+                  <div key={log.id} className={styles.logItem}>
+                    <span className={styles.logIcon}><ShieldAlert size={15} /></span>
+                    <span className={styles.logCopy}>
+                      <strong>{actionLabel(log.action)}</strong>
+                      <small>{targetEmail} · by {actor?.displayName || actor?.email || "Admin"}</small>
+                      <time title={new Date(log.created_at).toLocaleString()}>{formatRelativeTime(log.created_at)}</time>
+                    </span>
+                  </div>
+                );
+              }) : (
                 <div className={styles.emptyAudit}>
-                  <ShieldCheck size={20} />
-                  <strong>No admin actions yet</strong>
-                  <span>
-                    Suspend, restore, promote, demote or delete a test account
-                    and the action will appear here instantly.
-                  </span>
+                  <ShieldCheck size={20} /><strong>No admin actions yet</strong>
+                  <span>Use Suspend, Restore, Make admin, Remove admin or Delete on a test account.</span>
                 </div>
               )}
             </div>
@@ -529,19 +437,11 @@ export function AdminDashboard({
       {deleteTarget ? (
         <div className={styles.backdrop}>
           <div className={styles.modal}>
-            <span>PERMANENT ACTION</span>
-            <h2>Delete account?</h2>
-            <p>
-              The account for <strong>{deleteTarget.email}</strong> and its
-              linked records will be permanently deleted.
-            </p>
+            <span>PERMANENT ACTION</span><h2>Delete account?</h2>
+            <p>The account for <strong>{deleteTarget.email}</strong> and its linked records will be permanently deleted.</p>
             <div>
-              <button onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button
-                className={styles.danger}
-                onClick={deleteAccount}
-                disabled={busy === deleteTarget.id}
-              >
+              <button type="button" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button type="button" className={styles.danger} onClick={deleteAccount} disabled={busy === deleteTarget.id}>
                 {busy === deleteTarget.id ? "Deleting…" : "Delete account"}
               </button>
             </div>

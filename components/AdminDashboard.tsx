@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import {
   Activity,
   Ban,
@@ -79,29 +78,26 @@ export function AdminDashboard({
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    setUsers(initialUsers);
-    setLogs(initialLogs);
-  }, [initialUsers, initialLogs]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      router.refresh();
-    }, 10000);
-
-    return () => window.clearInterval(timer);
-  }, [router]);
 
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
-    return users.filter(
-      (user) =>
-        !value ||
-        user.email.toLowerCase().includes(value) ||
-        user.displayName.toLowerCase().includes(value),
-    );
+
+    return users
+      .filter(
+        (user) =>
+          !value ||
+          user.email.toLowerCase().includes(value) ||
+          user.displayName.toLowerCase().includes(value),
+      )
+      .sort((a, b) => {
+        const roleRank = (role: AdminRole | null) =>
+          role === "super_admin" ? 0 : role === "admin" ? 1 : 2;
+
+        const roleDifference = roleRank(a.role) - roleRank(b.role);
+        if (roleDifference !== 0) return roleDifference;
+
+        return a.createdAt.localeCompare(b.createdAt);
+      });
   }, [query, users]);
 
   async function runAction(
@@ -206,7 +202,7 @@ export function AdminDashboard({
         </div>
         <div className={styles.status}>
           <i />
-          Live data · refreshes every 10 seconds
+          Admin systems online
         </div>
       </header>
 
@@ -271,11 +267,28 @@ export function AdminDashboard({
               <span>Actions</span>
             </div>
 
-            {filtered.map((user) => {
+            {filtered.map((user, index) => {
               const isSelf = user.id === currentAdminId;
+              const previousUser = filtered[index - 1];
+              const beginsStandardUsers =
+                user.role === null &&
+                Boolean(previousUser?.role);
 
               return (
-                <div className={styles.row} key={user.id}>
+                <div key={user.id}>
+                  {beginsStandardUsers ? (
+                    <div className={styles.accountDivider}>
+                      <span>Registered users</span>
+                    </div>
+                  ) : null}
+
+                  <div
+                    className={`${styles.row} ${
+                      user.role === "super_admin"
+                        ? styles.superAdminRow
+                        : ""
+                    }`}
+                  >
                   <span>
                     <strong>{user.displayName || "Unnamed user"}</strong>
                     <small>{user.email}</small>
@@ -353,6 +366,7 @@ export function AdminDashboard({
                       <span className={styles.you}>Current account</span>
                     )}
                   </span>
+                  </div>
                 </div>
               );
             })}

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type DirectoryRow = {
-  id: string;
+  user_id: string;
   email: string;
   created_at: string;
   last_sign_in_at: string | null;
@@ -68,15 +68,23 @@ export default async function AdminPage() {
     ...((overviewResult.data ?? {}) as Partial<Overview>),
   };
 
-  const users = directory.map((item) => ({
-    id: item.id,
-    email: item.email,
-    createdAt: item.created_at,
-    lastSignInAt: item.last_sign_in_at,
-    bannedUntil: item.banned_until,
-    displayName: item.display_name,
-    role: item.role,
-  }));
+  const users = directory
+    .filter(
+      (item) =>
+        typeof item.user_id === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          item.user_id,
+        ),
+    )
+    .map((item) => ({
+      id: item.user_id,
+      email: item.email,
+      createdAt: item.created_at,
+      lastSignInAt: item.last_sign_in_at,
+      bannedUntil: item.banned_until,
+      displayName: item.display_name,
+      role: item.role,
+    }));
 
   const dataOperational =
     !directoryResult.error && !overviewResult.error && !logsResult.error;

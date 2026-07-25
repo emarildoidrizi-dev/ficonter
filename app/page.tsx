@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, BarChart3, LockKeyhole, Sparkles, WalletCards, Target, ReceiptText } from "lucide-react";
 import { Brand } from "@/components/Brand";
+import { PublicPreviewGreeting } from "@/components/PublicPreviewGreeting";
 
 const features = [
   [WalletCards, "Unified overview", "See income, expenses, cash flow, bills and net worth from one calm dashboard."],
@@ -52,7 +53,7 @@ export default async function HomePage({
           </div>
           <div className="hero-panel">
             <div className="eyebrow">Private overview</div>
-            <h3 style={{fontFamily:"Georgia,serif",fontSize:32,margin:"14px 0 0"}}>Good morning, Alex.</h3>
+            <PublicPreviewGreeting name="Lido" />
             <p style={{color:"#c9c3ba"}}>Your financial position is stable and improving.</p>
             <div className="metric-grid">
               <div className="metric"><span>Net worth</span><strong>€42,650</strong></div>

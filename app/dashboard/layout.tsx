@@ -39,7 +39,19 @@ export default async function DashboardLayout({
         density={interfacePreferences.density}
       />
       <RealtimeRefreshBridge />
-      <Sidebar isAdmin={Boolean(admin)} />
+      <Sidebar
+        isAdmin={Boolean(admin)}
+        user={{
+          displayName: String(
+            user.user_metadata?.display_name ??
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              "",
+          ),
+          email: user.email ?? "",
+          avatarPath: String(user.user_metadata?.avatar_path ?? ""),
+        }}
+      />
       <main className="app-main">{children}</main>
     </div>
   );

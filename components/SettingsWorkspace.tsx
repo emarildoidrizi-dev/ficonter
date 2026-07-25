@@ -84,10 +84,27 @@ type Props = {
   userId: string;
   email: string;
   metadata: Metadata;
+  initialSection?: string;
 };
 
 type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
 type ExportKind = null | "transactions" | "json" | "pdf";
+
+function isSectionId(value: string | undefined): value is SectionId {
+  return Boolean(
+    value &&
+      [
+        "profile",
+        "security",
+        "financial",
+        "notifications",
+        "appearance",
+        "privacy",
+        "subscription",
+        "language",
+      ].includes(value),
+  );
+}
 
 const sections = [
   { id: "profile", label: "Profile", description: "Identity and profile photo", icon: UserRound },
@@ -239,10 +256,12 @@ async function compressProfilePhoto(file: File): Promise<Blob> {
   }
 }
 
-export function SettingsWorkspace({ userId, email, metadata }: Props) {
+export function SettingsWorkspace({ userId, email, metadata, initialSection }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const photoInput = useRef<HTMLInputElement>(null);
-  const [active, setActive] = useState<SectionId>("profile");
+  const [active, setActive] = useState<SectionId>(() =>
+    isSectionId(initialSection) ? initialSection : "profile",
+  );
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
   const [profilePhoto, setProfilePhoto] = useState("");
@@ -263,6 +282,13 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<ExportKind>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (isSectionId(initialSection)) {
+      setActive(initialSection);
+      setMessage(null);
+    }
+  }, [initialSection]);
 
   useEffect(() => {
     const cookies = document.cookie

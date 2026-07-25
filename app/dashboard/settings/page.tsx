@@ -5,13 +5,24 @@ import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams?: Promise<{
+    section?: string | string[];
+  }>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const query = await searchParams;
+  const section = Array.isArray(query?.section)
+    ? query.section[0]
+    : query?.section;
 
   return (
     <section>
@@ -30,6 +41,7 @@ export default async function SettingsPage() {
         userId={user.id}
         email={user.email ?? ""}
         metadata={user.user_metadata ?? {}}
+        initialSection={section}
       />
     </section>
   );

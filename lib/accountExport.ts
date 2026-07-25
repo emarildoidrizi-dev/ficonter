@@ -502,7 +502,11 @@ function imagePdf(images: Uint8Array[]): Blob {
   ].join("");
   chunks.push(ascii(xref));
 
-  return new Blob([concatBytes(chunks)], { type: "application/pdf" });
+  const pdfBytes = concatBytes(chunks);
+  const pdfBuffer = new ArrayBuffer(pdfBytes.byteLength);
+  new Uint8Array(pdfBuffer).set(pdfBytes);
+
+  return new Blob([pdfBuffer], { type: "application/pdf" });
 }
 
 function reportSummary(payload: AccountExportPayload): { label: string; value: string }[] {

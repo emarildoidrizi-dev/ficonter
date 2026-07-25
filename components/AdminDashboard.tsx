@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Ban,
@@ -16,6 +16,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./AdminDashboard.module.css";
 
 type AdminRole = "admin" | "super_admin";
@@ -57,6 +58,34 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "Never";
 }
 
+function formatRelativeTime(value: string) {
+  const seconds = Math.max(
+    1,
+    Math.floor((Date.now() - new Date(value).getTime()) / 1000),
+  );
+
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function actionLabel(action: string) {
+  const labels: Record<string, string> = {
+    suspend: "Account suspended",
+    restore: "Account restored",
+    promote_admin: "Promoted to admin",
+    promote_super_admin: "Promoted to super admin",
+    demote_admin: "Admin role removed",
+    delete_user: "Account deleted",
+  };
+
+  return labels[action] ?? action.replaceAll("_", " ");
+}
+
 export function AdminDashboard({
   currentAdminId,
   currentRole,
@@ -72,6 +101,7 @@ export function AdminDashboard({
   counts: Counts;
   system: Record<string, "operational" | "degraded" | "configured">;
 }) {
+  const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState(initialUsers);
   const [logs, setLogs] = useState(initialLogs);
   const [query, setQuery] = useState("");
@@ -79,26 +109,55 @@ export function AdminDashboard({
   const [message, setMessage] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-audit-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "admin_audit_logs",
+        },
+        (payload) => {
+          const next = payload.new as LogRow;
+          setLogs((current) => [
+            next,
+            ...current.filter((item) => item.id !== next.id),
+          ]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  const sortedUsers = useMemo(
+    () =>
+      [...users].sort((a, b) => {
+        const rank = (role: AdminRole | null) =>
+          role === "super_admin" ? 0 : role === "admin" ? 1 : 2;
+        return rank(a.role) - rank(b.role);
+      }),
+    [users],
+  );
+
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
+    return sortedUsers.filter(
+      (user) =>
+        !value ||
+        user.email.toLowerCase().includes(value) ||
+        user.displayName.toLowerCase().includes(value),
+    );
+  }, [query, sortedUsers]);
 
-    return users
-      .filter(
-        (user) =>
-          !value ||
-          user.email.toLowerCase().includes(value) ||
-          user.displayName.toLowerCase().includes(value),
-      )
-      .sort((a, b) => {
-        const roleRank = (role: AdminRole | null) =>
-          role === "super_admin" ? 0 : role === "admin" ? 1 : 2;
-
-        const roleDifference = roleRank(a.role) - roleRank(b.role);
-        if (roleDifference !== 0) return roleDifference;
-
-        return a.createdAt.localeCompare(b.createdAt);
-      });
-  }, [query, users]);
+  const userMap = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
+  );
 
   async function runAction(
     user: UserRow,
@@ -121,6 +180,7 @@ export function AdminDashboard({
     const data = (await response.json().catch(() => null)) as {
       error?: string;
       role?: AdminRole | null;
+      audit?: LogRow;
     } | null;
 
     if (!response.ok) {
@@ -139,17 +199,12 @@ export function AdminDashboard({
       }),
     );
 
-    setLogs((current) => [
-      {
-        id: crypto.randomUUID(),
-        admin_user_id: currentAdminId,
-        action,
-        target_user_id: user.id,
-        details: data?.role ? { role: data.role } : {},
-        created_at: new Date().toISOString(),
-      },
-      ...current,
-    ]);
+    if (data?.audit) {
+      setLogs((current) => [
+        data.audit as LogRow,
+        ...current.filter((item) => item.id !== data.audit?.id),
+      ]);
+    }
 
     setMessage("Admin action completed.");
     setBusy(null);
@@ -166,6 +221,7 @@ export function AdminDashboard({
 
     const data = (await response.json().catch(() => null)) as {
       error?: string;
+      audit?: LogRow;
     } | null;
 
     if (!response.ok) {
@@ -177,6 +233,14 @@ export function AdminDashboard({
     setUsers((current) =>
       current.filter((item) => item.id !== deleteTarget.id),
     );
+
+    if (data?.audit) {
+      setLogs((current) => [
+        data.audit as LogRow,
+        ...current.filter((item) => item.id !== data.audit?.id),
+      ]);
+    }
+
     setDeleteTarget(null);
     setMessage("Account permanently deleted.");
     setBusy(null);
@@ -269,103 +333,104 @@ export function AdminDashboard({
 
             {filtered.map((user, index) => {
               const isSelf = user.id === currentAdminId;
-              const previousUser = filtered[index - 1];
-              const beginsStandardUsers =
-                user.role === null &&
-                Boolean(previousUser?.role);
+              const showDivider =
+                index > 0 &&
+                filtered[index - 1]?.role !== null &&
+                user.role === null;
 
               return (
                 <div key={user.id}>
-                  {beginsStandardUsers ? (
-                    <div className={styles.accountDivider}>
+                  {showDivider ? (
+                    <div className={styles.registeredDivider}>
                       <span>Registered users</span>
+                      <i />
                     </div>
                   ) : null}
 
                   <div
-                    className={`${styles.row} ${
+                    className={`${styles.row}${
                       user.role === "super_admin"
-                        ? styles.superAdminRow
+                        ? ` ${styles.superAdminRow}`
                         : ""
                     }`}
                   >
-                  <span>
-                    <strong>{user.displayName || "Unnamed user"}</strong>
-                    <small>{user.email}</small>
-                  </span>
-                  <span>{formatDate(user.createdAt)}</span>
-                  <span>{formatDate(user.lastSignInAt)}</span>
-                  <span>
-                    <b
-                      className={
-                        user.bannedUntil ? styles.suspended : styles.active
-                      }
-                    >
-                      {user.bannedUntil ? "Suspended" : "Active"}
-                    </b>
-                  </span>
-                  <span>
-                    <b className={user.role ? styles.role : styles.standard}>
-                      {user.role?.replace("_", " ") ?? "User"}
-                    </b>
-                  </span>
-                  <span className={styles.actions}>
-                    {!isSelf ? (
-                      <>
-                        <button
-                          disabled={busy === user.id}
-                          onClick={() =>
-                            runAction(
-                              user,
-                              user.bannedUntil ? "restore" : "suspend",
+                    <span>
+                      <strong>{user.displayName || "Unnamed user"}</strong>
+                      <small>{user.email}</small>
+                    </span>
+                    <span>{formatDate(user.createdAt)}</span>
+                    <span>{formatDate(user.lastSignInAt)}</span>
+                    <span>
+                      <b
+                        className={
+                          user.bannedUntil ? styles.suspended : styles.active
+                        }
+                      >
+                        {user.bannedUntil ? "Suspended" : "Active"}
+                      </b>
+                    </span>
+                    <span>
+                      <b className={user.role ? styles.role : styles.standard}>
+                        {user.role?.replace("_", " ") ?? "User"}
+                      </b>
+                    </span>
+                    <span className={styles.actions}>
+                      {!isSelf ? (
+                        <>
+                          <button
+                            disabled={busy === user.id}
+                            onClick={() =>
+                              runAction(
+                                user,
+                                user.bannedUntil ? "restore" : "suspend",
+                              )
+                            }
+                          >
+                            {user.bannedUntil ? (
+                              <RefreshCw size={15} />
+                            ) : (
+                              <Ban size={15} />
+                            )}
+                            {user.bannedUntil ? "Restore" : "Suspend"}
+                          </button>
+
+                          {currentRole === "super_admin" ? (
+                            user.role ? (
+                              <button
+                                disabled={busy === user.id}
+                                onClick={() =>
+                                  runAction(user, "demote_admin")
+                                }
+                              >
+                                <UserCog size={15} />
+                                Remove admin
+                              </button>
+                            ) : (
+                              <button
+                                disabled={busy === user.id}
+                                onClick={() =>
+                                  runAction(user, "promote_admin")
+                                }
+                              >
+                                <ShieldCheck size={15} />
+                                Make admin
+                              </button>
                             )
-                          }
-                        >
-                          {user.bannedUntil ? (
-                            <RefreshCw size={15} />
-                          ) : (
-                            <Ban size={15} />
-                          )}
-                          {user.bannedUntil ? "Restore" : "Suspend"}
-                        </button>
+                          ) : null}
 
-                        {currentRole === "super_admin" ? (
-                          user.role ? (
-                            <button
-                              disabled={busy === user.id}
-                              onClick={() =>
-                                runAction(user, "demote_admin")
-                              }
-                            >
-                              <UserCog size={15} />
-                              Remove admin
-                            </button>
-                          ) : (
-                            <button
-                              disabled={busy === user.id}
-                              onClick={() =>
-                                runAction(user, "promote_admin")
-                              }
-                            >
-                              <ShieldCheck size={15} />
-                              Make admin
-                            </button>
-                          )
-                        ) : null}
-
-                        <button
-                          className={styles.delete}
-                          disabled={busy === user.id}
-                          onClick={() => setDeleteTarget(user)}
-                        >
-                          <Trash2 size={15} />
-                          Delete
-                        </button>
-                      </>
-                    ) : (
-                      <span className={styles.you}>Current account</span>
-                    )}
-                  </span>
+                          <button
+                            className={styles.delete}
+                            disabled={busy === user.id}
+                            onClick={() => setDeleteTarget(user)}
+                          >
+                            <Trash2 size={15} />
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <span className={styles.you}>Current account</span>
+                      )}
+                    </span>
                   </div>
                 </div>
               );
@@ -412,24 +477,49 @@ export function AdminDashboard({
             </p>
           </article>
 
-          <article className={styles.panel}>
+          <article className={`${styles.panel} ${styles.auditPanel}`}>
             <span>ADMIN AUDIT</span>
             <h2>Recent actions</h2>
+
             <div className={styles.logs}>
               {logs.length ? (
-                logs.slice(0, 20).map((log) => (
-                  <div key={log.id}>
-                    <ShieldAlert size={15} />
-                    <span>
-                      <strong>{log.action.replaceAll("_", " ")}</strong>
-                      <small>
-                        {new Date(log.created_at).toLocaleString("en-GB")}
-                      </small>
-                    </span>
-                  </div>
-                ))
+                logs.slice(0, 20).map((log) => {
+                  const actor = userMap.get(log.admin_user_id);
+                  const target = log.target_user_id
+                    ? userMap.get(log.target_user_id)
+                    : null;
+                  const targetEmail =
+                    String(log.details?.target_email ?? "") ||
+                    target?.email ||
+                    "account";
+
+                  return (
+                    <div key={log.id} className={styles.logItem}>
+                      <span className={styles.logIcon}>
+                        <ShieldAlert size={15} />
+                      </span>
+                      <span className={styles.logCopy}>
+                        <strong>{actionLabel(log.action)}</strong>
+                        <small>
+                          {targetEmail} · by{" "}
+                          {actor?.displayName || actor?.email || "Admin"}
+                        </small>
+                        <time title={new Date(log.created_at).toLocaleString()}>
+                          {formatRelativeTime(log.created_at)}
+                        </time>
+                      </span>
+                    </div>
+                  );
+                })
               ) : (
-                <p>No admin actions recorded yet.</p>
+                <div className={styles.emptyAudit}>
+                  <ShieldCheck size={20} />
+                  <strong>No admin actions yet</strong>
+                  <span>
+                    Suspend, restore, promote, demote or delete a test account
+                    and the action will appear here instantly.
+                  </span>
+                </div>
               )}
             </div>
           </article>

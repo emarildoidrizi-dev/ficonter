@@ -40,6 +40,20 @@ async function authorize(request: NextRequest) {
   return { user, admin };
 }
 
+async function getTargetIdentity(targetUserId: string) {
+  const service = createServiceClient();
+  const { data } = await service.auth.admin.getUserById(targetUserId);
+
+  return {
+    target_email: data.user?.email ?? "",
+    target_display_name: String(
+      data.user?.user_metadata?.display_name ??
+        data.user?.user_metadata?.full_name ??
+        "",
+    ),
+  };
+}
+
 async function writeAuditLog(
   adminUserId: string,
   action: string,
@@ -47,12 +61,21 @@ async function writeAuditLog(
   details: Record<string, unknown> = {},
 ) {
   const service = createServiceClient();
-  await service.from("admin_audit_logs").insert({
-    admin_user_id: adminUserId,
-    action,
-    target_user_id: targetUserId,
-    details,
-  });
+  const { data, error } = await service
+    .from("admin_audit_logs")
+    .insert({
+      admin_user_id: adminUserId,
+      action,
+      target_user_id: targetUserId,
+      details,
+    })
+    .select(
+      "id,admin_user_id,action,target_user_id,details,created_at",
+    )
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 export async function PATCH(
@@ -82,6 +105,7 @@ export async function PATCH(
   }
 
   const service = createServiceClient();
+  const targetDetails = await getTargetIdentity(id);
 
   if (body.action === "suspend" || body.action === "restore") {
     const { error } = await service.auth.admin.updateUserById(id, {
@@ -95,8 +119,17 @@ export async function PATCH(
       );
     }
 
-    await writeAuditLog(auth.user.id, body.action, id);
-    return NextResponse.json({ ok: true }, { headers: noStoreHeaders() });
+    const audit = await writeAuditLog(
+      auth.user.id,
+      body.action,
+      id,
+      targetDetails,
+    );
+
+    return NextResponse.json(
+      { ok: true, audit },
+      { headers: noStoreHeaders() },
+    );
   }
 
   if (auth.admin.role !== "super_admin") {
@@ -119,9 +152,15 @@ export async function PATCH(
       );
     }
 
-    await writeAuditLog(auth.user.id, body.action, id);
+    const audit = await writeAuditLog(
+      auth.user.id,
+      body.action,
+      id,
+      targetDetails,
+    );
+
     return NextResponse.json(
-      { ok: true, role: null },
+      { ok: true, role: null, audit },
       { headers: noStoreHeaders() },
     );
   }
@@ -141,10 +180,15 @@ export async function PATCH(
     );
   }
 
-  await writeAuditLog(auth.user.id, body.action, id, { role });
+  const audit = await writeAuditLog(
+    auth.user.id,
+    body.action,
+    id,
+    { ...targetDetails, role },
+  );
 
   return NextResponse.json(
-    { ok: true, role },
+    { ok: true, role, audit },
     { headers: noStoreHeaders() },
   );
 }
@@ -166,8 +210,14 @@ export async function DELETE(
   }
 
   const service = createServiceClient();
+  const targetDetails = await getTargetIdentity(id);
 
-  await writeAuditLog(auth.user.id, "delete_user", id);
+  const audit = await writeAuditLog(
+    auth.user.id,
+    "delete_user",
+    id,
+    targetDetails,
+  );
 
   const { error } = await service.auth.admin.deleteUser(id);
 
@@ -178,5 +228,8 @@ export async function DELETE(
     );
   }
 
-  return NextResponse.json({ ok: true }, { headers: noStoreHeaders() });
+  return NextResponse.json(
+    { ok: true, audit },
+    { headers: noStoreHeaders() },
+  );
 }

@@ -341,3 +341,79 @@ html[data-density="comfortable"] .app-main :where(
     --density-page-padding: 14px;
   }
 }
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+html[data-resolved-theme="dark"] {
+  color-scheme: dark;
+  --text-primary: #fffaf2;
+  --text-secondary: #d5cec4;
+  --text-tertiary: #aaa298;
+  --surface-canvas: #101315;
+  --surface-card: #1a1e21;
+  --surface-raised: #22272a;
+  --surface-subtle: #292f32;
+  --surface-hover: #333a3e;
+  --surface-sidebar: #090c0e;
+  --sidebar-text: #fffaf2;
+  --sidebar-muted: #d2cbc1;
+  --border-subtle: #3b4246;
+  --border-strong: #566066;
+  --control-bg: #202528;
+  --solid-bg: #f3ece2;
+  --solid-bg-hover: #ded2c2;
+  --solid-text: #15181a;
+  --gold: #d0b27d;
+  --gold-soft: #3c3428;
+  --sage: #9bb8aa;
+  --sage-soft: #263b34;
+  --burgundy: #e09a9a;
+  --shadow: 0 24px 70px rgba(0, 0, 0, .34);
+}
+
+html[data-resolved-theme="dark"] body,
+html[data-resolved-theme="dark"] .app-main {
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+html[data-resolved-theme="dark"] .app-main :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--text-primary) !important;
+}
+
+html[data-resolved-theme="dark"] .app-main :where(input, select, textarea) {
+  background-color: var(--control-bg) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+}
+
+html[data-resolved-theme="dark"] .app-main :where(input, textarea)::placeholder {
+  color: var(--text-tertiary) !important;
+  opacity: 1;
+}
+
+html[data-resolved-theme="dark"] .app-main option {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+html[data-resolved-theme="dark"] .app-main :where(table, th, td) {
+  border-color: var(--border-subtle) !important;
+}
+
+html[data-resolved-theme="dark"] .app-main :where(th) {
+  color: var(--text-secondary) !important;
+}
+
+html[data-resolved-theme="dark"] ::selection {
+  background: rgba(208, 178, 125, .32);
+  color: #fff;
+}
+
+html[data-resolved-theme="dark"] :where(.hero-panel, .dark-section, .auth-art) {
+  color: var(--sidebar-text) !important;
+}
+
+html[data-resolved-theme="dark"] .btn-primary {
+  background: var(--solid-bg) !important;
+  color: var(--solid-text) !important;
+}

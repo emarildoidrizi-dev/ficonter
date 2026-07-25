@@ -176,3 +176,11 @@
     text-align: left;
   }
 }
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .livePill,
+:global(html[data-resolved-theme="dark"]) .infoCard { background: var(--surface-card) !important; border-color: var(--border-subtle) !important; color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .transactionRow { border-color: var(--border-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.transactionMain strong,.infoCard strong,.transactionAmount strong) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.transactionMain span,.transactionMain small,.transactionAmount span,.infoCard p,.kpiNote) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .incomeIcon { background: #263b34 !important; color: #a7c9b7 !important; }
+:global(html[data-resolved-theme="dark"]) .expenseIcon { background: #412a2d !important; color: #e6a4a4 !important; }

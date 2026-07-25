@@ -123,3 +123,31 @@
   .modalBillSummary,.modalActions{grid-template-columns:1fr}
   .modalBillSummary div:last-child{text-align:left}
 }
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .summaryGrid article,
+:global(html[data-resolved-theme="dark"]) .formCard,
+:global(html[data-resolved-theme="dark"]) .billCard,
+:global(html[data-resolved-theme="dark"]) .emptyState,
+:global(html[data-resolved-theme="dark"]) .search,
+:global(html[data-resolved-theme="dark"]) .confirmModal,
+:global(html[data-resolved-theme="dark"]) .modalBillSummary {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .warningCard { background: #342629 !important; border-color: #68464b !important; }
+:global(html[data-resolved-theme="dark"]) .dateBox,
+:global(html[data-resolved-theme="dark"]) .iconButton,
+:global(html[data-resolved-theme="dark"]) .modalClose,
+:global(html[data-resolved-theme="dark"]) .modalCancel { background: var(--surface-raised) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.summaryGrid strong,.actionRow h2,.formHeading h3,.billIdentity h3,.amount strong,.dateBox strong,.confirmModal strong) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.summaryGrid span,.actionRow p,.formGrid label,.billIdentity p,.billIdentity small,.amount span,.dateBox span,.confirmModal p) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .formGrid input,
+:global(html[data-resolved-theme="dark"]) .formGrid select,
+:global(html[data-resolved-theme="dark"]) .formGrid textarea,
+:global(html[data-resolved-theme="dark"]) .filters select { background: var(--control-bg) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .cardActions { border-color: var(--border-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .paid { background: #294239 !important; color: #b9dcc8 !important; }
+:global(html[data-resolved-theme="dark"]) .pending { background: #403625 !important; color: #e1c994 !important; }
+:global(html[data-resolved-theme="dark"]) .overdue { background: #472c2d !important; color: #efb0aa !important; }
+:global(html[data-resolved-theme="dark"]) .cancelled { background: #34383a !important; color: #c5c0ba !important; }

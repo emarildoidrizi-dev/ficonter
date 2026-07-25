@@ -43,3 +43,31 @@
 .tableCard.goals header{background:#e5dcf1}.goalTable{grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr);gap:14px}.goalTable span:nth-child(2),.goalTable span:nth-child(3){text-align:right;font-weight:700}.goalFooter{display:grid!important;grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr)!important;gap:14px!important}.goalFooter b{text-align:right}@media(max-width:650px){.goalTable,.goalFooter{grid-template-columns:minmax(0,1fr) 100px 100px!important}}
 
 .goalSummaryCard{min-height:230px}.goalSummaryCard header{background:#e5dcf1}.goalSummaryBody{display:grid;gap:18px;padding-top:20px}.goalSummaryAmounts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.goalSummaryAmounts span{padding:13px;border-radius:12px;background:#f7f3ed;color:#817a72;font-size:11px}.goalSummaryAmounts b{display:block;margin-top:6px;color:#25282a;font-size:15px}.goalSummaryProgress{height:9px;border-radius:999px;background:#ece8e2;overflow:hidden}.goalSummaryProgress i{display:block;height:100%;border-radius:inherit;background:#9c7cc6}.goalSummaryFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#77716a;font-size:12px}.goalSummaryFooter a{padding:8px 11px;border:1px solid #ded6ca;border-radius:9px;background:#fff;color:#25282a;font-weight:800}@media(max-width:650px){.goalSummaryAmounts{grid-template-columns:1fr}.goalSummaryFooter{align-items:flex-start;flex-direction:column}}
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .topGrid > article,
+:global(html[data-resolved-theme="dark"]) .cashFlow,
+:global(html[data-resolved-theme="dark"]) .tableCard,
+:global(html[data-resolved-theme="dark"]) .bottomGrid > article,
+:global(html[data-resolved-theme="dark"]) .modal form,
+:global(html[data-resolved-theme="dark"]) .goalSummaryAmounts span {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .monthNav button,
+:global(html[data-resolved-theme="dark"]) .monthNav input,
+:global(html[data-resolved-theme="dark"]) .goalSummaryFooter a,
+:global(html[data-resolved-theme="dark"]) .tableCard header button { background: var(--surface-raised) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header h1,.topGrid h3,.cashFlow h3,.tableCard h3,.bottomGrid h3,.overview strong,.ring strong,.cashFlow b,.goalSummaryAmounts b,.compactFooter b) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header p,.overview label,.bars > div,.breakdown,.cashFlow span,.tableHead,.row,.tableCard footer,.expenseHead,.expenseRow,.spending > div,.compactEmpty,.goalSummaryFooter,.goalSummaryAmounts span) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.overview label,.cashFlow > div,.cashFlow span,.tableHead,.row,.tableCard footer,.expenseHead,.expenseRow,.spending > div,.compactEmpty) { border-color: var(--border-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .overview input { background: var(--control-bg) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .ring { background: conic-gradient(#b99ad0 var(--progress),#31373a 0) !important; }
+:global(html[data-resolved-theme="dark"]) .ring::after { background: var(--surface-card) !important; }
+:global(html[data-resolved-theme="dark"]) .bars i,
+:global(html[data-resolved-theme="dark"]) .goalSummaryProgress { background: var(--surface-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .cashFlow .left { background: #243941 !important; }
+:global(html[data-resolved-theme="dark"]) .tableCard header { color: #171a1c !important; }
+:global(html[data-resolved-theme="dark"]) .tableCard header h3 { color: #171a1c !important; }
+:global(html[data-resolved-theme="dark"]) .expenseHead { background: #46382c !important; }
+:global(html[data-resolved-theme="dark"]) .modal input { background: var(--control-bg) !important; color: var(--text-primary) !important; border-color: var(--border-subtle) !important; }

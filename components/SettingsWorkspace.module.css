@@ -66,3 +66,45 @@
 
 @media(max-width:1050px){.densityGrid{grid-template-columns:1fr}:global(html[data-density="compact"]) .workspace,:global(html[data-density="comfortable"]) .workspace{grid-template-columns:1fr}}
 @media(max-width:700px){.densityCard{grid-template-columns:78px minmax(0,1fr)}.densityPreview{width:78px}}
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .navigation,
+:global(html[data-resolved-theme="dark"]) .panel,
+:global(html[data-resolved-theme="dark"]) .formCard,
+:global(html[data-resolved-theme="dark"]) .privacyCard,
+:global(html[data-resolved-theme="dark"]) .planCard,
+:global(html[data-resolved-theme="dark"]) .languageCard,
+:global(html[data-resolved-theme="dark"]) .optionCard,
+:global(html[data-resolved-theme="dark"]) .densityCard,
+:global(html[data-resolved-theme="dark"]) .photoEditor,
+:global(html[data-resolved-theme="dark"]) .sessionRow,
+:global(html[data-resolved-theme="dark"]) .infoStrip,
+:global(html[data-resolved-theme="dark"]) .modal {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .sectionButton { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .sectionButton small,
+:global(html[data-resolved-theme="dark"]) .accountCard small,
+:global(html[data-resolved-theme="dark"]) .cardHeading p,
+:global(html[data-resolved-theme="dark"]) .panelHeader p,
+:global(html[data-resolved-theme="dark"]) .form label,
+:global(html[data-resolved-theme="dark"]) .formCard p,
+:global(html[data-resolved-theme="dark"]) .privacyCard p,
+:global(html[data-resolved-theme="dark"]) .planCard p,
+:global(html[data-resolved-theme="dark"]) .languageCard p { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .sectionActive {
+  background: var(--surface-raised) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+:global(html[data-resolved-theme="dark"]) .sectionActive small { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .sectionIcon,
+:global(html[data-resolved-theme="dark"]) .sessionIcon,
+:global(html[data-resolved-theme="dark"]) .segmented,
+:global(html[data-resolved-theme="dark"]) .disabledGrid button,
+:global(html[data-resolved-theme="dark"]) .secondaryButton,
+:global(html[data-resolved-theme="dark"]) .textButton { background: var(--surface-raised) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.panelHeader h2,.cardHeading h3,.accountCard strong,.formCard h3,.privacyCard h3,.planCard h3,.languageCard h3,.modal h3) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .dangerZone { background: #261d20 !important; border-color: #70464d !important; }
+:global(html[data-resolved-theme="dark"]) .densityPreview { background: var(--surface-subtle) !important; border-color: var(--border-subtle) !important; }

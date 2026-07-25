@@ -86,3 +86,24 @@
 
 .fxPreview{margin:8px 0 14px;padding:12px 14px;border:1px solid #dfd5c7;border-radius:12px;background:#f7f1e7;color:#5f5b55;font-size:13px}
 
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .searchBox,
+:global(html[data-resolved-theme="dark"]) .secondaryAction,
+:global(html[data-resolved-theme="dark"]) .summary > div,
+:global(html[data-resolved-theme="dark"]) .row,
+:global(html[data-resolved-theme="dark"]) .modal,
+:global(html[data-resolved-theme="dark"]) .actions button,
+:global(html[data-resolved-theme="dark"]) .modalActions button,
+:global(html[data-resolved-theme="dark"]) .fxPreview {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .toolbar select,
+:global(html[data-resolved-theme="dark"]) .modal input,
+:global(html[data-resolved-theme="dark"]) .modal select { background: var(--control-bg) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .row:hover { background: var(--surface-raised) !important; border-color: #715f45 !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details strong,.summary strong,.amountBlock strong,.balanceBlock strong,.modal h3) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details span,.summary span,.amountBlock span,.balanceBlock span,.recordCount,.modal p,.empty,.fxPreview) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .positive { color: #a7c9b7 !important; }
+:global(html[data-resolved-theme="dark"]) .negative { color: #e5a09d !important; }

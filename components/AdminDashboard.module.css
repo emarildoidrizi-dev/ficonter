@@ -1028,3 +1028,42 @@
     width: auto;
   }
 }
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .kpis article,
+:global(html[data-resolved-theme="dark"]) .panel,
+:global(html[data-resolved-theme="dark"]) .side > section,
+:global(html[data-resolved-theme="dark"]) .auditPanel,
+:global(html[data-resolved-theme="dark"]) .logItem,
+:global(html[data-resolved-theme="dark"]) .modal,
+:global(html[data-resolved-theme="dark"]) .toast {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .privacyNote,
+:global(html[data-resolved-theme="dark"]) .aggregateDisclaimer,
+:global(html[data-resolved-theme="dark"]) .modalAccount,
+:global(html[data-resolved-theme="dark"]) .noResults,
+:global(html[data-resolved-theme="dark"]) .emptyAudit { background: var(--surface-subtle) !important; border-color: var(--border-subtle) !important; color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .rowHead,
+:global(html[data-resolved-theme="dark"]) .row,
+:global(html[data-resolved-theme="dark"]) .groupDivider,
+:global(html[data-resolved-theme="dark"]) .systemList > div { border-color: var(--border-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .row { background: var(--surface-card) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .superAdminRow { background: linear-gradient(90deg,rgba(113,86,151,.18),rgba(26,30,33,.95)) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header h1,.kpis strong,.panelHead h2,.healthName,.logItem strong,.modal h2,.toast strong) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header p,.kpis span,.kpis small,.rowHead,.row small,.healthResult,.healthCheckedAt,.logItem span,.auditHint,.modal p,.toast p) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .accountTools input,
+:global(html[data-resolved-theme="dark"]) .accountTools button,
+:global(html[data-resolved-theme="dark"]) .refreshButton,
+:global(html[data-resolved-theme="dark"]) .healthRefresh,
+:global(html[data-resolved-theme="dark"]) .actions button,
+:global(html[data-resolved-theme="dark"]) .modalActions button { background: var(--surface-raised) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .protected { background: #312943 !important; border-color: #55476f !important; color: #d2c4eb !important; }
+:global(html[data-resolved-theme="dark"]) .active,
+:global(html[data-resolved-theme="dark"]) .healthy,
+:global(html[data-resolved-theme="dark"]) .good { background: #294239 !important; color: #b9dcc8 !important; }
+:global(html[data-resolved-theme="dark"]) .suspended,
+:global(html[data-resolved-theme="dark"]) .offline,
+:global(html[data-resolved-theme="dark"]) .bad { background: #472c2d !important; color: #efb0aa !important; }
+:global(html[data-resolved-theme="dark"]) .degraded { color: #e3c78f !important; }

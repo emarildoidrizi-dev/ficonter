@@ -3,7 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AdminRole = "admin" | "super_admin";
 
-const PRIMARY_SUPER_ADMIN_EMAIL = "wixlyydo@gmail.com";
+const FALLBACK_SUPER_ADMIN_EMAIL = "wixlyydo@gmail.com";
+
+export function getPrimarySuperAdminEmail(): string {
+  return (
+    process.env.FICONTER_SUPER_ADMIN_EMAIL?.trim().toLowerCase() ||
+    FALLBACK_SUPER_ADMIN_EMAIL
+  );
+}
 
 export function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,12 +38,10 @@ export async function requireAdmin() {
     return { user: null, admin: null };
   }
 
-  // The founder account remains a deterministic super-admin even if an
-  // admin_users lookup is temporarily unavailable. This check runs only on
-  // the server against the verified Supabase Auth user email.
-  if (
-    user.email?.trim().toLowerCase() === PRIMARY_SUPER_ADMIN_EMAIL
-  ) {
+  const isPrimarySuperAdmin =
+    user.email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
+
+  if (isPrimarySuperAdmin) {
     return {
       user,
       admin: {
@@ -46,8 +51,6 @@ export async function requireAdmin() {
     };
   }
 
-  // First use the authenticated client. The admin_users RLS policy permits
-  // every admin to read their own role.
   const { data: authenticatedAdmin } = await supabase
     .from("admin_users")
     .select("user_id,role")
@@ -64,7 +67,6 @@ export async function requireAdmin() {
     };
   }
 
-  // Server-only fallback for non-founder administrators.
   const service = createServiceClient();
   const { data: serviceAdmin } = await service
     .from("admin_users")

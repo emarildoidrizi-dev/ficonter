@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Ban,
@@ -78,6 +79,20 @@ export function AdminDashboard({
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setUsers(initialUsers);
+    setLogs(initialLogs);
+  }, [initialUsers, initialLogs]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      router.refresh();
+    }, 10000);
+
+    return () => window.clearInterval(timer);
+  }, [router]);
 
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
@@ -191,7 +206,7 @@ export function AdminDashboard({
         </div>
         <div className={styles.status}>
           <i />
-          Admin systems online
+          Live data · refreshes every 10 seconds
         </div>
       </header>
 

@@ -1,162 +1,186 @@
 "use client";
 
-import { useMemo } from "react";
-import { ShieldCheck } from "lucide-react";
-import { TYPE_BY_VALUE, type FlowDirection } from "@/lib/financialOptions";
+import { useState } from "react";
+import {
+  CalendarCheck2,
+  ChevronDown,
+  CreditCard,
+  PiggyBank,
+  ReceiptText,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  TrendingUp,
+} from "lucide-react";
+import { formatCurrency } from "@/lib/financialOptions";
+import type {
+  FinancialHealthFactor,
+  FinancialHealthFactorId,
+  FinancialHealthResult,
+} from "@/lib/wealth/financialHealth";
 import styles from "./FinancialHealthScore.module.css";
 
-type Transaction = {
-  id: string;
-  type: string;
-  amount: number | string;
-  amount_eur: number | string | null;
-  transaction_date: string;
-};
+const FACTOR_ICONS = {
+  "cash-flow": TrendingUp,
+  savings: PiggyBank,
+  debt: CreditCard,
+  bills: ReceiptText,
+  "emergency-fund": ShieldCheck,
+  goals: Target,
+  planning: CalendarCheck2,
+} satisfies Record<FinancialHealthFactorId, typeof TrendingUp>;
 
-type Props = { transactions: Transaction[] };
+function factorMetric(factor: FinancialHealthFactor): string {
+  if (factor.metricLabel) return factor.metricLabel;
 
-type HealthBreakdown = {
-  score: number;
-  label: "Excellent" | "Healthy" | "Stable" | "Needs attention" | "At risk";
-  summary: string;
-  savingsRate: number;
-  netCashFlow: number;
-};
-
-const directionOf = (type: string): FlowDirection =>
-  TYPE_BY_VALUE[type]?.direction ??
-  (type === "income" ? "inflow" : "outflow");
-
-const isSavingType = (type: string) =>
-  type.toLowerCase().includes("saving");
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, value));
+  if (factor.metricUnit === "currency") {
+    return formatCurrency(factor.metricValue, "EUR");
+  }
+  if (factor.metricUnit === "percent") {
+    return `${factor.metricValue.toFixed(1)}%`;
+  }
+  if (factor.metricUnit === "months") {
+    return `${factor.metricValue.toFixed(1)} months`;
+  }
+  if (factor.metricUnit === "count") {
+    return Math.round(factor.metricValue).toLocaleString("en-US");
+  }
+  return "—";
 }
 
-function calculateHealth(transactions: Transaction[]): HealthBreakdown {
-  let income = 0;
-  let expenses = 0;
-  let savings = 0;
-
-  for (const item of transactions) {
-    const amount = Number(item.amount_eur ?? item.amount ?? 0);
-    if (!Number.isFinite(amount)) continue;
-
-    if (isSavingType(item.type)) {
-      savings += amount;
-      continue;
-    }
-
-    const direction = directionOf(item.type);
-    if (direction === "inflow") income += amount;
-    if (direction === "outflow") expenses += amount;
-  }
-
-  const netCashFlow = income - expenses - savings;
-  const savingsRate = income > 0 ? savings / income : 0;
-  const expenseRatio = income > 0 ? expenses / income : 1;
-
-  const cashFlowScore =
-    income > 0 ? clamp((netCashFlow / income) * 160 + 20, 0, 40) : 0;
-  const savingsScore =
-    income > 0 ? clamp((savingsRate / 0.2) * 30, 0, 30) : 0;
-  const spendingScore =
-    income > 0 ? clamp((1 - expenseRatio) * 40, 0, 20) : 0;
-  const activityScore = clamp((transactions.length / 12) * 10, 0, 10);
-
-  const score = Math.round(
-    clamp(cashFlowScore + savingsScore + spendingScore + activityScore, 0, 100),
-  );
-
-  if (score >= 90) {
-    return {
-      score,
-      label: "Excellent",
-      summary: "Your recorded cash flow and saving habits show an excellent financial foundation.",
-      savingsRate,
-      netCashFlow,
-    };
-  }
-  if (score >= 75) {
-    return {
-      score,
-      label: "Healthy",
-      summary: "Your finances are in a healthy position, with only limited areas to improve.",
-      savingsRate,
-      netCashFlow,
-    };
-  }
-  if (score >= 60) {
-    return {
-      score,
-      label: "Stable",
-      summary: "Your finances are stable, although cash flow, saving consistency or spending can still improve.",
-      savingsRate,
-      netCashFlow,
-    };
-  }
-  if (score >= 40) {
-    return {
-      score,
-      label: "Needs attention",
-      summary: "Your current records indicate pressure in cash flow or saving consistency.",
-      savingsRate,
-      netCashFlow,
-    };
-  }
-  return {
-    score,
-    label: "At risk",
-    summary: "Your recorded outflows are placing significant pressure on your finances.",
-    savingsRate,
-    netCashFlow,
-  };
-}
-
-export function FinancialHealthScore({ transactions }: Props) {
-  const health = useMemo(() => calculateHealth(transactions), [transactions]);
+export function FinancialHealthScore({
+  result,
+  error = "",
+}: {
+  result: FinancialHealthResult;
+  error?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
   const circumference = 2 * Math.PI * 46;
-  const dashOffset = circumference - (health.score / 100) * circumference;
+  const dashOffset = circumference - (result.score / 100) * circumference;
+  const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
 
   return (
-    <section className={styles.card} aria-label="Financial health score">
-      <div className={styles.gaugeWrap}>
-        <svg
-          className={styles.gauge}
-          viewBox="0 0 112 112"
-          role="img"
-          aria-label={`Financial health score ${health.score} out of 100`}
-        >
-          <circle className={styles.gaugeTrack} cx="56" cy="56" r="46" />
-          <circle
-            className={styles.gaugeValue}
-            cx="56"
-            cy="56"
-            r="46"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-          />
-        </svg>
+    <section className={styles.module} aria-label="Financial health score">
+      <article className={styles.card}>
+        <div className={styles.gaugeWrap}>
+          <svg
+            className={styles.gauge}
+            viewBox="0 0 112 112"
+            role="img"
+            aria-label={`Financial health score ${result.score} out of 100`}
+          >
+            <circle className={styles.gaugeTrack} cx="56" cy="56" r="46" />
+            <circle
+              className={styles.gaugeValue}
+              cx="56"
+              cy="56"
+              r="46"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+            />
+          </svg>
 
-        <div className={styles.score}>
-          <strong>{health.score}</strong>
-          <span>/ 100</span>
+          <div className={styles.score}>
+            <strong>{result.score}</strong>
+            <span>/ 100</span>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.copy}>
-        <span className={styles.eyebrow}>Financial health</span>
-        <div
-          className={styles.statusRow}
-          data-status={health.label.toLowerCase().replaceAll(" ", "-")}
-        >
-          <ShieldCheck size={18} />
-          <strong>{health.label}</strong>
+        <div className={styles.copy}>
+          <div className={styles.eyebrowRow}>
+            <span className={styles.eyebrow}>Wealth Engine · Financial health</span>
+            <span className={styles.version}>v{result.version}</span>
+          </div>
+          <div className={styles.statusRow} data-status={statusSlug}>
+            <ShieldCheck size={18} />
+            <strong>{result.label}</strong>
+          </div>
+          <p className={styles.summary}>{result.summary}</p>
+
+          <div className={styles.quickMetrics}>
+            <span>
+              <small>Cash-flow margin</small>
+              <strong>{(result.metrics.cashFlowMargin * 100).toFixed(1)}%</strong>
+            </span>
+            <span>
+              <small>Savings rate</small>
+              <strong>{(result.metrics.savingsRate * 100).toFixed(1)}%</strong>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className={styles.breakdownButton}
+            aria-expanded={expanded}
+            aria-controls="financial-health-breakdown"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Hide score breakdown" : "View score breakdown"}
+            <ChevronDown className={expanded ? styles.chevronOpen : ""} size={16} />
+          </button>
         </div>
-        <p className={styles.explanation}>
-          Savings rate is one part of your overall financial health.
-        </p>
-      </div>
+      </article>
+
+      {expanded ? (
+        <div className={styles.breakdown} id="financial-health-breakdown">
+          <header className={styles.breakdownHeader}>
+            <div>
+              <span>Transparent scoring</span>
+              <h2>How your score is built</h2>
+              <p>
+                One calculation uses your existing Transactions, Bills, Debt,
+                Goals and Monthly Planner records. No parallel balances or
+                duplicate financial values are created.
+              </p>
+            </div>
+            <div className={styles.confidence}>
+              <small>Data confidence</small>
+              <strong>{result.confidence}</strong>
+              <span>{result.dataCoverage}% coverage</span>
+            </div>
+          </header>
+
+          {error ? <div className={styles.error}>{error}</div> : null}
+
+          <div className={styles.factorList}>
+            {result.factors.map((factor) => {
+              const Icon = FACTOR_ICONS[factor.id];
+              return (
+                <article className={styles.factor} key={factor.id} data-status={factor.status}>
+                  <div className={styles.factorIcon}>
+                    <Icon size={18} aria-hidden="true" />
+                  </div>
+                  <div className={styles.factorBody}>
+                    <div className={styles.factorTop}>
+                      <div>
+                        <strong>{factor.name}</strong>
+                        <span>{factorMetric(factor)}</span>
+                      </div>
+                      <b>
+                        {factor.points.toFixed(1)} <small>/ {factor.maximum}</small>
+                      </b>
+                    </div>
+                    <div className={styles.factorTrack} aria-hidden="true">
+                      <span style={{ width: `${factor.percentage}%` }} />
+                    </div>
+                    <p>{factor.explanation}</p>
+                    <small className={styles.factorAction}>{factor.action}</small>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className={styles.nextAction}>
+            <Sparkles size={20} aria-hidden="true" />
+            <div>
+              <span>Next best action</span>
+              <strong>{result.nextBestAction}</strong>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
-  );}
+  );
+}

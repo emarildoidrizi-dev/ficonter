@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownRight,
@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/financialOptions";
+import {
+  calculateFinancialHealth,
+  normalizeFinancialHealthInputs,
+  type FinancialHealthInputs,
+} from "@/lib/wealth/financialHealth";
 import { FinancialHealthScore } from "@/components/FinancialHealthScore";
 import styles from "./DashboardLiveOverview.module.css";
 
@@ -35,12 +40,12 @@ type Props = {
   userId: string;
   name: string;
   initialTransactions: Transaction[];
+  initialHealthInputs: FinancialHealthInputs;
   initialError?: string;
+  initialHealthError?: string;
 };
 
 function euroValue(transaction: Transaction) {
-  // amount_eur is the authoritative reporting value. Falling back to amount
-  // only protects legacy EUR rows created before the conversion migration.
   if (transaction.amount_eur !== null && transaction.amount_eur !== undefined) {
     return Number(transaction.amount_eur);
   }
@@ -85,12 +90,17 @@ export function DashboardLiveOverview({
   userId,
   name,
   initialTransactions,
+  initialHealthInputs,
   initialError = "",
+  initialHealthError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const refreshTimerRef = useRef<number | null>(null);
   const [transactions, setTransactions] = useState(
     [...initialTransactions].sort(newestFirst),
   );
+  const [healthInputs, setHealthInputs] = useState(initialHealthInputs);
+  const [healthError, setHealthError] = useState(initialHealthError);
   const [connectionState, setConnectionState] = useState<
     "connecting" | "live" | "offline"
   >("connecting");
@@ -100,39 +110,81 @@ export function DashboardLiveOverview({
   }, [initialTransactions]);
 
   useEffect(() => {
+    setHealthInputs(initialHealthInputs);
+    setHealthError(initialHealthError);
+  }, [initialHealthInputs, initialHealthError]);
+
+  const refreshHealthInputs = useCallback(async () => {
+    const { data, error } = await supabase.rpc("get_financial_health_inputs");
+
+    if (error) {
+      setHealthError(error.message);
+      return;
+    }
+
+    setHealthInputs(normalizeFinancialHealthInputs(data));
+    setHealthError("");
+  }, [supabase]);
+
+  const scheduleHealthRefresh = useCallback(() => {
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      void refreshHealthInputs();
+    }, 180);
+  }, [refreshHealthInputs]);
+
+  useEffect(() => {
     function upsert(event: Event) {
       const transaction = (event as CustomEvent<Transaction>).detail;
       if (!transaction?.id) return;
-      setTransactions((current) => [
-        transaction,
-        ...current.filter((item) => item.id !== transaction.id),
-      ].sort(newestFirst));
+      setTransactions((current) =>
+        [
+          transaction,
+          ...current.filter((item) => item.id !== transaction.id),
+        ].sort(newestFirst),
+      );
+      scheduleHealthRefresh();
     }
 
     function remove(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id;
       if (!id) return;
       setTransactions((current) => current.filter((item) => item.id !== id));
+      scheduleHealthRefresh();
+    }
+
+    function refreshFromPlatformEvent() {
+      scheduleHealthRefresh();
     }
 
     window.addEventListener("ficonter:transaction-created", upsert);
     window.addEventListener("ficonter:transaction-upserted", upsert);
     window.addEventListener("ficonter:transaction-deleted", remove);
     window.addEventListener("ficonter:transaction-save-failed", remove);
+    window.addEventListener("ficonter:data-changed", refreshFromPlatformEvent);
 
     return () => {
       window.removeEventListener("ficonter:transaction-created", upsert);
       window.removeEventListener("ficonter:transaction-upserted", upsert);
       window.removeEventListener("ficonter:transaction-deleted", remove);
       window.removeEventListener("ficonter:transaction-save-failed", remove);
+      window.removeEventListener(
+        "ficonter:data-changed",
+        refreshFromPlatformEvent,
+      );
     };
-  }, []);
+  }, [scheduleHealthRefresh]);
 
   useEffect(() => {
     if (!userId) return;
 
+    const refreshOnly = () => scheduleHealthRefresh();
     const channel = supabase
-      .channel(`dashboard-transactions-${userId}`)
+      .channel(`dashboard-wealth-engine-${userId}`)
       .on(
         "postgres_changes",
         {
@@ -150,11 +202,63 @@ export function DashboardLiveOverview({
 
             const next = payload.new as Transaction;
             if (!next?.id) return current;
-            return [next, ...current.filter((item) => item.id !== next.id)].sort(
-              newestFirst,
-            );
+            return [
+              next,
+              ...current.filter((item) => item.id !== next.id),
+            ].sort(newestFirst);
           });
+          scheduleHealthRefresh();
         },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bills",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "debts",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "goals",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "monthly_budget_plans",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "monthly_budget_items",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") setConnectionState("live");
@@ -162,32 +266,31 @@ export function DashboardLiveOverview({
           status === "CHANNEL_ERROR" ||
           status === "TIMED_OUT" ||
           status === "CLOSED"
-        )
+        ) {
           setConnectionState("offline");
+        }
       });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [supabase, userId]);
+  }, [scheduleHealthRefresh, supabase, userId]);
 
-  const totals = useMemo(() => {
-    return transactions.reduce(
-      (summary, transaction) => {
-        const value = euroValue(transaction);
-        if (isIncome(transaction)) summary.income += value;
-        else summary.expenses += value;
-        return summary;
-      },
-      { income: 0, expenses: 0 },
-    );
-  }, [transactions]);
+  useEffect(
+    () => () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    },
+    [],
+  );
 
-  const cashFlow = totals.income - totals.expenses;
-  const savingsRate = totals.income
-    ? Math.max(0, (cashFlow / totals.income) * 100)
-    : 0;
+  const financialHealth = useMemo(
+    () => calculateFinancialHealth(healthInputs),
+    [healthInputs],
+  );
   const recent = transactions;
+  const { metrics } = financialHealth;
 
   return (
     <>
@@ -219,36 +322,38 @@ export function DashboardLiveOverview({
         </div>
       </header>
 
-      {initialError && <div className="alert alert-error">{initialError}</div>}
+      {initialError ? <div className="alert alert-error">{initialError}</div> : null}
 
       <section className="kpis">
         <div className="kpi">
           <span>Income recorded</span>
-          <strong>{formatCurrency(totals.income, "EUR")}</strong>
+          <strong>{formatCurrency(metrics.totalIncome, "EUR")}</strong>
           <small className={styles.kpiNote}>All currencies converted to EUR</small>
         </div>
         <div className="kpi">
           <span>Expenses recorded</span>
-          <strong>{formatCurrency(totals.expenses, "EUR")}</strong>
-          <small className={styles.kpiNote}>All currencies converted to EUR</small>
+          <strong>{formatCurrency(metrics.totalExpenses, "EUR")}</strong>
+          <small className={styles.kpiNote}>Saving transfers are shown separately</small>
         </div>
         <div className="kpi">
           <span>Cash flow</span>
           <strong
-            className={cashFlow >= 0 ? "amount-positive" : "amount-negative"}
+            className={
+              metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
+            }
           >
-            {formatCurrency(cashFlow, "EUR")}
+            {formatCurrency(metrics.netCashFlow, "EUR")}
           </strong>
-          <small className={styles.kpiNote}>Income minus expenses in EUR</small>
+          <small className={styles.kpiNote}>Income minus expenses and savings</small>
         </div>
         <div className="kpi">
           <span>Savings rate</span>
-          <strong>{savingsRate.toFixed(1)}%</strong>
-          <small className={styles.kpiNote}>Based on EUR-normalized totals</small>
+          <strong>{(metrics.savingsRate * 100).toFixed(1)}%</strong>
+          <small className={styles.kpiNote}>Recorded savings divided by income</small>
         </div>
       </section>
 
-      <FinancialHealthScore transactions={transactions} />
+      <FinancialHealthScore result={financialHealth} error={healthError} />
 
       <section className="grid-2">
         <div className="panel">
@@ -262,52 +367,64 @@ export function DashboardLiveOverview({
 
           {recent.length ? (
             <>
-            <div
-              className={styles.liveTable}
-              tabIndex={recent.length > 10 ? 0 : undefined}
-              aria-label="Live transaction history. The newest ten transactions are visible first; scroll for older records."
-            >
-              {recent.map((transaction) => {
-                const currency = transaction.currency || "EUR";
-                const originalAmount = Number(transaction.amount);
-                const converted = euroValue(transaction);
-                const income = isIncome(transaction);
-                const foreign = currency !== "EUR";
+              <div
+                className={styles.liveTable}
+                tabIndex={recent.length > 10 ? 0 : undefined}
+                aria-label="Live transaction history. The newest ten transactions are visible first; scroll for older records."
+              >
+                {recent.map((transaction) => {
+                  const currency = transaction.currency || "EUR";
+                  const originalAmount = Number(transaction.amount);
+                  const converted = euroValue(transaction);
+                  const income = isIncome(transaction);
+                  const foreign = currency !== "EUR";
 
-                return (
-                  <article className={styles.transactionRow} key={transaction.id}>
-                    <div
-                      className={`${styles.flowIcon} ${
-                        income ? styles.incomeIcon : styles.expenseIcon
-                      }`}
-                    >
-                      {income ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
-                    </div>
-                    <div className={styles.transactionMain}>
-                      <strong>{transaction.description}</strong>
-                      <span>{transaction.category}</span>
-                      <small>
-                        <Clock3 size={13} /> {readableDateTime(transaction)}
-                      </small>
-                    </div>
-                    <div className={styles.transactionAmount}>
-                      <strong className={income ? "amount-positive" : "amount-negative"}>
-                        {income ? "+" : "-"}
-                        {formatCurrency(converted, "EUR")}
-                      </strong>
-                      {foreign ? (
-                        <span>
-                          Original: {formatCurrency(originalAmount, currency)}
-                        </span>
-                      ) : (
-                        <span>Original currency: EUR</span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            {recent.length > 10 && <p className={styles.scrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}
+                  return (
+                    <article className={styles.transactionRow} key={transaction.id}>
+                      <div
+                        className={`${styles.flowIcon} ${
+                          income ? styles.incomeIcon : styles.expenseIcon
+                        }`}
+                      >
+                        {income ? (
+                          <ArrowUpRight size={18} />
+                        ) : (
+                          <ArrowDownRight size={18} />
+                        )}
+                      </div>
+                      <div className={styles.transactionMain}>
+                        <strong>{transaction.description}</strong>
+                        <span>{transaction.category}</span>
+                        <small>
+                          <Clock3 size={13} /> {readableDateTime(transaction)}
+                        </small>
+                      </div>
+                      <div className={styles.transactionAmount}>
+                        <strong
+                          className={
+                            income ? "amount-positive" : "amount-negative"
+                          }
+                        >
+                          {income ? "+" : "-"}
+                          {formatCurrency(converted, "EUR")}
+                        </strong>
+                        {foreign ? (
+                          <span>
+                            Original: {formatCurrency(originalAmount, currency)}
+                          </span>
+                        ) : (
+                          <span>Original currency: EUR</span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {recent.length > 10 ? (
+                <p className={styles.scrollHint}>
+                  Showing 10 transactions at a time · Scroll for older activity
+                </p>
+              ) : null}
             </>
           ) : (
             <div className="empty">
@@ -336,14 +453,14 @@ export function DashboardLiveOverview({
             <div>
               <strong>Live synchronization</strong>
               <p>
-                Inserts, edits and deletions appear here automatically without a
-                manual refresh.
+                The same Wealth Engine inputs refresh when Transactions, Bills,
+                Debt, Goals or Monthly Planner data changes.
               </p>
             </div>
           </div>
           <div className="stat-row">
             <span>Transactions recorded</span>
-            <strong>{transactions.length}</strong>
+            <strong>{healthInputs.transactions.count}</strong>
           </div>
           <div className="stat-row">
             <span>Reporting currency</span>

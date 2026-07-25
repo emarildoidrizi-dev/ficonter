@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Activity,
+  AlertTriangle,
   Ban,
   CheckCircle2,
   HardDrive,
+  LoaderCircle,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -14,55 +22,62 @@ import {
   UserCheck,
   UserCog,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
+import {
+  type AdminAuditRow,
+  type AdminCounts,
+  type AdminRole,
+  type AdminUserRow,
+} from "@/lib/admin/snapshot";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./AdminDashboard.module.css";
 
-type AdminRole = "admin" | "super_admin";
-
-type UserRow = {
+type PatchAction =
+  | "suspend"
+  | "restore"
+  | "promote_admin"
+  | "demote_admin";
+type UserAction = PatchAction | "delete_user";
+type SystemStatus = "operational" | "degraded" | "configured";
+type Toast = {
   id: string;
-  email: string;
-  createdAt: string;
-  lastSignInAt: string | null;
-  bannedUntil: string | null;
-  displayName: string;
-  role: AdminRole | null;
+  type: "success" | "error";
+  title: string;
+  message: string;
+};
+type PendingAction = {
+  action: UserAction;
+  user: AdminUserRow;
 };
 
-type LogRow = {
-  id: string;
-  admin_user_id: string;
-  action: string;
-  target_user_id: string | null;
-  details: Record<string, unknown>;
-  created_at: string;
+type ActionCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  successTitle: string;
+  successMessage: string;
+  danger: boolean;
 };
 
-type Counts = {
-  users: number;
-  active7Days: number;
-  active30Days: number;
-  new7Days: number;
-  new30Days: number;
-  transactions: number;
-  bills: number;
-  goals: number;
-  debts: number;
-  plannerRecords: number;
-  storageObjects: number;
-};
+const TOAST_DURATION_MS = 5000;
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "Never";
 }
 
-function formatAuditDateTime(value: string) {
+function formatAuditDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatAuditTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -75,11 +90,88 @@ function actionLabel(action: string) {
     suspend: "Account suspended",
     restore: "Account restored",
     promote_admin: "Promoted to admin",
-    promote_super_admin: "Promoted to super admin",
     demote_admin: "Admin role removed",
+    delete_user_requested: "Deletion requested",
     delete_user: "Account deleted",
+    delete_user_failed: "Deletion failed",
   };
   return labels[action] ?? action.replaceAll("_", " ");
+}
+
+function stringDetail(
+  details: Record<string, unknown> | null | undefined,
+  key: string,
+) {
+  const value = details?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function actionCopy(pending: PendingAction): ActionCopy {
+  const account = pending.user.displayName || pending.user.email;
+
+  switch (pending.action) {
+    case "suspend":
+      return {
+        eyebrow: "ACCOUNT ACCESS",
+        title: `Suspend ${account}?`,
+        description:
+          "This account will be blocked from signing in until an administrator restores it. Its financial records will remain private and unchanged.",
+        confirmLabel: "Suspend account",
+        successTitle: "Account suspended",
+        successMessage: `${account} can no longer sign in until restored.`,
+        danger: true,
+      };
+    case "restore":
+      return {
+        eyebrow: "ACCOUNT ACCESS",
+        title: `Restore ${account}?`,
+        description:
+          "This will remove the suspension and allow the account to sign in again using its existing credentials.",
+        confirmLabel: "Restore account",
+        successTitle: "Account restored",
+        successMessage: `${account} can sign in again.`,
+        danger: false,
+      };
+    case "promote_admin":
+      return {
+        eyebrow: "ADMIN PERMISSIONS",
+        title: `Make ${account} an admin?`,
+        description:
+          "This grants privacy-safe platform administration access. The account will be able to manage users and view aggregate platform information, but never customer financial values.",
+        confirmLabel: "Make admin",
+        successTitle: "Admin access granted",
+        successMessage: `${account} is now an administrator.`,
+        danger: false,
+      };
+    case "demote_admin":
+      return {
+        eyebrow: "ADMIN PERMISSIONS",
+        title: `Remove admin access?`,
+        description:
+          `${account} will immediately lose access to the administration area but will remain an active registered FICONTER user.`,
+        confirmLabel: "Remove admin",
+        successTitle: "Admin access removed",
+        successMessage: `${account} is now a standard registered user.`,
+        danger: true,
+      };
+    case "delete_user":
+      return {
+        eyebrow: "PERMANENT ACTION",
+        title: `Permanently delete ${account}?`,
+        description:
+          "This permanently deletes the authentication account and all linked database records. Profile storage objects are also removed. This action cannot be undone or recovered.",
+        confirmLabel: "Permanently delete",
+        successTitle: "Account permanently deleted",
+        successMessage: `${account} and its linked records were deleted.`,
+        danger: true,
+      };
+  }
+}
+
+function uniqueToastId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function AdminDashboard({
@@ -87,186 +179,289 @@ export function AdminDashboard({
   currentRole,
   initialUsers,
   initialLogs,
-  counts,
+  initialCounts,
   system,
 }: {
   currentAdminId: string;
   currentRole: AdminRole;
-  initialUsers: UserRow[];
-  initialLogs: LogRow[];
-  counts: Counts;
-  system: Record<string, "operational" | "degraded" | "configured">;
+  initialUsers: AdminUserRow[];
+  initialLogs: AdminAuditRow[];
+  initialCounts: AdminCounts;
+  system: Record<string, SystemStatus>;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState(initialUsers);
   const [logs, setLogs] = useState(initialLogs);
+  const [counts, setCounts] = useState(initialCounts);
   const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [busy, setBusy] = useState<PendingAction | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const toastTimers = useRef(new Map<string, number>());
+  const refreshTimer = useRef<number | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const dismissToast = useCallback((id: string) => {
+    const timer = toastTimers.current.get(id);
+    if (timer) window.clearTimeout(timer);
+    toastTimers.current.delete(id);
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  const showToast = useCallback(
+    (type: Toast["type"], title: string, message: string) => {
+      const id = uniqueToastId();
+      const toast = { id, type, title, message };
+      setToasts((current) => [...current, toast].slice(-4));
+      const timer = window.setTimeout(
+        () => dismissToast(id),
+        TOAST_DURATION_MS,
+      );
+      toastTimers.current.set(id, timer);
+    },
+    [dismissToast],
+  );
+
+  const refreshDirectory = useCallback(
+    async (showFailure = false) => {
+      setRefreshing(true);
+      try {
+        const response = await fetch("/api/admin/users", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        const data = (await response.json().catch(() => null)) as {
+          users?: AdminUserRow[];
+          counts?: AdminCounts;
+          error?: string;
+        } | null;
+
+        if (!response.ok || !data?.users || !data.counts) {
+          throw new Error(data?.error ?? "The account directory could not be refreshed.");
+        }
+
+        setUsers(data.users);
+        setCounts(data.counts);
+        setPending((current) =>
+          current && data.users?.some((user) => user.id === current.user.id)
+            ? current
+            : null,
+        );
+      } catch (error) {
+        if (showFailure) {
+          showToast(
+            "error",
+            "Refresh failed",
+            error instanceof Error
+              ? error.message
+              : "The account directory could not be refreshed.",
+          );
+        }
+      } finally {
+        setRefreshing(false);
+      }
+    },
+    [showToast],
+  );
+
+  const scheduleDirectoryRefresh = useCallback(() => {
+    if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+    refreshTimer.current = window.setTimeout(() => {
+      void refreshDirectory(false);
+    }, 180);
+  }, [refreshDirectory]);
 
   useEffect(() => {
     const channel = supabase
-      .channel("admin-audit-live")
+      .channel("admin-user-management-live")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "admin_audit_logs",
         },
         (payload) => {
-          const next = payload.new as LogRow;
-          setLogs((current) => [
-            next,
-            ...current.filter((item) => item.id !== next.id),
-          ]);
+          if (payload.eventType === "DELETE") {
+            const removed = payload.old as Partial<AdminAuditRow>;
+            if (removed.id) {
+              setLogs((current) =>
+                current.filter((item) => item.id !== removed.id),
+              );
+            }
+          } else {
+            const next = payload.new as AdminAuditRow;
+            setLogs((current) => [
+              next,
+              ...current.filter((item) => item.id !== next.id),
+            ]);
+          }
+          scheduleDirectoryRefresh();
         },
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+      toastTimers.current.forEach((timer) => window.clearTimeout(timer));
+      toastTimers.current.clear();
       void supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [scheduleDirectoryRefresh, supabase]);
 
-  const sortedUsers = useMemo(
-    () =>
-      [...users].sort((a, b) => {
-        const rank = (role: AdminRole | null) =>
-          role === "super_admin" ? 0 : role === "admin" ? 1 : 2;
-        return rank(a.role) - rank(b.role);
-      }),
-    [users],
-  );
+  useEffect(() => {
+    if (!pending) return;
 
-  const filtered = useMemo(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(() => confirmButtonRef.current?.focus(), 0);
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) setPending(null);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [busy, pending]);
+
+  const filteredUsers = useMemo(() => {
     const value = query.trim().toLowerCase();
-    return sortedUsers.filter(
+    return users.filter(
       (user) =>
         !value ||
         user.email.toLowerCase().includes(value) ||
         user.displayName.toLowerCase().includes(value),
     );
-  }, [query, sortedUsers]);
+  }, [query, users]);
+
+  const userGroups = useMemo(
+    () => [
+      {
+        key: "super-admin",
+        label: "Super Admin",
+        users: filteredUsers.filter((user) => user.role === "super_admin"),
+      },
+      {
+        key: "admins",
+        label: "Admins",
+        users: filteredUsers.filter((user) => user.role === "admin"),
+      },
+      {
+        key: "registered-users",
+        label: "Registered Users",
+        users: filteredUsers.filter((user) => user.role === null),
+      },
+    ],
+    [filteredUsers],
+  );
 
   const userMap = useMemo(
     () => new Map(users.map((user) => [user.id, user])),
     [users],
   );
 
-  async function requestAction(
-    user: UserRow,
-    action:
-      | "suspend"
-      | "restore"
-      | "promote_admin"
-      | "promote_super_admin"
-      | "demote_admin",
-  ) {
-    if (user.id === currentAdminId) {
-      setMessage(
-        "The current super-admin account is protected and cannot be changed here.",
-      );
-      return;
-    }
+  const orderedLogs = useMemo(
+    () =>
+      [...logs].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [logs],
+  );
 
-    setBusy(user.id);
-    setMessage("");
+  function isProtected(user: AdminUserRow) {
+    return user.id === currentAdminId || user.role === "super_admin";
+  }
+
+  function canManageStatus(user: AdminUserRow) {
+    if (isProtected(user)) return false;
+    return currentRole === "super_admin" || user.role === null;
+  }
+
+  function canDelete(user: AdminUserRow) {
+    if (isProtected(user)) return false;
+    return currentRole === "super_admin" || user.role === null;
+  }
+
+  function applyResponseUser(
+    current: AdminUserRow[],
+    next: { id: string; bannedUntil: string | null; role: AdminRole | null },
+  ) {
+    return current.map((user) =>
+      user.id === next.id
+        ? { ...user, bannedUntil: next.bannedUntil, role: next.role }
+        : user,
+    );
+  }
+
+  async function confirmAction() {
+    if (!pending || busy) return;
+
+    const copy = actionCopy(pending);
+    setBusy(pending);
 
     try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: "PATCH",
+      const isDelete = pending.action === "delete_user";
+      const response = await fetch(`/api/admin/users/${pending.user.id}`, {
+        method: isDelete ? "DELETE" : "PATCH",
         credentials: "same-origin",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
+          ...(isDelete ? {} : { "Content-Type": "application/json" }),
         },
-        body: JSON.stringify({ action }),
+        ...(isDelete ? {} : { body: JSON.stringify({ action: pending.action }) }),
       });
 
       const data = (await response.json().catch(() => null)) as {
         error?: string;
-        role?: AdminRole | null;
-        audit?: LogRow;
+        deletedUserId?: string;
+        user?: {
+          id: string;
+          bannedUntil: string | null;
+          role: AdminRole | null;
+        };
+        audit?: AdminAuditRow;
       } | null;
 
       if (!response.ok) {
         throw new Error(data?.error ?? `Request failed (${response.status}).`);
       }
 
-      setUsers((current) =>
-        current.map((item) => {
-          if (item.id !== user.id) return item;
-          if (action === "suspend") {
-            return { ...item, bannedUntil: "9999-12-31T00:00:00Z" };
-          }
-          if (action === "restore") {
-            return { ...item, bannedUntil: null };
-          }
-          return { ...item, role: data?.role ?? null };
-        }),
-      );
+      if (isDelete) {
+        setUsers((current) =>
+          current.filter((user) => user.id !== pending.user.id),
+        );
+        setCounts((current) => ({
+          ...current,
+          users: Math.max(0, current.users - 1),
+        }));
+      } else if (data?.user) {
+        setUsers((current) => applyResponseUser(current, data.user!));
+      }
 
       if (data?.audit) {
         setLogs((current) => [
-          data.audit as LogRow,
+          data.audit!,
           ...current.filter((item) => item.id !== data.audit?.id),
         ]);
       }
 
-      setMessage("Admin action completed successfully.");
+      setPending(null);
+      showToast("success", copy.successTitle, copy.successMessage);
+      scheduleDirectoryRefresh();
     } catch (error) {
-      setMessage(
+      showToast(
+        "error",
+        "Action not completed",
         error instanceof Error
           ? error.message
           : "The admin action could not be completed.",
-      );
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function deleteAccount() {
-    if (!deleteTarget) return;
-
-    setBusy(deleteTarget.id);
-    setMessage("");
-
-    try {
-      const response = await fetch(`/api/admin/users/${deleteTarget.id}`, {
-        method: "DELETE",
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      });
-
-      const data = (await response.json().catch(() => null)) as {
-        error?: string;
-        audit?: LogRow;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(data?.error ?? `Request failed (${response.status}).`);
-      }
-
-      setUsers((current) =>
-        current.filter((item) => item.id !== deleteTarget.id),
-      );
-
-      if (data?.audit) {
-        setLogs((current) => [
-          data.audit as LogRow,
-          ...current.filter((item) => item.id !== data.audit?.id),
-        ]);
-      }
-
-      setDeleteTarget(null);
-      setMessage("Account permanently deleted.");
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "The account could not be deleted.",
       );
     } finally {
       setBusy(null);
@@ -279,6 +474,7 @@ export function AdminDashboard({
     counts.goals +
     counts.debts +
     counts.plannerRecords;
+  const pendingCopy = pending ? actionCopy(pending) : null;
 
   return (
     <section className={styles.page}>
@@ -292,166 +488,438 @@ export function AdminDashboard({
           </p>
         </div>
         <div className={styles.status}>
-          <i />
-          Admin systems online
+          <ShieldCheck size={15} />
+          Administration secured
         </div>
       </header>
 
-      {message ? <div className={styles.notice}>{message}</div> : null}
-
       <div className={styles.kpis}>
-        <article><Users /><span>Registered users</span><strong>{users.length}</strong><small>{counts.new30Days} joined in 30 days</small></article>
-        <article><UserCheck /><span>Active in 7 days</span><strong>{counts.active7Days}</strong><small>{counts.active30Days} active in 30 days</small></article>
-        <article><Activity /><span>Platform records</span><strong>{aggregateRecords}</strong><small>Aggregate counts only</small></article>
-        <article><HardDrive /><span>Storage objects</span><strong>{counts.storageObjects}</strong><small>Profile-photo objects</small></article>
+        <article>
+          <Users />
+          <span>Registered users</span>
+          <strong>{users.length}</strong>
+          <small>{counts.new30Days} joined in 30 days</small>
+        </article>
+        <article>
+          <UserCheck />
+          <span>Active in 7 days</span>
+          <strong>{counts.active7Days}</strong>
+          <small>{counts.active30Days} active in 30 days</small>
+        </article>
+        <article>
+          <Activity />
+          <span>Platform records</span>
+          <strong>{aggregateRecords}</strong>
+          <small>Aggregate counts only</small>
+        </article>
+        <article>
+          <HardDrive />
+          <span>Storage objects</span>
+          <strong>{counts.storageObjects}</strong>
+          <small>Aggregate object count</small>
+        </article>
       </div>
 
       <div className={styles.grid}>
         <article className={styles.panel}>
           <div className={styles.panelHead}>
-            <div><span>USER MANAGEMENT</span><h2>Accounts</h2></div>
-            <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search account" /></label>
+            <div>
+              <span>USER MANAGEMENT</span>
+              <h2>Accounts</h2>
+            </div>
+            <div className={styles.accountTools}>
+              <label>
+                <Search size={16} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search name or email"
+                  aria-label="Search accounts by display name or email"
+                />
+              </label>
+              <button
+                type="button"
+                className={styles.refreshButton}
+                onClick={() => void refreshDirectory(true)}
+                disabled={refreshing}
+                aria-label="Refresh user directory"
+                title="Refresh user directory"
+              >
+                <RefreshCw
+                  size={16}
+                  className={refreshing ? styles.spinning : undefined}
+                />
+              </button>
+            </div>
           </div>
 
           <div className={styles.privacyNote}>
             Only account identity, status and role are shown. Financial balances,
-            transactions and private notes are not accessible here.
+            transactions, bills, debts, savings, goals and planner values are not
+            accessible here.
           </div>
 
           <div className={styles.table}>
             <div className={styles.rowHead}>
-              <span>Account</span><span>Created</span><span>Last sign-in</span>
-              <span>Status</span><span>Role</span><span>Actions</span>
+              <span>Account</span>
+              <span>Created</span>
+              <span>Last sign-in</span>
+              <span>Status</span>
+              <span>Role</span>
+              <span>Actions</span>
             </div>
 
-            {filtered.map((user, index) => {
-              const isSelf = user.id === currentAdminId;
-              const showDivider =
-                index > 0 &&
-                filtered[index - 1]?.role !== null &&
-                user.role === null;
-
-              return (
-                <div key={user.id}>
-                  {showDivider ? (
-                    <div className={styles.registeredDivider}>
-                      <span>Registered users</span><i />
-                    </div>
-                  ) : null}
-
-                  <div className={`${styles.row}${user.role === "super_admin" ? ` ${styles.superAdminRow}` : ""}`}>
-                    <span><strong>{user.displayName || "Unnamed user"}</strong><small>{user.email}</small></span>
-                    <span>{formatDate(user.createdAt)}</span>
-                    <span>{formatDate(user.lastSignInAt)}</span>
-                    <span><b className={user.bannedUntil ? styles.suspended : styles.active}>{user.bannedUntil ? "Suspended" : "Active"}</b></span>
-                    <span><b className={user.role ? styles.role : styles.standard}>{user.role?.replace("_", " ") ?? "User"}</b></span>
-                    <span className={styles.actions}>
-                      {isSelf ? (
-                        <span className={styles.you}>Protected account</span>
-                      ) : (
-                        <>
-                          <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, user.bannedUntil ? "restore" : "suspend")}>
-                            {user.bannedUntil ? <RefreshCw size={15} /> : <Ban size={15} />}
-                            {user.bannedUntil ? "Restore" : "Suspend"}
-                          </button>
-
-                          {currentRole === "super_admin" ? (
-                            user.role ? (
-                              <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, "demote_admin")}>
-                                <UserCog size={15} />Remove admin
-                              </button>
-                            ) : (
-                              <button type="button" disabled={busy === user.id} onClick={() => requestAction(user, "promote_admin")}>
-                                <ShieldCheck size={15} />Make admin
-                              </button>
-                            )
-                          ) : null}
-
-                          <button type="button" className={styles.delete} disabled={busy === user.id} onClick={() => setDeleteTarget(user)}>
-                            <Trash2 size={15} />Delete
-                          </button>
-                        </>
-                      )}
-                    </span>
-                  </div>
+            {userGroups.map((group) => (
+              <div key={group.key} className={styles.userGroup}>
+                <div className={styles.groupDivider}>
+                  <span>{group.label}</span>
+                  <i />
+                  <small>{group.users.length}</small>
                 </div>
-              );
-            })}
+
+                {group.users.map((user) => {
+                  const protectedAccount = isProtected(user);
+                  const rowBusy = busy?.user.id === user.id;
+
+                  return (
+                    <div
+                      key={user.id}
+                      className={`${styles.row}${
+                        user.role === "super_admin"
+                          ? ` ${styles.superAdminRow}`
+                          : ""
+                      }`}
+                    >
+                      <span>
+                        <strong>{user.displayName || "Unnamed user"}</strong>
+                        <small>{user.email}</small>
+                      </span>
+                      <span>{formatDate(user.createdAt)}</span>
+                      <span>{formatDate(user.lastSignInAt)}</span>
+                      <span>
+                        <b
+                          className={
+                            user.bannedUntil ? styles.suspended : styles.active
+                          }
+                        >
+                          {user.bannedUntil ? "Suspended" : "Active"}
+                        </b>
+                      </span>
+                      <span>
+                        <b className={user.role ? styles.role : styles.standard}>
+                          {user.role?.replace("_", " ") ?? "User"}
+                        </b>
+                      </span>
+                      <span className={styles.actions}>
+                        {protectedAccount ? (
+                          <span className={styles.protected}>
+                            <ShieldCheck size={15} /> Protected Account
+                          </span>
+                        ) : (
+                          <>
+                            {canManageStatus(user) ? (
+                              <button
+                                type="button"
+                                disabled={rowBusy}
+                                onClick={() =>
+                                  setPending({
+                                    user,
+                                    action: user.bannedUntil
+                                      ? "restore"
+                                      : "suspend",
+                                  })
+                                }
+                              >
+                                {rowBusy ? (
+                                  <LoaderCircle
+                                    size={15}
+                                    className={styles.spinning}
+                                  />
+                                ) : user.bannedUntil ? (
+                                  <RefreshCw size={15} />
+                                ) : (
+                                  <Ban size={15} />
+                                )}
+                                {user.bannedUntil ? "Restore" : "Suspend"}
+                              </button>
+                            ) : null}
+
+                            {currentRole === "super_admin" ? (
+                              user.role === "admin" ? (
+                                <button
+                                  type="button"
+                                  disabled={rowBusy}
+                                  onClick={() =>
+                                    setPending({ user, action: "demote_admin" })
+                                  }
+                                >
+                                  <UserCog size={15} /> Remove admin
+                                </button>
+                              ) : user.role === null ? (
+                                <button
+                                  type="button"
+                                  disabled={rowBusy}
+                                  onClick={() =>
+                                    setPending({ user, action: "promote_admin" })
+                                  }
+                                >
+                                  <ShieldCheck size={15} /> Make admin
+                                </button>
+                              ) : null
+                            ) : null}
+
+                            {canDelete(user) ? (
+                              <button
+                                type="button"
+                                className={styles.delete}
+                                disabled={rowBusy}
+                                onClick={() =>
+                                  setPending({ user, action: "delete_user" })
+                                }
+                              >
+                                <Trash2 size={15} /> Delete
+                              </button>
+                            ) : null}
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
+            {!filteredUsers.length ? (
+              <div className={styles.noResults}>
+                <Search size={20} />
+                <strong>No matching accounts</strong>
+                <span>Search by display name or full email address.</span>
+              </div>
+            ) : null}
           </div>
         </article>
 
         <aside className={styles.side}>
           <article className={styles.panel}>
-            <span>PLATFORM HEALTH</span><h2>Systems</h2>
+            <span>PLATFORM HEALTH</span>
+            <h2>Systems</h2>
             <ul className={styles.systemList}>
               {Object.entries(system).map(([name, status]) => (
                 <li key={name}>
-                  <span>{status === "degraded" ? <XCircle size={16} /> : <CheckCircle2 size={16} />}{name}</span>
-                  <b className={status === "degraded" ? styles.bad : styles.good}>{status}</b>
+                  <span>
+                    {status === "degraded" ? (
+                      <XCircle size={16} />
+                    ) : (
+                      <CheckCircle2 size={16} />
+                    )}
+                    {name}
+                  </span>
+                  <b
+                    className={
+                      status === "degraded" ? styles.bad : styles.good
+                    }
+                  >
+                    {status}
+                  </b>
                 </li>
               ))}
             </ul>
           </article>
 
           <article className={styles.panel}>
-            <span>MODULE COUNTS</span><h2>Usage</h2>
+            <span>MODULE COUNTS</span>
+            <h2>Usage</h2>
             <ul>
-              <li>Transactions <b>{counts.transactions}</b></li>
-              <li>Bills <b>{counts.bills}</b></li>
-              <li>Goals <b>{counts.goals}</b></li>
-              <li>Debt accounts <b>{counts.debts}</b></li>
-              <li>Planner records <b>{counts.plannerRecords}</b></li>
+              <li>
+                Transactions <b>{counts.transactions}</b>
+              </li>
+              <li>
+                Bills <b>{counts.bills}</b>
+              </li>
+              <li>
+                Goals <b>{counts.goals}</b>
+              </li>
+              <li>
+                Debt <b>{counts.debts}</b>
+              </li>
+              <li>
+                Planner <b>{counts.plannerRecords}</b>
+              </li>
+              <li>
+                Storage objects <b>{counts.storageObjects}</b>
+              </li>
+              <li>
+                Registered users <b>{users.length}</b>
+              </li>
+              <li>
+                Active users <b>{counts.active30Days}</b>
+              </li>
             </ul>
-            <p className={styles.aggregateDisclaimer}>Counts indicate usage only. No customer financial amounts are shown.</p>
+            <p className={styles.aggregateDisclaimer}>
+              Counts indicate usage only. No customer financial amounts are
+              shown.
+            </p>
           </article>
 
           <article className={`${styles.panel} ${styles.auditPanel}`}>
-            <span>ADMIN AUDIT</span><h2>Recent actions</h2>
+            <span>ADMIN AUDIT</span>
+            <h2>Recent actions</h2>
 
             <div className={styles.auditScroll}>
               <div className={styles.logs}>
-                {logs.length ? logs.map((log) => {
-                  const actor = userMap.get(log.admin_user_id);
-                  const target = log.target_user_id ? userMap.get(log.target_user_id) : null;
-                  const targetEmail = String(log.details?.target_email ?? "") || target?.email || "account";
+                {orderedLogs.length ? (
+                  orderedLogs.map((log) => {
+                    const actor = userMap.get(log.admin_user_id);
+                    const target = log.target_user_id
+                      ? userMap.get(log.target_user_id)
+                      : null;
+                    const targetName =
+                      stringDetail(log.details, "target_display_name") ||
+                      stringDetail(log.details, "target_email") ||
+                      target?.displayName ||
+                      target?.email ||
+                      "Deleted account";
+                    const actorName =
+                      stringDetail(log.details, "admin_display_name") ||
+                      stringDetail(log.details, "admin_email") ||
+                      actor?.displayName ||
+                      actor?.email ||
+                      "Administrator";
 
-                  return (
-                    <div key={log.id} className={styles.logItem}>
-                      <span className={styles.logIcon}><ShieldAlert size={15} /></span>
-                      <span className={styles.logCopy}>
-                        <strong>{actionLabel(log.action)}</strong>
-                        <small>{targetEmail} · by {actor?.displayName || actor?.email || "Admin"}</small>
-                        <time>{formatAuditDateTime(log.created_at)}</time>
-                      </span>
-                    </div>
-                  );
-                }) : (
+                    return (
+                      <div key={log.id} className={styles.logItem}>
+                        <span className={styles.logIcon}>
+                          <ShieldAlert size={15} />
+                        </span>
+                        <div className={styles.auditFields}>
+                          <span>
+                            <small>Action</small>
+                            <strong>{actionLabel(log.action)}</strong>
+                          </span>
+                          <span>
+                            <small>User</small>
+                            <strong>{targetName}</strong>
+                          </span>
+                          <span>
+                            <small>Admin</small>
+                            <strong>{actorName}</strong>
+                          </span>
+                          <span>
+                            <small>Date</small>
+                            <strong>{formatAuditDate(log.created_at)}</strong>
+                          </span>
+                          <span>
+                            <small>Time</small>
+                            <strong>{formatAuditTime(log.created_at)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
                   <div className={styles.emptyAudit}>
-                    <ShieldCheck size={20} /><strong>No admin actions yet</strong>
-                    <span>Use Suspend, Restore, Make admin, Remove admin or Delete on a test account.</span>
+                    <ShieldCheck size={20} />
+                    <strong>No admin actions yet</strong>
+                    <span>
+                      Completed user-management actions will appear here in real
+                      time.
+                    </span>
                   </div>
                 )}
               </div>
             </div>
 
-            {logs.length > 6 ? (
+            {orderedLogs.length > 6 ? (
               <div className={styles.auditHint}>
-                Scroll to view {logs.length - 6} older action{logs.length - 6 === 1 ? "" : "s"}
+                Scroll to view {orderedLogs.length - 6} older action
+                {orderedLogs.length - 6 === 1 ? "" : "s"}
               </div>
             ) : null}
           </article>
         </aside>
       </div>
 
-      {deleteTarget ? (
-        <div className={styles.backdrop}>
-          <div className={styles.modal}>
-            <span>PERMANENT ACTION</span><h2>Delete account?</h2>
-            <p>The account for <strong>{deleteTarget.email}</strong> and its linked records will be permanently deleted.</p>
+      <div
+        className={styles.toastRegion}
+        aria-live="polite"
+        aria-label="Admin notifications"
+      >
+        {toasts.map((toast) => (
+          <article
+            key={toast.id}
+            className={`${styles.toast} ${
+              toast.type === "success" ? styles.toastSuccess : styles.toastError
+            }`}
+          >
+            <span className={styles.toastIcon}>
+              {toast.type === "success" ? (
+                <CheckCircle2 size={19} />
+              ) : (
+                <AlertTriangle size={19} />
+              )}
+            </span>
             <div>
-              <button type="button" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button type="button" className={styles.danger} onClick={deleteAccount} disabled={busy === deleteTarget.id}>
-                {busy === deleteTarget.id ? "Deleting…" : "Delete account"}
+              <strong>{toast.title}</strong>
+              <p>{toast.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => dismissToast(toast.id)}
+              aria-label="Dismiss notification"
+            >
+              <X size={16} />
+            </button>
+            <i className={styles.toastTimer} />
+          </article>
+        ))}
+      </div>
+
+      {pending && pendingCopy ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !busy) setPending(null);
+          }}
+        >
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-confirmation-title"
+          >
+            <div className={styles.modalIcon}>
+              {pendingCopy.danger ? (
+                <AlertTriangle size={22} />
+              ) : (
+                <ShieldCheck size={22} />
+              )}
+            </div>
+            <span>{pendingCopy.eyebrow}</span>
+            <h2 id="admin-confirmation-title">{pendingCopy.title}</h2>
+            <p>{pendingCopy.description}</p>
+            <div className={styles.modalAccount}>
+              <strong>{pending.user.displayName}</strong>
+              <span>{pending.user.email}</span>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={Boolean(busy)}
+              >
+                Cancel
+              </button>
+              <button
+                ref={confirmButtonRef}
+                type="button"
+                className={pendingCopy.danger ? styles.danger : styles.primary}
+                onClick={() => void confirmAction()}
+                disabled={Boolean(busy)}
+              >
+                {busy ? (
+                  <LoaderCircle size={16} className={styles.spinning} />
+                ) : null}
+                {busy ? "Processing…" : pendingCopy.confirmLabel}
               </button>
             </div>
           </div>

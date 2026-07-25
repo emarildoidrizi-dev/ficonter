@@ -167,14 +167,25 @@ function currentDeviceLabel() {
 function applyInterface(preferences: Preferences) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.dataset.theme = preferences.appearance;
-  root.dataset.density = preferences.density;
-  root.style.colorScheme =
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const resolvedTheme =
     preferences.appearance === "system"
-      ? "light dark"
+      ? prefersDark
+        ? "dark"
+        : "light"
       : preferences.appearance;
-  localStorage.setItem("ficonter-appearance", preferences.appearance);
-  localStorage.setItem("ficonter-density", preferences.density);
+
+  root.dataset.theme = preferences.appearance;
+  root.dataset.resolvedTheme = resolvedTheme;
+  root.dataset.density = preferences.density;
+  root.style.colorScheme = resolvedTheme;
+
+  try {
+    localStorage.setItem("ficonter-appearance", preferences.appearance);
+    localStorage.setItem("ficonter-density", preferences.density);
+  } catch {
+    // The interface still updates when browser storage is unavailable.
+  }
 }
 
 async function compressProfilePhoto(file: File): Promise<Blob> {
@@ -755,7 +766,34 @@ export function SettingsWorkspace({ userId, email, metadata }: Props) {
         {active === "appearance" ? (
           <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
             <fieldset className={styles.optionGroup}><legend>Theme</legend><div className={styles.optionGrid}>{[['light','Light','Bright private workspace'],['dark','Dark','Low-light interface'],['system','System default','Follow device preference']].map(([value,label,description]) => <label className={styles.optionCard} key={value}><input type="radio" checked={preferences.appearance === value} onChange={() => { const next = { ...preferences, appearance: value as Preferences['appearance'] }; setPreferences(next); applyInterface(next); }} /><span className={styles.optionPreview} data-theme={value} /><strong>{label}</strong><small>{description}</small></label>)}</div></fieldset>
-            <fieldset className={styles.optionGroup}><legend>Layout density</legend><div className={styles.segmented}>{(['comfortable','compact'] as const).map((value) => <label key={value}><input type="radio" checked={preferences.density === value} onChange={() => { const next = { ...preferences, density: value }; setPreferences(next); applyInterface(next); }} /><span>{value === 'comfortable' ? 'Comfortable' : 'Compact'}</span></label>)}</div></fieldset>
+            <fieldset className={styles.optionGroup}>
+              <legend>Layout density</legend>
+              <div className={styles.densityGrid}>
+                {([
+                  ["comfortable", "Comfortable", "More breathing room, larger controls and spacious cards."],
+                  ["compact", "Compact", "Tighter spacing and more financial information visible at once."],
+                ] as const).map(([value, label, description]) => (
+                  <label className={styles.densityCard} key={value}>
+                    <input
+                      type="radio"
+                      checked={preferences.density === value}
+                      onChange={() => {
+                        const next = { ...preferences, density: value };
+                        setPreferences(next);
+                        applyInterface(next);
+                      }}
+                    />
+                    <span className={styles.densityPreview} data-density={value} aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
           </form>
         ) : null}

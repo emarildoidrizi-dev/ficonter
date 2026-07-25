@@ -85,8 +85,8 @@
 .primary,
 .primaryLink {
   border: 0;
-  background: var(--ink);
-  color: #fff;
+  background: var(--solid-bg);
+  color: var(--solid-text);
 }
 
 .secondary {

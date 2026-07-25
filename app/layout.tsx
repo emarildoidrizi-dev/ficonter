@@ -23,11 +23,31 @@ export const metadata: Metadata = {
   },
 };
 
+const interfacePreferenceScript = `
+(function () {
+  try {
+    var root = document.documentElement;
+    var appearance = localStorage.getItem("ficonter-appearance") || "light";
+    var density = localStorage.getItem("ficonter-density") || "comfortable";
+    if (appearance !== "dark" && appearance !== "system") appearance = "light";
+    if (density !== "compact") density = "comfortable";
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var resolved = appearance === "system" ? (prefersDark ? "dark" : "light") : appearance;
+    root.dataset.theme = appearance;
+    root.dataset.resolvedTheme = resolved;
+    root.dataset.density = density;
+    root.style.colorScheme = resolved;
+  } catch (_) {}
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: interfacePreferenceScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

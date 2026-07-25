@@ -58,17 +58,16 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "Never";
 }
 
-function formatRelativeTime(value: string) {
-  const seconds = Math.max(
-    1,
-    Math.floor((Date.now() - new Date(value).getTime()) / 1000),
-  );
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+function formatAuditDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
 }
 
 function actionLabel(action: string) {
@@ -408,28 +407,38 @@ export function AdminDashboard({
 
           <article className={`${styles.panel} ${styles.auditPanel}`}>
             <span>ADMIN AUDIT</span><h2>Recent actions</h2>
-            <div className={styles.logs}>
-              {logs.length ? logs.slice(0, 20).map((log) => {
-                const actor = userMap.get(log.admin_user_id);
-                const target = log.target_user_id ? userMap.get(log.target_user_id) : null;
-                const targetEmail = String(log.details?.target_email ?? "") || target?.email || "account";
-                return (
-                  <div key={log.id} className={styles.logItem}>
-                    <span className={styles.logIcon}><ShieldAlert size={15} /></span>
-                    <span className={styles.logCopy}>
-                      <strong>{actionLabel(log.action)}</strong>
-                      <small>{targetEmail} · by {actor?.displayName || actor?.email || "Admin"}</small>
-                      <time title={new Date(log.created_at).toLocaleString()}>{formatRelativeTime(log.created_at)}</time>
-                    </span>
+
+            <div className={styles.auditScroll}>
+              <div className={styles.logs}>
+                {logs.length ? logs.map((log) => {
+                  const actor = userMap.get(log.admin_user_id);
+                  const target = log.target_user_id ? userMap.get(log.target_user_id) : null;
+                  const targetEmail = String(log.details?.target_email ?? "") || target?.email || "account";
+
+                  return (
+                    <div key={log.id} className={styles.logItem}>
+                      <span className={styles.logIcon}><ShieldAlert size={15} /></span>
+                      <span className={styles.logCopy}>
+                        <strong>{actionLabel(log.action)}</strong>
+                        <small>{targetEmail} · by {actor?.displayName || actor?.email || "Admin"}</small>
+                        <time>{formatAuditDateTime(log.created_at)}</time>
+                      </span>
+                    </div>
+                  );
+                }) : (
+                  <div className={styles.emptyAudit}>
+                    <ShieldCheck size={20} /><strong>No admin actions yet</strong>
+                    <span>Use Suspend, Restore, Make admin, Remove admin or Delete on a test account.</span>
                   </div>
-                );
-              }) : (
-                <div className={styles.emptyAudit}>
-                  <ShieldCheck size={20} /><strong>No admin actions yet</strong>
-                  <span>Use Suspend, Restore, Make admin, Remove admin or Delete on a test account.</span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+
+            {logs.length > 6 ? (
+              <div className={styles.auditHint}>
+                Scroll to view {logs.length - 6} older action{logs.length - 6 === 1 ? "" : "s"}
+              </div>
+            ) : null}
           </article>
         </aside>
       </div>

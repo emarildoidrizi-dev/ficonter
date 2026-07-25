@@ -17,7 +17,7 @@ type Props = { transactions: Transaction[] };
 
 type HealthBreakdown = {
   score: number;
-  label: "Excellent" | "Healthy" | "Needs attention" | "At risk";
+  label: "Excellent" | "Healthy" | "Stable" | "Needs attention" | "At risk";
   summary: string;
   savingsRate: number;
   netCashFlow: number;
@@ -69,16 +69,49 @@ function calculateHealth(transactions: Transaction[]): HealthBreakdown {
     clamp(cashFlowScore + savingsScore + spendingScore + activityScore, 0, 100),
   );
 
-  if (score >= 80) {
-    return { score, label: "Excellent", summary: "Your recorded cash flow and saving habits show a strong foundation.", savingsRate, netCashFlow };
+  if (score >= 90) {
+    return {
+      score,
+      label: "Excellent",
+      summary: "Your recorded cash flow and saving habits show an excellent financial foundation.",
+      savingsRate,
+      netCashFlow,
+    };
   }
-  if (score >= 65) {
-    return { score, label: "Healthy", summary: "Your finances are generally stable, with room for focused improvement.", savingsRate, netCashFlow };
+  if (score >= 75) {
+    return {
+      score,
+      label: "Healthy",
+      summary: "Your finances are in a healthy position, with only limited areas to improve.",
+      savingsRate,
+      netCashFlow,
+    };
   }
-  if (score >= 45) {
-    return { score, label: "Needs attention", summary: "Your current records indicate pressure in cash flow or saving consistency.", savingsRate, netCashFlow };
+  if (score >= 60) {
+    return {
+      score,
+      label: "Stable",
+      summary: "Your finances are stable, although cash flow, saving consistency or spending can still improve.",
+      savingsRate,
+      netCashFlow,
+    };
   }
-  return { score, label: "At risk", summary: "Your recorded outflows are placing significant pressure on your finances.", savingsRate, netCashFlow };
+  if (score >= 40) {
+    return {
+      score,
+      label: "Needs attention",
+      summary: "Your current records indicate pressure in cash flow or saving consistency.",
+      savingsRate,
+      netCashFlow,
+    };
+  }
+  return {
+    score,
+    label: "At risk",
+    summary: "Your recorded outflows are placing significant pressure on your finances.",
+    savingsRate,
+    netCashFlow,
+  };
 }
 
 export function FinancialHealthScore({ transactions }: Props) {
@@ -114,10 +147,16 @@ export function FinancialHealthScore({ transactions }: Props) {
 
       <div className={styles.copy}>
         <span className={styles.eyebrow}>Financial health</span>
-        <div className={styles.statusRow}>
+        <div
+          className={styles.statusRow}
+          data-status={health.label.toLowerCase().replaceAll(" ", "-")}
+        >
           <ShieldCheck size={18} />
           <strong>{health.label}</strong>
         </div>
+        <p className={styles.explanation}>
+          Savings rate is one part of your overall financial health.
+        </p>
       </div>
     </section>
   );}

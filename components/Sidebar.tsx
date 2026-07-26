@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Activity,
+  BrainCircuit,
   ArrowLeftRight,
   ChartPie,
   ChevronUp,
@@ -55,6 +56,7 @@ const standardLinks = [
   ["/dashboard/goals", Target, "Goals"],
   ["/dashboard/net-worth", Landmark, "Net worth"],
   ["/dashboard/financial-independence", Flag, "Financial independence"],
+  ["/dashboard/insights", BrainCircuit, "AI insights"],
 ] as const;
 
 function fallbackDisplayName(user: SidebarUser): string {

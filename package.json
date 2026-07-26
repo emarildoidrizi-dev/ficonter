@@ -9,14 +9,15 @@
     "lint": "eslint .",
     "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs",
     "verify:phase2-health": "node scripts/verify-phase2-financial-health.mjs",
-    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-net-worth-growth && npm run verify:phase2-cash-flow && npm run verify:phase2-emergency-fund && npm run verify:phase2-savings && npm run verify:phase2-financial-independence && npm run verify:wealth-empty-state",
+    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-net-worth-growth && npm run verify:phase2-cash-flow && npm run verify:phase2-emergency-fund && npm run verify:phase2-savings && npm run verify:phase2-financial-independence && npm run verify:wealth-empty-state && npm run verify:phase2-ai",
     "verify:phase2-wealth": "node scripts/verify-phase2-wealth-score.mjs",
     "verify:phase2-cash-flow": "node scripts/verify-phase2-cash-flow.mjs",
     "verify:phase2-emergency-fund": "node scripts/verify-phase2-emergency-fund.mjs",
     "verify:phase2-savings": "node scripts/verify-phase2-savings.mjs",
     "verify:phase2-net-worth-growth": "node scripts/verify-phase2-net-worth-growth.mjs",
     "verify:phase2-financial-independence": "node scripts/verify-phase2-financial-independence.mjs",
-    "verify:wealth-empty-state": "node scripts/verify-wealth-empty-state.mjs"
+    "verify:wealth-empty-state": "node scripts/verify-wealth-empty-state.mjs",
+    "verify:phase2-ai": "node scripts/verify-phase2-ai-insights.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

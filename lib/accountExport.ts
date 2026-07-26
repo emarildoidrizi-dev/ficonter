@@ -8,10 +8,14 @@ export type AccountExportTable =
   | "debts"
   | "debt_payments"
   | "monthly_budget_plans"
-  | "monthly_budget_items";
+  | "monthly_budget_items"
+  | "financial_documents"
+  | "support_requests"
+  | "support_messages"
+  | "user_notifications";
 
 export type AccountExportPayload = {
-  schema_version: "1.1";
+  schema_version: "1.2";
   export_type: "ficonter-account-archive";
   exported_at: string;
   privacy: {

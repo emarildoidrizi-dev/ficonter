@@ -7,6 +7,8 @@ import {
   CircleHelp,
   CreditCard,
   FileKey2,
+  FolderLock,
+  Inbox,
   Goal,
   Landmark,
   MessageSquareText,
@@ -82,6 +84,28 @@ const guides = [
       "Financial Health and Wealth Score use different verified factors.",
       "Empty accounts remain Not assessed until meaningful data exists.",
       "Smart Insights uses FICONTER calculations only and makes no external AI request.",
+    ],
+  },
+  {
+    icon: Inbox,
+    title: "Support inbox",
+    description:
+      "Keep every support concern and reply inside a private two-way conversation.",
+    points: [
+      "New support replies appear in your Inbox and notification center.",
+      "You can continue the conversation without opening an external email app.",
+      "Resolved concerns can be reopened by sending another message.",
+    ],
+  },
+  {
+    icon: FolderLock,
+    title: "Document Vault",
+    description:
+      "Store financial documents privately without exposing them to the administration dashboard.",
+    points: [
+      "Upload PDF, JPG, PNG or WEBP files up to 10 MB each.",
+      "Organize statements, payslips, tax records and other financial documents.",
+      "Preview, download, edit or permanently delete only your own files.",
     ],
   },
 ] as const;
@@ -207,8 +231,8 @@ export function HelpCenter() {
           <span>STILL NEED HELP?</span>
           <h2>Tell us what is happening.</h2>
           <p>
-            Open the secure Contact Us window, describe your concern and tell
-            us which email address to use for the response.
+            Open the secure Contact Us window and describe your concern. Every
+            response will appear in your private FICONTER Inbox.
           </p>
         </div>
         <button type="button" onClick={openContact}>

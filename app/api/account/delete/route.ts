@@ -6,28 +6,30 @@ import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
-async function removeProfileStorageObjects(userId: string) {
+async function removeUserStorageObjects(userId: string, bucketName: string) {
   const service = createServiceClient();
-  const bucket = service.storage.from("profile-photos");
+  const bucket = service.storage.from(bucketName);
   const { data, error } = await bucket.list(userId, { limit: 1000 });
 
   if (error) {
-    console.error("Self-service profile storage listing failed", {
+    console.error("Self-service storage listing failed", {
       userId,
+      bucketName,
       message: error.message,
     });
     return { removed: 0, status: "failed" as const };
   }
 
-  const paths = (data ?? []).map((object) => `${userId}/${object.name}`);
-  if (!paths.length) {
-    return { removed: 0, status: "not_found" as const };
-  }
+  const paths = ((data ?? []) as Array<{ name: string }>).map(
+    (object) => `${userId}/${object.name}`,
+  );
+  if (!paths.length) return { removed: 0, status: "not_found" as const };
 
   const { error: removeError } = await bucket.remove(paths);
   if (removeError) {
-    console.error("Self-service profile storage cleanup failed", {
+    console.error("Self-service storage cleanup failed", {
       userId,
+      bucketName,
       message: removeError.message,
     });
     return { removed: 0, status: "failed" as const };
@@ -35,7 +37,6 @@ async function removeProfileStorageObjects(userId: string) {
 
   return { removed: paths.length, status: "complete" as const };
 }
-
 
 export async function DELETE(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
@@ -95,13 +96,19 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const storageCleanup = await removeProfileStorageObjects(user.id);
+  const [profileStorage, documentStorage] = await Promise.all([
+    removeUserStorageObjects(user.id, "profile-photos"),
+    removeUserStorageObjects(user.id, "financial-documents"),
+  ]);
 
   return NextResponse.json(
     {
       ok: true,
-      storageCleanup: storageCleanup.status,
-      storageObjectsRemoved: storageCleanup.removed,
+      storageCleanup: {
+        profilePhotos: profileStorage.status,
+        financialDocuments: documentStorage.status,
+      },
+      storageObjectsRemoved: profileStorage.removed + documentStorage.removed,
     },
     { headers: noStoreHeaders() },
   );

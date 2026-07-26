@@ -401,16 +401,16 @@ export async function PATCH(
   }
 }
 
-async function removeProfileStorageObjects(userId: string) {
+async function removeUserStorageObjects(userId: string, bucketName: string) {
   const service = createServiceClient();
-  const bucket = service.storage.from("profile-photos");
+  const bucket = service.storage.from(bucketName);
   const { data, error } = await bucket.list(userId, { limit: 1000 });
 
-  if (error) {
-    return { removed: 0, status: "failed" as const };
-  }
+  if (error) return { removed: 0, status: "failed" as const };
 
-  const paths = (data ?? []).map((object) => `${userId}/${object.name}`);
+  const paths = ((data ?? []) as Array<{ name: string }>).map(
+    (object) => `${userId}/${object.name}`,
+  );
   if (!paths.length) return { removed: 0, status: "not_found" as const };
 
   const removeResult = await bucket.remove(paths);
@@ -479,12 +479,18 @@ export async function DELETE(
       return jsonError("The account could not be permanently deleted.", 500);
     }
 
-    const storageCleanup = await removeProfileStorageObjects(id);
+    const [profileStorage, documentStorage] = await Promise.all([
+      removeUserStorageObjects(id, "profile-photos"),
+      removeUserStorageObjects(id, "financial-documents"),
+    ]);
     const finalDetails = {
       ...baseDetails,
       completion_status: "complete",
-      storage_cleanup: storageCleanup.status,
-      storage_objects_removed: storageCleanup.removed,
+      storage_cleanup: {
+        profile_photos: profileStorage.status,
+        financial_documents: documentStorage.status,
+      },
+      storage_objects_removed: profileStorage.removed + documentStorage.removed,
     };
     const finalAudit = await updateAuditLog(
       pendingAudit.id,

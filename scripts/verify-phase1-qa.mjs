@@ -133,7 +133,7 @@ const serviceAdmin = await source("lib/supabase/admin.ts");
 check(serviceAdmin.includes('import "server-only"') && serviceAdmin.includes("SUPABASE_SERVICE_ROLE_KEY") && !serviceAdmin.includes("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY"), "Service-role credentials remain server-only.");
 
 const apiRoutes = files.filter((file) => file.endsWith(`${path.sep}route.ts`) && file.includes(`${path.sep}app${path.sep}api${path.sep}`));
-check(apiRoutes.length === 10, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
+check(apiRoutes.length === 22, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
 for (const file of apiRoutes) {
   const relative = path.relative(root, file);
   const text = await readFile(file, "utf8");

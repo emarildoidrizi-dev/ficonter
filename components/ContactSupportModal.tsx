@@ -18,6 +18,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   SUPPORT_CATEGORIES,
   SUPPORT_LIMITS,
@@ -28,6 +29,7 @@ import styles from "./ContactSupportModal.module.css";
 type SubmissionReceipt = {
   reference: string;
   email: string;
+  threadId: string;
 };
 
 function focusableElements(container: HTMLElement): HTMLElement[] {
@@ -47,6 +49,7 @@ export function ContactSupportModal({
   defaultEmail: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -145,15 +148,16 @@ export function ContactSupportModal({
         reference?: string;
         email?: string;
         error?: string;
+        threadId?: string;
       } | null;
 
-      if (!response.ok || !data?.reference || !data.email) {
+      if (!response.ok || !data?.reference || !data.email || !data.threadId) {
         throw new Error(
           data?.error ?? "Your message could not be submitted. Please try again.",
         );
       }
 
-      setReceipt({ reference: data.reference, email: data.email });
+      setReceipt({ reference: data.reference, email: data.email, threadId: data.threadId });
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -216,8 +220,8 @@ export function ContactSupportModal({
             <span>MESSAGE RECEIVED</span>
             <h3>Thank you for contacting FICONTER.</h3>
             <p>
-              Your concern is now in our secure support inbox. We’ll reply to
-              <strong> {receipt.email}</strong> as soon as possible.
+              Your concern is now in our secure support inbox. Replies will appear in your FICONTER Inbox. We will also keep
+              <strong> {receipt.email}</strong> as your contact address.
             </p>
             <div className={styles.referenceCard}>
               <small>Support reference</small>
@@ -226,10 +230,14 @@ export function ContactSupportModal({
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={close}
+              onClick={() => {
+                const threadId = receipt.threadId;
+                close();
+                router.push(`/dashboard/inbox?thread=${threadId}`);
+              }}
               data-primary-action="true"
             >
-              Done <ChevronRight size={17} />
+              Open inbox <ChevronRight size={17} />
             </button>
           </div>
         ) : (

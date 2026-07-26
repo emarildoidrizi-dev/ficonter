@@ -567,7 +567,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
   }
 
   async function loadAccountExport(): Promise<AccountExportPayload> {
-    const tables: AccountExportTable[] = [
+    const userScopedTables: AccountExportTable[] = [
       "transactions",
       "bills",
       "goals",
@@ -576,10 +576,13 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       "debt_payments",
       "monthly_budget_plans",
       "monthly_budget_items",
+      "financial_documents",
+      "support_requests",
+      "user_notifications",
     ];
 
     const results = await Promise.all(
-      tables.map(async (table) => {
+      userScopedTables.map(async (table) => {
         const { data, error } = await supabase
           .from(table)
           .select("*")
@@ -589,8 +592,17 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       }),
     );
 
+    const { data: supportMessages, error: supportMessagesError } = await supabase
+      .from("support_messages")
+      .select("*");
+    if (supportMessagesError) throw supportMessagesError;
+    results.push([
+      "support_messages",
+      (supportMessages ?? []) as Record<string, unknown>[],
+    ]);
+
     return {
-      schema_version: "1.1",
+      schema_version: "1.2",
       export_type: "ficonter-account-archive",
       exported_at: new Date().toISOString(),
       privacy: {

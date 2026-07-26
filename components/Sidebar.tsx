@@ -10,6 +10,8 @@ import {
   CircleHelp,
   CreditCard,
   Flag,
+  FileArchive,
+  Inbox as InboxIcon,
   Landmark,
   LayoutDashboard,
   MessageSquareText,
@@ -34,6 +36,7 @@ import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
 import { Brand } from "./Brand";
 import { ContactSupportModal } from "./ContactSupportModal";
+import { NotificationCenter } from "./NotificationCenter";
 import styles from "./SidebarNavigation.module.css";
 
 type SidebarUser = {
@@ -61,6 +64,8 @@ const standardLinks = [
   ["/dashboard/net-worth", Landmark, "Net worth"],
   ["/dashboard/financial-independence", Flag, "Financial independence"],
   ["/dashboard/insights", BrainCircuit, "Smart insights"],
+  ["/dashboard/inbox", InboxIcon, "Inbox"],
+  ["/dashboard/documents", FileArchive, "Documents"],
 ] as const;
 
 function fallbackDisplayName(user: SidebarUser): string {
@@ -112,7 +117,9 @@ export function Sidebar({
     .toUpperCase();
   const accountAreaActive =
     pathname.startsWith("/dashboard/settings") ||
-    pathname.startsWith("/dashboard/help");
+    pathname.startsWith("/dashboard/help") ||
+    pathname.startsWith("/dashboard/inbox") ||
+    pathname.startsWith("/dashboard/documents");
 
   useEffect(() => {
     setPendingHref(null);
@@ -267,6 +274,7 @@ export function Sidebar({
       </nav>
 
       <div className={styles.accountDock} ref={accountRef}>
+        <NotificationCenter isAdmin={isAdmin} />
         {menuOpen ? (
           <div className={styles.accountMenu} role="menu" aria-label="Account menu">
             <button

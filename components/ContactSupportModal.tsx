@@ -17,6 +17,7 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   SUPPORT_CATEGORIES,
   SUPPORT_LIMITS,
@@ -58,6 +59,11 @@ export function ContactSupportModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<SubmissionReceipt | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -159,9 +165,9 @@ export function ContactSupportModal({
     }
   }
 
-  if (!open) return null;
+  if (!open || !portalReady) return null;
 
-  return (
+  const modal = (
     <div
       className={styles.backdrop}
       role="presentation"
@@ -347,4 +353,6 @@ export function ContactSupportModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -1,50 +1,16 @@
-FICONTER Support Messaging, Notifications and Document Vault
-Files to upload or replace
+FICONTER · Support Conversation Deletion
 
-app/api/account/delete/route.ts
-app/api/admin/support/[id]/messages/route.ts
-app/api/admin/support/[id]/read/route.ts
-app/api/admin/support/[id]/route.ts
-app/api/admin/support/route.ts
-app/api/admin/users/[id]/route.ts
-app/api/documents/[id]/access/route.ts
-app/api/documents/[id]/route.ts
-app/api/documents/complete/route.ts
-app/api/documents/route.ts
-app/api/documents/upload-intent/[id]/route.ts
-app/api/documents/upload-intent/route.ts
-app/api/notifications/route.ts
-app/api/support/requests/route.ts
-app/api/support/threads/[id]/messages/route.ts
-app/api/support/threads/[id]/read/route.ts
-app/api/support/threads/route.ts
-app/dashboard/admin/support/page.tsx
-app/dashboard/documents/page.tsx
-app/dashboard/help/page.tsx
-app/dashboard/inbox/page.tsx
-components/ContactSupportModal.module.css
-components/ContactSupportModal.tsx
-components/DocumentVault.module.css
-components/DocumentVault.tsx
-components/HelpCenter.module.css
-components/HelpCenter.tsx
-components/NotificationCenter.module.css
-components/NotificationCenter.tsx
-components/SettingsWorkspace.tsx
-components/Sidebar.tsx
-components/SupportConversations.module.css
+REPLACE / ADD
 components/SupportConversations.tsx
-components/SupportInbox.module.css
+components/SupportConversations.module.css
 components/SupportInbox.tsx
-lib/accountExport.ts
-lib/admin/support.ts
-lib/documentVault.ts
-lib/support.ts
-lib/supportData.ts
-lib/supportMessaging.ts
-package.json
-scripts/verify-contact-support.mjs
-scripts/verify-phase1-qa.mjs
-scripts/verify-support-messaging-documents.mjs
-supabase/contact_support_center.sql
-supabase/support_messaging_notifications_document_vault.sql
+components/SupportInbox.module.css
+components/SupportDeleteDialog.tsx
+components/SupportDeleteDialog.module.css
+app/api/support/threads/[id]/route.ts
+app/api/admin/support/[id]/route.ts
+supabase/support_conversation_deletion.sql
+scripts/verify-support-conversation-deletion.mjs
+scripts/verify-support-selected-state.mjs
+
+No environment variables are required.

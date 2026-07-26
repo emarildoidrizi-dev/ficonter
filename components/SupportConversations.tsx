@@ -9,12 +9,14 @@ import {
   MessageSquareText,
   RefreshCw,
   Send,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT, supportCategoryLabel, supportStatusLabel } from "@/lib/support";
 import { SUPPORT_MESSAGE_LIMIT, type SupportThread } from "@/lib/supportMessaging";
+import { SupportDeleteDialog } from "./SupportDeleteDialog";
 import styles from "./SupportConversations.module.css";
 
 function formatDateTime(value: string): string {
@@ -55,6 +57,8 @@ export function SupportConversations({
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SupportThread | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const selected = threads.find((thread) => thread.id === selectedId) ?? null;
   const totalUnread = threads.reduce((sum, thread) => sum + unreadAdminMessages(thread), 0);
@@ -91,7 +95,7 @@ export function SupportConversations({
     const channel = supabase
       .channel("ficonter-customer-support-inbox")
       .on("postgres_changes", { event: "*", schema: "public", table: "support_messages" }, () => void refresh(true))
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "support_requests" }, () => void refresh(true))
+      .on("postgres_changes", { event: "*", schema: "public", table: "support_requests" }, () => void refresh(true))
       .subscribe();
 
     return () => {
@@ -138,6 +142,34 @@ export function SupportConversations({
       setError(sendError instanceof Error ? sendError.message : "Your reply could not be sent.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function deleteConversation() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/support/threads/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json().catch(() => null)) as { deletedId?: string; error?: string } | null;
+      if (!response.ok || data?.deletedId !== deleteTarget.id) {
+        throw new Error(data?.error ?? "The conversation could not be deleted.");
+      }
+
+      const remaining = threads.filter((thread) => thread.id !== deleteTarget.id);
+      setThreads(remaining);
+      setSelectedId(remaining[0]?.id ?? null);
+      setDeleteTarget(null);
+      setReply("");
+      if (!remaining.length) router.replace("/dashboard/inbox", { scroll: false });
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "The conversation could not be deleted.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -213,7 +245,19 @@ export function SupportConversations({
                   <span>{supportCategoryLabel(selected.category)} · {selected.reference}</span>
                   <h2>{selected.subject}</h2>
                 </div>
-                <span className={`${styles.status} ${styles[`status_${selected.status}`]}`}>{supportStatusLabel(selected.status)}</span>
+                <div className={styles.conversationControls}>
+                  <span className={`${styles.status} ${styles[`status_${selected.status}`]}`}>{supportStatusLabel(selected.status)}</span>
+                  <button
+                    type="button"
+                    className={styles.deleteThreadButton}
+                    onClick={() => setDeleteTarget(selected)}
+                    aria-label={`Delete ${selected.reference}`}
+                    title="Delete conversation"
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
               </header>
 
               <div className={styles.messages} aria-live="polite">
@@ -257,6 +301,16 @@ export function SupportConversations({
           )}
         </div>
       </div>
+
+      <SupportDeleteDialog
+        open={Boolean(deleteTarget)}
+        reference={deleteTarget?.reference ?? ""}
+        subject={deleteTarget?.subject ?? ""}
+        audience="customer"
+        busy={deleting}
+        onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+        onConfirm={() => void deleteConversation()}
+      />
     </section>
   );
 }

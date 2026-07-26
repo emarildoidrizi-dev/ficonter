@@ -36,3 +36,62 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "The support request could not be updated." }, { status: 500, headers: noStoreHeaders() });
   }
 }
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "This request could not be verified." }, { status: 403, headers: noStoreHeaders() });
+  }
+
+  try {
+    const { user, admin } = await requireAdmin();
+    if (!user || !admin) {
+      return NextResponse.json({ error: "Admin access is required." }, { status: 403, headers: noStoreHeaders() });
+    }
+
+    const { id } = await context.params;
+    const current = await loadSupportRequest(id);
+    if (!current) {
+      return NextResponse.json({ error: "The support conversation was not found." }, { status: 404, headers: noStoreHeaders() });
+    }
+
+    const service = createServiceClient();
+    const { data: deleted, error: deleteError } = await service
+      .from("support_requests")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (deleteError) throw deleteError;
+    if (!deleted) {
+      return NextResponse.json({ error: "The support conversation was already removed." }, { status: 404, headers: noStoreHeaders() });
+    }
+
+    const { error: auditError } = await service.from("admin_audit_logs").insert({
+      admin_user_id: user.id,
+      action: "delete_support_conversation",
+      target_user_id: current.userId,
+      details: {
+        request_id: id,
+        reference: current.reference,
+        category: current.category,
+        previous_status: current.status,
+        message_count: current.messages.length,
+      },
+    });
+
+    if (auditError) {
+      console.error("Support conversation deletion audit failed", {
+        requestId: id,
+        adminUserId: user.id,
+        code: auditError.code,
+      });
+    }
+
+    return NextResponse.json({ ok: true, deletedId: deleted.id }, { headers: noStoreHeaders() });
+  } catch (error) {
+    console.error("Admin support conversation deletion failed", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return NextResponse.json({ error: "The support conversation could not be deleted." }, { status: 500, headers: noStoreHeaders() });
+  }
+}

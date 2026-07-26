@@ -11,11 +11,13 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AdminSupportRequest } from "@/lib/admin/support";
 import { supportCategoryLabel, supportStatusLabel, type SupportStatus } from "@/lib/support";
 import { SUPPORT_MESSAGE_LIMIT } from "@/lib/supportMessaging";
+import { SupportDeleteDialog } from "./SupportDeleteDialog";
 import styles from "./SupportInbox.module.css";
 
 const FILTERS: Array<{ value: "all" | SupportStatus; label: string }> = [
@@ -47,6 +49,8 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AdminSupportRequest | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const counts = useMemo(() => ({
     all: requests.length,
@@ -148,6 +152,34 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
     }
   }
 
+  async function deleteConversation() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/support/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json().catch(() => null)) as { deletedId?: string; error?: string } | null;
+      if (!response.ok || data?.deletedId !== deleteTarget.id) {
+        throw new Error(data?.error ?? "The support conversation could not be deleted.");
+      }
+
+      const remaining = requests.filter((item) => item.id !== deleteTarget.id);
+      setRequests(remaining);
+      setSelectedId(remaining[0]?.id ?? null);
+      setDeleteTarget(null);
+      setReply("");
+      setInternalNote(false);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "The support conversation could not be deleted.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <section className={styles.page}>
       <header className={styles.header}>
@@ -204,11 +236,24 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
                   <h2>{selected.subject}</h2>
                   <small>{selected.contactEmail}</small>
                 </div>
-                <select value={selected.status} onChange={(event) => void updateStatus(event.target.value as SupportStatus)} disabled={updating} aria-label="Support status">
-                  <option value="open">Open</option>
-                  <option value="in_progress">In progress</option>
-                  <option value="resolved">Resolved</option>
-                </select>
+                <div className={styles.conversationActions}>
+                  <select value={selected.status} onChange={(event) => void updateStatus(event.target.value as SupportStatus)} disabled={updating || deleting} aria-label="Support status">
+                    <option value="open">Open</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                  <button
+                    type="button"
+                    className={styles.deleteThreadButton}
+                    onClick={() => setDeleteTarget(selected)}
+                    disabled={updating || deleting}
+                    aria-label={`Delete ${selected.reference}`}
+                    title="Delete conversation"
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
               </header>
 
               <div className={styles.messages}>
@@ -244,6 +289,16 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
           )}
         </div>
       </div>
+
+      <SupportDeleteDialog
+        open={Boolean(deleteTarget)}
+        reference={deleteTarget?.reference ?? ""}
+        subject={deleteTarget?.subject ?? ""}
+        audience="admin"
+        busy={deleting}
+        onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+        onConfirm={() => void deleteConversation()}
+      />
     </section>
   );
 }

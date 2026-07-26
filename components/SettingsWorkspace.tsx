@@ -52,6 +52,11 @@ import {
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
+type AuthIdentityUser = {
+  email?: string | null;
+  new_email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
 type SectionId =
   | "profile"
   | "security"
@@ -256,6 +261,29 @@ async function compressProfilePhoto(file: File): Promise<Blob> {
   }
 }
 
+function readEmailIdentity(
+  user: AuthIdentityUser | null | undefined,
+  fallbackEmail: string,
+  fallbackPending: string,
+) {
+  const current = String(user?.email ?? fallbackEmail).trim().toLowerCase();
+  const storedPending = String(
+    user?.user_metadata?.pending_email_change ?? fallbackPending,
+  )
+    .trim()
+    .toLowerCase();
+  const authPending = String(user?.new_email ?? "").trim().toLowerCase();
+  const pending = authPending || (storedPending && storedPending !== current ? storedPending : "");
+
+  return { current, pending };
+}
+
+function emailChangeRedirectUrl() {
+  if (typeof window === "undefined") return undefined;
+  const next = encodeURIComponent("/dashboard/settings?section=profile");
+  return `${window.location.origin}/auth/callback?next=${next}`;
+}
+
 export function SettingsWorkspace({ userId, email, metadata, initialSection }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -270,7 +298,14 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
   );
   const [pendingPhoto, setPendingPhoto] = useState<Blob | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
-  const [accountEmail, setAccountEmail] = useState(email);
+  const initialPendingEmail = String(metadata.pending_email_change ?? "")
+    .trim()
+    .toLowerCase();
+  const [currentEmail, setCurrentEmail] = useState(email.trim().toLowerCase());
+  const [pendingEmail, setPendingEmail] = useState(initialPendingEmail);
+  const [accountEmail, setAccountEmail] = useState(initialPendingEmail || email);
+  const [emailRequesting, setEmailRequesting] = useState(false);
+  const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
   const [rememberDevice, setRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -289,6 +324,33 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       setMessage(null);
     }
   }, [initialSection]);
+
+  useEffect(() => {
+    let active = true;
+
+    function syncIdentity(user: AuthIdentityUser | null | undefined) {
+      if (!active) return;
+      const identity = readEmailIdentity(user, email, initialPendingEmail);
+      setCurrentEmail(identity.current);
+      setPendingEmail(identity.pending);
+      setAccountEmail(identity.pending || identity.current);
+      window.dispatchEvent(
+        new CustomEvent("ficonter:profile-updated", {
+          detail: { email: identity.current },
+        }),
+      );
+    }
+
+    void supabase.auth.getUser().then(({ data }) => syncIdentity(data.user));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncIdentity(session?.user);
+    });
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, [email, initialPendingEmail, supabase]);
 
   useEffect(() => {
     const cookies = document.cookie
@@ -415,6 +477,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
           detail: {
             fullName,
             displayName,
+            email: currentEmail,
             profilePhotoPath: nextPhotoPath,
           },
         }),
@@ -457,18 +520,67 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
 
   async function updateEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
+    if (emailRequesting) return;
+
+    setEmailRequesting(true);
     setMessage(null);
+
     try {
       const nextEmail = accountEmail.trim().toLowerCase();
-      if (!nextEmail) throw new Error("Enter a valid email address.");
-      const { error } = await supabase.auth.updateUser({ email: nextEmail });
+      if (!nextEmail || !nextEmail.includes("@")) {
+        throw new Error("Enter a valid email address.");
+      }
+      if (nextEmail === currentEmail && !pendingEmail) {
+        showSuccess("Your email address is unchanged.");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.updateUser(
+        { email: nextEmail },
+        { emailRedirectTo: emailChangeRedirectUrl() },
+      );
       if (error) throw error;
-      showSuccess(nextEmail === email ? "Your email address is unchanged." : "Confirmation links were sent to complete the email change.");
+
+      await saveMetadata({
+        pending_email_change: nextEmail,
+        pending_email_change_requested_at: new Date().toISOString(),
+      });
+
+      const identity = readEmailIdentity(
+        data.user as AuthIdentityUser | null,
+        currentEmail,
+        nextEmail,
+      );
+      setCurrentEmail(identity.current);
+      setPendingEmail(identity.pending || nextEmail);
+      setAccountEmail(identity.pending || nextEmail);
+      showSuccess(
+        "Confirmation link sent. Your current email remains active until the change is confirmed.",
+      );
     } catch (error) {
       showError(error, "Your email address could not be updated.");
     } finally {
-      setLoading(false);
+      setEmailRequesting(false);
+    }
+  }
+
+  async function resendEmailChange() {
+    if (!pendingEmail || emailResending) return;
+    setEmailResending(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "email_change",
+        email: pendingEmail,
+        options: { emailRedirectTo: emailChangeRedirectUrl() },
+      });
+      if (error) throw error;
+      showSuccess("A new confirmation link was sent to the pending email address.");
+    } catch (error) {
+      showError(error, "The confirmation link could not be resent.");
+    } finally {
+      setEmailResending(false);
     }
   }
 
@@ -480,7 +592,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
     setLoading(true);
     try {
       if (currentPassword) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+        const { error } = await supabase.auth.signInWithPassword({ email: currentEmail, password: currentPassword });
         if (error) throw new Error("Your current password is incorrect.");
       }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -730,32 +842,44 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
         {message ? <div className={`${styles.message} ${message.type === "error" ? styles.error : styles.success}`}>{message.type === "success" ? <Check size={17} /> : null}{message.text}</div> : null}
 
         {active === "profile" ? (
-          <form className={styles.form} onSubmit={saveProfile}>
-            <div className={styles.photoEditor}>
-              <div className={styles.largeAvatar}>{profilePhoto ? <img src={profilePhoto} alt="Profile preview" /> : avatarText}</div>
-              <div><h3>Profile photo</h3><p>Upload a clear square image. Ficonter compresses it and stores it securely.</p><div className={styles.inlineActions}><button type="button" className={styles.secondaryButton} onClick={() => photoInput.current?.click()}><Camera size={16} />Choose photo</button>{profilePhoto ? <button type="button" className={styles.textButton} onClick={() => {
+          <div className={styles.stack}>
+            <form className={styles.form} onSubmit={saveProfile}>
+              <div className={styles.photoEditor}>
+                <div className={styles.largeAvatar}>{profilePhoto ? <img src={profilePhoto} alt="Profile preview" /> : avatarText}</div>
+                <div><h3>Profile photo</h3><p>Upload a clear square image. Ficonter compresses it and stores it securely.</p><div className={styles.inlineActions}><button type="button" className={styles.secondaryButton} onClick={() => photoInput.current?.click()}><Camera size={16} />Choose photo</button>{profilePhoto ? <button type="button" className={styles.textButton} onClick={() => {
   setPendingPhoto(null);
   setRemovePhoto(true);
   setProfilePhoto("");
 }}>Remove</button> : null}</div></div>
-              <input ref={photoInput} className={styles.hiddenInput} type="file" accept="image/*" onChange={choosePhoto} />
-            </div>
-            <div className={styles.formGrid}>
-              <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" /></label>
-              <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
-            </div>
-            <label><span>Email address</span><input value={email} disabled /></label>
-            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save changes"}</button></div>
-          </form>
+                <input ref={photoInput} className={styles.hiddenInput} type="file" accept="image/*" onChange={choosePhoto} />
+              </div>
+              <div className={styles.formGrid}>
+                <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={120} /></label>
+                <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="nickname" maxLength={80} /></label>
+              </div>
+              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save profile"}</button></div>
+            </form>
+
+            <form className={styles.formCard} onSubmit={updateEmail}>
+              <div className={styles.cardHeading}><Mail size={19} /><div><h3>Login email</h3><p>Change the email used to sign in to Ficonter.</p></div></div>
+              <div className={styles.formGrid}>
+                <label><span>Current email</span><input type="email" value={currentEmail} disabled /></label>
+                <label><span>New email</span><input type="email" inputMode="email" autoComplete="email" value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} required /></label>
+              </div>
+              {pendingEmail ? (
+                <div className={styles.pendingEmailCard} role="status">
+                  <div><span className={styles.pendingLabel}>Pending confirmation</span><strong>{pendingEmail}</strong><p>Your current email remains active until the required confirmation link or links are approved.</p></div>
+                  <button type="button" className={styles.secondaryButton} disabled={emailResending} onClick={() => void resendEmailChange()}>{emailResending ? "Sending…" : "Resend link"}</button>
+                </div>
+              ) : null}
+              <div className={styles.emailSecurityNote}><ShieldCheck size={17} /><span>For security, Ficonter never changes the login email until Supabase confirms the request.</span></div>
+              <div className={styles.actions}><button className={styles.secondaryButton} disabled={emailRequesting}>{emailRequesting ? "Sending confirmation…" : pendingEmail ? "Change pending email" : "Send confirmation link"}</button></div>
+            </form>
+          </div>
         ) : null}
 
         {active === "security" ? (
           <div className={styles.stack}>
-            <form className={styles.formCard} onSubmit={updateEmail}>
-              <div className={styles.cardHeading}><Mail size={19} /><div><h3>Email address</h3><p>Your email is your login identity.</p></div></div>
-              <label><span>Account email</span><input type="email" value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} required /></label>
-              <div className={styles.actions}><button className={styles.secondaryButton} disabled={loading}>Update email</button></div>
-            </form>
             <form className={styles.formCard} onSubmit={updatePassword}>
               <div className={styles.cardHeading}><KeyRound size={19} /><div><h3>Change password</h3><p>Use at least eight characters.</p></div></div>
               <label><span>Current password</span><div className={styles.passwordField}><input type={showPassword ? "text" : "password"} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>

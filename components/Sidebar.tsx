@@ -48,6 +48,7 @@ type ProfileUpdatedDetail = {
   displayName?: string;
   fullName?: string;
   profilePhotoPath?: string;
+  email?: string;
 };
 
 const standardLinks = [
@@ -90,6 +91,7 @@ export function Sidebar({
   const [contactOpen, setContactOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [displayName, setDisplayName] = useState(() => fallbackDisplayName(user));
+  const [accountEmail, setAccountEmail] = useState(user.email);
   const [avatarPath, setAvatarPath] = useState(user.avatarPath);
   const [avatarUrl, setAvatarUrl] = useState("");
 
@@ -109,7 +111,7 @@ export function Sidebar({
     [isAdmin],
   );
 
-  const avatarText = (displayName || user.email || "F")
+  const avatarText = (displayName || accountEmail || "F")
     .trim()
     .slice(0, 1)
     .toUpperCase();
@@ -164,11 +166,14 @@ export function Sidebar({
         setDisplayName(
           detail.displayName?.trim() ||
             detail.fullName?.trim() ||
-            fallbackDisplayName({ ...user, displayName: "" }),
+            fallbackDisplayName({ ...user, email: accountEmail, displayName: "" }),
         );
       }
       if (typeof detail?.profilePhotoPath === "string") {
         setAvatarPath(detail.profilePhotoPath);
+      }
+      if (typeof detail?.email === "string" && detail.email.trim()) {
+        setAccountEmail(detail.email.trim());
       }
     }
 
@@ -177,6 +182,15 @@ export function Sidebar({
       window.removeEventListener("ficonter:profile-updated", handleProfileUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextEmail = session?.user.email?.trim();
+      if (nextEmail) setAccountEmail(nextEmail);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, [supabase]);
 
   useEffect(() => {
     function openContactUs() {
@@ -338,7 +352,7 @@ export function Sidebar({
           </span>
           <span className={styles.accountIdentity}>
             <strong>{displayName}</strong>
-            <small>{user.email}</small>
+            <small>{accountEmail}</small>
           </span>
           <ChevronUp
             className={`${styles.accountChevron}${
@@ -361,7 +375,7 @@ export function Sidebar({
 
       <ContactSupportModal
         open={contactOpen}
-        defaultEmail={user.email}
+        defaultEmail={accountEmail}
         onClose={() => setContactOpen(false)}
       />
     </aside>

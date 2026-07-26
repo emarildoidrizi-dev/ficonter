@@ -145,6 +145,19 @@ function categoryIcon(category: DebtCategory) {
   return WalletCards;
 }
 
+function readableError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+  return fallback;
+}
+
 export function DebtManager({
   userId,
   initialDebts,
@@ -515,10 +528,18 @@ export function DebtManager({
       );
       if (error) throw error;
 
+      const deletionResult = result as {
+        deleted_debt_count?: number;
+        deleted_transaction_count?: number;
+      } | null;
+      const deletedDebtCount = Number(deletionResult?.deleted_debt_count ?? 0);
       const deletedTransactionCount = Number(
-        (result as { deleted_transaction_count?: number } | null)
-          ?.deleted_transaction_count ?? 0,
+        deletionResult?.deleted_transaction_count ?? 0,
       );
+
+      if (deletedDebtCount !== 1) {
+        throw new Error("Debt could not be deleted.");
+      }
 
       setDebts((current) => current.filter((item) => item.id !== debt.id));
       setPayments((current) =>
@@ -534,7 +555,7 @@ export function DebtManager({
       );
       notifyFiconterDataChange("all");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Debt could not be deleted.");
+      setNotice(readableError(error, "Debt could not be deleted."));
     } finally {
       setBusy(null);
     }

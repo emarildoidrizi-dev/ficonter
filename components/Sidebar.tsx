@@ -11,7 +11,6 @@ import {
   CreditCard,
   Flag,
   FileArchive,
-  Inbox as InboxIcon,
   Landmark,
   LayoutDashboard,
   MessageSquareText,
@@ -64,7 +63,6 @@ const standardLinks = [
   ["/dashboard/net-worth", Landmark, "Net worth"],
   ["/dashboard/financial-independence", Flag, "Financial independence"],
   ["/dashboard/insights", BrainCircuit, "Smart insights"],
-  ["/dashboard/inbox", InboxIcon, "Inbox"],
   ["/dashboard/documents", FileArchive, "Documents"],
 ] as const;
 

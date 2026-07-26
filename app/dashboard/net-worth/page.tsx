@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NetWorthLive } from "@/components/NetWorthLive";
-import { normalizeWealthScoreInputs } from "@/lib/wealth/wealthScore";
+import { normalizeNetWorthGrowthInputs } from "@/lib/wealth/netWorthGrowth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,12 +14,12 @@ export default async function NetWorthPage() {
 
   if (!user) redirect("/login");
 
-  const { data, error } = await supabase.rpc("get_wealth_score_inputs");
+  const { data, error } = await supabase.rpc("get_net_worth_growth_inputs");
 
   return (
     <NetWorthLive
       userId={user.id}
-      initialWealthInputs={normalizeWealthScoreInputs(data)}
+      initialGrowthInputs={normalizeNetWorthGrowthInputs(data)}
       initialError={error?.message ?? ""}
     />
   );

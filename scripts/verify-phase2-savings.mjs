@@ -23,6 +23,7 @@ for (const file of [enginePath, componentPath, cssPath, pagePath, sqlPath]) {
 }
 
 const engine = read(enginePath);
+const periods = read("lib/wealth/averagePeriods.ts");
 const component = read(componentPath);
 const page = read(pagePath);
 const sql = read(sqlPath);
@@ -37,7 +38,7 @@ check("engine provides saving consistency", engine.includes("consistencyRate"));
 check("engine provides recommended target", engine.includes("recommendedMonthlyTarget"));
 check("engine provides annual forecast", engine.includes("annualForecast"));
 check("engine provides 3/6/9/12 calendar averages", engine.includes("SAVINGS_AVERAGE_PERIODS") && engine.includes("averageMonthlySavings9Months") && engine.includes("averageMonthlySavings12Months"));
-check("engine counts zero-saving calendar months", engine.includes("return total / period"));
+check("engine counts zero-saving calendar months", periods.includes("return total / period"));
 check("engine uses six-month planning baseline", engine.includes("baselineAveragePeriod: SavingsAveragePeriod = 6"));
 check("engine provides category allocation", engine.includes("SavingsCategory"));
 check("engine excludes Emergency Fund defensively", engine.includes("isEmergencyFundCategory") && !engine.includes("emergencyFundShare"));

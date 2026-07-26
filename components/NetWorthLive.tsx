@@ -9,45 +9,48 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/financialOptions";
+import { calculateWealthScore } from "@/lib/wealth/wealthScore";
 import {
-  calculateWealthScore,
-  normalizeWealthScoreInputs,
-  type WealthScoreInputs,
-} from "@/lib/wealth/wealthScore";
+  normalizeNetWorthGrowthInputs,
+  type NetWorthGrowthInputs,
+} from "@/lib/wealth/netWorthGrowth";
 import { WealthScore } from "@/components/WealthScore";
+import { NetWorthGrowth } from "@/components/NetWorthGrowth";
 import styles from "./NetWorthLive.module.css";
 
 export function NetWorthLive({
   userId,
-  initialWealthInputs,
+  initialGrowthInputs,
   initialError = "",
 }: {
   userId: string;
-  initialWealthInputs: WealthScoreInputs;
+  initialGrowthInputs: NetWorthGrowthInputs;
   initialError?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
-  const [inputs, setInputs] = useState(initialWealthInputs);
+  const [inputs, setInputs] = useState(initialGrowthInputs);
   const [error, setError] = useState(initialError);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    setInputs(initialWealthInputs);
+    setInputs(initialGrowthInputs);
     setError(initialError);
-  }, [initialWealthInputs, initialError]);
+  }, [initialGrowthInputs, initialError]);
 
   const refresh = useCallback(async () => {
+    setRefreshing(true);
     const { data, error: refreshError } = await supabase.rpc(
-      "get_wealth_score_inputs",
+      "get_net_worth_growth_inputs",
     );
 
     if (refreshError) {
       setError(refreshError.message);
-      return;
+    } else {
+      setInputs(normalizeNetWorthGrowthInputs(data));
+      setError("");
     }
-
-    setInputs(normalizeWealthScoreInputs(data));
-    setError("");
+    setRefreshing(false);
   }, [supabase]);
 
   const scheduleRefresh = useCallback(() => {
@@ -74,7 +77,7 @@ export function NetWorthLive({
 
     const refreshOnly = () => scheduleRefresh();
     const channel = supabase
-      .channel(`wealth-score-${userId}`)
+      .channel(`net-worth-growth-${userId}`)
       .on(
         "postgres_changes",
         {
@@ -100,6 +103,16 @@ export function NetWorthLive({
         {
           event: "*",
           schema: "public",
+          table: "debt_payments",
+          filter: `user_id=eq.${userId}`,
+        },
+        refreshOnly,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
           table: "goals",
           filter: `user_id=eq.${userId}`,
         },
@@ -115,18 +128,39 @@ export function NetWorthLive({
     };
   }, [scheduleRefresh, supabase, userId]);
 
-  const result = useMemo(() => calculateWealthScore(inputs), [inputs]);
-  const liabilities = inputs.liabilities;
+  useEffect(() => {
+    function handleVisible() {
+      if (document.visibilityState === "visible") void refresh();
+    }
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => document.removeEventListener("visibilitychange", handleVisible);
+  }, [refresh]);
+
+  const result = useMemo(
+    () => calculateWealthScore(inputs.wealthScore),
+    [inputs.wealthScore],
+  );
+  const liabilities = inputs.wealthScore.liabilities;
 
   return (
     <section className={styles.shell}>
-      <header>
-        <span className={styles.eyebrow}>Wealth Engine</span>
-        <h1>Net worth</h1>
-        <p>
-          Your recorded capital, savings and liabilities—now connected to a
-          transparent long-term Wealth Score.
-        </p>
+      <header className={styles.pageHeader}>
+        <div>
+          <span className={styles.eyebrow}>Wealth Engine</span>
+          <h1>Net worth</h1>
+          <p>
+            Your recorded capital, savings and liabilities—connected to one
+            Wealth Score and a transparent growth history.
+          </p>
+        </div>
+        <button
+          type="button"
+          className={styles.refreshButton}
+          disabled={refreshing}
+          onClick={() => void refresh()}
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
       </header>
 
       {error ? <div className={styles.error}>{error}</div> : null}
@@ -167,6 +201,8 @@ export function NetWorthLive({
       </div>
 
       <WealthScore result={result} error={error} />
+
+      <NetWorthGrowth inputs={inputs} />
 
       <div className={styles.panel}>
         <div className={styles.panelHeader}>

@@ -154,7 +154,10 @@ for (const file of userScopedPages) {
   const usesExplicitUserFilter = text.includes('eq("user_id", user.id)');
   const usesAuthenticatedWealthRpc =
     file === "app/dashboard/net-worth/page.tsx" &&
-    text.includes('rpc("get_wealth_score_inputs")');
+    (
+      text.includes('rpc("get_wealth_score_inputs")') ||
+      text.includes('rpc("get_net_worth_growth_inputs")')
+    );
   check(
     usesExplicitUserFilter || usesAuthenticatedWealthRpc,
     `${file} explicitly scopes financial queries to the authenticated user.`,
@@ -162,11 +165,15 @@ for (const file of userScopedPages) {
 }
 
 const wealthSql = await source("supabase/phase2_wealth_score_engine.sql");
+const growthSql = await source("supabase/phase2_net_worth_growth.sql");
 check(
   wealthSql.includes("auth.uid()") &&
     wealthSql.includes("security invoker") &&
-    wealthSql.includes("public.get_financial_health_inputs()"),
-  "The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health source of truth.",
+    wealthSql.includes("public.get_financial_health_inputs()") &&
+    growthSql.includes("auth.uid()") &&
+    growthSql.includes("security invoker") &&
+    growthSql.includes("public.get_wealth_score_inputs()"),
+  "The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health and Wealth Score sources of truth.",
 );
 
 console.log(`Phase 1 QA verification: ${passes.length} checks passed.`);

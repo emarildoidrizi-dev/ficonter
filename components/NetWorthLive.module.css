@@ -3,6 +3,15 @@
   gap: 24px;
 }
 
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.pageHeader > div { min-width: 0; }
+
 .shell header h1 {
   margin: 4px 0 0;
   font: 600 clamp(46px, 7vw, 82px) / 0.95 Georgia, serif;
@@ -14,6 +23,23 @@
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.55;
+}
+
+.refreshButton {
+  flex: 0 0 auto;
+  padding: 11px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .eyebrow {
@@ -124,6 +150,8 @@
 }
 
 @media (max-width: 620px) {
+  .pageHeader { flex-direction: column; }
+  .refreshButton { width: 100%; }
   .cards { grid-template-columns: 1fr; }
   .panelHeader, .row { align-items: flex-start; flex-direction: column; }
   .row > strong { white-space: normal; }

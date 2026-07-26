@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Clock3,
   Coins,
   History,
   Pencil,
@@ -24,6 +25,7 @@ type Goal = {
   target_amount: number | string;
   current_amount: number | string;
   target_date: string | null;
+  target_time: string | null;
   status: GoalStatus;
   created_at: string;
   updated_at: string;
@@ -47,6 +49,19 @@ const money = (value: number | string) =>
   }).format(Number(value) || 0);
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const timeInputValue = (value: string | null | undefined) =>
+  value ? value.slice(0, 5) : "";
+
+const formatGoalTime = (value: string) => {
+  const [hours = "0", minutes = "0"] = value.split(":");
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
 
 export function GoalsManager({
   userId,
@@ -147,6 +162,7 @@ export function GoalsManager({
       const name = String(form.get("name") ?? "").trim();
       const targetAmount = Number(form.get("target_amount"));
       const targetDate = String(form.get("target_date") ?? "");
+      const targetTime = String(form.get("target_time") ?? "");
 
       if (!name) throw new Error("Enter a goal name.");
       if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
@@ -155,6 +171,12 @@ export function GoalsManager({
       if (targetDate && Number.isNaN(new Date(`${targetDate}T00:00:00`).getTime())) {
         throw new Error("Choose a valid target date.");
       }
+      if (targetTime && !targetDate) {
+        throw new Error("Choose a target date before adding a target time.");
+      }
+      if (targetTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(targetTime)) {
+        throw new Error("Choose a valid target time.");
+      }
 
       const payload = {
         user_id: userId,
@@ -162,6 +184,7 @@ export function GoalsManager({
         target_amount: targetAmount,
         current_amount: editing ? Number(editing.current_amount) : 0,
         target_date: targetDate || null,
+        target_time: targetTime ? `${targetTime}:00` : null,
         status: String(form.get("status") ?? "active") as GoalStatus,
         updated_at: new Date().toISOString(),
       };
@@ -449,13 +472,21 @@ export function GoalsManager({
 
                 <footer>
                   <span>{progress.toFixed(1)}% complete</span>
-                  <span>
+                  <span className={styles.deadline}>
                     {goal.target_date ? (
                       <>
-                        <CalendarDays size={13} />
-                        {new Date(
-                          `${goal.target_date}T12:00:00`,
-                        ).toLocaleDateString("en-GB")}
+                        <span>
+                          <CalendarDays size={13} />
+                          {new Date(
+                            `${goal.target_date}T12:00:00`,
+                          ).toLocaleDateString("en-GB")}
+                        </span>
+                        {goal.target_time ? (
+                          <span>
+                            <Clock3 size={13} />
+                            {formatGoalTime(goal.target_time)}
+                          </span>
+                        ) : null}
                       </>
                     ) : (
                       "No deadline"
@@ -530,13 +561,21 @@ export function GoalsManager({
                 required
               />
             </label>
-            <div className={styles.two}>
+            <div className={styles.deadlineFields}>
               <label>
                 Target date
                 <input
                   name="target_date"
                   type="date"
                   defaultValue={editing?.target_date ?? ""}
+                />
+              </label>
+              <label>
+                Target time
+                <input
+                  name="target_time"
+                  type="time"
+                  defaultValue={timeInputValue(editing?.target_time)}
                 />
               </label>
               <label>

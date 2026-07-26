@@ -158,6 +158,125 @@
   line-height: 1.45;
 }
 
+
+.periodMetric {
+  grid-column: span 2;
+}
+
+.periodHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.periodHeader > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.periodHeader svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.periodHeader span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.periodSelector {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 4px;
+  background: var(--surface-subtle);
+}
+
+.periodSelector button {
+  min-width: 42px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.periodSelector button:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.periodSelector button[data-active="true"] {
+  background: var(--solid-bg);
+  color: var(--solid-text);
+}
+
+.periodValues {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+.periodValues strong,
+.periodValues small,
+.annualizedPace span,
+.annualizedPace b {
+  display: block;
+}
+
+.periodValues strong {
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 2.7vw, 38px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.periodValues small {
+  max-width: 680px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.annualizedPace {
+  min-width: 178px;
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 22px;
+}
+
+.annualizedPace span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.annualizedPace b {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-size: 20px;
+}
+
+.annualizedPace small {
+  margin-top: 5px;
+}
+
 .rhythm {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -722,6 +841,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .periodMetric {
+    grid-column: span 2;
+  }
+
   .twoColumn,
   .twoColumnWide {
     grid-template-columns: 1fr;
@@ -778,6 +901,36 @@
   .highlightGrid,
   .insightGrid {
     grid-template-columns: 1fr;
+  }
+
+  .periodMetric {
+    grid-column: auto;
+  }
+
+  .periodHeader,
+  .periodValues {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .periodHeader {
+    flex-direction: column;
+  }
+
+  .periodSelector {
+    width: 100%;
+  }
+
+  .periodSelector button {
+    flex: 1;
+  }
+
+  .annualizedPace {
+    min-width: 0;
+    border-top: 1px solid var(--border-subtle);
+    border-left: 0;
+    padding-top: 14px;
+    padding-left: 0;
   }
 
   .headerActions {

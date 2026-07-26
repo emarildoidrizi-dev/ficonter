@@ -61,6 +61,10 @@ export type SavingsMonthHighlight = {
   amount: number;
 };
 
+export const SAVINGS_AVERAGE_PERIODS = [3, 6, 9, 12] as const;
+export type SavingsAveragePeriod = (typeof SAVINGS_AVERAGE_PERIODS)[number];
+export type SavingsAverageByPeriod = Record<SavingsAveragePeriod, number>;
+
 export type SavingsIntelligenceResult = {
   version: "1.0";
   status: SavingsRhythmStatus;
@@ -73,8 +77,13 @@ export type SavingsIntelligenceResult = {
     totalSaved: number;
     savingsRate: number;
     currentMonthSavings: number;
+    averageMonthlySavingsByPeriod: SavingsAverageByPeriod;
     averageMonthlySavings3Months: number;
     averageMonthlySavings6Months: number;
+    averageMonthlySavings9Months: number;
+    averageMonthlySavings12Months: number;
+    baselineAveragePeriod: SavingsAveragePeriod;
+    baselineMonthlySavings: number;
     recommendedMonthlyTarget: number;
     recommendedTargetRate: number;
     monthlyGap: number;
@@ -152,6 +161,19 @@ function round(value: number, digits = 1): number {
 function average(values: number[]): number {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function calendarMonthAverage(
+  months: CashFlowMonth[],
+  period: SavingsAveragePeriod,
+): number {
+  const total = months
+    .slice(-period)
+    .reduce((sum, month) => sum + Math.max(0, month.savings), 0);
+
+  // Divide by the full calendar period. Missing months and months without
+  // saving contributions therefore count as zero instead of inflating pace.
+  return total / period;
 }
 
 function activeMonth(month: CashFlowMonth): boolean {
@@ -261,18 +283,24 @@ export function calculateSavingsIntelligence(
   };
   const activeMonths = months.filter(activeMonth);
   const savingMonths = activeMonths.filter((month) => month.savings > 0);
-  const recentThree = months.slice(-3).filter(activeMonth);
-  const priorThree = months.slice(-6, -3).filter(activeMonth);
-  const recentSix = months.slice(-6).filter(activeMonth);
+  const recentThree = months.slice(-3);
+  const priorThree = months.slice(-6, -3);
 
   const totalSaved = health.metrics.totalSavings;
   const savingsRate = health.metrics.savingsRate;
-  const averageMonthlySavings3Months = average(
-    recentThree.map((month) => month.savings),
-  );
-  const averageMonthlySavings6Months = average(
-    recentSix.map((month) => month.savings),
-  );
+  const averageMonthlySavingsByPeriod: SavingsAverageByPeriod = {
+    3: calendarMonthAverage(months, 3),
+    6: calendarMonthAverage(months, 6),
+    9: calendarMonthAverage(months, 9),
+    12: calendarMonthAverage(months, 12),
+  };
+  const averageMonthlySavings3Months = averageMonthlySavingsByPeriod[3];
+  const averageMonthlySavings6Months = averageMonthlySavingsByPeriod[6];
+  const averageMonthlySavings9Months = averageMonthlySavingsByPeriod[9];
+  const averageMonthlySavings12Months = averageMonthlySavingsByPeriod[12];
+  const baselineAveragePeriod: SavingsAveragePeriod = 6;
+  const baselineMonthlySavings =
+    averageMonthlySavingsByPeriod[baselineAveragePeriod];
   const priorThreeAverage = average(priorThree.map((month) => month.savings));
   const recentTrendChange = averageMonthlySavings3Months - priorThreeAverage;
   const recentTrendPercent =
@@ -304,17 +332,17 @@ export function calculateSavingsIntelligence(
       : 0;
   const monthlyGap = Math.max(
     0,
-    recommendedMonthlyTarget - averageMonthlySavings3Months,
+    recommendedMonthlyTarget - baselineMonthlySavings,
   );
   const progressToTarget =
     recommendedMonthlyTarget > 0
       ? clamp(
-          (averageMonthlySavings3Months / recommendedMonthlyTarget) * 100,
+          (baselineMonthlySavings / recommendedMonthlyTarget) * 100,
           0,
           200,
         )
       : 0;
-  const annualForecast = averageMonthlySavings3Months * 12;
+  const annualForecast = baselineMonthlySavings * 12;
   const recommendedAnnualTarget = recommendedMonthlyTarget * 12;
   const consistencyRate = activeMonths.length
     ? savingMonths.length / activeMonths.length
@@ -377,8 +405,8 @@ export function calculateSavingsIntelligence(
       id: "target-gap",
       tone: monthlyGap > recommendedMonthlyTarget * 0.5 ? "warning" : "info",
       title: "Your recent saving pace is below the sustainable target",
-      detail: `The latest three-month pace is €${round(
-        averageMonthlySavings3Months,
+      detail: `The six-month calendar average is €${round(
+        baselineMonthlySavings,
       ).toLocaleString("en-US")} per month, leaving a €${round(
         monthlyGap,
       ).toLocaleString("en-US")} monthly gap.`,
@@ -520,8 +548,13 @@ export function calculateSavingsIntelligence(
       totalSaved,
       savingsRate,
       currentMonthSavings: currentMonth.savings,
+      averageMonthlySavingsByPeriod,
       averageMonthlySavings3Months,
       averageMonthlySavings6Months,
+      averageMonthlySavings9Months,
+      averageMonthlySavings12Months,
+      baselineAveragePeriod,
+      baselineMonthlySavings,
       recommendedMonthlyTarget,
       recommendedTargetRate,
       monthlyGap,

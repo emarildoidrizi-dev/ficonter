@@ -22,6 +22,8 @@ import { formatCurrency } from "@/lib/financialOptions";
 import {
   calculateSavingsIntelligence,
   normalizeSavingsIntelligenceInputs,
+  SAVINGS_AVERAGE_PERIODS,
+  type SavingsAveragePeriod,
   type SavingsInsightTone,
   type SavingsIntelligenceInputs,
 } from "@/lib/wealth/savingsIntelligence";
@@ -76,6 +78,8 @@ export function SavingsIntelligence({
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
+  const [averagePeriod, setAveragePeriod] =
+    useState<SavingsAveragePeriod>(6);
 
   useEffect(() => {
     setInputs(initialInputs);
@@ -179,6 +183,9 @@ export function SavingsIntelligence({
     ...result.categories.map((category) => category.amount),
   );
   const targetProgress = Math.min(100, result.metrics.progressToTarget);
+  const selectedMonthlyAverage =
+    result.metrics.averageMonthlySavingsByPeriod[averagePeriod];
+  const selectedAnnualizedPace = selectedMonthlyAverage * 12;
 
   return (
     <section className={styles.shell}>
@@ -228,19 +235,44 @@ export function SavingsIntelligence({
           <strong>{(result.metrics.savingsRate * 100).toFixed(1)}%</strong>
           <small>Recorded savings divided by recorded income</small>
         </article>
-        <article>
-          <Activity aria-hidden="true" />
-          <span>Three-month pace</span>
-          <strong>
-            {formatCurrency(result.metrics.averageMonthlySavings3Months, "EUR")}
-          </strong>
-          <small>Average saving contribution per active recent month</small>
-        </article>
-        <article>
-          <TrendingUp aria-hidden="true" />
-          <span>Annual forecast</span>
-          <strong>{formatCurrency(result.metrics.annualForecast, "EUR")}</strong>
-          <small>Recent monthly pace projected across 12 months</small>
+        <article className={styles.periodMetric}>
+          <div className={styles.periodHeader}>
+            <div>
+              <Activity aria-hidden="true" />
+              <span>Average monthly savings</span>
+            </div>
+            <div
+              className={styles.periodSelector}
+              role="group"
+              aria-label="Choose savings average period"
+            >
+              {SAVINGS_AVERAGE_PERIODS.map((period) => (
+                <button
+                  type="button"
+                  key={period}
+                  data-active={averagePeriod === period}
+                  aria-pressed={averagePeriod === period}
+                  onClick={() => setAveragePeriod(period)}
+                >
+                  {period}M
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.periodValues} aria-live="polite">
+            <div>
+              <strong>{formatCurrency(selectedMonthlyAverage, "EUR")}</strong>
+              <small>
+                Total saved in the last {averagePeriod} calendar months divided
+                by {averagePeriod}. Months without savings count as €0.
+              </small>
+            </div>
+            <div className={styles.annualizedPace}>
+              <span>Annualized pace</span>
+              <b>{formatCurrency(selectedAnnualizedPace, "EUR")}</b>
+              <small>Selected monthly average × 12</small>
+            </div>
+          </div>
         </article>
       </div>
 
@@ -263,7 +295,7 @@ export function SavingsIntelligence({
           <p>{result.summary}</p>
 
           <div className={styles.progressHeader}>
-            <span>Progress to sustainable monthly target</span>
+            <span>Progress to target using the six-month average</span>
             <strong>{result.metrics.progressToTarget.toFixed(1)}%</strong>
           </div>
           <div
@@ -451,11 +483,13 @@ export function SavingsIntelligence({
             </div>
             <div>
               <WalletCards size={19} aria-hidden="true" />
-              <span>Six-month pace</span>
+              <span>Planning baseline</span>
               <strong>
-                {formatCurrency(result.metrics.averageMonthlySavings6Months, "EUR")}
+                {formatCurrency(result.metrics.baselineMonthlySavings, "EUR")}
               </strong>
-              <small>Average per active month in the recent six-month window</small>
+              <small>
+                Six-month calendar average used for target progress and planning
+              </small>
             </div>
           </div>
         </article>

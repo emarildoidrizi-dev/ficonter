@@ -452,8 +452,15 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     if (deleteError) {
       setError(deleteError.message);
     } else {
-      const result = data as { deleted_transaction_count?: number; deleted_bill_count?: number } | null;
+      const result = data as {
+        deleted_transaction_count?: number;
+        deleted_bill_count?: number;
+        reversed_debt_payment_count?: number;
+      } | null;
       const deletedBillCount = Number(result?.deleted_bill_count ?? 0);
+      const reversedDebtPaymentCount = Number(
+        result?.reversed_debt_payment_count ?? 0,
+      );
       const deletedIdSet = new Set(ids);
       setTransactions((current) => current.filter((item) => !deletedIdSet.has(item.id)));
       setSelectedIds((current) => new Set([...current].filter((id) => !deletedIdSet.has(id))));
@@ -462,13 +469,36 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       notifyFiconterDataChange("all");
 
       if (mode === "bulk") {
+        const linkedChanges: string[] = [];
+        if (deletedBillCount > 0) {
+          linkedChanges.push(
+            `${deletedBillCount} linked ${
+              deletedBillCount === 1 ? "bill" : "bills"
+            } deleted`,
+          );
+        }
+        if (reversedDebtPaymentCount > 0) {
+          linkedChanges.push(
+            `${reversedDebtPaymentCount} debt ${
+              reversedDebtPaymentCount === 1 ? "payment" : "payments"
+            } reversed`,
+          );
+        }
         setNotice(
-          deletedBillCount > 0
-            ? `${ids.length} transactions and ${deletedBillCount} linked ${deletedBillCount === 1 ? "bill" : "bills"} deleted.`
+          linkedChanges.length
+            ? `${ids.length} transactions deleted; ${linkedChanges.join(" and ")}.`
             : `${ids.length} transactions deleted.`,
         );
+      } else if (deletedBillCount > 0 && reversedDebtPaymentCount > 0) {
+        setNotice(
+          "Transaction deleted, linked bill removed and debt balance restored.",
+        );
+      } else if (deletedBillCount > 0) {
+        setNotice("Transaction and linked bill deleted.");
+      } else if (reversedDebtPaymentCount > 0) {
+        setNotice("Transaction deleted and debt balance restored.");
       } else {
-        setNotice(deletedBillCount > 0 ? "Transaction and linked bill deleted." : "Transaction deleted.");
+        setNotice("Transaction deleted.");
       }
       window.setTimeout(() => setNotice(""), 3000);
     }
@@ -680,7 +710,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         <div className={styles.backdrop} onMouseDown={() => !loading && setDeleteTarget(null)}>
           <div className={`${styles.modal} ${styles.smallModal}`} onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true">
             <button className={styles.close} type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
-            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. A linked Bill will be removed at the same time so both modules remain synchronized.</p>
+            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. A linked Bill will also be removed. If this is a debt-payment transaction, the payment will be reversed and the outstanding debt balance restored.</p>
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
           </div>
@@ -693,7 +723,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             <button className={styles.close} type="button" onClick={() => setBulkDeleteOpen(false)}><X size={18} /></button>
             <small>PERMANENT BULK ACTION</small>
             <h3 id="bulk-delete-title">Delete {selectedTransactions.length} transactions?</h3>
-            <p>The selected transactions will be permanently removed. Any Bills linked to those transactions will be deleted in the same atomic action so Bills and Transactions remain synchronized.</p>
+            <p>The selected transactions will be permanently removed. Linked Bills will be deleted, while linked debt payments will be reversed and their outstanding balances restored in the same atomic action.</p>
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}>
               <button type="button" onClick={() => setBulkDeleteOpen(false)} disabled={loading}>Cancel</button>

@@ -127,9 +127,9 @@ async function convertToEur(amount: number, currency: string) {
     throw new Error(`EUR conversion is unavailable for ${currency}.`);
   }
 
-  const data = await response.json().catch(() => null);
-  const rate = Number(data?.rate);
-  const eur = Number(data?.convertedAmount ?? amount * rate);
+  const data = await response.json();
+  const eur = Number(data?.convertedAmount ?? data?.amount_eur ?? data?.result);
+  const rate = Number(data?.rate ?? (eur / amount));
 
   if (!Number.isFinite(eur) || !Number.isFinite(rate) || rate <= 0) {
     throw new Error("The exchange rate could not be calculated.");
@@ -351,6 +351,7 @@ export function DebtManager({
           current.map((item) => (item.id === editingId ? (data as Debt) : item)),
         );
         setNotice("Debt updated.");
+        notifyFiconterDataChange("all");
       } else {
         const { data, error } = await supabase
           .from("debts")
@@ -364,9 +365,9 @@ export function DebtManager({
             : [data as Debt, ...current],
         );
         setNotice("Debt added.");
+        notifyFiconterDataChange("all");
       }
 
-      notifyFiconterDataChange("debts");
       resetDebtForm();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Debt could not be saved.");
@@ -402,8 +403,29 @@ export function DebtManager({
       const conversion = await convertToEur(amount, debt.currency);
       const occurredAt = new Date(`${paidAt}T12:00:00`).toISOString();
 
+      const { data: transaction, error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          description: `Debt payment · ${debt.name}`,
+          amount,
+          currency: debt.currency,
+          amount_eur: Number(conversion.eur.toFixed(2)),
+          exchange_rate_to_eur: Number(conversion.rate.toFixed(10)),
+          exchange_rate_date: paidAt,
+          exchange_rate_source: "Debt payment conversion",
+          type: "expense",
+          category: "Debt repayment",
+          transaction_date: paidAt,
+          occurred_at: occurredAt,
+        })
+        .select("id")
+        .single();
+
+      if (transactionError) throw transactionError;
+
       const { data: result, error: paymentError } = await supabase.rpc(
-        "record_debt_payment_atomic",
+        "record_debt_payment",
         {
           p_debt_id: debt.id,
           p_amount: amount,
@@ -411,11 +433,18 @@ export function DebtManager({
           p_exchange_rate: Number(conversion.rate.toFixed(10)),
           p_paid_at: occurredAt,
           p_notes: notes || null,
-          p_exchange_rate_date: paidAt,
+          p_transaction_id: transaction.id,
         },
       );
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", transaction.id)
+          .eq("user_id", userId);
+        throw paymentError;
+      }
 
       const updatedDebt = (result as { debt?: Debt })?.debt;
       const newPayment = (result as { payment?: DebtPayment })?.payment;
@@ -430,8 +459,8 @@ export function DebtManager({
       }
 
       setPaymentDebt(null);
-      notifyFiconterDataChange("all");
       setNotice("Payment recorded and added to Transactions.");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Payment could not be recorded.",
@@ -447,25 +476,24 @@ export function DebtManager({
     setBusy(`delete-payment-${payment.id}`);
 
     try {
-      const { data: result, error } = await supabase.rpc(
-        "reverse_debt_payment_atomic",
-        { p_payment_id: payment.id },
-      );
+      const { data: result, error } = await supabase.rpc("reverse_debt_payment", {
+        p_payment_id: payment.id,
+      });
       if (error) throw error;
 
-      const restoredDebt = (result as { debt?: Debt } | null)?.debt;
-      if (restoredDebt) {
+      const updatedDebt = (result as { debt?: Debt } | null)?.debt;
+      if (updatedDebt) {
         setDebts((current) =>
           current.map((item) =>
-            item.id === restoredDebt.id ? restoredDebt : item,
+            item.id === updatedDebt.id ? updatedDebt : item,
           ),
         );
       }
 
       setPayments((current) => current.filter((item) => item.id !== payment.id));
       setDeletingPayment(null);
+      setNotice("Payment deleted, linked transaction removed and debt balance restored.");
       notifyFiconterDataChange("all");
-      setNotice("Payment deleted and debt balance restored.");
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Payment could not be deleted.",
@@ -481,18 +509,30 @@ export function DebtManager({
     setBusy(`delete-debt-${debt.id}`);
 
     try {
-      const { error } = await supabase.rpc("delete_debt_with_payments", {
-        p_debt_id: debt.id,
-      });
+      const { data: result, error } = await supabase.rpc(
+        "delete_debt_with_linked_transactions",
+        { p_debt_id: debt.id },
+      );
       if (error) throw error;
+
+      const deletedTransactionCount = Number(
+        (result as { deleted_transaction_count?: number } | null)
+          ?.deleted_transaction_count ?? 0,
+      );
 
       setDebts((current) => current.filter((item) => item.id !== debt.id));
       setPayments((current) =>
         current.filter((payment) => payment.debt_id !== debt.id),
       );
       setDeletingDebt(null);
+      setNotice(
+        deletedTransactionCount > 0
+          ? `Debt and ${deletedTransactionCount} linked ${
+              deletedTransactionCount === 1 ? "transaction" : "transactions"
+            } deleted.`
+          : "Debt deleted.",
+      );
       notifyFiconterDataChange("all");
-      setNotice("Debt and linked payment history deleted.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Debt could not be deleted.");
     } finally {
@@ -506,7 +546,7 @@ export function DebtManager({
         <div>
           <h1>Debt</h1>
           <p>
-            Track every liability, record repayments and keep Ficonter synchronized
+            Track every liability, record repayments and keep FICONTER synchronized
             across Transactions, Monthly Planner and Net Worth.
           </p>
         </div>
@@ -947,10 +987,9 @@ export function DebtManager({
 
       {deletingDebt ? (
         <div className={styles.modalBackdrop}>
-          <section className={styles.modal} role="alertdialog" aria-modal="true">
+          <section className={styles.modal}>
             <button
               className={styles.modalClose}
-              type="button"
               onClick={() => setDeletingDebt(null)}
             >
               <X size={19} />
@@ -963,11 +1002,9 @@ export function DebtManager({
               from Overview, Transactions and Monthly Planner.
             </p>
             <div className={styles.modalActions}>
-              <button type="button" onClick={() => setDeletingDebt(null)}>Keep debt</button>
+              <button onClick={() => setDeletingDebt(null)}>Keep debt</button>
               <button
                 className={styles.modalDanger}
-                type="button"
-                data-enter-confirm="true"
                 onClick={confirmDeleteDebt}
                 disabled={busy === `delete-debt-${deletingDebt.id}`}
               >
@@ -982,10 +1019,9 @@ export function DebtManager({
 
       {deletingPayment ? (
         <div className={styles.modalBackdrop}>
-          <section className={styles.modal} role="alertdialog" aria-modal="true">
+          <section className={styles.modal}>
             <button
               className={styles.modalClose}
-              type="button"
               onClick={() => setDeletingPayment(null)}
             >
               <X size={19} />
@@ -998,11 +1034,9 @@ export function DebtManager({
               disappear from Transactions, Overview and Monthly Planner.
             </p>
             <div className={styles.modalActions}>
-              <button type="button" onClick={() => setDeletingPayment(null)}>Keep payment</button>
+              <button onClick={() => setDeletingPayment(null)}>Keep payment</button>
               <button
                 className={styles.modalDanger}
-                type="button"
-                data-enter-confirm="true"
                 onClick={confirmDeletePayment}
                 disabled={busy === `delete-payment-${deletingPayment.id}`}
               >

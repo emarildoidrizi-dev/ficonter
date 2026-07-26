@@ -14,9 +14,13 @@ const sql = read("supabase/phase2_net_worth_growth.sql");
 
 expect(engine.includes("normalizeWealthScoreInputs"), "Growth engine reuses Wealth Score inputs");
 expect(engine.includes("calculateNetWorthGrowth"), "Shared Net Worth Growth engine exists");
-expect(engine.includes('version: "1.0"'), "Growth result is versioned");
+expect(engine.includes('version: "1.1"'), "Growth result is versioned");
 expect(engine.includes("selectedPeriodChange"), "Selected-period growth is calculated once");
 expect(engine.includes("projectedTwelveMonthNetWorth"), "Directional 12-month outlook exists");
+expect(engine.includes("forecastAvailable"), "Forecast availability is explicit");
+expect(engine.includes("forecastHistoryMonths >= 3"), "Forecast requires three completed comparable changes");
+expect(engine.includes("completedMonthly.slice(1)"), "Opening baseline is excluded from forecasting");
+expect(engine.includes("selectedMonthly.slice(1)"), "Opening baseline is excluded from growth metrics");
 expect(engine.includes("netDebtReduction"), "Net liability movement is measured");
 expect(engine.includes("savingsAllocated"), "Savings allocation is visible without double counting");
 expect(engine.includes("groupAnnual"), "Annual growth summaries are generated");
@@ -26,6 +30,8 @@ expect(component.includes("Capital, liabilities and net worth"), "Growth traject
 expect(component.includes("Savings remain part of recorded capital"), "UI explains savings are not added twice");
 expect(component.includes("Growth by calendar year"), "Annual growth view is present");
 expect(component.includes("Directional 12-month outlook"), "Forecast panel is present");
+expect(component.includes("Outlook unavailable"), "Insufficient history state is visible");
+expect(component.includes("current net-worth balance is never"), "UI explains baseline protection");
 expect(!component.includes(".from(\"transactions\")"), "Growth UI does not query transactions directly");
 expect(live.includes("calculateWealthScore(inputs.wealthScore)"), "Existing Wealth Score reuses the combined input source");
 expect(live.includes("<NetWorthGrowth inputs={inputs}"), "Growth module is integrated into Net Worth");

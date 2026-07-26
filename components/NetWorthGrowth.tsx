@@ -460,15 +460,46 @@ export function NetWorthGrowth({ inputs }: Props) {
             <ChartNoAxesCombined aria-hidden="true" />
           </div>
           <span>Directional 12-month outlook</span>
-          <h3>{formatCurrency(result.metrics.projectedTwelveMonthNetWorth, "EUR")}</h3>
-          <p>
-            Based on the average monthly net-worth change from the latest six
-            calendar months. This is a planning estimate, not a guarantee.
-          </p>
-          <div>
-            <small>Trailing monthly pace</small>
-            <strong>{signedCurrency(result.metrics.trailingSixMonthGrowth)}</strong>
-          </div>
+          {result.metrics.forecastAvailable &&
+          result.metrics.projectedTwelveMonthNetWorth !== null &&
+          result.metrics.trailingSixMonthGrowth !== null ? (
+            <>
+              <h3>
+                {formatCurrency(
+                  result.metrics.projectedTwelveMonthNetWorth,
+                  "EUR",
+                )}
+              </h3>
+              <p>
+                Based only on completed month-to-month net-worth changes from
+                the latest six eligible months. This is a planning estimate,
+                not a guarantee.
+              </p>
+              <div>
+                <small>Trailing completed-month pace</small>
+                <strong>
+                  {signedCurrency(result.metrics.trailingSixMonthGrowth)}
+                </strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className={styles.forecastUnavailable}>
+                Outlook unavailable
+              </h3>
+              <p>
+                More financial history is needed before FICONTER can calculate
+                a responsible direction. The current net-worth balance is never
+                treated as a recurring monthly loss.
+              </p>
+              <div>
+                <small>Completed month-to-month changes</small>
+                <strong>
+                  {result.metrics.forecastHistoryMonths} / 3 required
+                </strong>
+              </div>
+            </>
+          )}
         </article>
       </div>
 

@@ -738,3 +738,9 @@
     height: 260px;
   }
 }
+
+.forecastUnavailable {
+  max-width: 520px;
+  font-size: clamp(30px, 4vw, 46px) !important;
+  line-height: 1.06 !important;
+}

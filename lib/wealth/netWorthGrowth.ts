@@ -67,7 +67,7 @@ export type NetWorthGrowthYear = {
 };
 
 export type NetWorthGrowthResult = {
-  version: "1.0";
+  version: "1.1";
   period: NetWorthGrowthPeriod;
   periodLabel: string;
   label: NetWorthGrowthLabel;
@@ -87,8 +87,10 @@ export type NetWorthGrowthResult = {
     netDebtReduction: number;
     currentDebt: number;
     openingDebt: number;
-    trailingSixMonthGrowth: number;
-    projectedTwelveMonthNetWorth: number;
+    forecastAvailable: boolean;
+    forecastHistoryMonths: number;
+    trailingSixMonthGrowth: number | null;
+    projectedTwelveMonthNetWorth: number | null;
     recentThreeMonthAverage: number;
     priorThreeMonthAverage: number;
     momentumChange: number;
@@ -247,21 +249,26 @@ function groupAnnual(months: readonly NetWorthGrowthMonth[]): NetWorthGrowthYear
   return [...groups.entries()].map(([year, items]) => {
     const first = items[0];
     const last = items.at(-1) ?? first;
-    const openingNetWorth = first.netWorth - first.netWorthChange;
-    const openingDebt = first.debtOutstanding - first.debtChange;
-    const closingDebt = last.debtOutstanding;
+    const firstIndex = months.findIndex((month) => month.month === first.month);
+    const previous = firstIndex > 0 ? months[firstIndex - 1] : null;
+    const openingNetWorth = previous?.netWorth ?? first.netWorth;
+    const openingDebt = previous?.debtOutstanding ?? first.debtOutstanding;
+    const comparableItems = previous ? items : items.slice(1);
 
     return {
       year,
       openingNetWorth,
       closingNetWorth: last.netWorth,
-      change: items.reduce((sum, item) => sum + item.netWorthChange, 0),
-      retainedCapital: items.reduce(
+      change: last.netWorth - openingNetWorth,
+      retainedCapital: comparableItems.reduce(
         (sum, item) => sum + item.retainedCapital,
         0,
       ),
-      debtReduction: openingDebt - closingDebt,
-      savingsAllocated: items.reduce((sum, item) => sum + item.savings, 0),
+      debtReduction: openingDebt - last.debtOutstanding,
+      savingsAllocated: comparableItems.reduce(
+        (sum, item) => sum + item.savings,
+        0,
+      ),
     };
   });
 }
@@ -276,27 +283,26 @@ export function calculateNetWorthGrowth(
     period === "all" ? fullMonthly : fullMonthly.slice(-period);
   const first = selectedMonthly[0] ?? null;
   const last = selectedMonthly.at(-1) ?? null;
-  const openingNetWorth = first ? first.netWorth - first.netWorthChange : 0;
-  const openingDebt = first ? first.debtOutstanding - first.debtChange : 0;
+  const selectedGrowthMonths = selectedMonthly.slice(1);
+  const openingNetWorth = first?.netWorth ?? 0;
+  const openingDebt = first?.debtOutstanding ?? 0;
   const currentNetWorth = last?.netWorth ?? 0;
   const currentDebt = last?.debtOutstanding ?? 0;
-  const selectedPeriodChange = selectedMonthly.reduce(
-    (sum, month) => sum + month.netWorthChange,
-    0,
-  );
-  const selectedMonths = selectedMonthly.length;
+  const selectedPeriodChange =
+    first && last ? last.netWorth - first.netWorth : 0;
+  const selectedMonths = selectedGrowthMonths.length;
   const averageMonthlyGrowth = selectedMonths
     ? selectedPeriodChange / selectedMonths
     : 0;
-  const capitalAdded = selectedMonthly.reduce(
+  const capitalAdded = selectedGrowthMonths.reduce(
     (sum, month) => sum + month.retainedCapital,
     0,
   );
-  const savingsAllocated = selectedMonthly.reduce(
+  const savingsAllocated = selectedGrowthMonths.reduce(
     (sum, month) => sum + month.savings,
     0,
   );
-  const recordedDebtPayments = selectedMonthly.reduce(
+  const recordedDebtPayments = selectedGrowthMonths.reduce(
     (sum, month) => sum + month.debtPayments,
     0,
   );
@@ -306,14 +312,28 @@ export function calculateNetWorthGrowth(
       ? (selectedPeriodChange / openingNetWorth) * 100
       : null;
 
-  const trailingSix = fullMonthly.slice(-6);
-  const trailingSixMonthGrowth = average(
-    trailingSix.map((month) => month.netWorthChange),
+  const generatedMonth = /^\d{4}-\d{2}/.test(data.generatedAt)
+    ? data.generatedAt.slice(0, 7)
+    : new Date().toISOString().slice(0, 7);
+  const completedMonthly = fullMonthly.filter(
+    (month) => month.month < generatedMonth,
   );
+  // The first recorded month establishes the opening baseline. It must never be
+  // treated as a recurring monthly gain or loss for forecasting.
+  const completedGrowthMonths = completedMonthly.slice(1);
+  const forecastSample = completedGrowthMonths.slice(-6);
+  const forecastHistoryMonths = forecastSample.length;
+  const forecastAvailable = forecastHistoryMonths >= 3;
+  const trailingSixMonthGrowth = forecastAvailable
+    ? average(forecastSample.map((month) => month.netWorthChange))
+    : null;
   const projectedTwelveMonthNetWorth =
-    currentNetWorth + trailingSixMonthGrowth * 12;
-  const recentThree = fullMonthly.slice(-3);
-  const priorThree = fullMonthly.slice(-6, -3);
+    forecastAvailable && trailingSixMonthGrowth !== null
+      ? currentNetWorth + trailingSixMonthGrowth * 12
+      : null;
+  const comparableGrowthMonths = fullMonthly.slice(1);
+  const recentThree = comparableGrowthMonths.slice(-3);
+  const priorThree = comparableGrowthMonths.slice(-6, -3);
   const recentThreeMonthAverage = average(
     recentThree.map((month) => month.netWorthChange),
   );
@@ -321,19 +341,21 @@ export function calculateNetWorthGrowth(
     priorThree.map((month) => month.netWorthChange),
   );
   const momentumChange = recentThreeMonthAverage - priorThreeMonthAverage;
+  const trailingGrowthMonths = comparableGrowthMonths.slice(-6);
   const volatility = standardDeviation(
-    trailingSix.map((month) => month.netWorthChange),
+    trailingGrowthMonths.map((month) => month.netWorthChange),
   );
-  const positiveGrowthMonths = selectedMonthly.filter(
+  const positiveGrowthMonths = selectedGrowthMonths.filter(
     (month) => month.netWorthChange > 0.01,
   ).length;
+  const comparableHistoryMonths = Math.max(0, fullMonthly.length - 1);
   const confidence = confidenceFor(
-    data.growth.historyMonths,
+    comparableHistoryMonths,
     volatility,
-    trailingSixMonthGrowth,
+    trailingSixMonthGrowth ?? 0,
   );
   const dataCoverage = clamp(
-    Math.round((Math.min(data.growth.historyMonths, 12) / 12) * 85) +
+    Math.round((Math.min(comparableHistoryMonths, 12) / 12) * 85) +
       (data.wealthScore.liabilities.length || fullMonthly.length ? 15 : 0),
     0,
     100,
@@ -345,19 +367,19 @@ export function calculateNetWorthGrowth(
     priorThreeMonthAverage,
   );
 
-  const bestMonth = selectedMonthly.length
-    ? selectedMonthly.reduce((best, month) =>
+  const bestMonth = selectedGrowthMonths.length
+    ? selectedGrowthMonths.reduce((best, month) =>
         month.netWorthChange > best.netWorthChange ? month : best,
       )
     : null;
-  const weakestMonth = selectedMonthly.length
-    ? selectedMonthly.reduce((weakest, month) =>
+  const weakestMonth = selectedGrowthMonths.length
+    ? selectedGrowthMonths.reduce((weakest, month) =>
         month.netWorthChange < weakest.netWorthChange ? month : weakest,
       )
     : null;
 
   let summary = "FICONTER is building enough history to measure net-worth growth.";
-  if (selectedMonthly.length) {
+  if (selectedGrowthMonths.length) {
     if (label === "Declining") {
       summary =
         "Net wealth moved backward during the selected period. The breakdown shows whether cash-flow pressure or rising liabilities caused the change.";
@@ -378,7 +400,10 @@ export function calculateNetWorthGrowth(
 
   let nextBestAction =
     "Keep recording transactions and liabilities so FICONTER can measure a reliable growth trend.";
-  if (selectedPeriodChange < 0) {
+  if (!selectedGrowthMonths.length) {
+    nextBestAction =
+      "Keep recording complete monthly activity. FICONTER needs comparable month-end positions before it can measure growth.";
+  } else if (selectedPeriodChange < 0) {
     nextBestAction =
       "Restore positive monthly retained capital and avoid adding new liabilities until net-worth growth turns positive.";
   } else if (netDebtReduction < 0) {
@@ -401,16 +426,24 @@ export function calculateNetWorthGrowth(
   const insights: NetWorthGrowthInsight[] = [
     {
       id: "growth-direction",
-      title:
-        selectedPeriodChange >= 0
+      title: selectedGrowthMonths.length
+        ? selectedPeriodChange >= 0
           ? "Net wealth moved forward"
-          : "Net wealth moved backward",
-      detail: `${periodLabel(period, selectedMonths)} changed the recorded net-worth position by ${round(selectedPeriodChange, 2)} EUR.`,
-      action:
-        selectedPeriodChange >= 0
+          : "Net wealth moved backward"
+        : "Net-worth baseline established",
+      detail: selectedGrowthMonths.length
+        ? `${periodLabel(period, selectedMonthly.length)} changed the recorded net-worth position by ${round(selectedPeriodChange, 2)} EUR.`
+        : `FICONTER has recorded the current net-worth position of ${round(currentNetWorth, 2)} EUR, but no comparable month-end change exists yet.`,
+      action: selectedGrowthMonths.length
+        ? selectedPeriodChange >= 0
           ? "Protect the monthly activities producing positive growth."
-          : "Identify the months and liabilities responsible for the decline.",
-      tone: selectedPeriodChange >= 0 ? "positive" : "critical",
+          : "Identify the months and liabilities responsible for the decline."
+        : "Keep recording activity until at least two month-end positions can be compared.",
+      tone: selectedGrowthMonths.length
+        ? selectedPeriodChange >= 0
+          ? "positive"
+          : "critical"
+        : "info",
     },
     {
       id: "debt-effect",
@@ -440,20 +473,29 @@ export function calculateNetWorthGrowth(
     },
     {
       id: "forecast",
-      title: "Twelve-month direction",
-      detail: `At the trailing six-month pace, recorded net worth would reach approximately ${round(projectedTwelveMonthNetWorth, 2)} EUR in twelve months.`,
-      action:
-        confidence === "Developing"
-          ? "Treat this as an early directional estimate until more history is recorded."
-          : "Use the projection as a planning guide, not a guaranteed outcome.",
-      tone: projectedTwelveMonthNetWorth >= currentNetWorth ? "info" : "warning",
+      title: forecastAvailable
+        ? "Twelve-month direction"
+        : "Outlook needs more history",
+      detail:
+        forecastAvailable && projectedTwelveMonthNetWorth !== null
+          ? `At the trailing completed-month pace, recorded net worth would reach approximately ${round(projectedTwelveMonthNetWorth, 2)} EUR in twelve months.`
+          : `FICONTER has ${forecastHistoryMonths} of the 3 completed month-to-month changes required for a responsible outlook.`,
+      action: forecastAvailable
+        ? "Use the projection as a planning guide, not a guaranteed outcome."
+        : "Keep recording complete monthly activity. The forecast will activate automatically when enough history exists.",
+      tone:
+        forecastAvailable &&
+        projectedTwelveMonthNetWorth !== null &&
+        projectedTwelveMonthNetWorth < currentNetWorth
+          ? "warning"
+          : "info",
     },
   ];
 
   return {
-    version: "1.0",
+    version: "1.1",
     period,
-    periodLabel: periodLabel(period, selectedMonths),
+    periodLabel: periodLabel(period, selectedMonthly.length),
     label,
     summary,
     confidence,
@@ -471,6 +513,8 @@ export function calculateNetWorthGrowth(
       netDebtReduction,
       currentDebt,
       openingDebt,
+      forecastAvailable,
+      forecastHistoryMonths,
       trailingSixMonthGrowth,
       projectedTwelveMonthNetWorth,
       recentThreeMonthAverage,

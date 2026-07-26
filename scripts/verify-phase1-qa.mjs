@@ -151,8 +151,23 @@ const userScopedPages = [
 ];
 for (const file of userScopedPages) {
   const text = await source(file);
-  check(text.includes('eq("user_id", user.id)'), `${file} explicitly scopes financial queries to the authenticated user.`);
+  const usesExplicitUserFilter = text.includes('eq("user_id", user.id)');
+  const usesAuthenticatedWealthRpc =
+    file === "app/dashboard/net-worth/page.tsx" &&
+    text.includes('rpc("get_wealth_score_inputs")');
+  check(
+    usesExplicitUserFilter || usesAuthenticatedWealthRpc,
+    `${file} explicitly scopes financial queries to the authenticated user.`,
+  );
 }
+
+const wealthSql = await source("supabase/phase2_wealth_score_engine.sql");
+check(
+  wealthSql.includes("auth.uid()") &&
+    wealthSql.includes("security invoker") &&
+    wealthSql.includes("public.get_financial_health_inputs()"),
+  "The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health source of truth.",
+);
 
 console.log(`Phase 1 QA verification: ${passes.length} checks passed.`);
 for (const message of passes) console.log(`  PASS  ${message}`);

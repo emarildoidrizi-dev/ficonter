@@ -7,6 +7,7 @@ import {
   ChartPie,
   ChevronUp,
   CreditCard,
+  Flag,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -53,6 +54,7 @@ const standardLinks = [
   ["/dashboard/debt", CreditCard, "Debt"],
   ["/dashboard/goals", Target, "Goals"],
   ["/dashboard/net-worth", Landmark, "Net worth"],
+  ["/dashboard/financial-independence", Flag, "Financial independence"],
 ] as const;
 
 function fallbackDisplayName(user: SidebarUser): string {

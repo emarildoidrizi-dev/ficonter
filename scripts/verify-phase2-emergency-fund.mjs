@@ -44,7 +44,7 @@ check("component subscribes to transactions", component.includes('table: "transa
 check("component subscribes to bills", component.includes('table: "bills"'));
 check("component discloses no duplicate balance", component.includes("No second\n            balance or duplicate savings calculation is created"));
 check("component renders reserve milestones", component.includes("Protection milestones"));
-check("component renders 12-month history", component.includes("Last 12 months"));
+check("component renders scrollable full monthly history", component.includes("Full monthly history"));
 check("component reuses Transactions workflow", component.includes('href="/dashboard/transactions"'));
 check("sidebar exposes Emergency fund route", sidebar.includes('["/dashboard/emergency-fund", Umbrella, "Emergency fund"]'));
 check("SQL is security invoker", sql.includes("security invoker"));

@@ -285,7 +285,8 @@
   margin-top: 20px;
 }
 
-.readinessMetrics > span {
+.readinessMetrics > span,
+.periodMetric {
   min-width: 0;
   border: 1px solid var(--border-subtle);
   border-radius: 15px;
@@ -304,6 +305,62 @@
   margin-top: 7px;
   color: var(--text-primary);
   font-size: 18px;
+}
+
+.periodMetric {
+  display: grid;
+  gap: 8px;
+}
+
+.periodMetricTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.periodMetricTop small {
+  max-width: 150px;
+  line-height: 1.35;
+}
+
+.periodSelector {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 3px;
+  background: var(--surface-card);
+}
+
+.periodSelector button {
+  min-width: 31px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.periodSelector button:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.periodSelector button[data-active="true"] {
+  background: var(--solid-bg);
+  color: var(--solid-text);
+}
+
+.periodMetricNote {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .twoColumn,
@@ -781,6 +838,19 @@
   .metricGrid,
   .readinessMetrics {
     grid-template-columns: 1fr;
+  }
+
+  .periodMetricTop {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .periodSelector {
+    width: 100%;
+  }
+
+  .periodSelector button {
+    flex: 1 1 0;
   }
 
   .milestoneTop,

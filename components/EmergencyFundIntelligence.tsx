@@ -17,6 +17,10 @@ import {
   WalletCards,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  AVERAGE_PERIODS,
+  type AveragePeriod,
+} from "@/lib/wealth/averagePeriods";
 import { formatCurrency } from "@/lib/financialOptions";
 import {
   calculateEmergencyFund,
@@ -78,6 +82,7 @@ export function EmergencyFundIntelligence({
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
+  const [averagePeriod, setAveragePeriod] = useState<AveragePeriod>(6);
 
   useEffect(() => {
     setInputs(initialInputs);
@@ -155,6 +160,9 @@ export function EmergencyFundIntelligence({
     1,
     ...result.monthly.map((month) => month.contribution),
   );
+  const selectedAverageContribution =
+    result.metrics.averageContributions[averagePeriod];
+  const selectedPeriodTotal = selectedAverageContribution * averagePeriod;
 
   return (
     <section className={styles.shell}>
@@ -277,15 +285,33 @@ export function EmergencyFundIntelligence({
                 )}
               </strong>
             </span>
-            <span>
-              <small>Three-month pace</small>
-              <strong>
-                {formatCurrency(
-                  result.metrics.averageContribution3Months,
-                  "EUR",
-                )}
-              </strong>
-            </span>
+            <div className={styles.periodMetric}>
+              <div className={styles.periodMetricTop}>
+                <small>Average monthly emergency saving</small>
+                <div
+                  className={styles.periodSelector}
+                  aria-label="Emergency fund average period"
+                >
+                  {AVERAGE_PERIODS.map((period) => (
+                    <button
+                      key={period}
+                      type="button"
+                      data-active={averagePeriod === period}
+                      aria-pressed={averagePeriod === period}
+                      onClick={() => setAveragePeriod(period)}
+                    >
+                      {period}M
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <strong>{formatCurrency(selectedAverageContribution, "EUR")}</strong>
+              <span className={styles.periodMetricNote}>
+                {formatCurrency(selectedPeriodTotal, "EUR")} contributed over the
+                last {averagePeriod} calendar months. Months without a contribution
+                count as €0.
+              </span>
+            </div>
           </div>
         </div>
       </article>

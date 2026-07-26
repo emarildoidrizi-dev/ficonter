@@ -1,4 +1,9 @@
 import {
+  AVERAGE_PERIODS,
+  averageMonthlyFromSeries,
+  type AveragePeriod,
+} from "@/lib/wealth/averagePeriods";
+import {
   calculateFinancialHealth,
   normalizeFinancialHealthInputs,
   type FinancialHealthInputs,
@@ -84,6 +89,9 @@ export type EmergencyFundResult = {
     currentMonthContribution: number;
     averageContribution3Months: number;
     averageContribution6Months: number;
+    averageContribution9Months: number;
+    averageContribution12Months: number;
+    averageContributions: Record<AveragePeriod, number>;
     suggestedMonthlyContribution: number;
     monthsToRecommendedTarget: number | null;
     estimatedCompletionDate: string | null;
@@ -138,11 +146,6 @@ function round(value: number, digits = 1): number {
 function roundToFive(value: number): number {
   if (value <= 0) return 0;
   return Math.max(5, Math.round(value / 5) * 5);
-}
-
-function average(values: number[]): number {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function addMonths(value: string, monthCount: number): string | null {
@@ -257,8 +260,20 @@ export function calculateEmergencyFund(
 
   const monthlyValues = data.monthly.map((month) => month.contribution);
   const currentMonthContribution = monthlyValues.at(-1) ?? 0;
-  const averageContribution3Months = average(monthlyValues.slice(-3));
-  const averageContribution6Months = average(monthlyValues.slice(-6));
+  const averageContributions = Object.fromEntries(
+    AVERAGE_PERIODS.map((period) => [
+      period,
+      averageMonthlyFromSeries(
+        data.monthly,
+        period,
+        (month) => month.contribution,
+      ),
+    ]),
+  ) as Record<AveragePeriod, number>;
+  const averageContribution3Months = averageContributions[3];
+  const averageContribution6Months = averageContributions[6];
+  const averageContribution9Months = averageContributions[9];
+  const averageContribution12Months = averageContributions[12];
 
   // The contribution recommendation reuses existing income and expense totals.
   // It never creates a second savings or cash-flow balance.
@@ -271,7 +286,7 @@ export function calculateEmergencyFund(
     monthlySurplusBeforeSavings * 0.5,
   );
   const observedSustainablePace = Math.min(
-    averageContribution3Months,
+    averageContribution6Months,
     monthlySurplusBeforeSavings,
   );
   const sustainablePace = Math.max(
@@ -413,13 +428,13 @@ export function calculateEmergencyFund(
     });
   }
 
-  if (averageContribution3Months > 0) {
+  if (averageContribution6Months > 0) {
     insights.push({
       id: "pace",
       tone: "positive",
-      title: "Recent contribution pace",
-      description: `Your average Emergency fund contribution over the last three months is €${round(
-        averageContribution3Months,
+      title: "Contribution pace",
+      description: `Your average Emergency fund contribution over the last six months is €${round(
+        averageContribution6Months,
         0,
       ).toLocaleString("en-US")}.`,
     });
@@ -427,9 +442,9 @@ export function calculateEmergencyFund(
     insights.push({
       id: "pace",
       tone: "warning",
-      title: "No recent contribution pace",
+      title: "No established contribution pace",
       description:
-        "No Emergency fund contribution is recorded in the recent three-month window.",
+        "No Emergency fund contribution is recorded in the recent six-month window.",
     });
   }
 
@@ -466,6 +481,14 @@ export function calculateEmergencyFund(
       currentMonthContribution: round(currentMonthContribution, 2),
       averageContribution3Months: round(averageContribution3Months, 2),
       averageContribution6Months: round(averageContribution6Months, 2),
+      averageContribution9Months: round(averageContribution9Months, 2),
+      averageContribution12Months: round(averageContribution12Months, 2),
+      averageContributions: {
+        3: round(averageContribution3Months, 2),
+        6: round(averageContribution6Months, 2),
+        9: round(averageContribution9Months, 2),
+        12: round(averageContribution12Months, 2),
+      },
       suggestedMonthlyContribution: round(suggestedMonthlyContribution, 2),
       monthsToRecommendedTarget,
       estimatedCompletionDate,

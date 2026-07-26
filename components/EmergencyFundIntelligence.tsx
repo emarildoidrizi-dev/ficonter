@@ -6,6 +6,8 @@ import {
   Activity,
   CalendarClock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   PiggyBank,
   RefreshCw,
@@ -43,12 +45,18 @@ const INSIGHT_ICONS = {
   critical: CircleAlert,
 } satisfies Record<EmergencyFundInsightTone, typeof Activity>;
 
-function monthLabel(month: string): string {
+function monthLabelParts(month: string): { month: string; year: string } {
   const [year, monthNumber] = month.split("-").map(Number);
-  if (!year || !monthNumber) return month;
-  return new Intl.DateTimeFormat("en-US", { month: "short" }).format(
-    new Date(year, monthNumber - 1, 1),
-  );
+  if (!year || !monthNumber) {
+    return { month, year: "" };
+  }
+
+  return {
+    month: new Intl.DateTimeFormat("en-US", { month: "short" }).format(
+      new Date(year, monthNumber - 1, 1),
+    ),
+    year: String(year),
+  };
 }
 
 function dateLabel(value: string | null): string {
@@ -79,6 +87,7 @@ export function EmergencyFundIntelligence({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
+  const historyScrollRef = useRef<HTMLDivElement | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
@@ -163,6 +172,30 @@ export function EmergencyFundIntelligence({
   const selectedAverageContribution =
     result.metrics.averageContributions[averagePeriod];
   const selectedPeriodTotal = selectedAverageContribution * averagePeriod;
+
+  const scrollHistory = useCallback((direction: "earlier" | "later") => {
+    const viewport = historyScrollRef.current;
+    if (!viewport) return;
+
+    viewport.scrollBy({
+      left:
+        direction === "earlier"
+          ? -Math.max(320, viewport.clientWidth * 0.78)
+          : Math.max(320, viewport.clientWidth * 0.78),
+      behavior: "smooth",
+    });
+  }, []);
+
+  useEffect(() => {
+    const viewport = historyScrollRef.current;
+    if (!viewport) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      viewport.scrollLeft = viewport.scrollWidth;
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [result.monthly.length]);
 
   return (
     <section className={styles.shell}>
@@ -432,11 +465,38 @@ export function EmergencyFundIntelligence({
           <header className={styles.panelHeader}>
             <div>
               <span>Contribution history</span>
-              <h2>Last 12 months</h2>
+              <h2>Full monthly history</h2>
+              <p className={styles.historyHint}>
+                Swipe, use the trackpad, or use the arrows to review earlier months and years.
+              </p>
+            </div>
+            <div className={styles.historyControls}>
+              <button
+                type="button"
+                onClick={() => scrollHistory("earlier")}
+                aria-label="Show earlier contribution months"
+                title="Earlier months"
+              >
+                <ChevronLeft size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollHistory("later")}
+                aria-label="Show later contribution months"
+                title="Later months"
+              >
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
             </div>
           </header>
 
-          <div className={styles.chart}>
+          <div
+            className={styles.chartViewport}
+            ref={historyScrollRef}
+            tabIndex={0}
+            aria-label="Emergency fund contribution history by month"
+          >
+            <div className={styles.chart}>
             {result.monthly.map((month) => {
               const height =
                 month.contribution > 0
@@ -445,19 +505,24 @@ export function EmergencyFundIntelligence({
                       (month.contribution / maxMonthlyContribution) * 100,
                     )
                   : 0;
+              const label = monthLabelParts(month.month);
+
               return (
                 <div className={styles.chartColumn} key={month.month}>
                   <div className={styles.barArea}>
                     <span
                       className={styles.bar}
                       style={{ height: `${height}%` }}
-                      title={`${monthLabel(month.month)}: ${formatCurrency(
+                      title={`${label.month}${label.year ? ` ${label.year}` : ""}: ${formatCurrency(
                         month.contribution,
                         "EUR",
                       )}`}
                     />
                   </div>
-                  <strong>{monthLabel(month.month)}</strong>
+                  <strong>{label.month}</strong>
+                  {label.year ? (
+                    <span className={styles.chartYear}>{label.year}</span>
+                  ) : null}
                   <small>
                     {month.contribution > 0
                       ? formatCurrency(month.contribution, "EUR")
@@ -466,6 +531,7 @@ export function EmergencyFundIntelligence({
                 </div>
               );
             })}
+            </div>
           </div>
         </article>
 

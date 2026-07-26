@@ -23,10 +23,28 @@ begin
 
   v_health := public.get_financial_health_inputs();
 
-  with month_range as (
+  with contribution_bounds as (
+    select min(
+      date_trunc(
+        'month',
+        coalesce(occurred_at, transaction_date::timestamptz, created_at)
+      )::date
+    ) as first_month
+    from public.transactions
+    where user_id = v_user_id
+      and type = 'saving'
+      and lower(trim(category)) = 'emergency fund'
+  ),
+  month_range as (
     select generate_series(
-      date_trunc('month', current_date) - interval '11 months',
-      date_trunc('month', current_date),
+      least(
+        coalesce(
+          (select first_month from contribution_bounds),
+          date_trunc('month', current_date)::date
+        ),
+        (date_trunc('month', current_date) - interval '11 months')::date
+      ),
+      date_trunc('month', current_date)::date,
       interval '1 month'
     )::date as month_start
   ),
@@ -42,10 +60,6 @@ begin
     where user_id = v_user_id
       and type = 'saving'
       and lower(trim(category)) = 'emergency fund'
-      and date_trunc(
-        'month',
-        coalesce(occurred_at, transaction_date::timestamptz)
-      ) >= date_trunc('month', current_date) - interval '11 months'
     group by 1
   ),
   monthly_series as (
@@ -80,7 +94,7 @@ begin
       and lower(trim(category)) = 'emergency fund'
   )
   select jsonb_build_object(
-    'schemaVersion', 1,
+    'schemaVersion', 2,
     'generatedAt', now(),
     'financialHealth', v_health,
     'monthly', (
@@ -125,7 +139,7 @@ revoke all on function public.get_emergency_fund_intelligence_inputs() from publ
 grant execute on function public.get_emergency_fund_intelligence_inputs() to authenticated;
 
 comment on function public.get_emergency_fund_intelligence_inputs() is
-  'Returns privacy-scoped Emergency Fund Intelligence inputs for the authenticated user, reusing the existing Financial Health source of truth.';
+  'Returns privacy-scoped Emergency Fund Intelligence inputs, including complete monthly contribution history, for the authenticated user while reusing the existing Financial Health source of truth.';
 
 commit;
 

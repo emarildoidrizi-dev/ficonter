@@ -25,3 +25,27 @@
 :global(html[data-resolved-theme="dark"]) .negative { color: #e5a09d !important; }
 
 :global(html[data-resolved-theme="dark"]) .scrollHint { color: var(--text-secondary) !important; }
+
+/* Transaction range and bulk-management controls */
+.dateRangeCard{display:grid;grid-template-columns:minmax(250px,1fr) minmax(145px,190px) minmax(145px,190px) auto auto;align-items:end;gap:10px;margin-bottom:10px;padding:12px 14px;border:1px solid #e1d9ce;border-radius:15px;background:#f8f5ef}.dateRangeHeading{display:flex;align-items:center;gap:10px;min-height:44px}.dateRangeHeading>svg{flex:0 0 auto;color:#b69a6a}.dateRangeHeading strong,.dateRangeHeading span{display:block}.dateRangeHeading strong{color:#25282a;font-size:14px}.dateRangeHeading span{margin-top:3px;color:#77736d;font-size:12px}.dateRangeCard>label{display:grid;gap:5px;color:#5f5b55;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.dateRangeCard input{height:42px;padding:0 11px;border:1px solid #dcd3c7;border-radius:11px;background:#fff;color:#25282a;font:inherit;text-transform:none;letter-spacing:normal}.dateApplyButton,.dateClearButton{height:42px;padding:0 15px;border-radius:11px;font-weight:800;cursor:pointer}.dateApplyButton{border:1px solid #202427;background:#202427;color:#fff}.dateClearButton{border:1px solid #d8d0c4;background:#fff;color:#454744}.dateClearButton:disabled{opacity:.45;cursor:not-allowed}
+.selectionBar{display:flex;align-items:center;gap:12px;min-height:50px;margin:10px 0;padding:8px 10px 8px 13px;border:1px solid #e1d9ce;border-radius:14px;background:#f8f5ef}.selectAllControl{display:flex;align-items:center;gap:9px;color:#313434;font-size:13px;font-weight:800;cursor:pointer}.selectAllControl input,.rowCheckbox input{width:17px;height:17px;margin:0;accent-color:#8f774f;cursor:pointer}.selectAllControl input:disabled{cursor:not-allowed}.selectionCount{color:#77736d;font-size:12px;white-space:nowrap}.bulkActions{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-left:auto;flex-wrap:wrap}.bulkActions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:35px;padding:0 10px;border:1px solid #d8d0c4;border-radius:10px;background:#fff;color:#454744;font-size:12px;font-weight:800;cursor:pointer}.bulkActions button:hover{border-color:#b69a6a;background:#f1e8d8}.bulkActions button:disabled{opacity:.45;cursor:not-allowed}.bulkActions .bulkDeleteButton{border-color:#ddc1c1;color:#925b5b}.bulkActions .bulkDeleteButton:hover{border-color:#925b5b;background:#f6e6e6}.rowCheckbox{display:grid;place-items:center;width:26px;height:36px}.selectedRow{border-color:#b69a6a;background:#fbf7ef;box-shadow:0 0 0 1px rgba(182,154,106,.16)}
+
+/* Add the selection control without disturbing the transaction content. */
+.row{grid-template-columns:26px 4px minmax(180px,1fr) minmax(120px,auto) auto}.summary{grid-template-columns:repeat(3,1fr)}
+
+@media(max-width:1250px){.dateRangeCard{grid-template-columns:minmax(240px,1fr) 1fr 1fr auto auto}.row{grid-template-columns:26px 4px minmax(190px,1fr) auto}.actions{grid-column:3/5;justify-content:flex-end}.summary{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:980px){.dateRangeCard{grid-template-columns:1fr 1fr}.dateRangeHeading{grid-column:1/-1}.dateApplyButton,.dateClearButton{width:100%}.selectionBar{align-items:flex-start;flex-wrap:wrap}.bulkActions{width:100%;justify-content:flex-start;margin-left:0}.row{grid-template-columns:26px 4px 1fr auto}.amountBlock{grid-column:4;grid-row:1/3}.actions{grid-column:3/5;justify-content:flex-end}}
+@media(max-width:650px){.dateRangeCard{grid-template-columns:1fr}.dateRangeHeading{grid-column:auto}.selectionBar{display:grid;grid-template-columns:1fr auto}.bulkActions{grid-column:1/-1;display:grid;grid-template-columns:1fr}.bulkActions button{width:100%;min-height:40px}.row{grid-template-columns:26px 4px 1fr}.details{grid-column:3}.amountBlock{grid-column:3;grid-row:auto;text-align:left}.actions{grid-column:3;justify-content:flex-start}}
+
+:global(html[data-resolved-theme="dark"]) .dateRangeCard,
+:global(html[data-resolved-theme="dark"]) .selectionBar,
+:global(html[data-resolved-theme="dark"]) .bulkActions button,
+:global(html[data-resolved-theme="dark"]) .dateClearButton{
+  background:var(--surface-card)!important;
+  border-color:var(--border-subtle)!important;
+  color:var(--text-primary)!important;
+}
+:global(html[data-resolved-theme="dark"]) .dateRangeCard input{background:var(--control-bg)!important;border-color:var(--border-subtle)!important;color:var(--text-primary)!important;color-scheme:dark}
+:global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading strong,.selectAllControl){color:var(--text-primary)!important}
+:global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading span,.dateRangeCard>label,.selectionCount){color:var(--text-secondary)!important}
+:global(html[data-resolved-theme="dark"]) .selectedRow{background:var(--surface-raised)!important;border-color:#8f774f!important}

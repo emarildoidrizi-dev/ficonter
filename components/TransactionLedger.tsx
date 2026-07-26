@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  CalendarDays,
+  CalendarRange,
   Download,
   FileText,
   Pencil,
@@ -96,7 +96,13 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [dateFromDraft, setDateFromDraft] = useState("");
+  const [dateToDraft, setDateToDraft] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [editCategory, setEditCategory] = useState("");
@@ -128,6 +134,11 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setCategoryFilter("all");
       setCurrencyFilter("all");
       setMonthFilter("all");
+      setDateFromDraft("");
+      setDateToDraft("");
+      setDateFrom("");
+      setDateTo("");
+      setSelectedIds(new Set());
       setSortMode("newest");
       setNotice("Transaction saved and added to your ledger.");
       window.setTimeout(() => setNotice(""), 2600);
@@ -216,7 +227,9 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
         const matchesCurrency = currencyFilter === "all" || (item.currency || "EUR") === currencyFilter;
         const matchesMonth = monthFilter === "all" || item.transaction_date.startsWith(monthFilter);
-        return matchesSearch && matchesDirection && matchesCategory && matchesCurrency && matchesMonth;
+        const matchesDateFrom = !dateFrom || item.transaction_date >= dateFrom;
+        const matchesDateTo = !dateTo || item.transaction_date <= dateTo;
+        return matchesSearch && matchesDirection && matchesCategory && matchesCurrency && matchesMonth && matchesDateFrom && matchesDateTo;
       })
       .sort((a, b) => {
         if (sortMode === "oldest") return (a.occurred_at ?? a.transaction_date).localeCompare(b.occurred_at ?? b.transaction_date);
@@ -225,7 +238,23 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         if (sortMode === "description") return a.description.localeCompare(b.description);
         return (b.occurred_at ?? b.transaction_date).localeCompare(a.occurred_at ?? a.transaction_date);
       });
-  }, [transactions, search, directionFilter, categoryFilter, currencyFilter, monthFilter, sortMode]);
+  }, [transactions, search, directionFilter, categoryFilter, currencyFilter, monthFilter, dateFrom, dateTo, sortMode]);
+
+  const visibleIds = useMemo(() => new Set(visible.map((item) => item.id)), [visible]);
+  const selectedTransactions = useMemo(
+    () => visible.filter((item) => selectedIds.has(item.id)),
+    [visible, selectedIds],
+  );
+  const allVisibleSelected = visible.length > 0 && visible.every((item) => selectedIds.has(item.id));
+  const someVisibleSelected = visible.some((item) => selectedIds.has(item.id));
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      if (next.size === current.size && [...next].every((id) => current.has(id))) return current;
+      return next;
+    });
+  }, [visibleIds]);
 
   const totals = useMemo(() => {
     let inflow = 0;
@@ -250,12 +279,61 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     setCategoryFilter("all");
     setCurrencyFilter("all");
     setMonthFilter("all");
+    setDateFromDraft("");
+    setDateToDraft("");
+    setDateFrom("");
+    setDateTo("");
+    setSelectedIds(new Set());
     setSortMode("newest");
+    setError("");
   }
 
-  function exportCsv() {
+  function applyDateRange() {
+    setError("");
+    if (dateFromDraft && dateToDraft && dateFromDraft > dateToDraft) {
+      setError("The From date must be earlier than or equal to the To date.");
+      return;
+    }
+    setDateFrom(dateFromDraft);
+    setDateTo(dateToDraft);
+    setSelectedIds(new Set());
+  }
+
+  function clearDateRange() {
+    setDateFromDraft("");
+    setDateToDraft("");
+    setDateFrom("");
+    setDateTo("");
+    setSelectedIds(new Set());
+    setError("");
+  }
+
+  function toggleTransaction(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) visible.forEach((item) => next.delete(item.id));
+      else visible.forEach((item) => next.add(item.id));
+      return next;
+    });
+  }
+
+  const exportDateSuffix = dateFrom || dateTo
+    ? `${dateFrom || "start"}-to-${dateTo || "present"}`
+    : new Date().toISOString().slice(0, 10);
+
+  function exportCsv(items: Transaction[], scope: "view" | "selected") {
+    if (!items.length) return;
     const header = ["Description", "Category", "Occurred at", "Transaction type", "Direction", "Currency", "Original amount", "EUR amount", "Rate to EUR", "Rate date"];
-    const rows = visible.map((item) => [
+    const rows = items.map((item) => [
       item.description,
       item.category,
       item.occurred_at ?? item.transaction_date,
@@ -272,15 +350,15 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = `ficonter-transactions-${scope}-${exportDateSuffix}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setNotice("CSV export downloaded.");
+    setNotice(scope === "selected" ? "Selected transactions exported to CSV." : "Current transaction view exported to CSV.");
     window.setTimeout(() => setNotice(""), 2600);
   }
 
-  async function exportPdf() {
-    if (!visible.length || exportingPdf) return;
+  async function exportPdf(items: Transaction[], scope: "view" | "selected") {
+    if (!items.length || exportingPdf) return;
     setExportingPdf(true);
     setError("");
 
@@ -294,7 +372,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       );
       const exportedAt = new Date().toISOString();
       const pdf = await createTransactionsPdf(
-        visible.map((transaction) => ({
+        items.map((transaction) => ({
           description: transaction.description,
           category: transaction.category,
           type: typeLabel(transaction.type),
@@ -307,8 +385,8 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         { ownerName, email: user.email ?? "", locale: "en-US", exportedAt },
       );
 
-      triggerDownload(`ficonter-transactions-${exportedAt.slice(0, 10)}.pdf`, pdf);
-      setNotice("PDF export downloaded.");
+      triggerDownload(`ficonter-transactions-${scope}-${exportDateSuffix}.pdf`, pdf);
+      setNotice(scope === "selected" ? "Selected transactions exported to PDF." : "Current transaction view exported to PDF.");
       window.setTimeout(() => setNotice(""), 2600);
     } catch (pdfError) {
       setError(pdfError instanceof Error ? pdfError.message : "The PDF export could not be created.");
@@ -361,20 +439,49 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     return () => controller.abort();
   }, [editCurrency, editTarget]);
 
-  async function deleteTransaction() {
-    if (!deleteTarget) return;
+  async function deleteTransactions(ids: string[], mode: "single" | "bulk") {
+    if (!ids.length || loading) return;
     setLoading(true);
     setError("");
-    const { error: deleteError } = await supabase.from("transactions").delete().eq("id", deleteTarget.id);
-    if (deleteError) setError(deleteError.message);
-    else {
-      setTransactions((current) => current.filter((item) => item.id !== deleteTarget.id));
+
+    const { data, error: deleteError } = await supabase.rpc(
+      "delete_transactions_with_linked_bills",
+      { p_transaction_ids: ids },
+    );
+
+    if (deleteError) {
+      setError(deleteError.message);
+    } else {
+      const result = data as { deleted_transaction_count?: number; deleted_bill_count?: number } | null;
+      const deletedBillCount = Number(result?.deleted_bill_count ?? 0);
+      const deletedIdSet = new Set(ids);
+      setTransactions((current) => current.filter((item) => !deletedIdSet.has(item.id)));
+      setSelectedIds((current) => new Set([...current].filter((id) => !deletedIdSet.has(id))));
       setDeleteTarget(null);
+      setBulkDeleteOpen(false);
       notifyFiconterDataChange("all");
-      setNotice("Transaction deleted.");
-      window.setTimeout(() => setNotice(""), 2600);
+
+      if (mode === "bulk") {
+        setNotice(
+          deletedBillCount > 0
+            ? `${ids.length} transactions and ${deletedBillCount} linked ${deletedBillCount === 1 ? "bill" : "bills"} deleted.`
+            : `${ids.length} transactions deleted.`,
+        );
+      } else {
+        setNotice(deletedBillCount > 0 ? "Transaction and linked bill deleted." : "Transaction deleted.");
+      }
+      window.setTimeout(() => setNotice(""), 3000);
     }
     setLoading(false);
+  }
+
+  async function deleteTransaction() {
+    if (!deleteTarget) return;
+    await deleteTransactions([deleteTarget.id], "single");
+  }
+
+  async function deleteSelectedTransactions() {
+    await deleteTransactions(selectedTransactions.map((item) => item.id), "bulk");
   }
 
   async function updateTransaction(event: FormEvent<HTMLFormElement>) {
@@ -452,9 +559,20 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search description, category, type or currency" aria-label="Search transactions" />
         </label>
         <button className={styles.secondaryAction} type="button" onClick={clearFilters}><RotateCcw size={16} /> Reset</button>
-        <button className={styles.exportButton} type="button" onClick={exportCsv} disabled={!visible.length}><Download size={16} /> Export CSV</button>
-        <button className={styles.exportButton} type="button" onClick={() => void exportPdf()} disabled={!visible.length || exportingPdf}><FileText size={16} /> {exportingPdf ? "Preparing PDF…" : "Export PDF"}</button>
+        <button className={styles.exportButton} type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}><Download size={16} /> Export CSV</button>
+        <button className={styles.exportButton} type="button" onClick={() => void exportPdf(visible, "view")} disabled={!visible.length || exportingPdf}><FileText size={16} /> {exportingPdf ? "Preparing PDF…" : "Export PDF"}</button>
       </div>
+
+      <section className={styles.dateRangeCard} aria-label="Filter transactions by date range">
+        <div className={styles.dateRangeHeading}>
+          <CalendarRange size={18} aria-hidden="true" />
+          <div><strong>Date range</strong><span>Show and export transactions from a specific period.</span></div>
+        </div>
+        <label>From<input type="date" value={dateFromDraft} max={dateToDraft || undefined} onChange={(event) => setDateFromDraft(event.target.value)} /></label>
+        <label>To<input type="date" value={dateToDraft} min={dateFromDraft || undefined} onChange={(event) => setDateToDraft(event.target.value)} /></label>
+        <button className={styles.dateApplyButton} type="button" onClick={applyDateRange}>Apply</button>
+        <button className={styles.dateClearButton} type="button" onClick={clearDateRange} disabled={!dateFromDraft && !dateToDraft && !dateFrom && !dateTo}>Clear</button>
+      </section>
 
       <div className={`${styles.toolbar} ${styles.toolbarFive}`}>
         <select value={directionFilter} onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)}>
@@ -478,6 +596,28 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       {notice && <div className={styles.notice}>{notice}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
+      <div className={styles.selectionBar}>
+        <label className={styles.selectAllControl}>
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            aria-checked={someVisibleSelected && !allVisibleSelected ? "mixed" : allVisibleSelected}
+            onChange={toggleAllVisible}
+            disabled={!visible.length}
+          />
+          <span>Select all visible</span>
+        </label>
+        <span className={styles.selectionCount}>{selectedTransactions.length} selected</span>
+        {selectedTransactions.length > 0 && (
+          <div className={styles.bulkActions}>
+            <button type="button" onClick={() => exportCsv(selectedTransactions, "selected")}><Download size={15} /> Export selected CSV</button>
+            <button type="button" onClick={() => void exportPdf(selectedTransactions, "selected")} disabled={exportingPdf}><FileText size={15} /> Export selected PDF</button>
+            <button className={styles.bulkDeleteButton} type="button" onClick={() => setBulkDeleteOpen(true)}><Trash2 size={15} /> Delete selected</button>
+            <button type="button" onClick={() => setSelectedIds(new Set())}>Clear selection</button>
+          </div>
+        )}
+      </div>
+
       <div
         className={styles.listViewport}
         tabIndex={visible.length > 10 ? 0 : undefined}
@@ -487,7 +627,15 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         {visible.map((transaction) => {
           const direction = directionOf(transaction.type);
           return (
-            <article className={styles.row} key={transaction.id}>
+            <article className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`} key={transaction.id}>
+              <label className={styles.rowCheckbox}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(transaction.id)}
+                  onChange={() => toggleTransaction(transaction.id)}
+                  aria-label={`Select ${transaction.description}`}
+                />
+              </label>
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
               <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
@@ -532,9 +680,25 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         <div className={styles.backdrop} onMouseDown={() => !loading && setDeleteTarget(null)}>
           <div className={`${styles.modal} ${styles.smallModal}`} onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true">
             <button className={styles.close} type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
-            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. This cannot be undone.</p>
+            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. A linked Bill will be removed at the same time so both modules remain synchronized.</p>
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteOpen && (
+        <div className={styles.backdrop} onMouseDown={() => !loading && setBulkDeleteOpen(false)}>
+          <div className={`${styles.modal} ${styles.smallModal}`} onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true" aria-labelledby="bulk-delete-title">
+            <button className={styles.close} type="button" onClick={() => setBulkDeleteOpen(false)}><X size={18} /></button>
+            <small>PERMANENT BULK ACTION</small>
+            <h3 id="bulk-delete-title">Delete {selectedTransactions.length} transactions?</h3>
+            <p>The selected transactions will be permanently removed. Any Bills linked to those transactions will be deleted in the same atomic action so Bills and Transactions remain synchronized.</p>
+            {error && <div className={styles.error}>{error}</div>}
+            <div className={styles.modalActions}>
+              <button type="button" onClick={() => setBulkDeleteOpen(false)} disabled={loading}>Cancel</button>
+              <button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={() => void deleteSelectedTransactions()} disabled={loading || !selectedTransactions.length}>{loading ? "Deleting…" : "Delete selected"}</button>
+            </div>
           </div>
         </div>
       )}

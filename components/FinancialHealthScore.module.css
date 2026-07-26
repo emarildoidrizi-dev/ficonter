@@ -549,3 +549,7 @@
 :global(html[data-resolved-theme="dark"]) .factorTrack {
   background: #343b3e !important;
 }
+
+.statusRow[data-status="not-assessed"] {
+  color: var(--text-secondary);
+}

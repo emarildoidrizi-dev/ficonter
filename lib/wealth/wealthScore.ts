@@ -79,15 +79,17 @@ export type WealthScoreLabel =
   | "Strong"
   | "Progressing"
   | "Building"
-  | "Early stage";
+  | "Early stage"
+  | "Not assessed";
 
 export type WealthScoreResult = {
   version: "1.0";
   score: number;
   label: WealthScoreLabel;
   summary: string;
-  confidence: "High" | "Moderate" | "Developing";
+  confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
+  assessed: boolean;
   nextBestAction: string;
   health: FinancialHealthResult;
   metrics: {
@@ -171,6 +173,7 @@ function scoreLabel(score: number): WealthScoreLabel {
 }
 
 function confidenceFor(coverage: number): WealthScoreResult["confidence"] {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";
@@ -256,18 +259,20 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
   const wealth = data.wealth;
   const averageMonthlyIncome = metrics.averageMonthlyIncome;
   const hasAnyData =
-    data.financialHealth.transactions.count > 0 ||
-    data.financialHealth.debts.count > 0 ||
-    data.financialHealth.goals.count > 0;
+    health.assessed ||
+    data.liabilities.length > 0 ||
+    Math.abs(wealth.recordedCapital) > 0.005 ||
+    Math.abs(wealth.currentDebt) > 0.005;
 
   const netWorthMonths =
     averageMonthlyIncome > 0 ? wealth.netWorth / averageMonthlyIncome : 0;
-  const capitalToDebtRatio =
-    wealth.currentDebt > 0
+  const capitalToDebtRatio = !hasAnyData
+    ? 0
+    : wealth.currentDebt > 0
       ? Math.max(wealth.recordedCapital, 0) / wealth.currentDebt
       : wealth.recordedCapital > 0
         ? 2
-        : 1;
+        : 0;
   const accumulationRate = metrics.savingsRate;
 
   const recentRetentionRate =
@@ -341,10 +346,12 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       metricValue: wealth.netWorth,
       metricUnit: "currency",
       metricLabel: `${round(netWorthMonths, 1)} months of income`,
-      explanation:
-        "Measures recorded capital after subtracting every active liability, relative to average monthly income.",
-      action:
-        wealth.netWorth < 0
+      explanation: hasAnyData
+        ? "Measures recorded capital after subtracting every active liability, relative to average monthly income."
+        : "No recorded capital or liability data is available for assessment.",
+      action: !hasAnyData
+        ? "Record capital, liabilities or financial activity to activate net-position scoring."
+        : wealth.netWorth < 0
           ? "Move net wealth toward zero by retaining capital and reducing principal consistently."
           : netWorthMonths < 6
             ? "Build recorded net wealth toward at least six months of average income."
@@ -357,10 +364,12 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       maximum: 20,
       metricValue: accumulationRate * 100,
       metricUnit: "percent",
-      explanation:
-        "Reuses the same recorded savings rate shown on Overview; no second savings calculation is maintained.",
-      action:
-        accumulationRate >= 0.25
+      explanation: !hasAnyData
+        ? "No income or saving records are available for accumulation assessment."
+        : "Reuses the same recorded savings rate shown on Overview; no second savings calculation is maintained.",
+      action: !hasAnyData
+        ? "Record income and savings to activate wealth-accumulation scoring."
+        : accumulationRate >= 0.25
           ? "Maintain this accumulation rate and direct it toward clearly defined wealth priorities."
           : "Work toward retaining at least 25% of income for savings and long-term priorities when feasible.",
     }),
@@ -371,16 +380,19 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       maximum: 15,
       metricValue: metrics.debtProgress * 100,
       metricUnit: "percent",
-      metricLabel:
-        data.financialHealth.debts.activeCount === 0
+      metricLabel: !hasAnyData
+        ? "No debt records"
+        : data.financialHealth.debts.activeCount === 0
           ? "No active debt"
           : `${round(metrics.debtProgress * 100)}% repaid`,
-      explanation:
-        data.financialHealth.debts.activeCount === 0
+      explanation: !hasAnyData
+        ? "No liability records are available for debt-reduction assessment."
+        : data.financialHealth.debts.activeCount === 0
           ? "No active liability is currently reducing your wealth position."
           : "Uses the existing original and current debt balances to measure principal reduction.",
-      action:
-        data.financialHealth.debts.activeCount === 0
+      action: !hasAnyData
+        ? "Add any liabilities to activate debt-reduction scoring."
+        : data.financialHealth.debts.activeCount === 0
           ? "Keep future borrowing purposeful and affordable."
           : metrics.debtProgress < 0.25
             ? "Accelerate principal reduction on the most expensive or restrictive balances."
@@ -393,14 +405,17 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       maximum: 15,
       metricValue: capitalToDebtRatio,
       metricUnit: "ratio",
-      metricLabel:
-        wealth.currentDebt <= 0
+      metricLabel: !hasAnyData
+        ? "No capital or debt records"
+        : wealth.currentDebt <= 0
           ? "Debt-free"
           : `${round(capitalToDebtRatio, 2)}× recorded capital`,
-      explanation:
-        "Compares retained recorded capital with active liabilities without creating a separate asset balance.",
-      action:
-        wealth.currentDebt <= 0
+      explanation: !hasAnyData
+        ? "No recorded capital or liability data is available for balance assessment."
+        : "Compares retained recorded capital with active liabilities without creating a separate asset balance.",
+      action: !hasAnyData
+        ? "Record capital or liabilities to activate balance-sheet scoring."
+        : wealth.currentDebt <= 0
           ? "Preserve your debt-free position while growing productive capital."
           : capitalToDebtRatio < 0.5
             ? "Increase retained capital and reduce liabilities to strengthen your balance sheet."
@@ -444,23 +459,27 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       maximum: 5,
       metricValue: metrics.emergencyFundCoverageMonths,
       metricUnit: "months",
-      explanation:
-        "Reuses the Financial Health emergency-reserve coverage so the same reserve is never counted twice.",
-      action:
-        metrics.emergencyFundCoverageMonths >= 6
+      explanation: !hasAnyData
+        ? "No expense baseline or emergency reserve is available for resilience assessment."
+        : "Reuses the Financial Health emergency-reserve coverage so the same reserve is never counted twice.",
+      action: !hasAnyData
+        ? "Record regular expenses and emergency savings to activate resilience scoring."
+        : metrics.emergencyFundCoverageMonths >= 6
           ? "Maintain a six-month reserve while directing additional capital toward growth."
           : "Strengthen the emergency reserve toward six months before taking more investment risk.",
     }),
   ];
 
-  const score = Math.round(
-    clamp(
-      factors.reduce((total, current) => total + current.points, 0),
-      0,
-      100,
-    ),
-  );
-  const label = scoreLabel(score);
+  const score = hasAnyData
+    ? Math.round(
+        clamp(
+          factors.reduce((total, current) => total + current.points, 0),
+          0,
+          100,
+        ),
+      )
+    : 0;
+  const label = hasAnyData ? scoreLabel(score) : "Not assessed";
   const ordered = [...factors].sort(
     (a, b) => a.points / a.maximum - b.points / b.maximum,
   );
@@ -474,21 +493,24 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     (data.financialHealth.goals.count > 0 ? 5 : 0) +
     (data.financialHealth.transactions.totalSavings > 0 ? 5 : 0) +
     (data.financialHealth.debts.count > 0 || wealth.currentDebt === 0 ? 5 : 0);
-  const dataCoverage = Math.round(
-    clamp(
-      health.dataCoverage * 0.45 +
-        historyCoverage +
-        transactionCoverage +
-        moduleCoverage,
-      0,
-      100,
-    ),
-  );
+  const dataCoverage = hasAnyData
+    ? Math.round(
+        clamp(
+          health.dataCoverage * 0.45 +
+            historyCoverage +
+            transactionCoverage +
+            moduleCoverage,
+          0,
+          100,
+        ),
+      )
+    : 0;
   const confidence = confidenceFor(dataCoverage);
 
-  const summary =
-    data.financialHealth.transactions.count === 0
-      ? "Add financial activity to activate a meaningful long-term wealth assessment."
+  const summary = !hasAnyData
+    ? "No wealth records are available yet. Add financial activity or liabilities to begin a long-term wealth assessment."
+    : data.financialHealth.transactions.count === 0
+      ? "Add transaction history to complete a meaningful long-term wealth assessment."
       : `${label}. ${strongest.name} currently supports your trajectory, while ${weakest.name.toLowerCase()} is the clearest opportunity to strengthen long-term wealth.`;
 
   return {
@@ -498,7 +520,10 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     summary,
     confidence,
     dataCoverage,
-    nextBestAction: weakest.action,
+    assessed: hasAnyData,
+    nextBestAction: hasAnyData
+      ? weakest.action
+      : "Record your first financial activity to activate the Wealth Score.",
     health,
     metrics: {
       availableCash: wealth.availableCash,

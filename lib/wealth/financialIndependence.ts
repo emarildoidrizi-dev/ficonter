@@ -34,6 +34,7 @@ export type FinancialIndependenceInputs = {
 };
 
 export type FinancialIndependenceStage =
+  | "Not assessed"
   | "Starting"
   | "Debt-clearing"
   | "Foundation"
@@ -45,7 +46,8 @@ export type FinancialIndependenceStage =
 export type FinancialIndependenceConfidence =
   | "High"
   | "Moderate"
-  | "Developing";
+  | "Developing"
+  | "No data";
 
 export type FinancialIndependenceInsightTone =
   | "positive"
@@ -90,6 +92,7 @@ export type FinancialIndependenceResult = {
   summary: string;
   confidence: FinancialIndependenceConfidence;
   dataCoverage: number;
+  assessed: boolean;
   nextBestAction: string;
   assumptions: {
     targetMonthlySpending: number;
@@ -173,6 +176,7 @@ function nullableDate(value: unknown): string | null {
 }
 
 function confidenceFor(coverage: number): FinancialIndependenceConfidence {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";
@@ -326,6 +330,11 @@ export function calculateFinancialIndependence(
   const savings = calculateSavingsIntelligence(data.savingsIntelligence);
   const emergency = calculateEmergencyFund(data.emergencyFund);
   const health = savings.cashFlow.health;
+  const assessed =
+    health.assessed ||
+    growth.dataCoverage > 0 ||
+    savings.hasSavingsData ||
+    emergency.dataCoverage > 0;
 
   const currentExpenseBaseline = Math.max(
     0,
@@ -390,49 +399,70 @@ export function calculateFinancialIndependence(
   const estimatedIndependenceDate =
     monthsToTarget === null ? null : addMonthsToNow(monthsToTarget);
 
-  const stage = stageFor(
-    currentNetWorth,
-    progress,
-    financialIndependenceTarget,
-  );
+  const stage = assessed
+    ? stageFor(
+        currentNetWorth,
+        progress,
+        financialIndependenceTarget,
+      )
+    : "Not assessed";
 
+  const hasNetWorthData =
+    data.netWorthGrowth.wealthScore.financialHealth.transactions.count > 0 ||
+    data.netWorthGrowth.wealthScore.financialHealth.debts.count > 0 ||
+    data.netWorthGrowth.wealthScore.liabilities.length > 0;
+  const hasBillData =
+    data.savingsIntelligence.cashFlow.financialHealth.bills.count > 0;
   const readiness: FinancialIndependenceReadinessItem[] = [
     {
       id: "positive-net-worth",
       label: "Positive net wealth",
-      complete: currentNetWorth >= 0,
-      detail:
-        currentNetWorth >= 0
+      complete: hasNetWorthData && currentNetWorth >= 0,
+      detail: !hasNetWorthData
+        ? "No capital or liability records are available yet."
+        : currentNetWorth >= 0
           ? "Recorded capital exceeds outstanding liabilities."
           : "Outstanding liabilities still exceed recorded capital.",
     },
     {
       id: "emergency-reserve",
       label: "Three-month reserve",
-      complete: emergency.metrics.coverageMonths >= 3,
-      detail: `${round(emergency.metrics.coverageMonths, 1)} months of average expenses are currently protected.`,
+      complete:
+        emergency.dataCoverage > 0 && emergency.metrics.coverageMonths >= 3,
+      detail:
+        emergency.dataCoverage > 0
+          ? `${round(emergency.metrics.coverageMonths, 1)} months of average expenses are currently protected.`
+          : "No expense baseline and emergency-reserve history are available yet.",
     },
     {
       id: "positive-flow",
       label: "Positive cash-flow margin",
-      complete: health.metrics.cashFlowMargin > 0,
-      detail: `${round(health.metrics.cashFlowMargin * 100, 1)}% current cash-flow margin.`,
+      complete:
+        health.metrics.totalIncome > 0 && health.metrics.cashFlowMargin > 0,
+      detail:
+        health.metrics.totalIncome > 0
+          ? `${round(health.metrics.cashFlowMargin * 100, 1)}% current cash-flow margin.`
+          : "No recorded income is available for cash-flow assessment.",
     },
     {
       id: "consistent-saving",
       label: "Consistent wealth contribution",
       complete:
+        savings.hasSavingsData &&
         savings.metrics.consistencyRate >= 0.5 &&
         monthlyWealthContribution > 0,
-      detail: `${round(savings.metrics.consistencyRate * 100)}% saving consistency with ${roundedCurrency(monthlyWealthContribution)} EUR average monthly wealth-building pace.`,
+      detail: savings.hasSavingsData
+        ? `${round(savings.metrics.consistencyRate * 100)}% saving consistency with ${roundedCurrency(monthlyWealthContribution)} EUR average monthly wealth-building pace.`
+        : "No non-emergency saving history is available yet.",
     },
     {
       id: "bill-reliability",
       label: "No overdue bills",
-      complete: health.metrics.overdueBills === 0,
-      detail:
-        health.metrics.overdueBills === 0
-          ? "No overdue bills are currently recorded."
+      complete: hasBillData && health.metrics.overdueBills === 0,
+      detail: !hasBillData
+        ? "No bill records are available for reliability assessment."
+        : health.metrics.overdueBills === 0
+          ? "Recorded bills currently show no overdue obligations."
           : `${health.metrics.overdueBills} overdue bill${health.metrics.overdueBills === 1 ? "" : "s"} require attention.`,
     },
   ];
@@ -487,59 +517,81 @@ export function calculateFinancialIndependence(
   }));
 
   const completedHistoryMonths = completeMonths(growth.fullMonthly).length;
-  const dataCoverage = round(
-    clamp(
-      growth.dataCoverage * 0.35 +
-        savings.dataCoverage * 0.35 +
-        emergency.dataCoverage * 0.3,
-      0,
-      100,
-    ),
-  );
+  const dataCoverage = assessed
+    ? round(
+        clamp(
+          growth.dataCoverage * 0.35 +
+            savings.dataCoverage * 0.35 +
+            emergency.dataCoverage * 0.3,
+          0,
+          100,
+        ),
+      )
+    : 0;
   const confidence = confidenceFor(dataCoverage);
 
   let summary =
-    "FICONTER is building the financial history needed to estimate a responsible independence path.";
-  if (stage === "Debt-clearing") {
+    "No financial records are available yet. Add activity before FICONTER assesses an independence path.";
+  if (assessed) {
     summary =
-      "Your independence path is currently in the debt-clearing stage. Each reduction in liabilities improves the starting position for long-term capital growth.";
-  } else if (stage === "Independent") {
-    summary =
-      "Your recorded investable position has reached the selected Financial Independence target under the current planning assumptions.";
-  } else if (monthsToTarget !== null) {
-    summary =
-      "Your current non-emergency saving and debt-reduction pace produces a directional path toward the selected lifestyle target.";
-  } else if (monthlyWealthContribution <= 0) {
-    summary =
-      "A positive, repeatable monthly wealth-building contribution is required before FICONTER can estimate a completion date.";
+      "FICONTER is building the financial history needed to estimate a responsible independence path.";
+    if (stage === "Debt-clearing") {
+      summary =
+        "Your independence path is currently in the debt-clearing stage. Each reduction in liabilities improves the starting position for long-term capital growth.";
+    } else if (stage === "Independent") {
+      summary =
+        "Your recorded investable position has reached the selected Financial Independence target under the current planning assumptions.";
+    } else if (monthsToTarget !== null) {
+      summary =
+        "Your current non-emergency saving and debt-reduction pace produces a directional path toward the selected lifestyle target.";
+    } else if (monthlyWealthContribution <= 0) {
+      summary =
+        "A positive, repeatable monthly wealth-building contribution is required before FICONTER can estimate a completion date.";
+    }
   }
 
   let nextBestAction =
-    "Keep recording complete monthly activity so the independence estimate becomes more reliable.";
-  if (health.metrics.overdueBills > 0) {
+    "Record your first income, outflow, saving or liability to activate Financial Independence planning.";
+  if (assessed) {
     nextBestAction =
-      "Clear overdue obligations first so future contributions can support long-term wealth rather than catch-up payments.";
-  } else if (currentNetWorth < 0) {
-    nextBestAction =
-      "Prioritize principal reduction while preserving essential emergency protection; reaching zero net worth is the first independence milestone.";
-  } else if (emergency.metrics.coverageMonths < 3) {
-    nextBestAction =
-      "Complete the three-month emergency foundation before directing more capital toward long-term independence.";
-  } else if (monthlyWealthContribution <= 0) {
-    nextBestAction =
-      "Create a positive monthly wealth contribution through savings, debt reduction, or both.";
-  } else if (savings.metrics.consistencyRate < 0.5) {
-    nextBestAction =
-      "Make the current contribution pace consistent across more months before increasing the target.";
-  } else if (progress < 0.25) {
-    nextBestAction =
-      "Protect the six-month contribution pace and work toward the first 25% of the selected target.";
-  } else {
-    nextBestAction =
-      "Maintain the current pace and review your lifestyle and return assumptions at least once per year.";
+      "Keep recording complete monthly activity so the independence estimate becomes more reliable.";
+    if (health.metrics.overdueBills > 0) {
+      nextBestAction =
+        "Clear overdue obligations first so future contributions can support long-term wealth rather than catch-up payments.";
+    } else if (currentNetWorth < 0) {
+      nextBestAction =
+        "Prioritize principal reduction while preserving essential emergency protection; reaching zero net worth is the first independence milestone.";
+    } else if (emergency.metrics.coverageMonths < 3) {
+      nextBestAction =
+        "Complete the three-month emergency foundation before directing more capital toward long-term independence.";
+    } else if (monthlyWealthContribution <= 0) {
+      nextBestAction =
+        "Create a positive monthly wealth contribution through savings, debt reduction, or both.";
+    } else if (savings.metrics.consistencyRate < 0.5) {
+      nextBestAction =
+        "Make the current contribution pace consistent across more months before increasing the target.";
+    } else if (progress < 0.25) {
+      nextBestAction =
+        "Protect the six-month contribution pace and work toward the first 25% of the selected target.";
+    } else {
+      nextBestAction =
+        "Maintain the current pace and review your lifestyle and return assumptions at least once per year.";
+    }
   }
 
-  const insights: FinancialIndependenceInsight[] = [
+  const insights: FinancialIndependenceInsight[] = !assessed
+    ? [
+        {
+          id: "no-data",
+          tone: "info",
+          title: "Financial Independence is waiting for records",
+          description:
+            "Planning assumptions may be configured now, but no financial history is available for a responsible assessment.",
+          action:
+            "Record income, outflow, savings or liabilities to activate progress and timeline calculations.",
+        },
+      ]
+    : [
     {
       id: "target",
       tone: "info",
@@ -595,6 +647,7 @@ export function calculateFinancialIndependence(
     summary,
     confidence,
     dataCoverage,
+    assessed,
     nextBestAction,
     assumptions: {
       targetMonthlySpending: roundedCurrency(targetMonthlySpending),

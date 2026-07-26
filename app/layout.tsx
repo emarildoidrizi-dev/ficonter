@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 
 export const metadata: Metadata = {
   title: {
@@ -48,7 +49,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: interfacePreferenceScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <KeyboardInteractionBridge />
+        {children}
+      </body>
     </html>
   );
 }

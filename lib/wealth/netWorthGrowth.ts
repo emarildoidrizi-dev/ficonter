@@ -40,7 +40,8 @@ export type NetWorthGrowthLabel =
   | "Growing"
   | "Recovering"
   | "Flat"
-  | "Declining";
+  | "Declining"
+  | "Not enough history";
 
 export type NetWorthGrowthInsightTone =
   | "positive"
@@ -72,8 +73,9 @@ export type NetWorthGrowthResult = {
   periodLabel: string;
   label: NetWorthGrowthLabel;
   summary: string;
-  confidence: "High" | "Moderate" | "Developing";
+  confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
+  hasHistory: boolean;
   nextBestAction: string;
   metrics: {
     currentNetWorth: number;
@@ -214,6 +216,7 @@ function confidenceFor(
   volatility: number,
   monthlyAverage: number,
 ): NetWorthGrowthResult["confidence"] {
+  if (historyMonths <= 0) return "No data";
   const volatilityRatio =
     Math.abs(monthlyAverage) > 1 ? volatility / Math.abs(monthlyAverage) : volatility;
 
@@ -349,23 +352,40 @@ export function calculateNetWorthGrowth(
     (month) => month.netWorthChange > 0.01,
   ).length;
   const comparableHistoryMonths = Math.max(0, fullMonthly.length - 1);
+  const hasMeaningfulWealthData =
+    data.wealthScore.financialHealth.transactions.count > 0 ||
+    data.wealthScore.financialHealth.debts.count > 0 ||
+    data.wealthScore.liabilities.length > 0 ||
+    fullMonthly.some(
+      (month) =>
+        month.transactionCount > 0 ||
+        Math.abs(month.cumulativeCapital) > 0.005 ||
+        Math.abs(month.debtOutstanding) > 0.005,
+    );
+  const hasHistory = hasMeaningfulWealthData && comparableHistoryMonths > 0;
   const confidence = confidenceFor(
     comparableHistoryMonths,
     volatility,
     trailingSixMonthGrowth ?? 0,
   );
-  const dataCoverage = clamp(
-    Math.round((Math.min(comparableHistoryMonths, 12) / 12) * 85) +
-      (data.wealthScore.liabilities.length || fullMonthly.length ? 15 : 0),
-    0,
-    100,
-  );
-  const label = labelFor(
-    currentNetWorth,
-    selectedPeriodChange,
-    recentThreeMonthAverage,
-    priorThreeMonthAverage,
-  );
+  const dataCoverage = hasHistory
+    ? clamp(
+        Math.round((Math.min(comparableHistoryMonths, 12) / 12) * 85) +
+          (data.wealthScore.liabilities.length || comparableHistoryMonths > 0
+            ? 15
+            : 0),
+        0,
+        100,
+      )
+    : 0;
+  const label = hasHistory
+    ? labelFor(
+        currentNetWorth,
+        selectedPeriodChange,
+        recentThreeMonthAverage,
+        priorThreeMonthAverage,
+      )
+    : "Not enough history";
 
   const bestMonth = selectedGrowthMonths.length
     ? selectedGrowthMonths.reduce((best, month) =>
@@ -378,8 +398,10 @@ export function calculateNetWorthGrowth(
       )
     : null;
 
-  let summary = "FICONTER is building enough history to measure net-worth growth.";
-  if (selectedGrowthMonths.length) {
+  let summary = hasMeaningfulWealthData
+    ? "FICONTER is building enough month-end history to measure net-worth growth."
+    : "No net-worth activity is available yet. Add financial records to establish the first baseline.";
+  if (hasHistory && selectedGrowthMonths.length) {
     if (label === "Declining") {
       summary =
         "Net wealth moved backward during the selected period. The breakdown shows whether cash-flow pressure or rising liabilities caused the change.";
@@ -423,74 +445,86 @@ export function calculateNetWorthGrowth(
       "Maintain positive retained capital and consistent debt reduction to preserve wealth momentum.";
   }
 
-  const insights: NetWorthGrowthInsight[] = [
-    {
-      id: "growth-direction",
-      title: selectedGrowthMonths.length
-        ? selectedPeriodChange >= 0
-          ? "Net wealth moved forward"
-          : "Net wealth moved backward"
-        : "Net-worth baseline established",
-      detail: selectedGrowthMonths.length
-        ? `${periodLabel(period, selectedMonthly.length)} changed the recorded net-worth position by ${round(selectedPeriodChange, 2)} EUR.`
-        : `FICONTER has recorded the current net-worth position of ${round(currentNetWorth, 2)} EUR, but no comparable month-end change exists yet.`,
-      action: selectedGrowthMonths.length
-        ? selectedPeriodChange >= 0
-          ? "Protect the monthly activities producing positive growth."
-          : "Identify the months and liabilities responsible for the decline."
-        : "Keep recording activity until at least two month-end positions can be compared.",
-      tone: selectedGrowthMonths.length
-        ? selectedPeriodChange >= 0
-          ? "positive"
-          : "critical"
-        : "info",
-    },
-    {
-      id: "debt-effect",
-      title:
-        netDebtReduction >= 0
-          ? "Liabilities supported progress"
-          : "Liabilities reduced progress",
-      detail:
-        netDebtReduction >= 0
-          ? `Outstanding debt fell by ${round(netDebtReduction, 2)} EUR during the selected period.`
-          : `Outstanding debt increased by ${round(Math.abs(netDebtReduction), 2)} EUR during the selected period.`,
-      action:
-        netDebtReduction >= 0
-          ? "Continue reducing principal consistently."
-          : "Review new debt and minimum-payment pressure.",
-      tone: netDebtReduction >= 0 ? "positive" : "warning",
-    },
-    {
-      id: "savings-allocation",
-      title: "Savings are tracked as an allocation",
-      detail: `${round(savingsAllocated, 2)} EUR of retained capital was allocated to recorded savings. It is shown separately but never added twice to net worth.`,
-      action:
-        savingsAllocated > 0
-          ? "Keep savings contributions aligned with available cash flow."
-          : "Record intentional saving contributions when cash flow allows.",
-      tone: savingsAllocated > 0 ? "info" : "warning",
-    },
-    {
-      id: "forecast",
-      title: forecastAvailable
-        ? "Twelve-month direction"
-        : "Outlook needs more history",
-      detail:
-        forecastAvailable && projectedTwelveMonthNetWorth !== null
-          ? `At the trailing completed-month pace, recorded net worth would reach approximately ${round(projectedTwelveMonthNetWorth, 2)} EUR in twelve months.`
-          : `FICONTER has ${forecastHistoryMonths} of the 3 completed month-to-month changes required for a responsible outlook.`,
-      action: forecastAvailable
-        ? "Use the projection as a planning guide, not a guaranteed outcome."
-        : "Keep recording complete monthly activity. The forecast will activate automatically when enough history exists.",
-      tone:
-        forecastAvailable &&
-        projectedTwelveMonthNetWorth !== null &&
-        projectedTwelveMonthNetWorth < currentNetWorth
-          ? "warning"
-          : "info",
-    },
-  ];
+  const insights: NetWorthGrowthInsight[] = !hasMeaningfulWealthData
+    ? [
+        {
+          id: "no-data",
+          title: "Net-worth growth is waiting for records",
+          detail:
+            "No transaction, capital or liability history is available for a growth comparison yet.",
+          action:
+            "Record your first financial activity to establish the opening net-worth baseline.",
+          tone: "info",
+        },
+      ]
+    : [
+        {
+          id: "growth-direction",
+          title: selectedGrowthMonths.length
+            ? selectedPeriodChange >= 0
+              ? "Net wealth moved forward"
+              : "Net wealth moved backward"
+            : "Net-worth baseline established",
+          detail: selectedGrowthMonths.length
+            ? `${periodLabel(period, selectedMonthly.length)} changed the recorded net-worth position by ${round(selectedPeriodChange, 2)} EUR.`
+            : `FICONTER has recorded the current net-worth position of ${round(currentNetWorth, 2)} EUR, but no comparable month-end change exists yet.`,
+          action: selectedGrowthMonths.length
+            ? selectedPeriodChange >= 0
+              ? "Protect the monthly activities producing positive growth."
+              : "Identify the months and liabilities responsible for the decline."
+            : "Keep recording activity until at least two month-end positions can be compared.",
+          tone: selectedGrowthMonths.length
+            ? selectedPeriodChange >= 0
+              ? "positive"
+              : "critical"
+            : "info",
+        },
+        {
+          id: "debt-effect",
+          title:
+            netDebtReduction >= 0
+              ? "Liabilities supported progress"
+              : "Liabilities reduced progress",
+          detail:
+            netDebtReduction >= 0
+              ? `Outstanding debt fell by ${round(netDebtReduction, 2)} EUR during the selected period.`
+              : `Outstanding debt increased by ${round(Math.abs(netDebtReduction), 2)} EUR during the selected period.`,
+          action:
+            netDebtReduction >= 0
+              ? "Continue reducing principal consistently."
+              : "Review new debt and minimum-payment pressure.",
+          tone: netDebtReduction >= 0 ? "positive" : "warning",
+        },
+        {
+          id: "savings-allocation",
+          title: "Savings are tracked as an allocation",
+          detail: `${round(savingsAllocated, 2)} EUR of retained capital was allocated to recorded savings. It is shown separately but never added twice to net worth.`,
+          action:
+            savingsAllocated > 0
+              ? "Keep savings contributions aligned with available cash flow."
+              : "Record intentional saving contributions when cash flow allows.",
+          tone: savingsAllocated > 0 ? "info" : "warning",
+        },
+        {
+          id: "forecast",
+          title: forecastAvailable
+            ? "Twelve-month direction"
+            : "Outlook needs more history",
+          detail:
+            forecastAvailable && projectedTwelveMonthNetWorth !== null
+              ? `At the trailing completed-month pace, recorded net worth would reach approximately ${round(projectedTwelveMonthNetWorth, 2)} EUR in twelve months.`
+              : `FICONTER has ${forecastHistoryMonths} of the 3 completed month-to-month changes required for a responsible outlook.`,
+          action: forecastAvailable
+            ? "Use the projection as a planning guide, not a guaranteed outcome."
+            : "Keep recording complete monthly activity. The forecast will activate automatically when enough history exists.",
+          tone:
+            forecastAvailable &&
+            projectedTwelveMonthNetWorth !== null &&
+            projectedTwelveMonthNetWorth < currentNetWorth
+              ? "warning"
+              : "info",
+        },
+      ];
 
   return {
     version: "1.1",
@@ -500,6 +534,7 @@ export function calculateNetWorthGrowth(
     summary,
     confidence,
     dataCoverage,
+    hasHistory,
     nextBestAction,
     metrics: {
       currentNetWorth,

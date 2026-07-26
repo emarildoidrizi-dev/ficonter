@@ -176,7 +176,7 @@ export function CashFlowIntelligence({
     1,
     ...result.monthly.flatMap((month) => [month.income, month.outflow]),
   );
-  const statusSlug = result.label.toLowerCase();
+  const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
 
   return (
     <section className={styles.shell}>

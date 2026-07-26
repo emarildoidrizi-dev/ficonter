@@ -1105,6 +1105,7 @@ export function AdminDashboard({
               <button
                 ref={confirmButtonRef}
                 type="button"
+                data-enter-confirm="true"
                 className={pendingCopy.danger ? styles.danger : styles.primary}
                 onClick={() => void confirmAction()}
                 disabled={Boolean(busy)}

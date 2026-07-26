@@ -83,8 +83,9 @@ export type SavingsIntelligenceResult = {
   version: "1.0";
   status: SavingsRhythmStatus;
   summary: string;
-  confidence: "High" | "Moderate" | "Developing";
+  confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
+  hasSavingsData: boolean;
   nextBestAction: string;
   cashFlow: CashFlowIntelligenceResult;
   metrics: {
@@ -259,6 +260,7 @@ export function normalizeSavingsIntelligenceInputs(
 }
 
 function confidenceFor(coverage: number): SavingsIntelligenceResult["confidence"] {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";
@@ -336,6 +338,8 @@ export function calculateSavingsIntelligence(
   const priorThree = months.slice(-6, -3);
 
   const totalSaved = data.stats.totalAmount;
+  const hasSavingsData =
+    data.stats.contributionCount > 0 || totalSaved > 0.005;
   const savingsRate =
     health.metrics.totalIncome > 0 ? totalSaved / health.metrics.totalIncome : 0;
   const averageMonthlySavingsByPeriod: SavingsAverageByPeriod = {
@@ -545,13 +549,15 @@ export function calculateSavingsIntelligence(
   const categoryCoverage = categories.length ? 20 : 0;
   const contributionCoverage = clamp(data.stats.contributionCount / 6, 0, 1) * 15;
   const sourceCoverage = cashFlow.dataCoverage * 0.3;
-  const dataCoverage = Math.round(
-    clamp(
-      historyCoverage + categoryCoverage + contributionCoverage + sourceCoverage,
-      0,
-      100,
-    ),
-  );
+  const dataCoverage = hasSavingsData
+    ? Math.round(
+        clamp(
+          historyCoverage + categoryCoverage + contributionCoverage + sourceCoverage,
+          0,
+          100,
+        ),
+      )
+    : 0;
   const confidence = confidenceFor(dataCoverage);
 
   const summary =
@@ -573,7 +579,10 @@ export function calculateSavingsIntelligence(
     summary,
     confidence,
     dataCoverage,
-    nextBestAction: prioritized[0]?.action ?? "Keep savings records current.",
+    hasSavingsData,
+    nextBestAction: hasSavingsData
+      ? prioritized[0]?.action ?? "Keep savings records current."
+      : "Record your first non-emergency saving contribution to activate Savings Intelligence.",
     cashFlow,
     metrics: {
       totalSaved,

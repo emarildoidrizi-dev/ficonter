@@ -42,7 +42,11 @@ export type EmergencyFundStatus =
   | "Strong reserve"
   | "Set baseline";
 
-export type EmergencyFundConfidence = "High" | "Moderate" | "Developing";
+export type EmergencyFundConfidence =
+  | "High"
+  | "Moderate"
+  | "Developing"
+  | "No data";
 
 export type EmergencyFundInsightTone =
   | "positive"
@@ -156,6 +160,7 @@ function addMonths(value: string, monthCount: number): string | null {
 }
 
 function confidenceFor(coverage: number): EmergencyFundConfidence {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";

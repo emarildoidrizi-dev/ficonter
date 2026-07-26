@@ -678,3 +678,7 @@
     text-align: left;
   }
 }
+
+.outlook[data-status="not-enough-data"] {
+  border-left-color: var(--border-strong);
+}

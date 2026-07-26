@@ -957,3 +957,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+.trendBadge[data-direction="waiting"] {
+  color: var(--text-secondary);
+}

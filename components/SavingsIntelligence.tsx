@@ -344,30 +344,43 @@ export function SavingsIntelligence({
                 current sustainable monthly recommendation.
               </p>
             </div>
-            <div className={styles.trendBadge} data-direction={trendLabel(result.metrics.recentTrendChange).toLowerCase()}>
-              {result.metrics.recentTrendChange > 0 ? (
+            <div
+              className={styles.trendBadge}
+              data-direction={
+                result.hasSavingsData
+                  ? trendLabel(result.metrics.recentTrendChange).toLowerCase()
+                  : "waiting"
+              }
+            >
+              {!result.hasSavingsData ? (
+                <Activity size={16} aria-hidden="true" />
+              ) : result.metrics.recentTrendChange > 0 ? (
                 <TrendingUp size={16} aria-hidden="true" />
               ) : result.metrics.recentTrendChange < 0 ? (
                 <TrendingDown size={16} aria-hidden="true" />
               ) : (
                 <Activity size={16} aria-hidden="true" />
               )}
-              {trendLabel(result.metrics.recentTrendChange)}
+              {result.hasSavingsData
+                ? trendLabel(result.metrics.recentTrendChange)
+                : "Waiting for savings"}
             </div>
           </header>
 
           <div className={styles.chart} role="img" aria-label="Monthly saving contributions for the last twelve months">
-            <div
-              className={styles.targetLine}
-              style={{
-                bottom: `${Math.min(
-                  100,
-                  (result.metrics.recommendedMonthlyTarget / maxMonthlySaving) * 100,
-                )}%`,
-              }}
-            >
-              <span>Target</span>
-            </div>
+            {result.metrics.recommendedMonthlyTarget > 0 ? (
+              <div
+                className={styles.targetLine}
+                style={{
+                  bottom: `${Math.min(
+                    100,
+                    (result.metrics.recommendedMonthlyTarget / maxMonthlySaving) * 100,
+                  )}%`,
+                }}
+              >
+                <span>Target</span>
+              </div>
+            ) : null}
             {result.monthly.map((month) => (
               <div className={styles.chartColumn} key={month.month}>
                 <div className={styles.barArea}>

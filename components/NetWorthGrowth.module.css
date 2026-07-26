@@ -744,3 +744,7 @@
   font-size: clamp(30px, 4vw, 46px) !important;
   line-height: 1.06 !important;
 }
+
+.hero[data-status="not-enough-history"]::before {
+  background: var(--border-strong);
+}

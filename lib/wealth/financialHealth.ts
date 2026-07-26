@@ -1,3 +1,5 @@
+import { financialDataReadiness } from "@/lib/wealth/dataReadiness";
+
 export type FinancialHealthInputs = {
   schemaVersion: number;
   generatedAt: string;
@@ -80,15 +82,17 @@ export type FinancialHealthLabel =
   | "Healthy"
   | "Stable"
   | "Needs attention"
-  | "At risk";
+  | "At risk"
+  | "Not assessed";
 
 export type FinancialHealthResult = {
   version: "2.0";
   score: number;
   label: FinancialHealthLabel;
   summary: string;
-  confidence: "High" | "Moderate" | "Developing";
+  confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
+  assessed: boolean;
   nextBestAction: string;
   metrics: {
     totalIncome: number;
@@ -275,6 +279,7 @@ function scoreLabel(score: number): FinancialHealthLabel {
 }
 
 function confidenceFor(coverage: number): FinancialHealthResult["confidence"] {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";
@@ -289,6 +294,15 @@ export function calculateFinancialHealth(
   const debts = data.debts;
   const goals = data.goals;
   const planner = data.planner;
+  const readiness = financialDataReadiness(data);
+  const {
+    hasTransactions,
+    hasBills,
+    hasDebts,
+    hasGoals,
+    hasPlannerData,
+    hasAnyData: assessed,
+  } = readiness;
 
   const incomeMonths = Math.max(tx.incomeMonths, 1);
   const activeMonths = Math.max(tx.activeMonths, 1);
@@ -300,7 +314,7 @@ export function calculateFinancialHealth(
   const debtProgress =
     debts.originalBalance > 0
       ? clamp((debts.originalBalance - debts.currentBalance) / debts.originalBalance, 0, 1)
-      : debts.activeCount === 0
+      : hasDebts && debts.activeCount === 0
         ? 1
         : 0;
   const debtServiceRatio =
@@ -327,12 +341,17 @@ export function calculateFinancialHealth(
   const savingsPoints =
     tx.totalIncome > 0 ? clamp((savingsRate / 0.2) * 20, 0, 20) : 0;
 
-  let debtPoints = 20;
-  let debtExplanation = "No active debt is currently reducing your financial flexibility.";
-  let debtAction = "Keep future borrowing deliberate and affordable.";
-  let debtMetricLabel = "No active debt";
+  let debtPoints = 0;
+  let debtExplanation = "No debt records are available for assessment.";
+  let debtAction = "Add any active liabilities so FICONTER can assess debt pressure accurately.";
+  let debtMetricLabel = "No debt records";
 
-  if (debts.activeCount > 0) {
+  if (hasDebts && debts.activeCount === 0) {
+    debtPoints = 20;
+    debtExplanation = "Recorded debt accounts show no active outstanding balance.";
+    debtAction = "Keep future borrowing deliberate and affordable.";
+    debtMetricLabel = "No active debt";
+  } else if (debts.activeCount > 0) {
     const servicePoints = clamp(((0.5 - debtServiceRatio) / 0.4) * 10, 0, 10);
     const progressPoints = debtProgress * 6;
     const interestRate = debts.averageInterestRate / 100;
@@ -348,9 +367,12 @@ export function calculateFinancialHealth(
     debtMetricLabel = `${round(debtServiceRatio * 100)}% payment-to-income`;
   }
 
-  const overduePoints = clamp(8 - bills.overdueCount * 3, 0, 8);
-  const reliabilityPoints =
-    bills.paidCount > 0
+  const overduePoints = hasBills
+    ? clamp(8 - bills.overdueCount * 3, 0, 8)
+    : 0;
+  const reliabilityPoints = !hasBills
+    ? 0
+    : bills.paidCount > 0
       ? (bills.paidOnTimeCount / bills.paidCount) * 7
       : bills.overdueCount === 0
         ? 7
@@ -358,14 +380,14 @@ export function calculateFinancialHealth(
   const billPoints = overduePoints + reliabilityPoints;
 
   const emergencyPoints = clamp((emergencyFundCoverageMonths / 3) * 10, 0, 10);
-  const goalPoints = goals.count > 0 ? goalProgress * 5 : 2.5;
-  const planningPoints = planner.hasPlan
+  const goalPoints = hasGoals ? goalProgress * 5 : 0;
+  const planningPoints = hasPlannerData
     ? planner.itemCount >= 5
       ? 5
       : planner.itemCount >= 2
         ? 4
         : 3
-    : 1;
+    : 0;
 
   const factors: FinancialHealthFactor[] = [
     factor({
@@ -375,12 +397,14 @@ export function calculateFinancialHealth(
       maximum: 25,
       metricValue: cashFlowMargin * 100,
       metricUnit: "percent",
-      explanation:
-        tx.totalIncome > 0
+      explanation: !hasTransactions
+        ? "No transaction records are available for cash-flow assessment."
+        : tx.totalIncome > 0
           ? "Measures how much income remains after every recorded expense and saving contribution."
           : "Income is required before FICONTER can assess cash-flow resilience.",
-      action:
-        cashFlowMargin < 0
+      action: !hasTransactions
+        ? "Record your first income or outflow to activate cash-flow scoring."
+        : cashFlowMargin < 0
           ? "Bring recorded outflows below income to restore positive monthly capacity."
           : cashFlowMargin < 0.1
             ? "Create more breathing room by reducing flexible spending or increasing income."
@@ -393,9 +417,12 @@ export function calculateFinancialHealth(
       maximum: 20,
       metricValue: savingsRate * 100,
       metricUnit: "percent",
-      explanation: "Uses the same recorded saving transactions that power your Overview savings rate.",
-      action:
-        savingsRate >= 0.2
+      explanation: !hasTransactions
+        ? "No income or saving transactions are available for savings-rate assessment."
+        : "Uses the same recorded saving transactions that power your Overview savings rate.",
+      action: !hasTransactions
+        ? "Record income and a saving contribution to activate savings-rate scoring."
+        : savingsRate >= 0.2
           ? "Maintain your saving rhythm and review whether contributions match your priorities."
           : "Work toward recording savings equal to at least 20% of income when feasible.",
     }),
@@ -417,16 +444,19 @@ export function calculateFinancialHealth(
       maximum: 15,
       metricValue: bills.overdueCount,
       metricUnit: "count",
-      metricLabel:
-        bills.overdueCount === 0
+      metricLabel: !hasBills
+        ? "No bill records"
+        : bills.overdueCount === 0
           ? "No overdue bills"
           : `${bills.overdueCount} overdue bill${bills.overdueCount === 1 ? "" : "s"}`,
-      explanation:
-        bills.paidCount > 0
+      explanation: !hasBills
+        ? "No bill records are available for reliability assessment."
+        : bills.paidCount > 0
           ? `${bills.paidOnTimeCount} of ${bills.paidCount} recorded paid bills were settled by their due date.`
           : "FICONTER checks overdue and upcoming obligations recorded in Bills.",
-      action:
-        bills.overdueCount > 0
+      action: !hasBills
+        ? "Add recurring or one-time obligations in Bills to activate reliability scoring."
+        : bills.overdueCount > 0
           ? "Resolve overdue obligations first and review reminders or autopay settings."
           : "Keep upcoming bills funded and preserve your on-time payment record.",
     }),
@@ -437,11 +467,16 @@ export function calculateFinancialHealth(
       maximum: 10,
       metricValue: emergencyFundCoverageMonths,
       metricUnit: "months",
-      explanation: "Compares recorded Emergency fund contributions with average monthly expenses.",
+      explanation:
+        averageMonthlyExpenses > 0 || tx.emergencyFundSavings > 0
+          ? "Compares recorded Emergency fund contributions with average monthly expenses."
+          : "No emergency contribution or expense baseline is available for reserve assessment.",
       action:
-        emergencyFundCoverageMonths >= 3
-          ? "Maintain at least three months of essential outflows in an accessible reserve."
-          : "Build the Emergency fund category toward three months of average expenses.",
+        averageMonthlyExpenses <= 0 && tx.emergencyFundSavings <= 0
+          ? "Record regular expenses and an Emergency fund contribution to activate reserve scoring."
+          : emergencyFundCoverageMonths >= 3
+            ? "Maintain at least three months of essential outflows in an accessible reserve."
+            : "Build the Emergency fund category toward three months of average expenses.",
     }),
     factor({
       id: "goals",
@@ -470,24 +505,28 @@ export function calculateFinancialHealth(
       maximum: 5,
       metricValue: planner.itemCount,
       metricUnit: "count",
-      metricLabel: planner.hasPlan
+      metricLabel: hasPlannerData
         ? `${planner.itemCount} planned item${planner.itemCount === 1 ? "" : "s"}`
-        : "No current-month plan",
-      explanation: "Checks whether the current month has a structured planner and categorized targets.",
-      action: planner.hasPlan
+        : "No planning records",
+      explanation: hasPlannerData
+        ? "Checks whether the current month has a structured planner and categorized targets."
+        : "No meaningful Monthly Planner amounts or items are available for assessment.",
+      action: hasPlannerData
         ? "Review planned amounts as the month changes so the plan remains realistic."
-        : "Set up the current month in Monthly Planner to strengthen financial visibility.",
+        : "Add income or outflow items to Monthly Planner to activate planning assessment.",
     }),
   ];
 
-  const score = Math.round(
-    clamp(
-      factors.reduce((total, current) => total + current.points, 0),
-      0,
-      100,
-    ),
-  );
-  const label = scoreLabel(score);
+  const score = assessed
+    ? Math.round(
+        clamp(
+          factors.reduce((total, current) => total + current.points, 0),
+          0,
+          100,
+        ),
+      )
+    : 0;
+  const label = assessed ? scoreLabel(score) : "Not assessed";
 
   const ordered = [...factors].sort(
     (a, b) => a.points / a.maximum - b.points / b.maximum,
@@ -496,20 +535,23 @@ export function calculateFinancialHealth(
   const strongest = ordered.at(-1) ?? weakest;
 
   const moduleCoverage =
-    (bills.count > 0 ? 10 : 0) +
-    (debts.count > 0 ? 10 : 0) +
-    (goals.count > 0 ? 10 : 0) +
-    (planner.hasPlan ? 10 : 0);
+    (hasBills ? 10 : 0) +
+    (hasDebts ? 10 : 0) +
+    (hasGoals ? 10 : 0) +
+    (hasPlannerData ? 10 : 0);
   const transactionCoverage = clamp(tx.count / 12, 0, 1) * 45;
   const historyCoverage = clamp(tx.activeMonths / 3, 0, 1) * 15;
-  const dataCoverage = Math.round(
-    clamp(transactionCoverage + historyCoverage + moduleCoverage, 0, 100),
-  );
+  const dataCoverage = assessed
+    ? Math.round(
+        clamp(transactionCoverage + historyCoverage + moduleCoverage, 0, 100),
+      )
+    : 0;
   const confidence = confidenceFor(dataCoverage);
 
-  const summary =
-    tx.count === 0
-      ? "Add income and outflow records to activate a meaningful financial-health assessment."
+  const summary = !assessed
+    ? "No financial records are available yet. Add your first income, outflow, bill, debt, goal or planner item to begin assessment."
+    : tx.count === 0
+      ? "Add income and outflow records to complete a meaningful financial-health assessment."
       : `${label}. ${strongest.name} is currently supporting your position, while ${weakest.name.toLowerCase()} offers the clearest opportunity to improve.`;
 
   return {
@@ -519,7 +561,10 @@ export function calculateFinancialHealth(
     summary,
     confidence,
     dataCoverage,
-    nextBestAction: weakest.action,
+    assessed,
+    nextBestAction: assessed
+      ? weakest.action
+      : "Record your first financial activity to activate the Financial Health Score.",
     metrics: {
       totalIncome: tx.totalIncome,
       totalExpenses: tx.totalExpenses,

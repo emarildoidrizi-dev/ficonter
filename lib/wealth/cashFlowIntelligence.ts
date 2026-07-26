@@ -53,7 +53,8 @@ export type CashFlowOutlookLabel =
   | "Strong"
   | "Positive"
   | "Tight"
-  | "Negative";
+  | "Negative"
+  | "Not enough data";
 
 export type CashFlowInsightTone = "positive" | "info" | "warning" | "critical";
 
@@ -74,8 +75,9 @@ export type CashFlowIntelligenceResult = {
   version: "1.0";
   label: CashFlowOutlookLabel;
   summary: string;
-  confidence: "High" | "Moderate" | "Developing";
+  confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
+  forecastAvailable: boolean;
   nextBestAction: string;
   health: FinancialHealthResult;
   metrics: {
@@ -255,6 +257,7 @@ function outlookLabel(
 }
 
 function confidenceFor(coverage: number): CashFlowIntelligenceResult["confidence"] {
+  if (coverage <= 0) return "No data";
   if (coverage >= 75) return "High";
   if (coverage >= 45) return "Moderate";
   return "Developing";
@@ -270,6 +273,13 @@ export function calculateCashFlowIntelligence(
   const recentMonths = months.slice(-3);
   const priorMonths = months.slice(-6, -3);
   const activeMonths = months.filter((month) => month.transactionCount > 0);
+  const plannerHasData =
+    data.planner.plannedIncome > 0 || data.planner.plannedOutflow > 0;
+  const commitmentsHaveData =
+    data.commitments.items.some((item) => item.amount > 0) ||
+    data.commitments.total > 0;
+  const forecastAvailable =
+    activeMonths.length > 0 || plannerHasData || commitmentsHaveData;
 
   const averageMonthlyIncome = average(recentMonths.map((month) => month.income));
   const averageMonthlyOutflow = average(recentMonths.map((month) => month.outflow));
@@ -330,11 +340,21 @@ export function calculateCashFlowIntelligence(
     .sort((a, b) => b.recentAmount - a.recentAmount)
     .slice(0, 6);
 
-  const label = outlookLabel(projectedNetCashFlow, projectedMargin, commitmentRatio);
+  const label = forecastAvailable
+    ? outlookLabel(projectedNetCashFlow, projectedMargin, commitmentRatio)
+    : "Not enough data";
   const topCategory = categories[0];
   const insights: CashFlowInsight[] = [];
 
-  if (projectedNetCashFlow < 0) {
+  if (!forecastAvailable) {
+    insights.push({
+      id: "no-data",
+      title: "Cash-flow outlook is waiting for records",
+      detail: "No income, outflow, commitment or planner amount is available for forecasting yet.",
+      action: "Record the first income or outflow to activate Cash Flow Intelligence.",
+      tone: "info",
+    });
+  } else if (projectedNetCashFlow < 0) {
     insights.push({
       id: "negative-outlook",
       title: "Projected outflow is above expected income",
@@ -398,7 +418,7 @@ export function calculateCashFlowIntelligence(
     });
   }
 
-  if (!data.planner.hasPlan) {
+  if (forecastAvailable && !plannerHasData) {
     insights.push({
       id: "planner-gap",
       title: "The forecast is relying mainly on recorded history",
@@ -429,27 +449,28 @@ export function calculateCashFlowIntelligence(
   });
 
   const historyCoverage = clamp(activeMonths.length / 6, 0, 1) * 35;
-  const plannerCoverage = data.planner.hasPlan ? 20 : 0;
+  const plannerCoverage = plannerHasData ? 20 : 0;
   const categoryCoverage = categories.length ? 15 : 0;
   const commitmentCoverage = data.commitments.items.length ? 15 : 0;
   const healthCoverage = health.dataCoverage * 0.15;
-  const dataCoverage = Math.round(
-    clamp(
-      historyCoverage +
-        plannerCoverage +
-        categoryCoverage +
-        commitmentCoverage +
-        healthCoverage,
-      0,
-      100,
-    ),
-  );
+  const dataCoverage = forecastAvailable
+    ? Math.round(
+        clamp(
+          historyCoverage +
+            plannerCoverage +
+            categoryCoverage +
+            commitmentCoverage +
+            healthCoverage,
+          0,
+          100,
+        ),
+      )
+    : 0;
   const confidence = confidenceFor(dataCoverage);
 
-  const summary =
-    activeMonths.length === 0
-      ? "Record income and outflow activity to activate a meaningful cash-flow outlook."
-      : label === "Negative"
+  const summary = !forecastAvailable
+    ? "No cash-flow records are available yet. Add income, outflow, bills, debt minimums or planner amounts to begin forecasting."
+    : label === "Negative"
         ? "Expected outflow is currently above expected income. Known commitments and spending pressure should be reviewed first."
         : label === "Tight"
           ? "Cash flow remains positive, but the forecast leaves limited room for unexpected costs."
@@ -463,6 +484,7 @@ export function calculateCashFlowIntelligence(
     summary,
     confidence,
     dataCoverage,
+    forecastAvailable,
     nextBestAction: prioritized[0]?.action ?? "Keep financial records current.",
     health,
     metrics: {

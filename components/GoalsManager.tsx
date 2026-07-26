@@ -760,7 +760,7 @@ export function GoalsManager({
 
       {deleting ? (
         <div className={styles.backdrop}>
-          <div className={`${styles.modal} ${styles.confirm}`}>
+          <div className={`${styles.modal} ${styles.confirm}`} role="alertdialog" aria-modal="true">
             <span>PERMANENT ACTION</span>
             <h2>Delete goal?</h2>
             <p>
@@ -774,6 +774,7 @@ export function GoalsManager({
               <button
                 className={styles.danger}
                 type="button"
+                data-enter-confirm="true"
                 onClick={deleteGoal}
                 disabled={busy}
               >
@@ -786,7 +787,7 @@ export function GoalsManager({
 
       {reversing ? (
         <div className={styles.backdrop}>
-          <div className={`${styles.modal} ${styles.confirm}`}>
+          <div className={`${styles.modal} ${styles.confirm}`} role="alertdialog" aria-modal="true">
             <span>REVERSE INVESTMENT</span>
             <h2>Reverse {money(reversing.amount)}?</h2>
             <p>
@@ -800,6 +801,7 @@ export function GoalsManager({
               <button
                 className={styles.danger}
                 type="button"
+                data-enter-confirm="true"
                 onClick={reverseInvestment}
                 disabled={busy}
               >

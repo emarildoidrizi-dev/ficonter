@@ -580,6 +580,7 @@ export function BillsManager({
               <button
                 type="button"
                 className={styles.modalDelete}
+                data-enter-confirm="true"
                 onClick={confirmBillDeletion}
                 disabled={Boolean(busy)}
               >

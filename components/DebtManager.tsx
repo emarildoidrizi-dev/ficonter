@@ -947,9 +947,10 @@ export function DebtManager({
 
       {deletingDebt ? (
         <div className={styles.modalBackdrop}>
-          <section className={styles.modal}>
+          <section className={styles.modal} role="alertdialog" aria-modal="true">
             <button
               className={styles.modalClose}
+              type="button"
               onClick={() => setDeletingDebt(null)}
             >
               <X size={19} />
@@ -962,9 +963,11 @@ export function DebtManager({
               from Overview, Transactions and Monthly Planner.
             </p>
             <div className={styles.modalActions}>
-              <button onClick={() => setDeletingDebt(null)}>Keep debt</button>
+              <button type="button" onClick={() => setDeletingDebt(null)}>Keep debt</button>
               <button
                 className={styles.modalDanger}
+                type="button"
+                data-enter-confirm="true"
                 onClick={confirmDeleteDebt}
                 disabled={busy === `delete-debt-${deletingDebt.id}`}
               >
@@ -979,9 +982,10 @@ export function DebtManager({
 
       {deletingPayment ? (
         <div className={styles.modalBackdrop}>
-          <section className={styles.modal}>
+          <section className={styles.modal} role="alertdialog" aria-modal="true">
             <button
               className={styles.modalClose}
+              type="button"
               onClick={() => setDeletingPayment(null)}
             >
               <X size={19} />
@@ -994,9 +998,11 @@ export function DebtManager({
               disappear from Transactions, Overview and Monthly Planner.
             </p>
             <div className={styles.modalActions}>
-              <button onClick={() => setDeletingPayment(null)}>Keep payment</button>
+              <button type="button" onClick={() => setDeletingPayment(null)}>Keep payment</button>
               <button
                 className={styles.modalDanger}
+                type="button"
+                data-enter-confirm="true"
                 onClick={confirmDeletePayment}
                 disabled={busy === `delete-payment-${deletingPayment.id}`}
               >

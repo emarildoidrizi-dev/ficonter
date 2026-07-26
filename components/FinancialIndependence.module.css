@@ -778,3 +778,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.hero[data-stage="not-assessed"] {
+  border-left-color: var(--border-strong);
+}

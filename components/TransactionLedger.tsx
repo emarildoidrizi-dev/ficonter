@@ -534,7 +534,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             <button className={styles.close} type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
             <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. This cannot be undone.</p>
             {error && <div className={styles.error}>{error}</div>}
-            <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
+            <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
           </div>
         </div>
       )}

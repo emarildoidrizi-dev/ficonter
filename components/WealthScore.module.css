@@ -325,3 +325,7 @@
   .factor { grid-template-columns: 36px minmax(0, 1fr); padding: 14px; }
   .factorIcon { width: 34px; height: 34px; border-radius: 11px; }
 }
+
+.statusRow[data-status="not-assessed"] {
+  color: var(--text-secondary);
+}

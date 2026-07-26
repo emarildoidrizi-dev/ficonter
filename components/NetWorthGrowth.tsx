@@ -139,7 +139,7 @@ export function NetWorthGrowth({ inputs }: Props) {
     chartMinimum,
     chartMaximum,
   );
-  const statusSlug = result.label.toLowerCase();
+  const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
 
   return (
     <section className={styles.module}>

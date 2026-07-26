@@ -2,6 +2,14 @@ import type { SupportCategory, SupportStatus } from "@/lib/support";
 
 export const SUPPORT_MESSAGE_LIMIT = 5000;
 
+export const SUPPORT_READ_EVENT = "ficonter:support-read";
+
+export type SupportReadEventDetail = {
+  audience: "customer" | "admin";
+  requestId: string;
+  clearedCount: number;
+};
+
 export type SupportMessage = {
   id: string;
   requestId: string;

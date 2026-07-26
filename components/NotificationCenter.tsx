@@ -4,7 +4,11 @@ import { Bell, CheckCheck, Inbox, LoaderCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { NotificationItem } from "@/lib/supportMessaging";
+import {
+  SUPPORT_READ_EVENT,
+  type NotificationItem,
+  type SupportReadEventDetail,
+} from "@/lib/supportMessaging";
 import styles from "./NotificationCenter.module.css";
 
 function formatRelative(value: string): string {
@@ -25,9 +29,10 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const notificationsRef = useRef<NotificationItem[]>([]);
   const [adminSupportUnread, setAdminSupportUnread] = useState(0);
   const [loading, setLoading] = useState(true);
+  const unreadCount = notifications.filter((item) => !item.readAt).length;
 
   const refresh = useCallback(async () => {
     try {
@@ -42,8 +47,8 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
         adminSupportUnread?: number;
       } | null;
       if (!response.ok || !data?.notifications) return;
+      notificationsRef.current = data.notifications;
       setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount ?? 0);
       setAdminSupportUnread(data.adminSupportUnread ?? 0);
     } finally {
       setLoading(false);
@@ -80,6 +85,31 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
     };
   }, [refresh, supabase]);
 
+  useEffect(() => {
+    function handleSupportRead(event: Event) {
+      const detail = (event as CustomEvent<SupportReadEventDetail>).detail;
+      if (!detail?.requestId) return;
+
+      if (detail.audience === "admin") {
+        setAdminSupportUnread((current) => Math.max(0, current - Math.max(0, detail.clearedCount)));
+        return;
+      }
+
+      const href = `/dashboard/inbox?thread=${detail.requestId}`;
+      const now = new Date().toISOString();
+      const next = notificationsRef.current.map((item) =>
+        !item.readAt && item.href === href && (item.kind === "support_reply" || item.kind === "support_status")
+          ? { ...item, readAt: now }
+          : item,
+      );
+      notificationsRef.current = next;
+      setNotifications(next);
+    }
+
+    window.addEventListener(SUPPORT_READ_EVENT, handleSupportRead);
+    return () => window.removeEventListener(SUPPORT_READ_EVENT, handleSupportRead);
+  }, []);
+
   useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
@@ -106,8 +136,12 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
       body: JSON.stringify(id ? { id } : { all: true }),
     });
     if (response.ok) {
-      setNotifications((current) => current.map((item) => id && item.id !== id ? item : { ...item, readAt: item.readAt ?? new Date().toISOString() }));
-      setUnreadCount(id ? Math.max(0, unreadCount - 1) : 0);
+      const now = new Date().toISOString();
+      const next = notificationsRef.current.map((item) =>
+        id && item.id !== id ? item : { ...item, readAt: item.readAt ?? now },
+      );
+      notificationsRef.current = next;
+      setNotifications(next);
     }
   }
 

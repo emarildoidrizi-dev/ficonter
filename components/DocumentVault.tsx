@@ -64,6 +64,12 @@ export function DocumentVault() {
 
   useEffect(() => setPortalReady(true), []);
 
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(""), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [success]);
+
   const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/documents", { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });

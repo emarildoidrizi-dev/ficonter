@@ -15,7 +15,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT, supportCategoryLabel, supportStatusLabel } from "@/lib/support";
-import { SUPPORT_MESSAGE_LIMIT, type SupportThread } from "@/lib/supportMessaging";
+import {
+  SUPPORT_MESSAGE_LIMIT,
+  SUPPORT_READ_EVENT,
+  type SupportReadEventDetail,
+  type SupportThread,
+} from "@/lib/supportMessaging";
 import { SupportDeleteDialog } from "./SupportDeleteDialog";
 import styles from "./SupportConversations.module.css";
 
@@ -106,16 +111,29 @@ export function SupportConversations({
 
   useEffect(() => {
     if (!selectedId) return;
+    const activeThread = threads.find((thread) => thread.id === selectedId);
+    const clearedCount = activeThread ? unreadAdminMessages(activeThread) : 0;
     const now = new Date().toISOString();
-    setThreads((current) => current.map((thread) => thread.id === selectedId ? { ...thread, customerLastReadAt: now } : thread));
+
+    setThreads((current) => current.map((thread) =>
+      thread.id === selectedId ? { ...thread, customerLastReadAt: now } : thread,
+    ));
+
+    window.dispatchEvent(new CustomEvent<SupportReadEventDetail>(SUPPORT_READ_EVENT, {
+      detail: { audience: "customer", requestId: selectedId, clearedCount },
+    }));
+
     void fetch(`/api/support/threads/${selectedId}/read`, {
       method: "POST",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
-    });
+    }).then((response) => {
+      if (!response.ok) void refresh(true);
+    }).catch(() => void refresh(true));
+
     router.replace(`/dashboard/inbox?thread=${selectedId}`, { scroll: false });
     window.setTimeout(() => messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 60);
-  }, [router, selectedId]);
+  }, [refresh, router, selected?.lastMessageAt, selectedId]);
 
   async function sendReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

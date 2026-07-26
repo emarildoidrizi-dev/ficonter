@@ -1,16 +1,15 @@
-FICONTER · Support Conversation Deletion
+FICONTER — Immediate Read State & 5-Second Document Notice
 
-REPLACE / ADD
-components/SupportConversations.tsx
-components/SupportConversations.module.css
-components/SupportInbox.tsx
-components/SupportInbox.module.css
-components/SupportDeleteDialog.tsx
-components/SupportDeleteDialog.module.css
-app/api/support/threads/[id]/route.ts
-app/api/admin/support/[id]/route.ts
-supabase/support_conversation_deletion.sql
-scripts/verify-support-conversation-deletion.mjs
-scripts/verify-support-selected-state.mjs
+Replace/upload these files:
+- app/api/support/threads/[id]/read/route.ts
+- components/SupportConversations.tsx
+- components/SupportInbox.tsx
+- components/NotificationCenter.tsx
+- components/DocumentVault.tsx
+- lib/supportMessaging.ts
 
-No environment variables are required.
+Optional verifier:
+- scripts/verify-read-receipts-document-toast.mjs
+
+No Supabase SQL migration is required.
+No environment-variable changes are required.

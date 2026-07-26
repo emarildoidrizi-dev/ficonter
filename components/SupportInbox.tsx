@@ -16,7 +16,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AdminSupportRequest } from "@/lib/admin/support";
 import { supportCategoryLabel, supportStatusLabel, type SupportStatus } from "@/lib/support";
-import { SUPPORT_MESSAGE_LIMIT } from "@/lib/supportMessaging";
+import {
+  SUPPORT_MESSAGE_LIMIT,
+  SUPPORT_READ_EVENT,
+  type SupportReadEventDetail,
+} from "@/lib/supportMessaging";
 import { SupportDeleteDialog } from "./SupportDeleteDialog";
 import styles from "./SupportInbox.module.css";
 
@@ -100,10 +104,28 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
 
   useEffect(() => {
     if (!selectedId) return;
-    setRequests((current) => current.map((item) => item.id === selectedId ? { ...item, unreadCustomerMessages: 0, adminLastReadAt: new Date().toISOString() } : item));
-    void fetch(`/api/admin/support/${selectedId}/read`, { method: "POST", credentials: "same-origin", headers: { Accept: "application/json" } });
+    const activeRequest = requests.find((item) => item.id === selectedId);
+    const clearedCount = activeRequest?.unreadCustomerMessages ?? 0;
+    const now = new Date().toISOString();
+
+    setRequests((current) => current.map((item) =>
+      item.id === selectedId ? { ...item, unreadCustomerMessages: 0, adminLastReadAt: now } : item,
+    ));
+
+    window.dispatchEvent(new CustomEvent<SupportReadEventDetail>(SUPPORT_READ_EVENT, {
+      detail: { audience: "admin", requestId: selectedId, clearedCount },
+    }));
+
+    void fetch(`/api/admin/support/${selectedId}/read`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    }).then((response) => {
+      if (!response.ok) void refresh(true);
+    }).catch(() => void refresh(true));
+
     window.setTimeout(() => messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 60);
-  }, [selectedId]);
+  }, [refresh, selected?.lastMessageAt, selectedId]);
 
   async function updateStatus(status: SupportStatus) {
     if (!selected || updating) return;

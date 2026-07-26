@@ -633,7 +633,7 @@ export function calculateAiInsightsContext(
     },
   };
 
-  const fingerprint = `ai-v1-${stableHash(JSON.stringify(promptPayload))}`;
+  const fingerprint = `smart-v1-${stableHash(JSON.stringify(promptPayload))}`;
 
   return {
     assessed,
@@ -778,6 +778,583 @@ export function normalizeAiInsightSnapshot(
       100,
     ),
     generatedAt,
+  };
+}
+
+
+
+export const SMART_INSIGHTS_ENGINE_VERSION = "FICONTER Smart Engine v1";
+
+type RankedInsight = AiInsightItem & { rank: number };
+
+function metricNumber(
+  context: AiInsightsContext,
+  key: AiEvidenceKey,
+): number {
+  const value = context.evidence[key].value;
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function insight(
+  rank: number,
+  domain: AiInsightDomain,
+  priority: AiInsightPriority,
+  title: string,
+  detail: string,
+  action: string,
+  evidenceKeys: AiEvidenceKey[],
+): RankedInsight {
+  return {
+    rank,
+    domain,
+    priority,
+    title,
+    insight: detail,
+    action,
+    evidenceKeys: evidenceKeys.slice(0, 4),
+  };
+}
+
+function withoutRank(item: RankedInsight): AiInsightItem {
+  const { rank: _rank, ...result } = item;
+  return result;
+}
+
+function uniqueInsights(items: RankedInsight[], maximum: number): AiInsightItem[] {
+  const seen = new Set<string>();
+  return items
+    .sort((left, right) => right.rank - left.rank)
+    .filter((item) => {
+      const key = `${item.domain}:${item.title}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, maximum)
+    .map(withoutRank);
+}
+
+function smartPosition(context: AiInsightsContext): AiInsightReport["position"] {
+  if (!context.assessed) return "Not assessed";
+
+  const healthScore = metricNumber(context, "financial_health_score");
+  const wealthScore = metricNumber(context, "wealth_score");
+  const netWorth = metricNumber(context, "net_worth");
+  const cashFlowMargin = metricNumber(context, "cash_flow_margin");
+  const overdueBills = metricNumber(context, "overdue_bills");
+
+  if (overdueBills > 0 || cashFlowMargin < 0 || healthScore < 40) {
+    return "At risk";
+  }
+  if (healthScore < 60 || netWorth < 0) return "Needs attention";
+  if (healthScore >= 75 && wealthScore >= 60 && netWorth > 0) return "Strong";
+  if (healthScore >= 60 && cashFlowMargin >= 0) return "Stable";
+  return "Building";
+}
+
+function headlineFor(position: AiInsightReport["position"]): string {
+  switch (position) {
+    case "At risk":
+      return "Stabilize the financial foundation first";
+    case "Needs attention":
+      return "Protect cash flow and reduce financial pressure";
+    case "Stable":
+      return "Turn financial stability into stronger momentum";
+    case "Building":
+      return "Your financial foundation is taking shape";
+    case "Strong":
+      return "Your wealth system is gaining strength";
+    default:
+      return "Build the financial baseline first";
+  }
+}
+
+/**
+ * Creates a deterministic, cost-free report from FICONTER's existing verified
+ * Wealth Engine outputs. It never calls an external model and never creates a
+ * parallel balance, score, or forecast.
+ */
+export function generateSmartInsightReport(
+  context: AiInsightsContext,
+): AiInsightReport {
+  const cashFlow = context.sources.cashFlow;
+  const financialIndependence = context.sources.financialIndependence;
+  const savings = financialIndependence.sources.savings;
+  const emergency = financialIndependence.sources.emergency;
+  const growth = financialIndependence.sources.growth;
+  const health = cashFlow.health;
+
+  const income = health.metrics.totalIncome;
+  const cashFlowMargin = metricNumber(context, "cash_flow_margin");
+  const currentNetFlow = metricNumber(context, "current_month_net_flow");
+  const projectedNetFlow = context.evidence.projected_30_day_net_flow.value;
+  const knownCommitments = metricNumber(context, "known_commitments");
+  const savingsRate = metricNumber(context, "savings_rate");
+  const emergencyMonths = metricNumber(context, "emergency_months");
+  const currentDebt = metricNumber(context, "current_debt");
+  const debtServiceRatio = metricNumber(context, "debt_service_ratio");
+  const overdueBills = metricNumber(context, "overdue_bills");
+  const goalProgress = metricNumber(context, "goal_progress");
+  const netWorth = metricNumber(context, "net_worth");
+  const wealthScore = metricNumber(context, "wealth_score");
+  const fiProgress = metricNumber(context, "financial_independence_progress");
+  const plannerActive = context.evidence.planner_status.value === "Current-month planner active";
+
+  const priorityCandidates: RankedInsight[] = [];
+  const opportunityCandidates: RankedInsight[] = [];
+  const watchCandidates: RankedInsight[] = [];
+
+  if (overdueBills > 0) {
+    priorityCandidates.push(
+      insight(
+        100,
+        "Bills",
+        "critical",
+        "Resolve overdue obligations first",
+        "Overdue obligations weaken payment reliability and can create avoidable fees or additional pressure.",
+        "Review every overdue bill and either settle it or update its payment plan immediately.",
+        ["overdue_bills", "known_commitments"],
+      ),
+    );
+  }
+
+  if (income <= 0) {
+    priorityCandidates.push(
+      insight(
+        98,
+        "Cash flow",
+        "critical",
+        "Establish an income baseline",
+        "FICONTER cannot assess sustainable cash-flow capacity until income activity is recorded.",
+        "Record current income sources before relying on forecasts or contribution targets.",
+        ["current_month_net_flow", "cash_flow_margin"],
+      ),
+    );
+  } else if (cashFlowMargin < 0 || currentNetFlow < 0) {
+    priorityCandidates.push(
+      insight(
+        96,
+        "Cash flow",
+        "critical",
+        "Restore positive monthly cash flow",
+        "Current outflows are consuming more than the available monthly inflow.",
+        "Reduce flexible spending or increase income until monthly net flow becomes positive.",
+        ["cash_flow_margin", "current_month_net_flow"],
+      ),
+    );
+  } else if (cashFlowMargin < 10) {
+    priorityCandidates.push(
+      insight(
+        78,
+        "Cash flow",
+        "high",
+        "Create more monthly breathing room",
+        "The current margin leaves limited room for unexpected costs and long-term priorities.",
+        "Protect a larger share of income before increasing optional commitments.",
+        ["cash_flow_margin", "current_month_net_flow"],
+      ),
+    );
+  } else {
+    opportunityCandidates.push(
+      insight(
+        72,
+        "Cash flow",
+        "low",
+        "Protect the positive cash-flow margin",
+        "A positive monthly margin creates room for resilience, saving, and debt reduction.",
+        "Direct a planned share of the surplus toward the highest-priority financial goal.",
+        ["cash_flow_margin", "current_month_net_flow"],
+      ),
+    );
+  }
+
+  if (emergency.metrics.averageMonthlyExpenses > 0 && emergencyMonths < 1) {
+    priorityCandidates.push(
+      insight(
+        90,
+        "Emergency fund",
+        "high",
+        "Build the first emergency buffer",
+        "The current reserve does not yet cover one full average month of recorded expenses.",
+        "Prioritize the first one-month reserve before increasing lower-priority allocations.",
+        ["emergency_reserve", "emergency_months", "emergency_gap"],
+      ),
+    );
+  } else if (emergencyMonths < 3 && emergency.metrics.averageMonthlyExpenses > 0) {
+    priorityCandidates.push(
+      insight(
+        70,
+        "Emergency fund",
+        "medium",
+        "Strengthen financial resilience",
+        "The reserve has started but remains below the three-month protection foundation.",
+        "Maintain a consistent monthly emergency contribution until the foundation target is reached.",
+        ["emergency_months", "emergency_gap"],
+      ),
+    );
+  } else if (emergencyMonths >= 3) {
+    opportunityCandidates.push(
+      insight(
+        64,
+        "Emergency fund",
+        "low",
+        "Preserve the emergency reserve",
+        "The recorded reserve now provides a meaningful financial buffer.",
+        "Keep the reserve separate and replenish it after any genuine emergency withdrawal.",
+        ["emergency_reserve", "emergency_months"],
+      ),
+    );
+  }
+
+  if (currentDebt > 0 && (debtServiceRatio >= 25 || netWorth < 0)) {
+    priorityCandidates.push(
+      insight(
+        debtServiceRatio >= 35 ? 94 : 84,
+        "Debt",
+        debtServiceRatio >= 35 ? "critical" : "high",
+        "Reduce debt pressure deliberately",
+        "Debt is limiting financial flexibility and slowing improvement in the long-term wealth position.",
+        "Keep minimums current and direct additional capacity toward consistent principal reduction.",
+        ["current_debt", "debt_service_ratio", "net_worth"],
+      ),
+    );
+  } else if (currentDebt > 0) {
+    watchCandidates.push(
+      insight(
+        58,
+        "Debt",
+        "medium",
+        "Keep debt reduction visible",
+        "Debt remains an active claim on future cash flow even when current payments are manageable.",
+        "Review progress monthly and avoid adding new balances while existing debt is being reduced.",
+        ["current_debt", "debt_service_ratio"],
+      ),
+    );
+  } else if (health.assessed) {
+    opportunityCandidates.push(
+      insight(
+        55,
+        "Debt",
+        "low",
+        "Preserve borrowing flexibility",
+        "No active debt is currently reducing monthly flexibility.",
+        "Keep future borrowing deliberate and affordable.",
+        ["current_debt", "debt_service_ratio"],
+      ),
+    );
+  }
+
+  if (income > 0 && savingsRate < 5) {
+    priorityCandidates.push(
+      insight(
+        82,
+        "Savings",
+        "high",
+        "Start a repeatable saving habit",
+        "The current saving rate is too low to build meaningful long-term momentum.",
+        "Begin with a realistic recurring contribution and increase it after consistency is established.",
+        ["savings_rate", "monthly_savings_pace", "savings_target_gap"],
+      ),
+    );
+  } else if (income > 0 && savingsRate < 15) {
+    priorityCandidates.push(
+      insight(
+        62,
+        "Savings",
+        "medium",
+        "Raise the saving pace gradually",
+        "Savings are being recorded, but the current pace remains below a stronger long-term range.",
+        "Close part of the monthly target gap with a sustainable automatic contribution.",
+        ["savings_rate", "monthly_savings_pace", "savings_target_gap"],
+      ),
+    );
+  } else if (savingsRate >= 15) {
+    opportunityCandidates.push(
+      insight(
+        68,
+        "Savings",
+        "low",
+        "Maintain the saving momentum",
+        "The recorded saving rate is contributing positively to future financial capacity.",
+        "Keep contributions consistent and align them with the most important active priorities.",
+        ["savings_rate", "monthly_savings_pace"],
+      ),
+    );
+  }
+
+  if (netWorth < 0) {
+    priorityCandidates.push(
+      insight(
+        76,
+        "Net worth",
+        "high",
+        "Move net worth toward positive territory",
+        "Liabilities currently exceed recorded capital, which limits the long-term wealth position.",
+        "Combine retained cash flow with principal debt reduction and avoid counting savings twice.",
+        ["net_worth", "capital_to_debt_ratio", "current_debt"],
+      ),
+    );
+  } else if (netWorth > 0 && wealthScore >= 60) {
+    opportunityCandidates.push(
+      insight(
+        66,
+        "Net worth",
+        "low",
+        "Build on the positive wealth position",
+        "Recorded capital is supporting a stronger long-term position relative to liabilities.",
+        "Continue adding capital while protecting the current debt and cash-flow discipline.",
+        ["net_worth", "wealth_score", "capital_to_debt_ratio"],
+      ),
+    );
+  }
+
+  if (goalProgress <= 0 && health.assessed) {
+    watchCandidates.push(
+      insight(
+        46,
+        "Goals",
+        "low",
+        "Connect cash flow to a measurable goal",
+        "No funded goal progress is currently visible in the financial system.",
+        "Choose one measurable priority and record contributions consistently.",
+        ["goal_progress", "current_month_net_flow"],
+      ),
+    );
+  } else if (goalProgress > 0) {
+    opportunityCandidates.push(
+      insight(
+        48,
+        "Goals",
+        "low",
+        "Keep goal funding aligned",
+        "Recorded goal progress is connecting current cash flow with a future outcome.",
+        "Review the target date and contribution pace whenever financial capacity changes.",
+        ["goal_progress", "monthly_savings_pace"],
+      ),
+    );
+  }
+
+  if (!plannerActive) {
+    watchCandidates.push(
+      insight(
+        44,
+        "Planning",
+        "low",
+        "Activate the monthly planner",
+        "A current-month plan is not available to compare intended and actual financial activity.",
+        "Create a simple monthly plan for income, bills, saving, goals, and debt.",
+        ["planner_status", "known_commitments"],
+      ),
+    );
+  }
+
+  if (!cashFlow.forecastAvailable) {
+    watchCandidates.push(
+      insight(
+        60,
+        "Cash flow",
+        "medium",
+        "Forecast confidence is still developing",
+        "There is not yet enough completed history for a reliable 30-day cash-flow outlook.",
+        "Keep income and outflow records current until the forecast activates.",
+        ["projected_30_day_net_flow", "cash_flow_margin"],
+      ),
+    );
+  } else if (typeof projectedNetFlow === "number" && projectedNetFlow < 0) {
+    priorityCandidates.push(
+      insight(
+        88,
+        "Cash flow",
+        "high",
+        "Prepare for a negative 30-day outlook",
+        "The verified short-term projection indicates that known outflows may exceed expected inflows.",
+        "Review upcoming commitments and reduce avoidable outflow before the projected pressure arrives.",
+        ["projected_30_day_net_flow", "known_commitments"],
+      ),
+    );
+  }
+
+  if (!growth.hasHistory) {
+    watchCandidates.push(
+      insight(
+        52,
+        "Net worth",
+        "medium",
+        "Net-worth trend needs more history",
+        "FICONTER cannot yet distinguish a durable growth trend from the opening financial baseline.",
+        "Maintain complete monthly records until several genuine month-to-month changes exist.",
+        ["six_month_net_worth_change", "net_worth"],
+      ),
+    );
+  }
+
+  if (knownCommitments > 0 && cashFlowMargin < 20) {
+    watchCandidates.push(
+      insight(
+        54,
+        "Bills",
+        "medium",
+        "Keep fixed commitments funded",
+        "Known near-term obligations consume part of the available monthly capacity.",
+        "Reserve the required amount before allocating discretionary spending.",
+        ["known_commitments", "cash_flow_margin"],
+      ),
+    );
+  }
+
+  if (fiProgress > 0) {
+    opportunityCandidates.push(
+      insight(
+        45,
+        "Financial independence",
+        "low",
+        "Make independence progress repeatable",
+        "Current investable capital is already supporting part of the long-term lifestyle target.",
+        "Protect a consistent wealth contribution and review planning assumptions annually.",
+        [
+          "financial_independence_progress",
+          "monthly_freedom_income",
+          "financial_independence_target",
+        ],
+      ),
+    );
+  }
+
+  if (context.dataCoverage < 50) {
+    watchCandidates.push(
+      insight(
+        72,
+        "Planning",
+        "medium",
+        "Improve data coverage before relying on long-term conclusions",
+        "Several Wealth Engine modules are still working with limited financial history.",
+        "Keep records complete and review the report again after more monthly activity is available.",
+        ["planner_status", "financial_health_score", "wealth_score"],
+      ),
+    );
+  }
+
+  let priorities = uniqueInsights(priorityCandidates, 3);
+  if (!priorities.length) {
+    priorities = [
+      {
+        domain: "Financial health",
+        priority: "low",
+        title: "Keep the financial system current",
+        insight:
+          "No urgent weakness was identified from the currently verified FICONTER signals.",
+        action:
+          "Continue recording activity and review the main scores after each completed month.",
+        evidenceKeys: ["financial_health_score", "wealth_score"],
+      },
+    ];
+  }
+
+  const opportunities = uniqueInsights(opportunityCandidates, 3);
+  const watchlist = uniqueInsights(watchCandidates, 3);
+  const position = smartPosition(context);
+  const headline = headlineFor(position);
+  const lead = priorities[0];
+  const opportunityLead = opportunities[0];
+  const summary = opportunityLead
+    ? `${lead.title} is the clearest current priority. ${opportunityLead.title} is the strongest verified opportunity to build on.`
+    : `${lead.title} is the clearest current priority. Continue building complete monthly records so FICONTER can strengthen the analysis.`;
+
+  const actionSources = [
+    ...priorities,
+    ...opportunities,
+    ...watchlist,
+  ].filter(
+    (item, index, items) =>
+      items.findIndex(
+        (candidate) =>
+          candidate.domain === item.domain && candidate.title === item.title,
+      ) === index,
+  );
+
+  const horizons: AiActionStep["horizon"][] = [
+    "This week",
+    "This month",
+    "Next 90 days",
+    "Ongoing",
+  ];
+  const actionPlan: AiActionStep[] = actionSources.slice(0, 4).map((item, index) => ({
+    order: index + 1,
+    horizon: horizons[index] ?? "Ongoing",
+    title: item.title,
+    action: item.action,
+    evidenceKeys: item.evidenceKeys,
+  }));
+
+  const fallbackSteps: Omit<AiActionStep, "order">[] = [
+    {
+      horizon: "This month",
+      title: "Review the monthly plan",
+      action:
+        "Compare planned income and commitments with actual activity before making new discretionary allocations.",
+      evidenceKeys: ["planner_status", "known_commitments"],
+    },
+    {
+      horizon: "Next 90 days",
+      title: "Build one measurable improvement",
+      action:
+        "Choose one priority—cash flow, reserve, saving, or debt—and track the same action for three completed months.",
+      evidenceKeys: ["financial_health_score", "wealth_score"],
+    },
+    {
+      horizon: "Ongoing",
+      title: "Keep FICONTER records current",
+      action:
+        "Record income, outflows, saving contributions, bills, debt payments, and goal activity as they happen.",
+      evidenceKeys: ["planner_status", "financial_health_score"],
+    },
+  ];
+
+  for (const fallback of fallbackSteps) {
+    if (actionPlan.length >= 4) break;
+    if (actionPlan.some((step) => step.title === fallback.title)) continue;
+    actionPlan.push({ order: actionPlan.length + 1, ...fallback });
+  }
+
+  const dataLimitations: string[] = [];
+  if (context.dataCoverage < 50) {
+    dataLimitations.push(
+      "The report is based on developing data coverage, so priorities may change as more complete monthly history is recorded.",
+    );
+  }
+  if (!cashFlow.forecastAvailable) {
+    dataLimitations.push(
+      "The 30-day cash-flow forecast is unavailable until enough income and outflow history exists.",
+    );
+  }
+  if (!growth.hasHistory) {
+    dataLimitations.push(
+      "Net-worth growth cannot be assessed reliably until genuine month-to-month history is available.",
+    );
+  }
+  if (!savings.hasSavingsData) {
+    dataLimitations.push(
+      "Savings consistency and allocation cannot be assessed until non-emergency saving contributions are recorded.",
+    );
+  }
+  if (emergency.metrics.averageMonthlyExpenses <= 0) {
+    dataLimitations.push(
+      "Emergency-fund coverage requires an established average monthly expense baseline.",
+    );
+  }
+
+  return {
+    schemaVersion: 1,
+    headline,
+    summary,
+    position,
+    priorities,
+    opportunities,
+    watchlist,
+    actionPlan: actionPlan.slice(0, 4),
+    dataLimitations: dataLimitations.slice(0, 5),
+    disclaimer:
+      "Planning guidance generated from FICONTER's verified rules and recorded data. It is not individualized investment, tax, legal, or credit advice.",
   };
 }
 

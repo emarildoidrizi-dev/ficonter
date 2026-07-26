@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AiInsights } from "@/components/AiInsights";
 import { createClient } from "@/lib/supabase/server";
 import {
+  SMART_INSIGHTS_ENGINE_VERSION,
   calculateAiInsightsContext,
   normalizeAiInsightSnapshot,
   normalizeAiInsightsInputs,
@@ -10,7 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function AiInsightsPage() {
+export default async function SmartInsightsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,6 +25,7 @@ export default async function AiInsightsPage() {
       .from("ai_insight_snapshots")
       .select("id, data_fingerprint, report, model, data_coverage, generated_at")
       .eq("user_id", user.id)
+      .eq("model", SMART_INSIGHTS_ENGINE_VERSION)
       .order("generated_at", { ascending: false })
       .limit(1),
   ]);
@@ -39,7 +41,6 @@ export default async function AiInsightsPage() {
       initialSnapshot={snapshot}
       initialFingerprint={context.fingerprint}
       initialError={error?.message ?? ""}
-      aiConfigured={Boolean(process.env.OPENAI_API_KEY?.trim())}
     />
   );
 }

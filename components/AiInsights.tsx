@@ -9,10 +9,8 @@ import {
   CircleAlert,
   Clock3,
   DatabaseZap,
-  EyeOff,
   Gauge,
   Lightbulb,
-  LockKeyhole,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -32,7 +30,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/financialOptions";
 import {
-  AI_INSIGHTS_CONSENT_VERSION,
   calculateAiInsightsContext,
   normalizeAiInsightSnapshot,
   normalizeAiInsightsInputs,
@@ -50,7 +47,6 @@ type Props = {
   initialSnapshot: AiInsightSnapshot | null;
   initialFingerprint: string;
   initialError?: string;
-  aiConfigured: boolean;
 };
 
 const DOMAIN_ROUTES: Partial<Record<AiInsightDomain, string>> = {
@@ -221,7 +217,6 @@ export function AiInsights({
   initialSnapshot,
   initialFingerprint,
   initialError = "",
-  aiConfigured,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
@@ -233,8 +228,6 @@ export function AiInsights({
   const [notice, setNotice] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [savingConsent, setSavingConsent] = useState(false);
-  const [consentChecked, setConsentChecked] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -259,10 +252,6 @@ export function AiInsights({
   }, []);
 
   const context = useMemo(() => calculateAiInsightsContext(inputs), [inputs]);
-  const enabled =
-    inputs.preferences.enabled &&
-    inputs.preferences.consentVersion === AI_INSIGHTS_CONSENT_VERSION &&
-    Boolean(inputs.preferences.consentedAt);
   const stale = Boolean(snapshot && snapshot.dataFingerprint !== fingerprint);
 
   const refresh = useCallback(async () => {
@@ -302,40 +291,75 @@ export function AiInsights({
   useEffect(() => {
     const update = () => scheduleRefresh();
     const channel = supabase
-      .channel(`ai-insights:${userId}`)
+      .channel(`smart-insights:${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "transactions", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bills", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "bills",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "debts", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "debts",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "debt_payments", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "debt_payments",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "goals", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "goals",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "monthly_budget_items", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "monthly_budget_items",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "financial_independence_settings", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "financial_independence_settings",
+          filter: `user_id=eq.${userId}`,
+        },
         update,
       )
       .subscribe();
@@ -353,74 +377,8 @@ export function AiInsights({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
-  async function enableInsights(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!consentChecked || savingConsent) return;
-
-    setSavingConsent(true);
-    setError("");
-    const now = new Date().toISOString();
-    const { error: saveError } = await supabase
-      .from("ai_insight_preferences")
-      .upsert({
-        user_id: userId,
-        enabled: true,
-        consent_version: AI_INSIGHTS_CONSENT_VERSION,
-        consented_at: now,
-        updated_at: now,
-      });
-
-    if (saveError) {
-      setError(saveError.message);
-    } else {
-      setInputs((current) => ({
-        ...current,
-        preferences: {
-          enabled: true,
-          consentVersion: AI_INSIGHTS_CONSENT_VERSION,
-          consentedAt: now,
-          updatedAt: now,
-        },
-      }));
-      setConsentChecked(false);
-      showNotice("Private AI Insights is enabled.");
-    }
-    setSavingConsent(false);
-  }
-
-  async function disableInsights() {
-    if (savingConsent) return;
-    setSavingConsent(true);
-    setError("");
-    const now = new Date().toISOString();
-    const { error: saveError } = await supabase
-      .from("ai_insight_preferences")
-      .upsert({
-        user_id: userId,
-        enabled: false,
-        consent_version: AI_INSIGHTS_CONSENT_VERSION,
-        consented_at: inputs.preferences.consentedAt,
-        updated_at: now,
-      });
-
-    if (saveError) {
-      setError(saveError.message);
-    } else {
-      setInputs((current) => ({
-        ...current,
-        preferences: {
-          ...current.preferences,
-          enabled: false,
-          updatedAt: now,
-        },
-      }));
-      showNotice("AI Insights is disabled. Existing private reports were kept.");
-    }
-    setSavingConsent(false);
-  }
-
   async function generateInsights() {
-    if (generating || !enabled || !context.assessed) return;
+    if (generating || !context.assessed) return;
     setGenerating(true);
     setError("");
 
@@ -442,22 +400,24 @@ export function AiInsights({
         const suffix = payload.retryAfter
           ? ` Try again in ${payload.retryAfter} seconds.`
           : "";
-        setError(`${payload.error || "AI Insights could not generate a report."}${suffix}`);
+        setError(
+          `${payload.error || "Smart Insights could not generate a report."}${suffix}`,
+        );
       } else {
         const normalized = normalizeAiInsightSnapshot(payload.snapshot);
         if (!normalized) {
-          setError("AI Insights returned an invalid report.");
+          setError("Smart Insights returned an invalid report.");
         } else {
           setSnapshot(normalized);
           showNotice(
             payload.cached
-              ? "Your current private AI report is already up to date."
-              : "Your private AI report is ready.",
+              ? "Your Smart Insight report is already up to date."
+              : "Your Smart Insight report is ready.",
           );
         }
       }
     } catch {
-      setError("AI Insights is temporarily unavailable.");
+      setError("Smart Insights is temporarily unavailable.");
     }
 
     setGenerating(false);
@@ -478,14 +438,14 @@ export function AiInsights({
         error?: string;
       };
       if (!response.ok) {
-        setError(payload.error || "AI insight history could not be cleared.");
+        setError(payload.error || "Smart Insight history could not be cleared.");
       } else {
         setSnapshot(null);
         setClearOpen(false);
-        showNotice("AI insight history was cleared.");
+        showNotice("Smart Insight history was cleared.");
       }
     } catch {
-      setError("AI insight history could not be cleared.");
+      setError("Smart Insight history could not be cleared.");
     }
 
     setClearing(false);
@@ -498,10 +458,11 @@ export function AiInsights({
       <header className={styles.pageHeader}>
         <div>
           <span className={styles.eyebrow}>WEALTH ENGINE</span>
-          <h1>AI insights</h1>
+          <h1>Smart insights</h1>
           <p>
-            Turn FICONTER&apos;s verified financial signals into a private,
-            prioritized action plan without creating parallel balances or scores.
+            Turn FICONTER&apos;s verified financial signals into a prioritized,
+            practical action plan without external AI requests or parallel
+            calculations.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -518,26 +479,29 @@ export function AiInsights({
             />
             Refresh data
           </button>
-          {enabled ? (
-            <button
-              className={styles.generateButton}
-              type="button"
-              onClick={() => void generateInsights()}
-              disabled={generating || !context.assessed || !aiConfigured}
-            >
-              <Sparkles size={17} aria-hidden="true" />
-              {generating ? "Generating…" : snapshot ? "Refresh insights" : "Generate insights"}
-            </button>
-          ) : null}
+          <button
+            className={styles.generateButton}
+            type="button"
+            onClick={() => void generateInsights()}
+            disabled={generating || !context.assessed}
+          >
+            <Sparkles size={17} aria-hidden="true" />
+            {generating
+              ? "Preparing…"
+              : snapshot
+                ? "Refresh insights"
+                : "Generate insights"}
+          </button>
         </div>
       </header>
 
       {notice ? (
         <div className={styles.notice} role="status">
-          <Check size={18} aria-hidden="true" />
+          <Check size={17} aria-hidden="true" />
           {notice}
         </div>
       ) : null}
+
       {error ? (
         <div className={styles.error} role="alert">
           <CircleAlert size={18} aria-hidden="true" />
@@ -545,7 +509,7 @@ export function AiInsights({
         </div>
       ) : null}
 
-      <section className={styles.metricGrid} aria-label="AI insight readiness">
+      <section className={styles.metricGrid} aria-label="Smart Insight status">
         <article>
           <DatabaseZap aria-hidden="true" />
           <span>Data readiness</span>
@@ -561,103 +525,47 @@ export function AiInsights({
           <small>Existing Wealth Engine modules only</small>
         </article>
         <article>
-          <LockKeyhole aria-hidden="true" />
+          <ShieldCheck aria-hidden="true" />
           <span>Analysis mode</span>
-          <strong>{enabled ? "On demand" : "Disabled"}</strong>
-          <small>No automatic AI requests</small>
+          <strong>Rules-based</strong>
+          <small>No external AI request</small>
         </article>
         <article>
           <Clock3 aria-hidden="true" />
           <span>Latest report</span>
-          <strong>{snapshot ? dateTimeLabel(snapshot.generatedAt) : "Not generated"}</strong>
-          <small>{stale ? "Financial data has changed" : snapshot ? "Current data fingerprint" : "Generate when ready"}</small>
+          <strong>{snapshot ? "Generated" : "Not generated"}</strong>
+          <small>
+            {stale
+              ? "Financial data has changed"
+              : snapshot
+                ? dateTimeLabel(snapshot.generatedAt)
+                : "Generate when ready"}
+          </small>
         </article>
       </section>
 
-      {!enabled ? (
-        <section className={styles.consentPanel}>
-          <div className={styles.consentIcon}>
-            <ShieldCheck size={28} aria-hidden="true" />
-          </div>
-          <div className={styles.consentBody}>
-            <span className={styles.eyebrow}>PRIVATE BY CHOICE</span>
-            <h2>Enable private AI analysis</h2>
-            <p>
-              FICONTER sends only summarized financial metrics and category-level
-              totals when you request a report. Names, email addresses, raw
-              transaction descriptions and vendor-level records are excluded.
-            </p>
-            <p className={styles.providerDisclosure}>
-              FICONTER requests that the AI provider does not store the generated
-              response. The provider may still temporarily retain API request data
-              for security and abuse monitoring unless zero-data-retention controls
-              are enabled for the API account.
-            </p>
-            <div className={styles.privacyGrid}>
-              <div>
-                <EyeOff size={18} aria-hidden="true" />
-                <strong>No raw ledger records</strong>
-                <span>Only verified aggregate metrics are prepared.</span>
-              </div>
-              <div>
-                <LockKeyhole size={18} aria-hidden="true" />
-                <strong>Server-only credentials</strong>
-                <span>The AI API key is never exposed to the browser.</span>
-              </div>
-              <div>
-                <DatabaseZap size={18} aria-hidden="true" />
-                <strong>No duplicate calculations</strong>
-                <span>AI explains existing FICONTER results; it does not recalculate them.</span>
-              </div>
-            </div>
-            <form className={styles.consentForm} onSubmit={enableInsights}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={consentChecked}
-                  onChange={(event) => setConsentChecked(event.target.checked)}
-                />
-                <span>
-                  I understand that summarized financial metrics will be sent to
-                  FICONTER&apos;s configured AI provider only when I generate a report,
-                  and may be handled temporarily under that provider&apos;s API data policy.
-                </span>
-              </label>
-              <button
-                className={styles.generateButton}
-                type="submit"
-                disabled={!consentChecked || savingConsent}
-              >
-                <ShieldCheck size={17} aria-hidden="true" />
-                {savingConsent ? "Enabling…" : "Enable AI insights"}
-              </button>
-            </form>
-          </div>
-        </section>
-      ) : null}
+      <section className={styles.configurationPanel}>
+        <ShieldCheck size={24} aria-hidden="true" />
+        <div>
+          <strong>Cost-free private analysis</strong>
+          <p>
+            Smart Insights is generated inside FICONTER from the same verified
+            scores, totals, and forecasts already used across the platform. No
+            financial information is sent to OpenAI or another external AI
+            provider.
+          </p>
+        </div>
+      </section>
 
-      {enabled && !aiConfigured ? (
-        <section className={styles.configurationPanel}>
-          <AlertTriangle size={24} aria-hidden="true" />
-          <div>
-            <strong>AI service configuration is required</strong>
-            <p>
-              The private insight workspace is ready, but the server-side AI key
-              has not been configured yet. No financial data has been sent.
-            </p>
-          </div>
-        </section>
-      ) : null}
-
-      {enabled && !context.assessed ? (
+      {!context.assessed ? (
         <section className={styles.emptyState}>
           <BrainCircuit size={42} aria-hidden="true" />
           <span className={styles.eyebrow}>NOT ENOUGH DATA</span>
-          <h2>AI insights are not assessed yet</h2>
+          <h2>Smart insights are not assessed yet</h2>
           <p>
             Add income and outflow records before FICONTER prepares a meaningful
-            private report. Empty accounts remain at 0% coverage and are never
-            given invented conclusions.
+            report. Empty accounts remain at 0% coverage and are never given
+            invented conclusions.
           </p>
           <Link href="/dashboard/transactions" prefetch={false}>
             Add financial activity
@@ -666,17 +574,20 @@ export function AiInsights({
         </section>
       ) : null}
 
-      {enabled && context.assessed && stale ? (
+      {context.assessed && stale ? (
         <div className={styles.staleNotice} role="status">
           <RefreshCw size={18} aria-hidden="true" />
           <div>
             <strong>Your financial data changed</strong>
-            <span>Generate an updated report to align the insights with the latest FICONTER figures.</span>
+            <span>
+              Generate an updated report to align the insights with the latest
+              FICONTER figures.
+            </span>
           </div>
         </div>
       ) : null}
 
-      {enabled && context.assessed && !report ? (
+      {context.assessed && !report ? (
         <section className={styles.readyState}>
           <div className={styles.readyIcon}>
             <Sparkles size={30} aria-hidden="true" />
@@ -684,35 +595,32 @@ export function AiInsights({
           <span className={styles.eyebrow}>PRIVATE INTELLIGENCE</span>
           <h2>Your verified financial signals are ready</h2>
           <p>
-            Generate a concise report with priorities, opportunities, watch items
-            and a practical 90-day action plan. FICONTER remains the source of truth
-            for every displayed metric.
+            Generate a concise report with priorities, opportunities, watch
+            items, and a practical 90-day action plan. FICONTER remains the
+            source of truth for every displayed metric.
           </p>
           <button
             className={styles.generateButton}
             type="button"
             onClick={() => void generateInsights()}
-            disabled={generating || !aiConfigured}
+            disabled={generating}
           >
             <Sparkles size={18} aria-hidden="true" />
-            {generating ? "Generating private report…" : "Generate private report"}
+            {generating ? "Preparing smart report…" : "Generate smart report"}
           </button>
         </section>
       ) : null}
 
-      {enabled && report ? (
+      {context.assessed && report ? (
         <>
-          <section
-            className={styles.hero}
-            data-tone={positionTone(report.position)}
-          >
+          <section className={styles.hero} data-tone={positionTone(report.position)}>
             <div className={styles.heroIcon}>
               <BrainCircuit size={27} aria-hidden="true" />
             </div>
             <div className={styles.heroBody}>
               <div className={styles.heroTop}>
                 <div>
-                  <span>PRIVATE AI REPORT</span>
+                  <span>SMART INSIGHT REPORT</span>
                   <h2>{report.headline}</h2>
                 </div>
                 <div className={styles.positionBadge}>
@@ -729,7 +637,7 @@ export function AiInsights({
                 </span>
                 <span>
                   <ShieldCheck size={15} aria-hidden="true" />
-                  On-demand private analysis
+                  On-demand FICONTER analysis
                 </span>
                 {stale ? <strong>Update available</strong> : <strong>Current</strong>}
               </div>
@@ -797,7 +705,10 @@ export function AiInsights({
                     ))}
                   </ul>
                 ) : (
-                  <p>No material limitation was identified beyond the displayed data coverage.</p>
+                  <p>
+                    No material limitation was identified beyond the displayed
+                    data coverage.
+                  </p>
                 )}
               </div>
             </div>
@@ -806,37 +717,29 @@ export function AiInsights({
         </>
       ) : null}
 
-      {enabled ? (
-        <section className={styles.privacyFooter}>
+      <section className={styles.privacyFooter}>
+        <div>
+          <ShieldCheck size={20} aria-hidden="true" />
           <div>
-            <ShieldCheck size={20} aria-hidden="true" />
-            <div>
-              <strong>AI privacy controls</strong>
-              <span>Disable future requests or remove every saved private report.</span>
-            </div>
+            <strong>Private Smart Insight controls</strong>
+            <span>
+              Reports stay in your FICONTER account and use no paid external AI
+              service.
+            </span>
           </div>
-          <div className={styles.footerActions}>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => void disableInsights()}
-              disabled={savingConsent}
-            >
-              <EyeOff size={16} aria-hidden="true" />
-              Disable AI
-            </button>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              onClick={() => setClearOpen(true)}
-              disabled={!snapshot}
-            >
-              <Trash2 size={16} aria-hidden="true" />
-              Clear report history
-            </button>
-          </div>
-        </section>
-      ) : null}
+        </div>
+        <div className={styles.footerActions}>
+          <button
+            type="button"
+            className={styles.dangerButton}
+            onClick={() => setClearOpen(true)}
+            disabled={!snapshot}
+          >
+            <Trash2 size={16} aria-hidden="true" />
+            Clear report history
+          </button>
+        </div>
+      </section>
 
       {clearOpen ? (
         <div className={styles.modalBackdrop} role="presentation">
@@ -844,7 +747,7 @@ export function AiInsights({
             className={styles.modal}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="clear-ai-title"
+            aria-labelledby="clear-smart-title"
             onSubmit={clearHistory}
           >
             <button
@@ -856,10 +759,11 @@ export function AiInsights({
               <X size={20} aria-hidden="true" />
             </button>
             <span className={styles.eyebrow}>PRIVATE DATA CONTROL</span>
-            <h2 id="clear-ai-title">Clear AI report history?</h2>
+            <h2 id="clear-smart-title">Clear Smart Insight history?</h2>
             <p>
-              This permanently removes all saved AI reports for your account. Your
-              transactions, balances, scores and other FICONTER records remain unchanged.
+              This permanently removes all saved Smart Insight reports for your
+              account. Transactions, balances, scores, and other FICONTER records
+              remain unchanged.
             </p>
             <div className={styles.modalActions}>
               <button

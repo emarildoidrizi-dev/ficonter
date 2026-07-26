@@ -56,7 +56,7 @@ const standardLinks = [
   ["/dashboard/goals", Target, "Goals"],
   ["/dashboard/net-worth", Landmark, "Net worth"],
   ["/dashboard/financial-independence", Flag, "Financial independence"],
-  ["/dashboard/insights", BrainCircuit, "AI insights"],
+  ["/dashboard/insights", BrainCircuit, "Smart insights"],
 ] as const;
 
 function fallbackDisplayName(user: SidebarUser): string {

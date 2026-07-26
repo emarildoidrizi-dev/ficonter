@@ -43,3 +43,19 @@
 .recordedHelp{margin:-4px 0 2px!important;color:#827c74!important;font-size:11px;line-height:1.5}
 :global(html[data-resolved-theme="dark"]) .recordedHelp{color:var(--text-secondary)!important}
 @media(max-width:700px){.recordedFields{grid-template-columns:1fr}}
+
+/* Shared 3/6/9/12-month goal-funding view */
+.summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.averageCard{display:grid;align-content:start;gap:8px;min-width:0}
+.averageCardHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.periodSelector{display:inline-flex;align-items:center;gap:3px;padding:3px;border:1px solid #e3dbcf;border-radius:10px;background:#f6f2ec}
+.periodSelector button{min-width:34px;height:29px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:#746f68;font-size:11px;font-weight:800;cursor:pointer}
+.periodSelector button:hover{color:#202427}
+.periodSelector .periodActive{background:#202427;color:#fff}
+.averageCard small{display:block;color:#827c74;font-size:11px;line-height:1.45}
+:global(html[data-resolved-theme="dark"]) .periodSelector{background:var(--surface-subtle)!important;border-color:var(--border-subtle)!important}
+:global(html[data-resolved-theme="dark"]) .periodSelector button{color:var(--text-secondary)!important}
+:global(html[data-resolved-theme="dark"]) .periodSelector .periodActive{background:var(--text-primary)!important;color:var(--surface-card)!important}
+:global(html[data-resolved-theme="dark"]) .averageCard small{color:var(--text-secondary)!important}
+@media(max-width:1180px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.summary{grid-template-columns:1fr}.averageCardHeader{align-items:flex-start;flex-direction:column}.periodSelector{width:100%;display:grid;grid-template-columns:repeat(4,1fr)}.periodSelector button{width:100%}}

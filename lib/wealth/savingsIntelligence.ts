@@ -6,6 +6,12 @@ import {
   type CashFlowMonth,
 } from "@/lib/wealth/cashFlowIntelligence";
 
+import {
+  AVERAGE_PERIODS,
+  averageMonthlyFromSeries,
+  type AveragePeriod,
+} from "./averagePeriods";
+
 export type SavingsCategoryInput = {
   category: string;
   amount: number;
@@ -69,8 +75,8 @@ export type SavingsMonthHighlight = {
   amount: number;
 };
 
-export const SAVINGS_AVERAGE_PERIODS = [3, 6, 9, 12] as const;
-export type SavingsAveragePeriod = (typeof SAVINGS_AVERAGE_PERIODS)[number];
+export const SAVINGS_AVERAGE_PERIODS = AVERAGE_PERIODS;
+export type SavingsAveragePeriod = AveragePeriod;
 export type SavingsAverageByPeriod = Record<SavingsAveragePeriod, number>;
 
 export type SavingsIntelligenceResult = {
@@ -186,19 +192,6 @@ function round(value: number, digits = 1): number {
 function average(values: number[]): number {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function calendarMonthAverage(
-  months: CashFlowMonth[],
-  period: SavingsAveragePeriod,
-): number {
-  const total = months
-    .slice(-period)
-    .reduce((sum, month) => sum + Math.max(0, month.savings), 0);
-
-  // Divide by the full calendar period. Missing months and months without
-  // saving contributions therefore count as zero instead of inflating pace.
-  return total / period;
 }
 
 function activeMonth(month: CashFlowMonth): boolean {
@@ -346,10 +339,10 @@ export function calculateSavingsIntelligence(
   const savingsRate =
     health.metrics.totalIncome > 0 ? totalSaved / health.metrics.totalIncome : 0;
   const averageMonthlySavingsByPeriod: SavingsAverageByPeriod = {
-    3: calendarMonthAverage(months, 3),
-    6: calendarMonthAverage(months, 6),
-    9: calendarMonthAverage(months, 9),
-    12: calendarMonthAverage(months, 12),
+    3: averageMonthlyFromSeries(months, 3, (month) => month.savings),
+    6: averageMonthlyFromSeries(months, 6, (month) => month.savings),
+    9: averageMonthlyFromSeries(months, 9, (month) => month.savings),
+    12: averageMonthlyFromSeries(months, 12, (month) => month.savings),
   };
   const averageMonthlySavings3Months = averageMonthlySavingsByPeriod[3];
   const averageMonthlySavings6Months = averageMonthlySavingsByPeriod[6];

@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import {
+  AVERAGE_PERIODS,
+  summarizeDatedAmounts,
+  type AveragePeriod,
+} from "@/lib/wealth/averagePeriods";
 import styles from "./GoalsManager.module.css";
 
 type GoalStatus = "active" | "completed" | "paused";
@@ -84,6 +89,7 @@ export function GoalsManager({
   const [historyGoal, setHistoryGoal] = useState<Goal | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(initialError);
+  const [averagePeriod, setAveragePeriod] = useState<AveragePeriod>(6);
 
   useEffect(() => {
     if (!notice) return;
@@ -352,6 +358,17 @@ export function GoalsManager({
     0,
   );
 
+  const goalFundingPeriod = useMemo(
+    () =>
+      summarizeDatedAmounts(
+        investments,
+        averagePeriod,
+        (investment) => investment.invested_at,
+        (investment) => Number(investment.amount),
+      ),
+    [averagePeriod, investments],
+  );
+
   const investmentHistory = historyGoal
     ? investments.filter((item) => item.goal_id === historyGoal.id)
     : [];
@@ -396,6 +413,33 @@ export function GoalsManager({
               ? `${Math.min(100, (totalSaved / totalTarget) * 100).toFixed(1)}%`
               : "0%"}
           </strong>
+        </article>
+        <article className={styles.averageCard}>
+          <div className={styles.averageCardHeader}>
+            <span>Average monthly goal funding</span>
+            <div
+              className={styles.periodSelector}
+              role="group"
+              aria-label="Goal funding average period"
+            >
+              {AVERAGE_PERIODS.map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  className={averagePeriod === period ? styles.periodActive : ""}
+                  aria-pressed={averagePeriod === period}
+                  onClick={() => setAveragePeriod(period)}
+                >
+                  {period}M
+                </button>
+              ))}
+            </div>
+          </div>
+          <strong>{money(goalFundingPeriod.average)}</strong>
+          <small>
+            {money(goalFundingPeriod.total)} invested across the last {averagePeriod}
+            {" "}calendar months. Months without contributions count as €0.
+          </small>
         </article>
       </div>
 

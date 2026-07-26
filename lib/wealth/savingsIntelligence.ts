@@ -21,13 +21,21 @@ export type SavingsContribution = {
   occurredAt: string;
 };
 
+export type SavingsMonthInput = {
+  month: string;
+  contributionCount: number;
+  savings: number;
+};
+
 export type SavingsIntelligenceInputs = {
   schemaVersion: number;
   generatedAt: string;
   cashFlow: CashFlowIntelligenceInputs;
+  monthlySavings: SavingsMonthInput[];
   categories: SavingsCategoryInput[];
   recentSavings: SavingsContribution[];
   stats: {
+    totalAmount: number;
     contributionCount: number;
     firstContributionAt: string | null;
     lastContributionAt: string | null;
@@ -97,7 +105,6 @@ export type SavingsIntelligenceResult = {
     recentTrendChange: number;
     recentTrendPercent: number | null;
     surplusBeforeSavings: number;
-    emergencyFundShare: number;
     goalSavingsShare: number;
     categoryCount: number;
   };
@@ -113,9 +120,11 @@ const EMPTY_INPUTS: SavingsIntelligenceInputs = {
   schemaVersion: 1,
   generatedAt: new Date(0).toISOString(),
   cashFlow: normalizeCashFlowIntelligenceInputs(null),
+  monthlySavings: [],
   categories: [],
   recentSavings: [],
   stats: {
+    totalAmount: 0,
     contributionCount: 0,
     firstContributionAt: null,
     lastContributionAt: null,
@@ -147,6 +156,22 @@ function text(value: unknown, fallback = ""): string {
 
 function nullableText(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
+}
+
+function isEmergencyFundCategory(value: string): boolean {
+  return value.trim().toLowerCase() === "emergency fund";
+}
+
+function normalizeMonth(value: unknown): SavingsMonthInput | null {
+  const row = object(value);
+  const month = text(row.month);
+  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+
+  return {
+    month,
+    contributionCount: integer(row.contributionCount),
+    savings: Math.max(0, finite(row.savings)),
+  };
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -219,11 +244,20 @@ export function normalizeSavingsIntelligenceInputs(
     schemaVersion: integer(root.schemaVersion) || 1,
     generatedAt: text(root.generatedAt, new Date().toISOString()),
     cashFlow: normalizeCashFlowIntelligenceInputs(root.cashFlow),
-    categories: array(root.categories).map(normalizeCategory),
+    monthlySavings: array(root.monthlySavings)
+      .map(normalizeMonth)
+      .filter((item): item is SavingsMonthInput => Boolean(item)),
+    categories: array(root.categories)
+      .map(normalizeCategory)
+      .filter((category) => !isEmergencyFundCategory(category.category)),
     recentSavings: array(root.recentSavings)
       .map(normalizeContribution)
-      .filter((item): item is SavingsContribution => Boolean(item)),
+      .filter(
+        (item): item is SavingsContribution =>
+          Boolean(item) && !isEmergencyFundCategory(item?.category ?? ""),
+      ),
     stats: {
+      totalAmount: Math.max(0, finite(stats.totalAmount)),
       contributionCount: integer(stats.contributionCount),
       firstContributionAt: nullableText(stats.firstContributionAt),
       lastContributionAt: nullableText(stats.lastContributionAt),
@@ -271,7 +305,29 @@ export function calculateSavingsIntelligence(
   const data = normalizeSavingsIntelligenceInputs(input);
   const cashFlow = calculateCashFlowIntelligence(data.cashFlow);
   const health = cashFlow.health;
-  const months = data.cashFlow.monthly.slice(-12);
+  const cashFlowMonths = new Map(
+    data.cashFlow.monthly.slice(-12).map((month) => [month.month, month]),
+  );
+  const months: CashFlowMonth[] = data.monthlySavings.slice(-12).map((month) => {
+    const base = cashFlowMonths.get(month.month) ?? {
+      month: month.month,
+      transactionCount: 0,
+      income: 0,
+      expenses: 0,
+      savings: 0,
+      outflow: 0,
+      netCashFlow: 0,
+    };
+    const savings = Math.max(0, month.savings);
+
+    return {
+      ...base,
+      transactionCount: Math.max(base.transactionCount, month.contributionCount),
+      savings,
+      outflow: base.expenses + savings,
+      netCashFlow: base.income - base.expenses - savings,
+    };
+  });
   const currentMonth = months.at(-1) ?? {
     month: "",
     transactionCount: 0,
@@ -286,8 +342,9 @@ export function calculateSavingsIntelligence(
   const recentThree = months.slice(-3);
   const priorThree = months.slice(-6, -3);
 
-  const totalSaved = health.metrics.totalSavings;
-  const savingsRate = health.metrics.savingsRate;
+  const totalSaved = data.stats.totalAmount;
+  const savingsRate =
+    health.metrics.totalIncome > 0 ? totalSaved / health.metrics.totalIncome : 0;
   const averageMonthlySavingsByPeriod: SavingsAverageByPeriod = {
     3: calendarMonthAverage(months, 3),
     6: calendarMonthAverage(months, 6),
@@ -360,13 +417,9 @@ export function calculateSavingsIntelligence(
     }))
     .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category));
 
-  const emergencyFundAmount = categories
-    .filter((category) => category.category.toLowerCase() === "emergency fund")
-    .reduce((sum, category) => sum + category.amount, 0);
   const goalSavingsAmount = categories
     .filter((category) => category.category.toLowerCase() === "goal investments")
     .reduce((sum, category) => sum + category.amount, 0);
-  const emergencyFundShare = totalSaved > 0 ? emergencyFundAmount / totalSaved : 0;
   const goalSavingsShare = totalSaved > 0 ? goalSavingsAmount / totalSaved : 0;
 
   const highlightedMonths = activeMonths.length ? activeMonths : months;
@@ -462,21 +515,6 @@ export function calculateSavingsIntelligence(
     });
   }
 
-  if (
-    health.metrics.emergencyFundCoverageMonths < 3 &&
-    emergencyFundShare < 0.35 &&
-    totalSaved > 0
-  ) {
-    insights.push({
-      id: "reserve-priority",
-      tone: "info",
-      title: "Emergency protection remains a priority",
-      detail: `${round(
-        emergencyFundShare * 100,
-      )}% of recorded savings is assigned to Emergency fund while coverage is below three months.`,
-      action: "Direct part of the next saving contribution to the Emergency fund category.",
-    });
-  }
 
   const topCategory = categories[0];
   if (topCategory && topCategory.share >= 0.75 && categories.length > 1) {
@@ -568,7 +606,6 @@ export function calculateSavingsIntelligence(
       recentTrendChange,
       recentTrendPercent,
       surplusBeforeSavings,
-      emergencyFundShare,
       goalSavingsShare,
       categoryCount: categories.length,
     },

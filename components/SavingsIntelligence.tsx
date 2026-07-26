@@ -194,9 +194,10 @@ export function SavingsIntelligence({
           <span className={styles.eyebrow}>Wealth Engine</span>
           <h1>Savings intelligence</h1>
           <p>
-            Understand saving pace, consistency, allocation and future momentum
-            using the same General Saving transactions, cash-flow totals and
-            Financial Health inputs already used across FICONTER.
+            Understand non-emergency saving pace, consistency, allocation and
+            future momentum using the same transactions, cash-flow totals and
+            Financial Health inputs already used across FICONTER. Emergency Fund
+            contributions remain in their dedicated module.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -227,13 +228,13 @@ export function SavingsIntelligence({
           <PiggyBank aria-hidden="true" />
           <span>Total recorded savings</span>
           <strong>{formatCurrency(result.metrics.totalSaved, "EUR")}</strong>
-          <small>Same saving total used by Overview and Financial Health</small>
+          <small>Emergency Fund contributions are tracked separately</small>
         </article>
         <article>
           <Target aria-hidden="true" />
           <span>Savings rate</span>
           <strong>{(result.metrics.savingsRate * 100).toFixed(1)}%</strong>
-          <small>Recorded savings divided by recorded income</small>
+          <small>Non-emergency savings divided by recorded income</small>
         </article>
         <article className={styles.periodMetric}>
           <div className={styles.periodHeader}>
@@ -394,8 +395,9 @@ export function SavingsIntelligence({
               <span>Savings allocation</span>
               <h2>Where savings are going</h2>
               <p>
-                Categories are derived from the existing saving transactions.
-                Goal investments remain linked to their original transactions.
+                Categories are derived from existing non-emergency saving
+                transactions. Goal investments remain linked to their original
+                transactions; Emergency Fund stays in its dedicated module.
               </p>
             </div>
           </header>
@@ -431,7 +433,7 @@ export function SavingsIntelligence({
             <div className={styles.emptyState}>
               <Layers3 size={24} aria-hidden="true" />
               <strong>No savings allocation yet</strong>
-              <span>Categories appear after General Saving transactions are recorded.</span>
+              <span>Categories appear after non-emergency saving transactions are recorded.</span>
             </div>
           )}
         </article>
@@ -523,7 +525,7 @@ export function SavingsIntelligence({
             <div className={styles.emptyState}>
               <PiggyBank size={24} aria-hidden="true" />
               <strong>No saving contributions recorded</strong>
-              <span>Use General Saving in Transactions to start the history.</span>
+              <span>Use a non-emergency General Saving transaction to start the history.</span>
             </div>
           )}
         </article>
@@ -564,9 +566,9 @@ export function SavingsIntelligence({
           <span>Next best action</span>
           <strong>{result.nextBestAction}</strong>
           <p>
-            Forecasts are estimates based on recorded history. Total savings,
-            savings rate and cash-flow values continue to come from the existing
-            shared Financial Health and Cash Flow engines.
+            Forecasts are estimates based on recorded history. Savings
+            Intelligence excludes Emergency Fund contributions while continuing
+            to reuse the existing shared Financial Health and Cash Flow engines.
           </p>
         </div>
       </article>

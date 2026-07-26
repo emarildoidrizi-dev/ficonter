@@ -69,8 +69,13 @@ export function SupportConversations({
       });
       const data = (await response.json().catch(() => null)) as { threads?: SupportThread[]; error?: string } | null;
       if (!response.ok || !data?.threads) throw new Error(data?.error ?? "Your inbox could not be refreshed.");
-      setThreads(data.threads);
-      setSelectedId((current) => current && data.threads?.some((thread) => thread.id === current) ? current : data.threads?.[0]?.id ?? null);
+      const refreshedThreads = data.threads;
+      setThreads(refreshedThreads);
+      setSelectedId((current) =>
+        current && refreshedThreads.some((thread) => thread.id === current)
+          ? current
+          : refreshedThreads[0]?.id ?? null,
+      );
     } catch (refreshError) {
       if (!quiet) setError(refreshError instanceof Error ? refreshError.message : "Your inbox could not be refreshed.");
     } finally {

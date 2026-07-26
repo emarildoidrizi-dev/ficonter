@@ -39,7 +39,7 @@ function formatDateTime(value: string): string {
 export function SupportInbox({ initialRequests }: { initialRequests: AdminSupportRequest[] }) {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const [requests, setRequests] = useState(initialRequests);
-  const [selectedId, setSelectedId] = useState(initialRequests[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialRequests[0]?.id ?? null);
   const [filter, setFilter] = useState<"all" | SupportStatus>("all");
   const [query, setQuery] = useState("");
   const [reply, setReply] = useState("");
@@ -73,8 +73,13 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
       const response = await fetch("/api/admin/support", { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
       const data = (await response.json().catch(() => null)) as { requests?: AdminSupportRequest[]; error?: string } | null;
       if (!response.ok || !data?.requests) throw new Error(data?.error ?? "The support inbox could not be refreshed.");
-      setRequests(data.requests);
-      setSelectedId((current) => current && data.requests?.some((item) => item.id === current) ? current : data.requests?.[0]?.id ?? null);
+      const refreshedRequests: AdminSupportRequest[] = data.requests;
+      setRequests(refreshedRequests);
+      setSelectedId((current) =>
+        current !== null && refreshedRequests.some((item) => item.id === current)
+          ? current
+          : refreshedRequests[0]?.id ?? null,
+      );
     } catch (refreshError) {
       if (!quiet) setError(refreshError instanceof Error ? refreshError.message : "The support inbox could not be refreshed.");
     } finally {
@@ -109,7 +114,8 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
       });
       const data = (await response.json().catch(() => null)) as { request?: AdminSupportRequest; error?: string } | null;
       if (!response.ok || !data?.request) throw new Error(data?.error ?? "The support request could not be updated.");
-      setRequests((current) => current.map((item) => item.id === data.request?.id ? data.request : item));
+      const updatedRequest: AdminSupportRequest = data.request;
+      setRequests((current) => current.map((item) => item.id === updatedRequest.id ? updatedRequest : item));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "The support request could not be updated.");
     } finally {
@@ -131,7 +137,8 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
       });
       const data = (await response.json().catch(() => null)) as { request?: AdminSupportRequest; error?: string } | null;
       if (!response.ok || !data?.request) throw new Error(data?.error ?? "The reply could not be sent.");
-      setRequests((current) => current.map((item) => item.id === data.request?.id ? data.request : item));
+      const updatedRequest: AdminSupportRequest = data.request;
+      setRequests((current) => current.map((item) => item.id === updatedRequest.id ? updatedRequest : item));
       setReply("");
       setInternalNote(false);
     } catch (sendError) {

@@ -46,7 +46,7 @@ export function SupportConversations({
   const supabase = useMemo(() => createClient(), []);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const [threads, setThreads] = useState(initialThreads);
-  const [selectedId, setSelectedId] = useState(
+  const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId && initialThreads.some((item) => item.id === initialSelectedId)
       ? initialSelectedId
       : initialThreads[0]?.id ?? null,

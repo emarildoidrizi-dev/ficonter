@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Activity,
   ArrowLeftRight,
   ChartPie,
   ChevronUp,
@@ -42,6 +43,7 @@ type ProfileUpdatedDetail = {
 const standardLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
   ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
+  ["/dashboard/cash-flow", Activity, "Cash flow"],
   ["/dashboard/budget", ChartPie, "Monthly planner"],
   ["/dashboard/bills", ReceiptText, "Bills"],
   ["/dashboard/debt", CreditCard, "Debt"],

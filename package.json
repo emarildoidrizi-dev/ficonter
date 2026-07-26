@@ -9,8 +9,9 @@
     "lint": "eslint .",
     "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs",
     "verify:phase2-health": "node scripts/verify-phase2-financial-health.mjs",
-    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth",
-    "verify:phase2-wealth": "node scripts/verify-phase2-wealth-score.mjs"
+    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-cash-flow",
+    "verify:phase2-wealth": "node scripts/verify-phase2-wealth-score.mjs",
+    "verify:phase2-cash-flow": "node scripts/verify-phase2-cash-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

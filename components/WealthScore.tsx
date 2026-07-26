@@ -80,7 +80,7 @@ export function WealthScore({
 
         <div className={styles.copy}>
           <div className={styles.eyebrowRow}>
-            <span className={styles.eyebrow}>Wealth Engine · Wealth score</span>
+            <span className={styles.eyebrow}>Wealth Score</span>
             <span className={styles.version}>v{result.version}</span>
           </div>
           <div className={styles.statusRow} data-status={statusSlug}>

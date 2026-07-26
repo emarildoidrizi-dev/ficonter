@@ -7,10 +7,12 @@ import {
   ArrowLeftRight,
   ChartPie,
   ChevronUp,
+  CircleHelp,
   CreditCard,
   Flag,
   Landmark,
   LayoutDashboard,
+  MessageSquareText,
   LogOut,
   PiggyBank,
   ReceiptText,
@@ -29,7 +31,9 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { OPEN_CONTACT_EVENT } from "@/lib/support";
 import { Brand } from "./Brand";
+import { ContactSupportModal } from "./ContactSupportModal";
 import styles from "./SidebarNavigation.module.css";
 
 type SidebarUser = {
@@ -80,6 +84,7 @@ export function Sidebar({
   const accountRef = useRef<HTMLDivElement>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [displayName, setDisplayName] = useState(() => fallbackDisplayName(user));
   const [avatarPath, setAvatarPath] = useState(user.avatarPath);
@@ -91,6 +96,11 @@ export function Sidebar({
         ? [
             ...standardLinks,
             ["/dashboard/admin", ShieldCheck, "Admin"] as const,
+            [
+              "/dashboard/admin/support",
+              MessageSquareText,
+              "Support inbox",
+            ] as const,
           ]
         : standardLinks,
     [isAdmin],
@@ -100,7 +110,9 @@ export function Sidebar({
     .trim()
     .slice(0, 1)
     .toUpperCase();
-  const settingsActive = pathname.startsWith("/dashboard/settings");
+  const accountAreaActive =
+    pathname.startsWith("/dashboard/settings") ||
+    pathname.startsWith("/dashboard/help");
 
   useEffect(() => {
     setPendingHref(null);
@@ -162,6 +174,16 @@ export function Sidebar({
   }, []);
 
   useEffect(() => {
+    function openContactUs() {
+      setMenuOpen(false);
+      setContactOpen(true);
+    }
+
+    window.addEventListener(OPEN_CONTACT_EVENT, openContactUs);
+    return () => window.removeEventListener(OPEN_CONTACT_EVENT, openContactUs);
+  }, []);
+
+  useEffect(() => {
     if (!menuOpen) return;
 
     function handlePointerDown(event: PointerEvent) {
@@ -216,7 +238,9 @@ export function Sidebar({
       >
         {links.map(([href, Icon, label]) => {
           const active =
-            href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+            href === "/dashboard" || href === "/dashboard/admin"
+              ? pathname === href
+              : pathname.startsWith(href);
           const pending = pendingHref === href;
 
           return (
@@ -261,6 +285,25 @@ export function Sidebar({
               <Settings size={17} aria-hidden="true" />
               <span>Settings</span>
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => openRoute("/dashboard/help")}
+            >
+              <CircleHelp size={17} aria-hidden="true" />
+              <span>Help</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setContactOpen(true);
+              }}
+            >
+              <MessageSquareText size={17} aria-hidden="true" />
+              <span>Contact Us</span>
+            </button>
             <div className={styles.accountMenuDivider} />
             <button
               type="button"
@@ -278,7 +321,7 @@ export function Sidebar({
         <button
           type="button"
           className={`${styles.accountButton}${
-            settingsActive ? ` ${styles.accountButtonActive}` : ""
+            accountAreaActive ? ` ${styles.accountButtonActive}` : ""
           }`}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
@@ -309,6 +352,12 @@ export function Sidebar({
       >
         <span />
       </div>
+
+      <ContactSupportModal
+        open={contactOpen}
+        defaultEmail={user.email}
+        onClose={() => setContactOpen(false)}
+      />
     </aside>
   );
 }

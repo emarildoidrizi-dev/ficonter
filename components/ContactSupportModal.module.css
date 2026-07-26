@@ -1,0 +1,418 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(9, 12, 14, 0.68);
+  backdrop-filter: blur(12px);
+  animation: backdropIn 160ms ease-out;
+}
+
+.dialog {
+  width: min(760px, 100%);
+  max-height: min(900px, calc(100vh - 48px));
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 28px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.34);
+  animation: dialogIn 180ms ease-out;
+}
+
+.header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 40px;
+  gap: 16px;
+  align-items: start;
+  padding: 28px 28px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 42%),
+    var(--surface-card);
+}
+
+.headerIcon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--gold) 36%, var(--border-subtle));
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface-card));
+  color: var(--gold);
+}
+
+.header span,
+.successState > span:not(.successIcon) {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 5px 0 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.header p {
+  max-width: 590px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.closeButton:hover:not(:disabled),
+.closeButton:focus-visible {
+  border-color: var(--gold);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.closeButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.form {
+  display: grid;
+  gap: 19px;
+  padding: 26px 28px 28px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.form label {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  background: var(--control-bg);
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.form input,
+.form select {
+  min-height: 48px;
+  padding: 0 13px;
+}
+
+.form textarea {
+  min-height: 150px;
+  resize: vertical;
+  padding: 13px 14px 28px;
+  line-height: 1.6;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.form input::placeholder,
+.form textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.inputWithIcon {
+  position: relative;
+}
+
+.inputWithIcon svg {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  z-index: 1;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.inputWithIcon input {
+  padding-left: 39px;
+}
+
+.counter {
+  position: absolute;
+  right: 11px;
+  bottom: 9px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.error {
+  border: 1px solid color-mix(in srgb, var(--burgundy) 42%, var(--border-subtle));
+  border-radius: 13px;
+  padding: 12px 14px;
+  background: var(--danger-soft);
+  color: var(--burgundy);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.privacyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  padding: 13px 14px;
+  background: var(--surface-subtle);
+  color: var(--gold);
+}
+
+.privacyNote svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.privacyNote p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 13px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 1px solid var(--text-primary);
+  background: var(--text-primary);
+  color: var(--surface-card);
+}
+
+.secondaryButton {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--surface-hover);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.successState {
+  display: grid;
+  justify-items: center;
+  padding: 46px 32px 38px;
+  text-align: center;
+}
+
+.successIcon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border: 1px solid color-mix(in srgb, var(--sage) 45%, var(--border-subtle));
+  border-radius: 21px;
+  background: color-mix(in srgb, var(--sage) 12%, var(--surface-card));
+  color: var(--sage);
+}
+
+.successState h3 {
+  margin: 10px 0 10px;
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 39px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.successState p {
+  max-width: 550px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.successState p strong {
+  color: var(--text-primary);
+}
+
+.referenceCard {
+  display: grid;
+  gap: 5px;
+  min-width: 220px;
+  margin: 24px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  padding: 13px 18px;
+  background: var(--surface-subtle);
+}
+
+.referenceCard small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.referenceCard strong {
+  color: var(--text-primary);
+  font-size: 16px;
+  letter-spacing: 0.05em;
+}
+
+.spinning {
+  animation: spin 850ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+@media (max-width: 680px) {
+  .backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 25px 25px 0 0;
+  }
+
+  .header {
+    grid-template-columns: 44px minmax(0, 1fr) 38px;
+    gap: 12px;
+    padding: 21px 18px 18px;
+  }
+
+  .headerIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .header h2 {
+    font-size: 30px;
+  }
+
+  .form {
+    padding: 20px 18px 24px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+
+  .successState {
+    padding: 38px 22px 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .spinning {
+    animation: none;
+  }
+
+  .primaryButton:hover:not(:disabled),
+  .secondaryButton:hover:not(:disabled) {
+    transform: none;
+  }
+}

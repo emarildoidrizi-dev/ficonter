@@ -7,6 +7,7 @@ import {
   Clock3,
   Edit3,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
   X,
@@ -102,27 +103,18 @@ async function convertToEur(amount: number, currency: string) {
   if (currency === "EUR") return { rate: 1, eur: amount };
 
   const response = await fetch(
-    `/api/exchange-rate?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(
-      currency,
-    )}&to=EUR`,
+    `https://api.frankfurter.app/latest?amount=${encodeURIComponent(amount)}&from=${currency}&to=EUR`,
     { cache: "no-store" },
   );
-  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(
-      data?.error || `Live EUR conversion is unavailable for ${currency}.`,
-    );
+    throw new Error(`Live EUR conversion is unavailable for ${currency}.`);
   }
 
-  const rate = Number(data?.rate);
-  const eur = Number(data?.convertedAmount ?? amount * rate);
-
-  if (!Number.isFinite(eur) || !Number.isFinite(rate) || rate <= 0) {
-    throw new Error("The exchange rate could not be calculated.");
-  }
-
-  return { rate, eur };
+  const data = await response.json();
+  const eur = Number(data?.rates?.EUR);
+  if (!Number.isFinite(eur)) throw new Error("The exchange rate could not be calculated.");
+  return { rate: eur / amount, eur };
 }
 
 export function BillsManager({
@@ -299,6 +291,7 @@ export function BillsManager({
         autopay: form.autopay,
         reminder_days: Number(form.reminder_days),
         notes: form.notes.trim() || null,
+        status: "pending" as BillStatus,
         updated_at: new Date().toISOString(),
       };
 
@@ -317,7 +310,7 @@ export function BillsManager({
       } else {
         const { data, error } = await supabase
           .from("bills")
-          .insert({ ...payload, status: "pending" as BillStatus })
+          .insert(payload)
           .select()
           .single();
         if (error) throw error;
@@ -339,43 +332,101 @@ export function BillsManager({
   }
 
   async function markPaid(bill: Bill) {
-    if (busy || bill.status === "paid") return;
-
-    setBusy(`paid-${bill.id}`);
+    if (busy || bill.status === "paid" || bill.transaction_id) return;
+    setBusy(bill.id);
     setMessage("");
 
     try {
       const paidAt = new Date().toISOString();
-      const paidDate = paidAt.slice(0, 10);
 
-      const { data, error } = await supabase.rpc("mark_bill_paid", {
-        p_bill_id: bill.id,
-        p_paid_at: paidAt,
-        p_transaction_date: paidDate,
-      });
+      const { data: transaction, error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          description: bill.company ? `${bill.name} · ${bill.company}` : bill.name,
+          amount: Number(bill.amount),
+          currency: bill.currency,
+          amount_eur: Number(bill.amount_eur),
+          exchange_rate_to_eur: Number(bill.exchange_rate_to_eur),
+          exchange_rate_date: new Date().toISOString().slice(0, 10),
+          exchange_rate_source: "Bill conversion",
+          type: "expense",
+          category: bill.category,
+          transaction_date: new Date().toISOString().slice(0, 10),
+          occurred_at: paidAt,
+        })
+        .select("id")
+        .single();
+
+      if (transactionError) throw transactionError;
+
+      const { data: updated, error } = await supabase
+        .from("bills")
+        .update({
+          status: "paid",
+          paid_at: paidAt,
+          transaction_id: transaction.id,
+          updated_at: paidAt,
+        })
+        .eq("id", bill.id)
+        .eq("user_id", userId)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      const result = data as { bill?: Bill } | null;
-      const updatedBill = result?.bill;
-
-      if (!updatedBill) {
-        throw new Error("The paid bill could not be returned by the database.");
-      }
-
       setBills((current) =>
-        current.map((item) =>
-          item.id === updatedBill.id ? updatedBill : item,
-        ),
+        current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
 
       setMessage("Bill marked paid and added to Transactions.");
       notifyFiconterDataChange("all");
     } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The bill could not be marked paid.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function markUnpaid(bill: Bill) {
+    if (busy || bill.status !== "paid") return;
+
+    const busyKey = `unpaid-${bill.id}`;
+    setBusy(busyKey);
+    setMessage("");
+
+    try {
+      const { data, error } = await supabase.rpc("mark_bill_unpaid", {
+        p_bill_id: bill.id,
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        bill?: Bill;
+        deleted_transaction_count?: number;
+      } | null;
+      const updatedBill = result?.bill;
+
+      if (!updatedBill?.id) {
+        throw new Error("The bill was updated, but its new state could not be loaded.");
+      }
+
+      setBills((current) =>
+        current.map((item) => (item.id === bill.id ? updatedBill : item)),
+      );
+
+      notifyFiconterDataChange("all");
+      setMessage(
+        Number(result?.deleted_transaction_count ?? 0) > 0
+          ? "Bill marked unpaid and its linked transaction removed everywhere."
+          : "Bill marked unpaid everywhere.",
+      );
+    } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "The bill could not be marked paid.",
+          : "The bill could not be marked unpaid.",
       );
     } finally {
       setBusy(null);
@@ -395,12 +446,27 @@ export function BillsManager({
     setMessage("");
 
     try {
-      const { error } = await supabase.rpc("delete_bill_with_transaction", {
-        p_bill_id: bill.id,
-      });
+      // A paid bill may have created a linked transaction. Delete that first so
+      // Transactions, Overview and every subscribed tab update immediately.
+      if (bill.transaction_id) {
+        const { error: transactionError } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", bill.transaction_id)
+          .eq("user_id", userId);
 
-      if (error) throw error;
+        if (transactionError) throw transactionError;
+      }
 
+      const { error: billError } = await supabase
+        .from("bills")
+        .delete()
+        .eq("id", bill.id)
+        .eq("user_id", userId);
+
+      if (billError) throw billError;
+
+      // Update this page immediately; Realtime handles other tabs and sections.
       setBills((current) => current.filter((item) => item.id !== bill.id));
       setBillPendingDeletion(null);
       notifyFiconterDataChange("all");
@@ -432,7 +498,7 @@ export function BillsManager({
       <div className={styles.actionRow}>
         <div>
           <h2>All bills</h2>
-          <p>Marking a bill paid records it once in Transactions without duplicating the bill.</p>
+          <p>Paid and unpaid status changes stay synchronized with Transactions and all live financial totals.</p>
         </div>
         <button className={styles.primaryButton} onClick={() => setShowForm((value) => !value)}>
           {showForm ? <X size={18} /> : <Plus size={18} />}
@@ -506,7 +572,24 @@ export function BillsManager({
               </div>
               <div className={styles.cardActions}>
                 {status !== "paid" && status !== "cancelled" && (
-                  <button className={styles.paidButton} onClick={()=>markPaid(bill)} disabled={busy === `paid-${bill.id}`}><Check size={16}/>{busy === `paid-${bill.id}` ? "Marking…" : "Mark paid"}</button>
+                  <button
+                    className={styles.paidButton}
+                    onClick={() => markPaid(bill)}
+                    disabled={Boolean(busy)}
+                  >
+                    <Check size={16} />
+                    {busy === bill.id ? "Updating…" : "Mark paid"}
+                  </button>
+                )}
+                {status === "paid" && (
+                  <button
+                    className={`${styles.paidButton} ${styles.unpaidButton}`}
+                    onClick={() => markUnpaid(bill)}
+                    disabled={Boolean(busy)}
+                  >
+                    <RotateCcw size={16} />
+                    {busy === `unpaid-${bill.id}` ? "Updating…" : "Mark unpaid"}
+                  </button>
                 )}
                 <button className={styles.iconButton} onClick={()=>editBill(bill)} aria-label="Edit bill"><Edit3 size={17}/></button>
                 <button className={`${styles.iconButton} ${styles.deleteButton}`} onClick={()=>requestBillDeletion(bill)} aria-label="Delete bill"><Trash2 size={17}/></button>
@@ -580,7 +663,6 @@ export function BillsManager({
               <button
                 type="button"
                 className={styles.modalDelete}
-                data-enter-confirm="true"
                 onClick={confirmBillDeletion}
                 disabled={Boolean(busy)}
               >

@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
-  Clock3,
   Coins,
   History,
   Pencil,
@@ -25,7 +24,6 @@ type Goal = {
   target_amount: number | string;
   current_amount: number | string;
   target_date: string | null;
-  target_time: string | null;
   status: GoalStatus;
   created_at: string;
   updated_at: string;
@@ -48,20 +46,21 @@ const money = (value: number | string) =>
     currency: "EUR",
   }).format(Number(value) || 0);
 
-const today = () => new Date().toISOString().slice(0, 10);
-
-const timeInputValue = (value: string | null | undefined) =>
-  value ? value.slice(0, 5) : "";
-
-const formatGoalTime = (value: string) => {
-  const [hours = "0", minutes = "0"] = value.split(":");
-  const date = new Date();
-  date.setHours(Number(hours), Number(minutes), 0, 0);
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+const localDateInputValue = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
+
+const localTimeInputValue = (date = new Date()) =>
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+const formatRecordedAt = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 
 export function GoalsManager({
   userId,
@@ -162,7 +161,6 @@ export function GoalsManager({
       const name = String(form.get("name") ?? "").trim();
       const targetAmount = Number(form.get("target_amount"));
       const targetDate = String(form.get("target_date") ?? "");
-      const targetTime = String(form.get("target_time") ?? "");
 
       if (!name) throw new Error("Enter a goal name.");
       if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
@@ -171,20 +169,12 @@ export function GoalsManager({
       if (targetDate && Number.isNaN(new Date(`${targetDate}T00:00:00`).getTime())) {
         throw new Error("Choose a valid target date.");
       }
-      if (targetTime && !targetDate) {
-        throw new Error("Choose a target date before adding a target time.");
-      }
-      if (targetTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(targetTime)) {
-        throw new Error("Choose a valid target time.");
-      }
-
       const payload = {
         user_id: userId,
         name,
         target_amount: targetAmount,
         current_amount: editing ? Number(editing.current_amount) : 0,
         target_date: targetDate || null,
-        target_time: targetTime ? `${targetTime}:00` : null,
         status: String(form.get("status") ?? "active") as GoalStatus,
         updated_at: new Date().toISOString(),
       };
@@ -226,7 +216,8 @@ export function GoalsManager({
     try {
       const form = new FormData(event.currentTarget);
       const amount = Number(form.get("amount"));
-      const investmentDate = String(form.get("invested_at") ?? "");
+      const investmentDate = String(form.get("investment_date") ?? "");
+      const investmentTime = String(form.get("investment_time") ?? "");
       const notes = String(form.get("notes") ?? "").trim();
       const remaining = Math.max(
         0,
@@ -239,14 +230,22 @@ export function GoalsManager({
       if (amount > remaining) {
         throw new Error("Investment cannot exceed the remaining goal amount.");
       }
-      if (!investmentDate || Number.isNaN(new Date(`${investmentDate}T12:00:00.000Z`).getTime())) {
-        throw new Error("Choose a valid investment date.");
+      if (!investmentDate) {
+        throw new Error("Choose the date the investment was recorded.");
+      }
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(investmentTime)) {
+        throw new Error("Choose a valid recorded time.");
+      }
+
+      const recordedAt = new Date(`${investmentDate}T${investmentTime}:00`);
+      if (Number.isNaN(recordedAt.getTime())) {
+        throw new Error("Choose a valid recorded date and time.");
       }
 
       const { data, error } = await supabase.rpc("record_goal_investment", {
         p_goal_id: investmentGoal.id,
         p_amount: amount,
-        p_invested_at: `${investmentDate}T12:00:00.000Z`,
+        p_invested_at: recordedAt.toISOString(),
         p_notes: notes || null,
       });
       if (error) throw error;
@@ -474,20 +473,12 @@ export function GoalsManager({
                   <span>{progress.toFixed(1)}% complete</span>
                   <span className={styles.deadline}>
                     {goal.target_date ? (
-                      <>
-                        <span>
-                          <CalendarDays size={13} />
-                          {new Date(
-                            `${goal.target_date}T12:00:00`,
-                          ).toLocaleDateString("en-GB")}
-                        </span>
-                        {goal.target_time ? (
-                          <span>
-                            <Clock3 size={13} />
-                            {formatGoalTime(goal.target_time)}
-                          </span>
-                        ) : null}
-                      </>
+                      <span>
+                        <CalendarDays size={13} />
+                        {new Date(
+                          `${goal.target_date}T12:00:00`,
+                        ).toLocaleDateString("en-GB")}
+                      </span>
                     ) : (
                       "No deadline"
                     )}
@@ -571,14 +562,6 @@ export function GoalsManager({
                 />
               </label>
               <label>
-                Target time
-                <input
-                  name="target_time"
-                  type="time"
-                  defaultValue={timeInputValue(editing?.target_time)}
-                />
-              </label>
-              <label>
                 Status
                 <select
                   name="status"
@@ -648,15 +631,29 @@ export function GoalsManager({
               />
             </label>
 
-            <label>
-              Investment date
-              <input
-                name="invested_at"
-                type="date"
-                defaultValue={today()}
-                required
-              />
-            </label>
+            <div className={styles.recordedFields}>
+              <label>
+                Recorded date
+                <input
+                  name="investment_date"
+                  type="date"
+                  defaultValue={localDateInputValue()}
+                  required
+                />
+              </label>
+              <label>
+                Recorded time
+                <input
+                  name="investment_time"
+                  type="time"
+                  defaultValue={localTimeInputValue()}
+                  required
+                />
+              </label>
+            </div>
+            <p className={styles.recordedHelp}>
+              This exact date and time will appear on the linked transaction.
+            </p>
 
             <label>
               Notes
@@ -695,11 +692,7 @@ export function GoalsManager({
                   <article key={investment.id}>
                     <div>
                       <strong>{money(investment.amount)}</strong>
-                      <span>
-                        {new Date(
-                          investment.invested_at,
-                        ).toLocaleDateString("en-GB")}
-                      </span>
+                      <span>{formatRecordedAt(investment.invested_at)}</span>
                       {investment.notes ? <p>{investment.notes}</p> : null}
                     </div>
                     <button

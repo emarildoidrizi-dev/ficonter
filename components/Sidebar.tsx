@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   Target,
+  Umbrella,
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -44,6 +45,7 @@ const standardLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
   ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
   ["/dashboard/cash-flow", Activity, "Cash flow"],
+  ["/dashboard/emergency-fund", Umbrella, "Emergency fund"],
   ["/dashboard/budget", ChartPie, "Monthly planner"],
   ["/dashboard/bills", ReceiptText, "Bills"],
   ["/dashboard/debt", CreditCard, "Debt"],

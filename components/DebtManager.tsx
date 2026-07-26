@@ -183,6 +183,7 @@ export function DebtManager({
   const [statusFilter, setStatusFilter] = useState("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState(initialError);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     if (!notice) return;
@@ -396,16 +397,20 @@ export function DebtManager({
 
     const data = new FormData(event.currentTarget);
     const amount = Number(data.get("amount"));
-    const paidAt = String(data.get("paid_at") || new Date().toISOString().slice(0, 10));
+    const paidAt = String(
+      data.get("paid_at") || new Date().toISOString().slice(0, 10),
+    );
     const notes = String(data.get("notes") || "").trim();
 
-    if (!amount || amount <= 0) {
-      setNotice("Enter a valid payment amount.");
+    setPaymentError("");
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Enter a valid payment amount.");
       return;
     }
 
     if (amount > Number(debt.current_balance)) {
-      setNotice("Payment cannot exceed the outstanding balance.");
+      setPaymentError("Payment cannot exceed the outstanding balance.");
       return;
     }
 
@@ -416,68 +421,44 @@ export function DebtManager({
       const conversion = await convertToEur(amount, debt.currency);
       const occurredAt = new Date(`${paidAt}T12:00:00`).toISOString();
 
-      const { data: transaction, error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: userId,
-          description: `Debt payment · ${debt.name}`,
-          amount,
-          currency: debt.currency,
-          amount_eur: Number(conversion.eur.toFixed(2)),
-          exchange_rate_to_eur: Number(conversion.rate.toFixed(10)),
-          exchange_rate_date: paidAt,
-          exchange_rate_source: "Debt payment conversion",
-          type: "expense",
-          category: "Debt repayment",
-          transaction_date: paidAt,
-          occurred_at: occurredAt,
-        })
-        .select("id")
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      const { data: result, error: paymentError } = await supabase.rpc(
-        "record_debt_payment",
+      const { data: result, error } = await supabase.rpc(
+        "record_debt_payment_with_transaction",
         {
           p_debt_id: debt.id,
           p_amount: amount,
           p_amount_eur: Number(conversion.eur.toFixed(2)),
           p_exchange_rate: Number(conversion.rate.toFixed(10)),
           p_paid_at: occurredAt,
+          p_exchange_rate_date: paidAt,
           p_notes: notes || null,
-          p_transaction_id: transaction.id,
         },
       );
 
-      if (paymentError) {
-        await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", transaction.id)
-          .eq("user_id", userId);
-        throw paymentError;
+      if (error) throw error;
+
+      const updatedDebt = (result as { debt?: Debt } | null)?.debt;
+      const newPayment = (result as { payment?: DebtPayment } | null)?.payment;
+
+      if (!updatedDebt || !newPayment) {
+        throw new Error("The payment was not returned by the database.");
       }
 
-      const updatedDebt = (result as { debt?: Debt })?.debt;
-      const newPayment = (result as { payment?: DebtPayment })?.payment;
+      setDebts((current) =>
+        current.map((item) =>
+          item.id === updatedDebt.id ? updatedDebt : item,
+        ),
+      );
+      setPayments((current) => [
+        newPayment,
+        ...current.filter((item) => item.id !== newPayment.id),
+      ]);
 
-      if (updatedDebt) {
-        setDebts((current) =>
-          current.map((item) => (item.id === updatedDebt.id ? updatedDebt : item)),
-        );
-      }
-      if (newPayment) {
-        setPayments((current) => [newPayment, ...current]);
-      }
-
+      setPaymentError("");
       setPaymentDebt(null);
       setNotice("Payment recorded and added to Transactions.");
       notifyFiconterDataChange("all");
     } catch (error) {
-      setNotice(
-        error instanceof Error ? error.message : "Payment could not be recorded.",
-      );
+      setPaymentError(readableError(error, "Payment could not be recorded."));
     } finally {
       setBusy(null);
     }
@@ -910,7 +891,10 @@ export function DebtManager({
 
                 <button
                   className={styles.paymentButton}
-                  onClick={() => setPaymentDebt(debt)}
+                  onClick={() => {
+                    setPaymentError("");
+                    setPaymentDebt(debt);
+                  }}
                   disabled={debt.status === "paid_off" || Number(debt.current_balance) <= 0}
                 >
                   <Plus size={17} />
@@ -959,7 +943,10 @@ export function DebtManager({
             <button
               className={styles.modalClose}
               type="button"
-              onClick={() => setPaymentDebt(null)}
+              onClick={() => {
+                setPaymentError("");
+                setPaymentDebt(null);
+              }}
             >
               <X size={19} />
             </button>
@@ -994,6 +981,11 @@ export function DebtManager({
               Notes
               <textarea name="notes" rows={3} placeholder="Optional" />
             </label>
+            {paymentError ? (
+              <div className={styles.notice} role="alert">
+                {paymentError}
+              </div>
+            ) : null}
             <button
               className={styles.modalPrimary}
               disabled={busy === `payment-${paymentDebt.id}`}

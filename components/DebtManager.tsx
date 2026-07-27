@@ -805,7 +805,7 @@ export function DebtManager({
         </select>
       </div>
 
-      <div className={styles.debtGrid}>
+      <div className={`${styles.debtGrid} ficonter-scroll-region`}>
         {filteredDebts.length ? (
           filteredDebts.map((debt) => {
             const Icon = categoryIcon(debt.category);

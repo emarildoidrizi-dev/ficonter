@@ -156,3 +156,10 @@
   .panelHeader, .row { align-items: flex-start; flex-direction: column; }
   .row > strong { white-space: normal; }
 }
+
+
+.liabilityList {
+  max-height: min(52vh, 480px);
+  overflow-y: auto;
+  padding-right: 6px;
+}

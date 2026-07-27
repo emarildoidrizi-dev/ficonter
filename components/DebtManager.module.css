@@ -28,3 +28,7 @@
 :global(html[data-resolved-theme="dark"]) .active { background: #294239 !important; color: #b9dcc8 !important; }
 :global(html[data-resolved-theme="dark"]) .paused { background: #403625 !important; color: #e1c994 !important; }
 :global(html[data-resolved-theme="dark"]) .paid_off { background: #2d3946 !important; color: #bdd0e6 !important; }
+
+
+/* High-volume debt directory. */
+.debtGrid{max-height:min(75vh,900px);overflow-y:auto;padding-right:6px;align-content:start}

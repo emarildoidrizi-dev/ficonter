@@ -224,7 +224,7 @@ export function SupportConversations({
       {error ? <div className={styles.error} role="alert">{error}</div> : null}
 
       <div className={styles.workspace}>
-        <aside className={styles.threadList} aria-label="Support conversations">
+        <aside className={`${styles.threadList} ficonter-scroll-region`} aria-label="Support conversations">
           {threads.map((thread) => {
             const unread = unreadAdminMessages(thread);
             const latest = thread.messages.at(-1);
@@ -278,7 +278,7 @@ export function SupportConversations({
                 </div>
               </header>
 
-              <div className={styles.messages} aria-live="polite">
+              <div className={`${styles.messages} ficonter-scroll-region`} aria-live="polite">
                 {selected.messages.map((message) => (
                   <article key={message.id} className={`${styles.message} ${message.senderRole === "customer" ? styles.customerMessage : styles.adminMessage}`}>
                     <div>

@@ -649,7 +649,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       </div>
 
       <div
-        className={styles.listViewport}
+        className={`${styles.listViewport} ficonter-scroll-region`}
         tabIndex={visible.length > 10 ? 0 : undefined}
         aria-label="Transaction history. The newest ten transactions are visible first; scroll for older records."
       >

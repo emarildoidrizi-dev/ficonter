@@ -417,3 +417,41 @@ html[data-resolved-theme="dark"] .btn-primary {
   background: var(--solid-bg) !important;
   color: var(--solid-text) !important;
 }
+
+
+/* FICONTER NESTED SCROLL REGIONS v1 */
+.ficonter-scroll-region {
+  min-height: 0;
+  overscroll-behavior-y: auto !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ficonter-scroll-region::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ficonter-scroll-region::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ficonter-scroll-region::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-strong);
+  background-clip: padding-box;
+}
+
+.ficonter-scroll-region::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+  background-clip: padding-box;
+}
+
+.ficonter-scroll-region:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}

@@ -59,3 +59,8 @@
 :global(html[data-resolved-theme="dark"]) .averageCard small{color:var(--text-secondary)!important}
 @media(max-width:1180px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.summary{grid-template-columns:1fr}.averageCardHeader{align-items:flex-start;flex-direction:column}.periodSelector{width:100%;display:grid;grid-template-columns:repeat(4,1fr)}.periodSelector button{width:100%}}
+
+
+/* High-volume goals and investment history. */
+.grid{max-height:min(75vh,900px);overflow-y:auto;padding-right:6px;align-content:start}
+.historyList{max-height:min(48vh,480px);overflow-y:auto;padding-right:5px;align-content:start}

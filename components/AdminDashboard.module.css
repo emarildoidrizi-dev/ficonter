@@ -555,7 +555,6 @@
   --audit-row-height: 96px;
   max-height: calc((var(--audit-row-height) * 6) + (8px * 5));
   overflow-y: auto;
-  overscroll-behavior: contain;
   padding-right: 6px;
   scrollbar-color: #b7aa98 transparent;
   scrollbar-width: thin;
@@ -1067,3 +1066,17 @@
 :global(html[data-resolved-theme="dark"]) .offline,
 :global(html[data-resolved-theme="dark"]) .bad { background: #472c2d !important; color: #efb0aa !important; }
 :global(html[data-resolved-theme="dark"]) .degraded { color: #e3c78f !important; }
+
+
+/* Keep long user directories usable without trapping page scrolling. */
+.table {
+  max-height: min(72vh, 760px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.rowHead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-card);
+}

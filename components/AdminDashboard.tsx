@@ -720,7 +720,7 @@ export function AdminDashboard({
             accessible here.
           </div>
 
-          <div className={styles.table}>
+          <div className={`${styles.table} ficonter-scroll-region`}>
             <div className={styles.rowHead}>
               <span>Account</span>
               <span>Created</span>
@@ -958,7 +958,7 @@ export function AdminDashboard({
             <span>ADMIN AUDIT</span>
             <h2>Recent actions</h2>
 
-            <div className={styles.auditScroll}>
+            <div className={`${styles.auditScroll} ficonter-scroll-region`}>
               <div className={styles.logs}>
                 {orderedLogs.length ? (
                   orderedLogs.map((log) => {

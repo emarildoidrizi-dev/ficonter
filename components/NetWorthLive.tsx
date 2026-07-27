@@ -217,24 +217,30 @@ export function NetWorthLive({
         </div>
 
         {liabilities.length ? (
-          liabilities.map((debt) => (
-            <div className={styles.row} key={debt.id}>
-              <div>
-                <span>{debt.name}</span>
-                <small>
-                  {debt.annualInterestRate.toFixed(2)}% annual interest · {Math.max(
-                    0,
-                    debt.originalBalance - debt.currentBalance,
-                  ).toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "EUR",
-                  })}{" "}
-                  repaid
-                </small>
+          <div
+            className={`${styles.liabilityList} ficonter-scroll-region`}
+            tabIndex={liabilities.length > 5 ? 0 : undefined}
+            aria-label="Outstanding liabilities. Scroll for additional debt accounts."
+          >
+            {liabilities.map((debt) => (
+              <div className={styles.row} key={debt.id}>
+                <div>
+                  <span>{debt.name}</span>
+                  <small>
+                    {debt.annualInterestRate.toFixed(2)}% annual interest · {Math.max(
+                      0,
+                      debt.originalBalance - debt.currentBalance,
+                    ).toLocaleString("en-US", {
+                      style: "currency",
+                      currency: "EUR",
+                    })}{" "}
+                    repaid
+                  </small>
+                </div>
+                <strong>{formatCurrency(debt.currentBalance, "EUR")}</strong>
               </div>
-              <strong>{formatCurrency(debt.currentBalance, "EUR")}</strong>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
           <p className={styles.empty}>No outstanding debt.</p>
         )}

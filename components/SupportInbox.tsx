@@ -237,7 +237,7 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
       {error ? <div className={styles.error} role="alert">{error}</div> : null}
 
       <div className={styles.workspace}>
-        <aside className={styles.requestList}>
+        <aside className={`${styles.requestList} ficonter-scroll-region`}>
           {filtered.map((item) => (
             <button type="button" key={item.id} className={`${styles.requestItem}${selectedId === item.id ? ` ${styles.requestActive}` : ""}`} onClick={() => setSelectedId(item.id)}>
               <span className={styles.requestTop}><strong>{item.subject}</strong>{item.unreadCustomerMessages ? <b>{item.unreadCustomerMessages}</b> : null}</span>
@@ -278,7 +278,7 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
                 </div>
               </header>
 
-              <div className={styles.messages}>
+              <div className={`${styles.messages} ficonter-scroll-region`}>
                 {selected.messages.map((message) => (
                   <article key={message.id} className={`${styles.message} ${message.senderRole === "admin" ? styles.adminMessage : styles.customerMessage}${message.internalNote ? ` ${styles.internalMessage}` : ""}`}>
                     <div>

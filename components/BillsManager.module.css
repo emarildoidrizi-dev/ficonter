@@ -123,3 +123,7 @@
   .modalBillSummary,.modalActions{grid-template-columns:1fr}
   .modalBillSummary div:last-child{text-align:left}
 }
+
+
+/* High-volume bill list: internal scroll with page handoff at boundaries. */
+.billList{max-height:min(72vh,780px);overflow-y:auto;padding-right:6px;align-content:start}

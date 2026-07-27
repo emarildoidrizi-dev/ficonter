@@ -362,7 +362,7 @@ export function CashFlowIntelligence({
             </span>
           </div>
 
-          <div className={styles.commitmentList}>
+          <div className={`${styles.commitmentList} ficonter-scroll-region`}>
             {result.commitments.items.length ? (
               result.commitments.items.map((item) => (
                 <div className={styles.commitmentRow} key={item.id}>

@@ -49,10 +49,9 @@
 .liveTable {
   display: grid;
   gap: 0;
-  max-height: 900px;
+  max-height: min(68vh, 720px);
   margin-top: 6px;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding-right: 6px;
 }

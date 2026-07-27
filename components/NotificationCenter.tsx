@@ -194,7 +194,7 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
             ) : null}
           </header>
 
-          <div className={styles.list}>
+          <div className={`${styles.list} ficonter-scroll-region`}>
             {loading ? (
               <div className={styles.empty}><LoaderCircle className={styles.spin} size={20} /> Loading notifications…</div>
             ) : notifications.length ? notifications.map((item) => (

@@ -443,7 +443,7 @@ export function GoalsManager({
         </article>
       </div>
 
-      <div className={styles.grid}>
+      <div className={`${styles.grid} ficonter-scroll-region`}>
         {goals.length ? (
           goals.map((goal) => {
             const target = Number(goal.target_amount);
@@ -730,7 +730,7 @@ export function GoalsManager({
             <span>INVESTMENT HISTORY</span>
             <h2>{historyGoal.name}</h2>
 
-            <div className={styles.historyList}>
+            <div className={`${styles.historyList} ficonter-scroll-region`}>
               {investmentHistory.length ? (
                 investmentHistory.map((investment) => (
                   <article key={investment.id}>

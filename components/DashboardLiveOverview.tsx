@@ -368,7 +368,7 @@ export function DashboardLiveOverview({
           {recent.length ? (
             <>
               <div
-                className={styles.liveTable}
+                className={`${styles.liveTable} ficonter-scroll-region`}
                 tabIndex={recent.length > 10 ? 0 : undefined}
                 aria-label="Live transaction history. The newest ten transactions are visible first; scroll for older records."
               >

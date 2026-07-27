@@ -543,7 +543,7 @@ export function BillsManager({
         <select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)}><option value="all">All categories</option>{CATEGORIES.map((item)=><option key={item}>{item}</option>)}</select>
       </div>
 
-      <div className={styles.billList}>
+      <div className={`${styles.billList} ficonter-scroll-region`}>
         {filteredBills.length === 0 ? (
           <div className={styles.emptyState}>
             <CalendarDays size={32}/>

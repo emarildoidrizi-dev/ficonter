@@ -176,7 +176,7 @@ export function DocumentVault() {
       {loading ? (
         <div className={styles.empty}><LoaderCircle className={styles.spinning} size={26} /><strong>Loading your vault…</strong></div>
       ) : filtered.length ? (
-        <div className={styles.grid}>
+        <div className={`${styles.grid} ficonter-scroll-region`}>
           {filtered.map((document) => (
             <article key={document.id} className={styles.card}>
               <div className={styles.fileIcon}><FileText size={23} /></div>

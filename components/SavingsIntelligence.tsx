@@ -518,7 +518,7 @@ export function SavingsIntelligence({
           </header>
 
           {result.recentSavings.length ? (
-            <div className={styles.recentList}>
+            <div className={`${styles.recentList} ficonter-scroll-region`}>
               {result.recentSavings.map((saving) => (
                 <div className={styles.recentRow} key={saving.id}>
                   <div className={styles.recentIcon}>

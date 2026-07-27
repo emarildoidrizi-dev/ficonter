@@ -23,6 +23,12 @@ expect(engine.includes('id: "capital-balance"'), "Capital-balance factor exists"
 expect(engine.includes('id: "momentum"'), "Momentum factor exists");
 expect(engine.includes('id: "goals"'), "Goal-funding factor exists");
 expect(engine.includes('id: "resilience"'), "Resilience factor exists");
+expect(engine.includes("recentRetentionAvailable"), "Three-month retention requires real history");
+expect(engine.includes("momentumAvailable"), "Momentum comparison requires six months of data");
+expect(engine.includes("capitalToDebtRatioAvailable"), "Capital-to-debt ratio exposes availability explicitly");
+expect(engine.includes('"Setup incomplete"'), "Income-only wealth profiles use a neutral setup state");
+expect(component.includes('"Awaiting 3 months"'), "UI does not display a fabricated retention percentage");
+expect(component.includes('"Not recorded"'), "UI does not display an artificial debt ratio");
 expect(!component.includes("function calculateWealth"), "UI does not duplicate score calculations");
 expect(component.includes("result: WealthScoreResult"), "UI consumes shared Wealth Score result");
 expect(netWorth.includes("calculateWealthScore(inputs.wealthScore)"), "Net Worth calculates the shared result once");

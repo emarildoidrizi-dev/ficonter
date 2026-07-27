@@ -58,7 +58,8 @@ export type WealthScoreFactorStatus =
   | "strong"
   | "balanced"
   | "watch"
-  | "priority";
+  | "priority"
+  | "pending";
 
 export type WealthScoreFactor = {
   id: WealthScoreFactorId;
@@ -70,6 +71,7 @@ export type WealthScoreFactor = {
   metricValue: number;
   metricUnit: "percent" | "currency" | "months" | "ratio" | "count" | "none";
   metricLabel?: string;
+  assessed: boolean;
   explanation: string;
   action: string;
 };
@@ -80,6 +82,8 @@ export type WealthScoreLabel =
   | "Progressing"
   | "Building"
   | "Early stage"
+  | "Preliminary"
+  | "Setup incomplete"
   | "Not assessed";
 
 export type WealthScoreResult = {
@@ -90,6 +94,9 @@ export type WealthScoreResult = {
   confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
   assessed: boolean;
+  scoreAvailable: boolean;
+  preliminary: boolean;
+  missingInputs: string[];
   nextBestAction: string;
   health: FinancialHealthResult;
   metrics: {
@@ -100,11 +107,14 @@ export type WealthScoreResult = {
     netWorth: number;
     netWorthMonths: number;
     capitalToDebtRatio: number;
+    capitalToDebtRatioAvailable: boolean;
     accumulationRate: number;
     debtProgress: number;
     recentRetentionRate: number;
+    recentRetentionAvailable: boolean;
     priorRetentionRate: number;
     momentumChange: number;
+    momentumAvailable: boolean;
     goalProgress: number;
     emergencyCoverageMonths: number;
     activeDebtAccounts: number;
@@ -153,14 +163,19 @@ function factor(
     points: number;
   },
 ): WealthScoreFactor {
-  const points = round(clamp(value.points, 0, value.maximum));
-  const percentage = value.maximum > 0 ? round((points / value.maximum) * 100) : 0;
+  const points = value.assessed
+    ? round(clamp(value.points, 0, value.maximum))
+    : 0;
+  const percentage =
+    value.assessed && value.maximum > 0
+      ? round((points / value.maximum) * 100)
+      : 0;
 
   return {
     ...value,
     points,
     percentage,
-    status: statusFor(points, value.maximum),
+    status: value.assessed ? statusFor(points, value.maximum) : "pending",
   };
 }
 
@@ -259,58 +274,80 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
   const wealth = data.wealth;
   const averageMonthlyIncome = metrics.averageMonthlyIncome;
   const hasAnyData =
-    health.assessed ||
+    data.financialHealth.transactions.count > 0 ||
+    data.financialHealth.bills.count > 0 ||
+    data.financialHealth.debts.count > 0 ||
+    data.financialHealth.goals.count > 0 ||
+    data.financialHealth.planner.itemCount > 0 ||
     data.liabilities.length > 0 ||
     Math.abs(wealth.recordedCapital) > 0.005 ||
     Math.abs(wealth.currentDebt) > 0.005;
+  const hasDebtData =
+    data.financialHealth.debts.count > 0 ||
+    data.liabilities.length > 0 ||
+    Math.abs(wealth.currentDebt) > 0.005;
+  const hasCapitalData =
+    data.financialHealth.transactions.count > 0 ||
+    Math.abs(wealth.recordedCapital) > 0.005;
+  const cashFlowFactor = health.factors.find((factor) => factor.id === "cash-flow");
+  const emergencyFactor = health.factors.find(
+    (factor) => factor.id === "emergency-fund",
+  );
+  const hasCashFlowBaseline = cashFlowFactor?.assessed === true;
 
   const netWorthMonths =
     averageMonthlyIncome > 0 ? wealth.netWorth / averageMonthlyIncome : 0;
-  const capitalToDebtRatio = !hasAnyData
-    ? 0
-    : wealth.currentDebt > 0
-      ? Math.max(wealth.recordedCapital, 0) / wealth.currentDebt
-      : wealth.recordedCapital > 0
-        ? 2
-        : 0;
+  const capitalToDebtRatioAvailable = hasDebtData && wealth.currentDebt > 0;
+  const capitalToDebtRatio = capitalToDebtRatioAvailable
+    ? Math.max(wealth.recordedCapital, 0) / wealth.currentDebt
+    : 0;
   const accumulationRate = metrics.savingsRate;
 
-  const recentRetentionRate =
-    wealth.recent3MonthIncome > 0
-      ? wealth.recent3MonthRetainedCapital / wealth.recent3MonthIncome
-      : 0;
+  const recentRetentionAvailable =
+    wealth.historyMonths >= 3 && wealth.recent3MonthIncome > 0;
+  const recentRetentionRate = recentRetentionAvailable
+    ? wealth.recent3MonthRetainedCapital / wealth.recent3MonthIncome
+    : 0;
   const priorRetentionRate =
     wealth.prior3MonthIncome > 0
       ? wealth.prior3MonthRetainedCapital / wealth.prior3MonthIncome
       : 0;
-  const momentumChange = recentRetentionRate - priorRetentionRate;
+  const momentumAvailable =
+    wealth.historyMonths >= 6 &&
+    wealth.recent3MonthIncome > 0 &&
+    wealth.prior3MonthIncome > 0;
+  const momentumChange = momentumAvailable
+    ? recentRetentionRate - priorRetentionRate
+    : 0;
 
-  const netPositionPoints = hasAnyData
+  const netPositionPoints = hasCashFlowBaseline
     ? clamp(((netWorthMonths + 12) / 24) * 25, 0, 25)
     : 0;
-  const accumulationPoints =
-    data.financialHealth.transactions.totalIncome > 0
-      ? clamp((accumulationRate / 0.25) * 20, 0, 20)
-      : 0;
-  const debtReductionPoints = !hasAnyData
+  const accumulationPoints = hasCashFlowBaseline
+    ? clamp((accumulationRate / 0.25) * 20, 0, 20)
+    : 0;
+  const debtReductionPoints = !hasDebtData
     ? 0
-    : data.financialHealth.debts.activeCount === 0
+    : data.financialHealth.debts.activeCount === 0 && wealth.currentDebt <= 0
       ? 15
       : metrics.debtProgress * 15;
-  const capitalBalancePoints = !hasAnyData
+  const capitalBalancePoints = !hasDebtData
     ? 0
     : wealth.currentDebt <= 0
       ? 15
       : clamp((capitalToDebtRatio / 1.25) * 15, 0, 15);
 
-  let momentumPoints = data.financialHealth.transactions.count > 0 ? 5 : 0;
-  let momentumMetricLabel = "Building history";
-  let momentumExplanation =
-    "FICONTER needs at least four months of activity before comparing recent wealth momentum.";
+  let momentumPoints = 0;
+  let momentumMetricLabel = recentRetentionAvailable
+    ? `${round(recentRetentionRate * 100)}% recent retention`
+    : "Awaiting 3 months";
+  let momentumExplanation = recentRetentionAvailable
+    ? "A recent three-month retention rate is available, but six months are required before FICONTER scores the trend."
+    : "FICONTER needs three active months before displaying recent retention and six months before comparing momentum.";
   let momentumAction =
     "Keep recording income, expenses and savings so your trajectory becomes measurable.";
 
-  if (wealth.historyMonths >= 4 && wealth.recent3MonthIncome > 0) {
+  if (momentumAvailable) {
     const levelPoints = clamp(((recentRetentionRate + 0.1) / 0.35) * 7, 0, 7);
     const trendPoints = clamp(((momentumChange + 0.1) / 0.2) * 3, 0, 3);
     momentumPoints = levelPoints + trendPoints;
@@ -328,9 +365,7 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
   const goalPoints =
     data.financialHealth.goals.count > 0
       ? metrics.goalProgress * 10
-      : hasAnyData
-        ? 3
-        : 0;
+      : 0;
   const resiliencePoints = clamp(
     (metrics.emergencyFundCoverageMonths / 6) * 5,
     0,
@@ -341,15 +376,18 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "net-position",
       name: "Net wealth position",
+      assessed: hasCashFlowBaseline,
       points: netPositionPoints,
       maximum: 25,
       metricValue: wealth.netWorth,
       metricUnit: "currency",
-      metricLabel: `${round(netWorthMonths, 1)} months of income`,
-      explanation: hasAnyData
+      metricLabel: hasCashFlowBaseline
+        ? `${round(netWorthMonths, 1)} months of income`
+        : "Cash-flow baseline required",
+      explanation: hasCashFlowBaseline
         ? "Measures recorded capital after subtracting every active liability, relative to average monthly income."
-        : "No recorded capital or liability data is available for assessment.",
-      action: !hasAnyData
+        : "Income alone is not enough to assess the recorded net position reliably.",
+      action: !hasCashFlowBaseline
         ? "Record capital, liabilities or financial activity to activate net-position scoring."
         : wealth.netWorth < 0
           ? "Move net wealth toward zero by retaining capital and reducing principal consistently."
@@ -360,14 +398,15 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "accumulation",
       name: "Wealth accumulation",
+      assessed: hasCashFlowBaseline,
       points: accumulationPoints,
       maximum: 20,
       metricValue: accumulationRate * 100,
       metricUnit: "percent",
-      explanation: !hasAnyData
-        ? "No income or saving records are available for accumulation assessment."
+      explanation: !hasCashFlowBaseline
+        ? "Income and outflow records are required before accumulation can be assessed."
         : "Reuses the same recorded savings rate shown on Overview; no second savings calculation is maintained.",
-      action: !hasAnyData
+      action: !hasCashFlowBaseline
         ? "Record income and savings to activate wealth-accumulation scoring."
         : accumulationRate >= 0.25
           ? "Maintain this accumulation rate and direct it toward clearly defined wealth priorities."
@@ -376,23 +415,24 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "debt-reduction",
       name: "Debt reduction",
+      assessed: hasDebtData,
       points: debtReductionPoints,
       maximum: 15,
       metricValue: metrics.debtProgress * 100,
       metricUnit: "percent",
-      metricLabel: !hasAnyData
-        ? "No debt records"
-        : data.financialHealth.debts.activeCount === 0
-          ? "No active debt"
+      metricLabel: !hasDebtData
+        ? "No liabilities recorded"
+        : data.financialHealth.debts.activeCount === 0 && wealth.currentDebt <= 0
+          ? "Debt-free"
           : `${round(metrics.debtProgress * 100)}% repaid`,
-      explanation: !hasAnyData
+      explanation: !hasDebtData
         ? "No liability records are available for debt-reduction assessment."
-        : data.financialHealth.debts.activeCount === 0
-          ? "No active liability is currently reducing your wealth position."
+        : data.financialHealth.debts.activeCount === 0 && wealth.currentDebt <= 0
+          ? "Recorded liability accounts confirm no active outstanding balance."
           : "Uses the existing original and current debt balances to measure principal reduction.",
-      action: !hasAnyData
-        ? "Add any liabilities to activate debt-reduction scoring."
-        : data.financialHealth.debts.activeCount === 0
+      action: !hasDebtData
+        ? "Add liabilities, or complete a no-debt confirmation flow when available."
+        : data.financialHealth.debts.activeCount === 0 && wealth.currentDebt <= 0
           ? "Keep future borrowing purposeful and affordable."
           : metrics.debtProgress < 0.25
             ? "Accelerate principal reduction on the most expensive or restrictive balances."
@@ -401,20 +441,21 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "capital-balance",
       name: "Capital-to-debt balance",
+      assessed: hasDebtData && hasCapitalData,
       points: capitalBalancePoints,
       maximum: 15,
       metricValue: capitalToDebtRatio,
       metricUnit: "ratio",
-      metricLabel: !hasAnyData
-        ? "No capital or debt records"
+      metricLabel: !hasDebtData
+        ? "No liabilities recorded"
         : wealth.currentDebt <= 0
           ? "Debt-free"
           : `${round(capitalToDebtRatio, 2)}× recorded capital`,
-      explanation: !hasAnyData
-        ? "No recorded capital or liability data is available for balance assessment."
+      explanation: !hasDebtData
+        ? "A capital-to-debt ratio is not calculated until liability information is recorded."
         : "Compares retained recorded capital with active liabilities without creating a separate asset balance.",
-      action: !hasAnyData
-        ? "Record capital or liabilities to activate balance-sheet scoring."
+      action: !hasDebtData
+        ? "Record any liabilities before relying on the capital-to-debt balance."
         : wealth.currentDebt <= 0
           ? "Preserve your debt-free position while growing productive capital."
           : capitalToDebtRatio < 0.5
@@ -424,6 +465,7 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "momentum",
       name: "Wealth momentum",
+      assessed: momentumAvailable,
       points: momentumPoints,
       maximum: 10,
       metricValue: momentumChange * 100,
@@ -435,6 +477,7 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "goals",
       name: "Long-term goal funding",
+      assessed: data.financialHealth.goals.count > 0,
       points: goalPoints,
       maximum: 10,
       metricValue: metrics.goalProgress * 100,
@@ -455,14 +498,15 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     factor({
       id: "resilience",
       name: "Wealth resilience",
+      assessed: emergencyFactor?.assessed === true,
       points: resiliencePoints,
       maximum: 5,
       metricValue: metrics.emergencyFundCoverageMonths,
       metricUnit: "months",
-      explanation: !hasAnyData
+      explanation: emergencyFactor?.assessed !== true
         ? "No expense baseline or emergency reserve is available for resilience assessment."
         : "Reuses the Financial Health emergency-reserve coverage so the same reserve is never counted twice.",
-      action: !hasAnyData
+      action: emergencyFactor?.assessed !== true
         ? "Record regular expenses and emergency savings to activate resilience scoring."
         : metrics.emergencyFundCoverageMonths >= 6
           ? "Maintain a six-month reserve while directing additional capital toward growth."
@@ -470,48 +514,78 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     }),
   ];
 
-  const score = hasAnyData
+  const assessedFactors = factors.filter((current) => current.assessed);
+  const assessedMaximum = assessedFactors.reduce(
+    (total, current) => total + current.maximum,
+    0,
+  );
+  const scoreAvailable =
+    hasCashFlowBaseline &&
+    assessedFactors.some((factor) => factor.id === "net-position") &&
+    assessedFactors.some((factor) => factor.id === "accumulation");
+  const score = scoreAvailable
     ? Math.round(
         clamp(
-          factors.reduce((total, current) => total + current.points, 0),
+          (assessedFactors.reduce(
+            (total, current) => total + current.points,
+            0,
+          ) /
+            assessedMaximum) *
+            100,
           0,
           100,
         ),
       )
     : 0;
-  const label = hasAnyData ? scoreLabel(score) : "Not assessed";
-  const ordered = [...factors].sort(
-    (a, b) => a.points / a.maximum - b.points / b.maximum,
-  );
-  const weakest = ordered[0];
-  const strongest = ordered.at(-1) ?? weakest;
 
-  const historyCoverage = clamp(wealth.historyMonths / 6, 0, 1) * 25;
+  const factorCoverage = (assessedMaximum / 100) * 70;
+  const historyCoverage = clamp(wealth.historyMonths / 6, 0, 1) * 15;
   const transactionCoverage =
     clamp(data.financialHealth.transactions.count / 12, 0, 1) * 15;
-  const moduleCoverage =
-    (data.financialHealth.goals.count > 0 ? 5 : 0) +
-    (data.financialHealth.transactions.totalSavings > 0 ? 5 : 0) +
-    (data.financialHealth.debts.count > 0 || wealth.currentDebt === 0 ? 5 : 0);
   const dataCoverage = hasAnyData
     ? Math.round(
         clamp(
-          health.dataCoverage * 0.45 +
-            historyCoverage +
-            transactionCoverage +
-            moduleCoverage,
+          factorCoverage + historyCoverage + transactionCoverage,
           0,
           100,
         ),
       )
     : 0;
   const confidence = confidenceFor(dataCoverage);
+  const preliminary = scoreAvailable && dataCoverage < 55;
+  const label: WealthScoreLabel = !hasAnyData
+    ? "Not assessed"
+    : !scoreAvailable
+      ? "Setup incomplete"
+      : preliminary
+        ? "Preliminary"
+        : scoreLabel(score);
+
+  const ordered = [...assessedFactors].sort(
+    (a, b) => a.points / a.maximum - b.points / b.maximum,
+  );
+  const weakest = ordered[0] ?? factors[0];
+  const strongest = ordered.at(-1) ?? weakest;
+  const missingInputs = [
+    !hasCashFlowBaseline ? "income and outflow history" : "",
+    !hasDebtData ? "liability information" : "",
+    data.financialHealth.goals.count === 0 ? "a long-term goal" : "",
+    emergencyFactor?.assessed !== true ? "an emergency-fund baseline" : "",
+    !recentRetentionAvailable ? "three months of history" : "",
+    !momentumAvailable ? "six months of comparable history" : "",
+  ].filter(Boolean);
 
   const summary = !hasAnyData
     ? "No wealth records are available yet. Add financial activity or liabilities to begin a long-term wealth assessment."
-    : data.financialHealth.transactions.count === 0
-      ? "Add transaction history to complete a meaningful long-term wealth assessment."
-      : `${label}. ${strongest.name} currently supports your trajectory, while ${weakest.name.toLowerCase()} is the clearest opportunity to strengthen long-term wealth.`;
+    : !scoreAvailable
+      ? "Your wealth profile is incomplete. Add both income and outflow information before FICONTER calculates a Wealth Score."
+      : preliminary
+        ? `Preliminary assessment based on ${assessedFactors.length} of 7 wealth factors. More history and balance-sheet detail will improve reliability.`
+        : `${label}. ${strongest.name} currently supports your trajectory, while ${weakest.name.toLowerCase()} is the clearest opportunity to strengthen long-term wealth.`;
+
+  const setupAction = !hasCashFlowBaseline
+    ? "Record both income and at least one expense or saving outflow before FICONTER calculates a Wealth Score."
+    : "Complete more wealth sections before relying on the score.";
 
   return {
     version: "1.0",
@@ -520,10 +594,15 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
     summary,
     confidence,
     dataCoverage,
-    assessed: hasAnyData,
-    nextBestAction: hasAnyData
-      ? weakest.action
-      : "Record your first financial activity to activate the Wealth Score.",
+    assessed: scoreAvailable && !preliminary,
+    scoreAvailable,
+    preliminary,
+    missingInputs,
+    nextBestAction: !scoreAvailable
+      ? setupAction
+      : preliminary && missingInputs.length > 0
+        ? `Add ${missingInputs[0]} to make this preliminary score more reliable.`
+        : weakest.action,
     health,
     metrics: {
       availableCash: wealth.availableCash,
@@ -533,11 +612,14 @@ export function calculateWealthScore(value: WealthScoreInputs): WealthScoreResul
       netWorth: wealth.netWorth,
       netWorthMonths,
       capitalToDebtRatio,
+      capitalToDebtRatioAvailable,
       accumulationRate,
       debtProgress: metrics.debtProgress,
       recentRetentionRate,
+      recentRetentionAvailable,
       priorRetentionRate,
       momentumChange,
+      momentumAvailable,
       goalProgress: metrics.goalProgress,
       emergencyCoverageMonths: metrics.emergencyFundCoverageMonths,
       activeDebtAccounts: data.financialHealth.debts.activeCount,

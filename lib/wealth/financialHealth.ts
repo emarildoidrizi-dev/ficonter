@@ -61,7 +61,8 @@ export type FinancialHealthFactorStatus =
   | "strong"
   | "balanced"
   | "watch"
-  | "priority";
+  | "priority"
+  | "pending";
 
 export type FinancialHealthFactor = {
   id: FinancialHealthFactorId;
@@ -73,6 +74,7 @@ export type FinancialHealthFactor = {
   metricValue: number;
   metricUnit: "percent" | "currency" | "months" | "count" | "none";
   metricLabel?: string;
+  assessed: boolean;
   explanation: string;
   action: string;
 };
@@ -83,6 +85,8 @@ export type FinancialHealthLabel =
   | "Stable"
   | "Needs attention"
   | "At risk"
+  | "Preliminary"
+  | "Setup incomplete"
   | "Not assessed";
 
 export type FinancialHealthResult = {
@@ -93,6 +97,9 @@ export type FinancialHealthResult = {
   confidence: "High" | "Moderate" | "Developing" | "No data";
   dataCoverage: number;
   assessed: boolean;
+  scoreAvailable: boolean;
+  preliminary: boolean;
+  missingInputs: string[];
   nextBestAction: string;
   metrics: {
     totalIncome: number;
@@ -198,14 +205,19 @@ function factor(
     points: number;
   },
 ): FinancialHealthFactor {
-  const points = round(clamp(value.points, 0, value.maximum));
-  const percentage = value.maximum > 0 ? round((points / value.maximum) * 100) : 0;
+  const points = value.assessed
+    ? round(clamp(value.points, 0, value.maximum))
+    : 0;
+  const percentage =
+    value.assessed && value.maximum > 0
+      ? round((points / value.maximum) * 100)
+      : 0;
 
   return {
     ...value,
     points,
     percentage,
-    status: statusFor(points, value.maximum),
+    status: value.assessed ? statusFor(points, value.maximum) : "pending",
   };
 }
 
@@ -297,12 +309,17 @@ export function calculateFinancialHealth(
   const readiness = financialDataReadiness(data);
   const {
     hasTransactions,
+    hasIncome,
+    hasOutflow,
     hasBills,
     hasDebts,
     hasGoals,
     hasPlannerData,
-    hasAnyData: assessed,
+    hasAnyData,
   } = readiness;
+  const hasCashFlowBaseline = hasIncome && hasOutflow;
+  const hasEmergencyBaseline = hasOutflow;
+  const hasSavingsBaseline = hasCashFlowBaseline;
 
   const incomeMonths = Math.max(tx.incomeMonths, 1);
   const activeMonths = Math.max(tx.activeMonths, 1);
@@ -393,18 +410,22 @@ export function calculateFinancialHealth(
     factor({
       id: "cash-flow",
       name: "Cash flow",
+      assessed: hasCashFlowBaseline,
       points: cashFlowPoints,
       maximum: 25,
       metricValue: cashFlowMargin * 100,
       metricUnit: "percent",
+      metricLabel: hasCashFlowBaseline ? undefined : "Expense baseline required",
       explanation: !hasTransactions
         ? "No transaction records are available for cash-flow assessment."
-        : tx.totalIncome > 0
-          ? "Measures how much income remains after every recorded expense and saving contribution."
-          : "Income is required before FICONTER can assess cash-flow resilience.",
+        : !hasCashFlowBaseline
+          ? "Income is recorded, but no expense or saving outflow is available to establish a real cash-flow margin."
+          : "Measures how much income remains after every recorded expense and saving contribution.",
       action: !hasTransactions
         ? "Record your first income or outflow to activate cash-flow scoring."
-        : cashFlowMargin < 0
+        : !hasCashFlowBaseline
+          ? "Record at least one expense or saving outflow before relying on cash-flow scoring."
+          : cashFlowMargin < 0
           ? "Bring recorded outflows below income to restore positive monthly capacity."
           : cashFlowMargin < 0.1
             ? "Create more breathing room by reducing flexible spending or increasing income."
@@ -413,22 +434,29 @@ export function calculateFinancialHealth(
     factor({
       id: "savings",
       name: "Savings rate",
+      assessed: hasSavingsBaseline,
       points: savingsPoints,
       maximum: 20,
       metricValue: savingsRate * 100,
       metricUnit: "percent",
+      metricLabel: hasSavingsBaseline ? undefined : "Outflow baseline required",
       explanation: !hasTransactions
         ? "No income or saving transactions are available for savings-rate assessment."
-        : "Uses the same recorded saving transactions that power your Overview savings rate.",
+        : !hasSavingsBaseline
+          ? "Income alone cannot confirm whether the recorded savings rate is genuinely zero or the profile is incomplete."
+          : "Uses the same recorded saving transactions that power your Overview savings rate.",
       action: !hasTransactions
         ? "Record income and a saving contribution to activate savings-rate scoring."
-        : savingsRate >= 0.2
+        : !hasSavingsBaseline
+          ? "Record an expense or saving outflow before relying on the savings-rate result."
+          : savingsRate >= 0.2
           ? "Maintain your saving rhythm and review whether contributions match your priorities."
           : "Work toward recording savings equal to at least 20% of income when feasible.",
     }),
     factor({
       id: "debt",
       name: "Debt position",
+      assessed: hasDebts,
       points: debtPoints,
       maximum: 20,
       metricValue: debtServiceRatio * 100,
@@ -440,6 +468,7 @@ export function calculateFinancialHealth(
     factor({
       id: "bills",
       name: "Bill reliability",
+      assessed: hasBills,
       points: billPoints,
       maximum: 15,
       metricValue: bills.overdueCount,
@@ -463,10 +492,12 @@ export function calculateFinancialHealth(
     factor({
       id: "emergency-fund",
       name: "Emergency reserve",
+      assessed: hasEmergencyBaseline,
       points: emergencyPoints,
       maximum: 10,
       metricValue: emergencyFundCoverageMonths,
       metricUnit: "months",
+      metricLabel: hasEmergencyBaseline ? undefined : "Expense baseline required",
       explanation:
         averageMonthlyExpenses > 0 || tx.emergencyFundSavings > 0
           ? "Compares recorded Emergency fund contributions with average monthly expenses."
@@ -481,6 +512,7 @@ export function calculateFinancialHealth(
     factor({
       id: "goals",
       name: "Goal progress",
+      assessed: hasGoals,
       points: goalPoints,
       maximum: 5,
       metricValue: goalProgress * 100,
@@ -501,6 +533,7 @@ export function calculateFinancialHealth(
     factor({
       id: "planning",
       name: "Planning discipline",
+      assessed: hasPlannerData,
       points: planningPoints,
       maximum: 5,
       metricValue: planner.itemCount,
@@ -517,42 +550,79 @@ export function calculateFinancialHealth(
     }),
   ];
 
-  const score = assessed
+  const assessedFactors = factors.filter((current) => current.assessed);
+  const assessedMaximum = assessedFactors.reduce(
+    (total, current) => total + current.maximum,
+    0,
+  );
+  const scoreAvailable = hasCashFlowBaseline && assessedMaximum >= 45;
+  const score = scoreAvailable
     ? Math.round(
         clamp(
-          factors.reduce((total, current) => total + current.points, 0),
+          (assessedFactors.reduce(
+            (total, current) => total + current.points,
+            0,
+          ) /
+            assessedMaximum) *
+            100,
           0,
           100,
         ),
       )
     : 0;
-  const label = assessed ? scoreLabel(score) : "Not assessed";
 
-  const ordered = [...factors].sort(
-    (a, b) => a.points / a.maximum - b.points / b.maximum,
-  );
-  const weakest = ordered[0];
-  const strongest = ordered.at(-1) ?? weakest;
-
-  const moduleCoverage =
-    (hasBills ? 10 : 0) +
-    (hasDebts ? 10 : 0) +
-    (hasGoals ? 10 : 0) +
-    (hasPlannerData ? 10 : 0);
-  const transactionCoverage = clamp(tx.count / 12, 0, 1) * 45;
+  const factorCoverage = (assessedMaximum / 100) * 70;
+  const transactionCoverage = clamp(tx.count / 12, 0, 1) * 15;
   const historyCoverage = clamp(tx.activeMonths / 3, 0, 1) * 15;
-  const dataCoverage = assessed
+  const dataCoverage = hasAnyData
     ? Math.round(
-        clamp(transactionCoverage + historyCoverage + moduleCoverage, 0, 100),
+        clamp(
+          factorCoverage + transactionCoverage + historyCoverage,
+          0,
+          100,
+        ),
       )
     : 0;
   const confidence = confidenceFor(dataCoverage);
+  const preliminary = scoreAvailable && dataCoverage < 55;
+  const label: FinancialHealthLabel = !hasAnyData
+    ? "Not assessed"
+    : !scoreAvailable
+      ? "Setup incomplete"
+      : preliminary
+        ? "Preliminary"
+        : scoreLabel(score);
 
-  const summary = !assessed
+  const ordered = [...assessedFactors].sort(
+    (a, b) => a.points / a.maximum - b.points / b.maximum,
+  );
+  const weakest = ordered[0] ?? factors[0];
+  const strongest = ordered.at(-1) ?? weakest;
+
+  const missingInputs = [
+    !hasIncome ? "income" : "",
+    !hasOutflow ? "expenses or saving outflows" : "",
+    !hasBills ? "bills" : "",
+    !hasDebts ? "debts or a confirmed no-debt position" : "",
+    !hasGoals ? "financial goals" : "",
+    !hasPlannerData ? "a Monthly Planner" : "",
+  ].filter(Boolean);
+
+  const setupAction = !hasIncome
+    ? "Record at least one income entry before FICONTER calculates your score."
+    : !hasOutflow
+      ? "Record at least one expense or saving outflow so FICONTER can measure a real cash-flow margin."
+      : "Complete more financial sections before relying on the score.";
+
+  const summary = !hasAnyData
     ? "No financial records are available yet. Add your first income, outflow, bill, debt, goal or planner item to begin assessment."
-    : tx.count === 0
-      ? "Add income and outflow records to complete a meaningful financial-health assessment."
-      : `${label}. ${strongest.name} is currently supporting your position, while ${weakest.name.toLowerCase()} offers the clearest opportunity to improve.`;
+    : !scoreAvailable
+      ? hasIncome && !hasOutflow
+        ? "Your financial profile is incomplete. Income is recorded, but a real outflow baseline is still required before FICONTER can assess financial health."
+        : "Your financial profile is incomplete. Add both income and outflow information before FICONTER calculates a Financial Health Score."
+      : preliminary
+        ? `Preliminary assessment based on ${assessedFactors.length} of 7 scoring areas. Add more financial sections to improve reliability.`
+        : `${label}. ${strongest.name} is currently supporting your position, while ${weakest.name.toLowerCase()} offers the clearest opportunity to improve.`;
 
   return {
     version: "2.0",
@@ -561,10 +631,15 @@ export function calculateFinancialHealth(
     summary,
     confidence,
     dataCoverage,
-    assessed,
-    nextBestAction: assessed
-      ? weakest.action
-      : "Record your first financial activity to activate the Financial Health Score.",
+    assessed: scoreAvailable && !preliminary,
+    scoreAvailable,
+    preliminary,
+    missingInputs,
+    nextBestAction: !scoreAvailable
+      ? setupAction
+      : preliminary && missingInputs.length > 0
+        ? `Add ${missingInputs[0]} to make this preliminary score more reliable.`
+        : weakest.action,
     metrics: {
       totalIncome: tx.totalIncome,
       totalExpenses: tx.totalExpenses,

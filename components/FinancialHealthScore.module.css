@@ -538,7 +538,7 @@
 :global(html[data-resolved-theme="dark"]) .confidence,
 :global(html[data-resolved-theme="dark"]) .nextAction {
   border-color: var(--border-subtle) !important;
-  background: var(--surface-muted) !important;
+  background: var(--surface-subtle) !important;
 }
 
 :global(html[data-resolved-theme="dark"]) .breakdownHeader,
@@ -552,4 +552,18 @@
 
 .statusRow[data-status="not-assessed"] {
   color: var(--text-secondary);
+}
+
+.statusRow[data-status="preliminary"],
+.statusRow[data-status="setup-incomplete"] {
+  color: var(--text-secondary);
+}
+
+.factor[data-status="pending"] .factorIcon {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+
+.factor[data-status="pending"] .factorTrack span {
+  width: 0 !important;
 }

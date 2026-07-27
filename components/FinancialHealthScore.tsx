@@ -57,8 +57,11 @@ export function FinancialHealthScore({
 }) {
   const [expanded, setExpanded] = useState(false);
   const circumference = 2 * Math.PI * 46;
-  const dashOffset = circumference - (result.score / 100) * circumference;
+  const displayedScore = result.scoreAvailable ? result.score : 0;
+  const dashOffset = circumference - (displayedScore / 100) * circumference;
   const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
+  const cashFlowFactor = result.factors.find((factor) => factor.id === "cash-flow");
+  const savingsFactor = result.factors.find((factor) => factor.id === "savings");
 
   return (
     <section className={styles.module} aria-label="Financial health score">
@@ -68,7 +71,11 @@ export function FinancialHealthScore({
             className={styles.gauge}
             viewBox="0 0 112 112"
             role="img"
-            aria-label={`Financial health score ${result.score} out of 100`}
+            aria-label={
+              result.scoreAvailable
+                ? `Financial health score ${result.score} out of 100`
+                : "Financial health score pending profile completion"
+            }
           >
             <circle className={styles.gaugeTrack} cx="56" cy="56" r="46" />
             <circle
@@ -82,8 +89,8 @@ export function FinancialHealthScore({
           </svg>
 
           <div className={styles.score}>
-            <strong>{result.score}</strong>
-            <span>/ 100</span>
+            <strong>{result.scoreAvailable ? result.score : "—"}</strong>
+            <span>{result.scoreAvailable ? "/ 100" : "Pending"}</span>
           </div>
         </div>
 
@@ -101,11 +108,19 @@ export function FinancialHealthScore({
           <div className={styles.quickMetrics}>
             <span>
               <small>Cash-flow margin</small>
-              <strong>{(result.metrics.cashFlowMargin * 100).toFixed(1)}%</strong>
+              <strong>
+                {cashFlowFactor?.assessed
+                  ? `${(result.metrics.cashFlowMargin * 100).toFixed(1)}%`
+                  : "Pending"}
+              </strong>
             </span>
             <span>
               <small>Savings rate</small>
-              <strong>{(result.metrics.savingsRate * 100).toFixed(1)}%</strong>
+              <strong>
+                {savingsFactor?.assessed
+                  ? `${(result.metrics.savingsRate * 100).toFixed(1)}%`
+                  : "Pending"}
+              </strong>
             </span>
           </div>
 
@@ -158,7 +173,13 @@ export function FinancialHealthScore({
                         <span>{factorMetric(factor)}</span>
                       </div>
                       <b>
-                        {factor.points.toFixed(1)} <small>/ {factor.maximum}</small>
+                        {factor.assessed ? (
+                          <>
+                            {factor.points.toFixed(1)} <small>/ {factor.maximum}</small>
+                          </>
+                        ) : (
+                          <small>Pending</small>
+                        )}
                       </b>
                     </div>
                     <div className={styles.factorTrack} aria-hidden="true">

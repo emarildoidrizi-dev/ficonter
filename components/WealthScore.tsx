@@ -49,7 +49,8 @@ export function WealthScore({
 }) {
   const [expanded, setExpanded] = useState(false);
   const circumference = 2 * Math.PI * 46;
-  const dashOffset = circumference - (result.score / 100) * circumference;
+  const displayedScore = result.scoreAvailable ? result.score : 0;
+  const dashOffset = circumference - (displayedScore / 100) * circumference;
   const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
 
   return (
@@ -60,7 +61,11 @@ export function WealthScore({
             className={styles.gauge}
             viewBox="0 0 112 112"
             role="img"
-            aria-label={`Wealth score ${result.score} out of 100`}
+            aria-label={
+              result.scoreAvailable
+                ? `Wealth score ${result.score} out of 100`
+                : "Wealth score pending profile completion"
+            }
           >
             <circle className={styles.gaugeTrack} cx="56" cy="56" r="46" />
             <circle
@@ -73,8 +78,8 @@ export function WealthScore({
             />
           </svg>
           <div className={styles.score}>
-            <strong>{result.score}</strong>
-            <span>/ 100</span>
+            <strong>{result.scoreAvailable ? result.score : "—"}</strong>
+            <span>{result.scoreAvailable ? "/ 100" : "Pending"}</span>
           </div>
         </div>
 
@@ -96,11 +101,23 @@ export function WealthScore({
             </span>
             <span>
               <small>Capital / debt</small>
-              <strong>{result.metrics.capitalToDebtRatio.toFixed(2)}×</strong>
+              <strong>
+                {result.metrics.capitalToDebtRatioAvailable
+                  ? `${result.metrics.capitalToDebtRatio.toFixed(2)}×`
+                  : result.metrics.currentDebt <= 0 && result.factors.find(
+                        (factor) => factor.id === "capital-balance",
+                      )?.assessed
+                    ? "Debt-free"
+                    : "Not recorded"}
+              </strong>
             </span>
             <span>
               <small>3-month retention</small>
-              <strong>{(result.metrics.recentRetentionRate * 100).toFixed(1)}%</strong>
+              <strong>
+                {result.metrics.recentRetentionAvailable
+                  ? `${(result.metrics.recentRetentionRate * 100).toFixed(1)}%`
+                  : "Awaiting 3 months"}
+              </strong>
             </span>
           </div>
 
@@ -154,7 +171,13 @@ export function WealthScore({
                         <span>{factorMetric(factor)}</span>
                       </div>
                       <b>
-                        {factor.points.toFixed(1)} <small>/ {factor.maximum}</small>
+                        {factor.assessed ? (
+                          <>
+                            {factor.points.toFixed(1)} <small>/ {factor.maximum}</small>
+                          </>
+                        ) : (
+                          <small>Pending</small>
+                        )}
                       </b>
                     </div>
                     <div className={styles.factorTrack} aria-hidden="true">

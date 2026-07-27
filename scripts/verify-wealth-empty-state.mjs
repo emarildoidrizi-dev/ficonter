@@ -17,14 +17,14 @@ const savingsUi = read("components/SavingsIntelligence.tsx");
 const keyboard = read("components/KeyboardInteractionBridge.tsx");
 const rootLayout = read("app/layout.tsx");
 
-check("Financial Health has a zero-data Not assessed state", health.includes('"Not assessed"') && health.includes("assessed") && health.includes("No data"));
+check("Financial Health has zero-data and incomplete-profile states", health.includes('"Not assessed"') && health.includes('"Setup incomplete"') && health.includes("scoreAvailable"));
 check("Financial Health does not award debt points without debt records", health.includes("let debtPoints = 0") && health.includes("if (hasDebts && debts.activeCount === 0)"));
 check("Financial Health does not award bill, goal or planner points without records", health.includes("const overduePoints = hasBills") && health.includes("const goalPoints = hasGoals") && health.includes("const planningPoints = hasPlannerData"));
 check("Cash Flow has explicit forecast availability and no-data label", cash.includes("forecastAvailable") && cash.includes('"Not enough data"') && cash.includes('return "No data"'));
 check("Emergency Fund confidence can report No data", emergency.includes('| "No data"') && emergency.includes('return "No data"'));
 check("Savings Intelligence coverage remains zero without saving records", savings.includes("hasSavingsData") && savings.includes("const dataCoverage = hasSavingsData"));
 check("Savings target line is hidden when the target is zero", savingsUi.includes("result.metrics.recommendedMonthlyTarget > 0 ?"));
-check("Wealth Score has an unassessed zero-data state", wealth.includes('"Not assessed"') && wealth.includes("assessed: hasAnyData") && wealth.includes("? 0"));
+check("Wealth Score blocks scoring for incomplete profiles", wealth.includes('"Setup incomplete"') && wealth.includes("scoreAvailable") && wealth.includes("recentRetentionAvailable"));
 check("Net Worth Growth requires real comparable history", growth.includes('"Not enough history"') && growth.includes("hasHistory") && growth.includes("const dataCoverage = hasHistory"));
 check("Financial Independence has an unassessed zero-data state", independence.includes('"Not assessed"') && independence.includes("assessed") && independence.includes('return "No data"'));
 check("Global keyboard bridge is mounted", rootLayout.includes("KeyboardInteractionBridge") && keyboard.includes("data-enter-confirm"));

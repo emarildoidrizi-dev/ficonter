@@ -1,0 +1,17 @@
+NEW FILES
+app/dashboard/setup/page.tsx
+components/FinancialSetupGuide.tsx
+components/FinancialSetupGuide.module.css
+components/FinancialSetupSummary.tsx
+components/FinancialSetupSummary.module.css
+lib/wealth/setupReadiness.ts
+scripts/verify-financial-setup.mjs
+
+REPLACE EXISTING FILES
+app/dashboard/page.tsx
+app/dashboard/transactions/page.tsx
+components/DashboardLiveOverview.tsx
+components/Sidebar.tsx
+components/TransactionForm.tsx
+lib/wealth/dataReadiness.ts
+package.json

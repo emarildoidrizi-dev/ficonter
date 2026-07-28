@@ -18,6 +18,8 @@ import {
   type FinancialHealthInputs,
 } from "@/lib/wealth/financialHealth";
 import { FinancialHealthScore } from "@/components/FinancialHealthScore";
+import { FinancialSetupSummary } from "@/components/FinancialSetupSummary";
+import type { SetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 import styles from "./DashboardLiveOverview.module.css";
 
 type Transaction = {
@@ -41,6 +43,7 @@ type Props = {
   name: string;
   initialTransactions: Transaction[];
   initialHealthInputs: FinancialHealthInputs;
+  initialSetupAcknowledgements: SetupAcknowledgements;
   initialError?: string;
   initialHealthError?: string;
 };
@@ -91,6 +94,7 @@ export function DashboardLiveOverview({
   name,
   initialTransactions,
   initialHealthInputs,
+  initialSetupAcknowledgements,
   initialError = "",
   initialHealthError = "",
 }: Props) {
@@ -323,6 +327,11 @@ export function DashboardLiveOverview({
       </header>
 
       {initialError ? <div className="alert alert-error">{initialError}</div> : null}
+
+      <FinancialSetupSummary
+        inputs={healthInputs}
+        acknowledgements={initialSetupAcknowledgements}
+      />
 
       <section className="kpis">
         <div className="kpi">

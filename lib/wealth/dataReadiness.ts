@@ -30,10 +30,7 @@ export function financialDataReadiness(
     nonZero(input.transactions.totalSavings) ||
     nonZero(input.transactions.debtPayments);
   const hasIncome = nonZero(input.transactions.totalIncome);
-  const hasOutflow =
-    nonZero(input.transactions.totalExpenses) ||
-    nonZero(input.transactions.totalSavings) ||
-    nonZero(input.transactions.currentMonthOutflow);
+  const hasOutflow = nonZero(input.transactions.totalExpenses);
   const hasBills = input.bills.count > 0;
   const hasDebts = input.debts.count > 0;
   const hasGoals = input.goals.count > 0;

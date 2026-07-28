@@ -1,19 +1,27 @@
 # Change summary
 
-- Removes the vertical scroll trap caused by contained overscroll behavior.
-- Caps the Overview transaction list to a viewport-aware height so it scrolls inside the card.
-- Hands mouse-wheel and touch scrolling back to the page when an internal list reaches its top or bottom.
-- Adds consistent thin scrollbars in light and dark modes.
-- Applies the shared behavior to high-volume regions across Overview, Transactions, Bills, Debt, Goals, Monthly Planner, Cash Flow, Savings, Net Worth, Documents, Notifications, Support, and Admin.
-- Adds internal scrolling to lists that previously expanded indefinitely.
-- Keeps the Admin directory header visible while its user list scrolls.
-- Does not change calculations, database queries, realtime synchronization, authentication, or financial data.
+The package adds a guided Financial Setup workspace that distinguishes missing information from a confirmed zero financial position.
 
-Validation performed:
+## Customer experience
 
-- 14 modified TSX files parsed without syntax errors.
-- 10 modified stylesheets passed brace-balance checks.
-- Existing Phase 1 security verification passed 41 checks.
-- Existing Phase 1 QA syntax verification passed all 119 TypeScript/TSX source files.
+- New Financial Profile progress card on Overview.
+- New `/dashboard/setup` guided workspace.
+- Seven setup areas: income, expenses, bills, debt, savings, goals and Monthly Planner.
+- Explicit confirmations for no bills, debt-free, no savings yet and no active goals.
+- Profile completion percentage and next-step guidance.
+- Score status progresses from Pending to Preliminary to Ready.
+- Realtime refresh when connected financial modules change.
+- Financial Setup entry added to the profile menu.
+- Guided transaction links preselect Income, Expense or Saving.
 
-The uploaded baseline project already reports five unrelated Phase 1 QA inventory/atomicity failures. This scroll package does not alter those modules or create those failures.
+## Scoring protection
+
+- A saving transfer alone no longer substitutes for an expense baseline.
+- Income-only profiles remain incomplete.
+- Confirmations describe empty categories without creating artificial balances or scoring points.
+
+## Architecture
+
+- Reuses `get_financial_health_inputs` and the existing shared Wealth Engine inputs.
+- Stores only setup acknowledgements in authenticated user metadata.
+- Does not create a parallel financial data source.

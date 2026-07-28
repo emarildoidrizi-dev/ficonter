@@ -13,6 +13,7 @@ import {
   FileArchive,
   Landmark,
   LayoutDashboard,
+  ListChecks,
   MessageSquareText,
   LogOut,
   PiggyBank,
@@ -116,6 +117,7 @@ export function Sidebar({
     .slice(0, 1)
     .toUpperCase();
   const accountAreaActive =
+    pathname.startsWith("/dashboard/setup") ||
     pathname.startsWith("/dashboard/settings") ||
     pathname.startsWith("/dashboard/help") ||
     pathname.startsWith("/dashboard/inbox") ||
@@ -296,6 +298,14 @@ export function Sidebar({
             >
               <UserRound size={17} aria-hidden="true" />
               <span>Profile</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => openRoute("/dashboard/setup")}
+            >
+              <ListChecks size={17} aria-hidden="true" />
+              <span>Financial setup</span>
             </button>
             <button
               type="button"

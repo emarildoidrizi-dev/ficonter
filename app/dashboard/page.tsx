@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
 import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
+import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
       name={name}
       initialTransactions={transactionResult.data ?? []}
       initialHealthInputs={normalizeFinancialHealthInputs(healthResult.data)}
+      initialSetupAcknowledgements={readSetupAcknowledgements(user.user_metadata)}
       initialError={transactionResult.error?.message ?? ""}
       initialHealthError={healthResult.error?.message ?? ""}
     />

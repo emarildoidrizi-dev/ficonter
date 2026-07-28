@@ -32,14 +32,27 @@ type RateState = {
   source: string;
 };
 
-export function TransactionForm() {
+export function TransactionForm({
+  initialType = "expense",
+  initialCategory,
+}: {
+  initialType?: "expense" | "income" | "saving";
+  initialCategory?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [amount, setAmount] = useState("");
   const [occurredAt, setOccurredAt] = useState(() => localDateTimeValue());
   const transactionTimeWasEdited = useRef(false);
-  const [category, setCategory] = useState("Groceries");
+  const defaultCategory =
+    initialCategory ??
+    (initialType === "income"
+      ? "Salary"
+      : initialType === "saving"
+        ? "General savings"
+        : "Groceries");
+  const [category, setCategory] = useState(defaultCategory);
   const [customCategory, setCustomCategory] = useState("");
   const [rate, setRate] = useState<RateState>({
     rate: 1,
@@ -193,7 +206,7 @@ export function TransactionForm() {
       setCurrency("EUR");
       transactionTimeWasEdited.current = false;
       setOccurredAt(localDateTimeValue());
-      setCategory("Groceries");
+      setCategory(defaultCategory);
       setCustomCategory("");
       notifyFiconterDataChange("all");
     } catch (submitError) {
@@ -258,7 +271,7 @@ export function TransactionForm() {
 
       <div className="field">
         <label>Transaction type</label>
-        <select className="input" name="type" defaultValue="expense">
+        <select className="input" name="type" defaultValue={initialType}>
           {Object.entries(groupedTypes).map(([group, options]) => (
             <optgroup key={group} label={group}>
               {options.map((option) => (

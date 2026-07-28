@@ -19,7 +19,8 @@
     "verify:wealth-empty-state": "node scripts/verify-wealth-empty-state.mjs",
     "verify:phase2-ai": "node scripts/verify-phase2-ai-insights.mjs",
     "verify:support": "node scripts/verify-contact-support.mjs",
-    "verify:support-platform": "node scripts/verify-support-messaging-documents.mjs"
+    "verify:support-platform": "node scripts/verify-support-messaging-documents.mjs",
+    "verify:financial-setup": "node scripts/verify-financial-setup.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

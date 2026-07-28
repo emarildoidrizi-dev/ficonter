@@ -6,13 +6,28 @@ import { TransactionLedger } from "@/components/TransactionLedger";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function TransactionsPage() {
+type TransactionsPageProps = {
+  searchParams?: Promise<{
+    setup?: string | string[];
+  }>;
+};
+
+function setupTransactionType(value: string | undefined) {
+  if (value === "income" || value === "saving") return value;
+  return "expense";
+}
+
+export default async function TransactionsPage({ searchParams }: TransactionsPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const query = await searchParams;
+  const setupValue = Array.isArray(query?.setup) ? query.setup[0] : query?.setup;
+  const initialType = setupTransactionType(setupValue);
 
   const { data, error } = await supabase
     .from("transactions")
@@ -32,7 +47,7 @@ export default async function TransactionsPage() {
         <div className="panel transaction-entry-panel">
           <h3>Add transaction</h3>
           <p className="muted transaction-intro">Record income and expenses as they happen.</p>
-          <TransactionForm />
+          <TransactionForm initialType={initialType} />
         </div>
         <div className="panel transaction-ledger-panel">
           <div className="panel-head">

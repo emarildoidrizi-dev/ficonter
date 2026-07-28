@@ -10,6 +10,7 @@
   align-content: start;
   min-height: 0;
   overflow-y: auto;
+  gap: 5px;
   padding-right: 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
@@ -17,8 +18,24 @@
 
 .link {
   position: relative;
+  min-height: 35px;
+  gap: 10px;
   overflow: hidden;
+  padding: 7px 11px;
+  font-size: 14px;
+  line-height: 1.15;
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.link svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.link > span:first-of-type {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .link:hover {
@@ -43,7 +60,7 @@
 .accountDock {
   position: relative;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 14px;
 }
 
 .accountDock::before {
@@ -243,6 +260,51 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 900px) {
+  .sidebarRoot {
+    padding: 20px 16px;
+  }
+
+  .sidebarRoot :global(.brand) {
+    padding: 0 8px 18px;
+  }
+
+  .navigation {
+    gap: 3px;
+  }
+
+  .link {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 13.5px;
+  }
+
+  .accountDock {
+    padding-top: 10px;
+  }
+
+  .accountButton {
+    grid-template-columns: 38px minmax(0, 1fr) 16px;
+    gap: 9px;
+    padding: 8px;
+    border-radius: 14px;
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .accountIdentity strong {
+    font-size: 13px;
+  }
+
+  .accountIdentity small {
+    font-size: 10.5px;
   }
 }
 

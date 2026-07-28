@@ -10,10 +10,104 @@
   align-content: start;
   min-height: 0;
   overflow-y: auto;
-  gap: 5px;
+  gap: 7px;
   padding-right: 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.navigationSection,
+.navigationGroup,
+.primaryLinks,
+.groupLinks {
+  display: grid;
+  min-width: 0;
+}
+
+.navigationSection,
+.navigationGroup {
+  gap: 3px;
+}
+
+.primaryLinks,
+.groupLinks {
+  gap: 3px;
+}
+
+.sectionLabel {
+  display: block;
+  padding: 2px 11px 4px;
+  color: rgba(220, 213, 201, 0.54);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.groupButton {
+  width: 100%;
+  min-height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  border-radius: 9px;
+  padding: 6px 10px 6px 11px;
+  background: transparent;
+  color: rgba(220, 213, 201, 0.58);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.groupButton:hover,
+.groupButton:focus-visible {
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(247, 243, 236, 0.86);
+  outline: none;
+}
+
+.groupButtonActive {
+  color: var(--gold);
+}
+
+.groupChevron {
+  flex: 0 0 auto;
+  opacity: 0.7;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.groupButton:hover .groupChevron,
+.groupButton:focus-visible .groupChevron,
+.groupButtonActive .groupChevron {
+  opacity: 1;
+}
+
+.groupChevronOpen {
+  transform: rotate(180deg);
+}
+
+.groupLinks {
+  position: relative;
+  padding-left: 5px;
+  animation: groupLinksIn 140ms ease-out;
+}
+
+.groupLinks::before {
+  content: "";
+  position: absolute;
+  inset: 3px auto 3px 0;
+  width: 1px;
+  border-radius: 999px;
+  background: rgba(200, 170, 120, 0.16);
 }
 
 .link {
@@ -233,6 +327,17 @@
   animation: routeProgress 900ms ease-in-out infinite;
 }
 
+@keyframes groupLinksIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -273,7 +378,18 @@
   }
 
   .navigation {
-    gap: 3px;
+    gap: 5px;
+  }
+
+  .groupButton {
+    min-height: 26px;
+    padding-block: 4px;
+    font-size: 9.5px;
+  }
+
+  .sectionLabel {
+    padding-bottom: 2px;
+    font-size: 9.5px;
   }
 
   .link {
@@ -347,12 +463,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .link,
+  .groupButton,
+  .groupChevron,
   .progress,
   .accountButton,
   .accountChevron {
     transition: none;
   }
 
+  .groupLinks,
   .spinner,
   .progress span,
   .accountMenu {

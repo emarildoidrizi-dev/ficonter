@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   ChartPie,
   Compass,
+  ChevronDown,
   ChevronUp,
   CircleHelp,
   CreditCard,
@@ -25,6 +26,7 @@ import {
   Umbrella,
   UserRound,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useEffect,
@@ -53,22 +55,71 @@ type ProfileUpdatedDetail = {
   email?: string;
 };
 
-const standardLinks = [
+type NavigationLink = readonly [
+  href: string,
+  icon: LucideIcon,
+  label: string,
+];
+
+type NavigationGroupKey =
+  | "money-management"
+  | "financial-progress"
+  | "resources"
+  | "administration";
+
+type NavigationGroup = {
+  key: NavigationGroupKey;
+  label: string;
+  links: readonly NavigationLink[];
+};
+
+const primaryLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
   ["/dashboard/gps", Compass, "Financial GPS"],
-  ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
-  ["/dashboard/cash-flow", Activity, "Cash flow"],
-  ["/dashboard/emergency-fund", Umbrella, "Emergency fund"],
-  ["/dashboard/savings", PiggyBank, "Savings intelligence"],
-  ["/dashboard/budget", ChartPie, "Monthly planner"],
-  ["/dashboard/bills", ReceiptText, "Bills"],
-  ["/dashboard/debt", CreditCard, "Debt"],
-  ["/dashboard/goals", Target, "Goals"],
-  ["/dashboard/net-worth", Landmark, "Net worth"],
-  ["/dashboard/financial-independence", Flag, "Financial independence"],
-  ["/dashboard/insights", BrainCircuit, "Smart insights"],
-  ["/dashboard/documents", FileArchive, "Documents"],
-] as const;
+] as const satisfies readonly NavigationLink[];
+
+const standardGroups = [
+  {
+    key: "money-management",
+    label: "Money management",
+    links: [
+      ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
+      ["/dashboard/cash-flow", Activity, "Cash flow"],
+      ["/dashboard/budget", ChartPie, "Monthly planner"],
+      ["/dashboard/bills", ReceiptText, "Bills"],
+    ],
+  },
+  {
+    key: "financial-progress",
+    label: "Financial progress",
+    links: [
+      ["/dashboard/emergency-fund", Umbrella, "Emergency fund"],
+      ["/dashboard/savings", PiggyBank, "Savings intelligence"],
+      ["/dashboard/debt", CreditCard, "Debt"],
+      ["/dashboard/goals", Target, "Goals"],
+      ["/dashboard/net-worth", Landmark, "Net worth"],
+      [
+        "/dashboard/financial-independence",
+        Flag,
+        "Financial independence",
+      ],
+      ["/dashboard/insights", BrainCircuit, "Smart insights"],
+    ],
+  },
+  {
+    key: "resources",
+    label: "Account & support",
+    links: [["/dashboard/documents", FileArchive, "Documents"]],
+  },
+] as const satisfies readonly NavigationGroup[];
+
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard" || href === "/dashboard/admin") {
+    return pathname === href;
+  }
+
+  return pathname.startsWith(href);
+}
 
 function fallbackDisplayName(user: SidebarUser): string {
   const provided = user.displayName.trim();
@@ -90,6 +141,26 @@ export function Sidebar({
   const supabase = useMemo(() => createClient(), []);
   const accountRef = useRef<HTMLDivElement>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<
+    Record<NavigationGroupKey, boolean>
+  >(() => ({
+    "money-management": isRouteActive(pathname, "/dashboard/transactions") ||
+      isRouteActive(pathname, "/dashboard/cash-flow") ||
+      isRouteActive(pathname, "/dashboard/budget") ||
+      isRouteActive(pathname, "/dashboard/bills"),
+    "financial-progress":
+      isRouteActive(pathname, "/dashboard/emergency-fund") ||
+      isRouteActive(pathname, "/dashboard/savings") ||
+      isRouteActive(pathname, "/dashboard/debt") ||
+      isRouteActive(pathname, "/dashboard/goals") ||
+      isRouteActive(pathname, "/dashboard/net-worth") ||
+      isRouteActive(pathname, "/dashboard/financial-independence") ||
+      isRouteActive(pathname, "/dashboard/insights"),
+    resources: isRouteActive(pathname, "/dashboard/documents"),
+    administration:
+      isRouteActive(pathname, "/dashboard/admin") ||
+      isRouteActive(pathname, "/dashboard/admin/support"),
+  }));
   const [menuOpen, setMenuOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -98,21 +169,24 @@ export function Sidebar({
   const [avatarPath, setAvatarPath] = useState(user.avatarPath);
   const [avatarUrl, setAvatarUrl] = useState("");
 
-  const links = useMemo(
-    () =>
-      isAdmin
-        ? [
-            ...standardLinks,
-            ["/dashboard/admin", ShieldCheck, "Admin"] as const,
-            [
-              "/dashboard/admin/support",
-              MessageSquareText,
-              "Support inbox",
-            ] as const,
-          ]
-        : standardLinks,
-    [isAdmin],
-  );
+  const navigationGroups = useMemo<readonly NavigationGroup[]>(() => {
+    if (!isAdmin) return standardGroups;
+
+    const administrationGroup: NavigationGroup = {
+      key: "administration",
+      label: "Administration",
+      links: [
+        ["/dashboard/admin", ShieldCheck, "Admin"],
+        [
+          "/dashboard/admin/support",
+          MessageSquareText,
+          "Support inbox",
+        ],
+      ],
+    };
+
+    return [...standardGroups, administrationGroup];
+  }, [isAdmin]);
 
   const avatarText = (displayName || accountEmail || "F")
     .trim()
@@ -128,7 +202,24 @@ export function Sidebar({
   useEffect(() => {
     setPendingHref(null);
     setMenuOpen(false);
-  }, [pathname]);
+
+    setOpenGroups((current) => {
+      let next = current;
+
+      for (const group of navigationGroups) {
+        const containsActiveRoute = group.links.some(([href]) =>
+          isRouteActive(pathname, href),
+        );
+
+        if (containsActiveRoute && !next[group.key]) {
+          if (next === current) next = { ...current };
+          next[group.key] = true;
+        }
+      }
+
+      return next;
+    });
+  }, [navigationGroups, pathname]);
 
   useEffect(() => {
     if (!pendingHref) return;
@@ -259,32 +350,107 @@ export function Sidebar({
         className={`side-nav ${styles.navigation}`}
         aria-label="Private finance navigation"
       >
-        {links.map(([href, Icon, label]) => {
-          const active =
-            href === "/dashboard" || href === "/dashboard/admin"
-              ? pathname === href
-              : pathname.startsWith(href);
-          const pending = pendingHref === href;
+        <div className={styles.navigationSection}>
+          <span className={styles.sectionLabel}>Main</span>
+          <div className={styles.primaryLinks}>
+            {primaryLinks.map(([href, Icon, label]) => {
+              const active = isRouteActive(pathname, href);
+              const pending = pendingHref === href;
+
+              return (
+                <Link
+                  className={`side-link ${styles.link}${
+                    active ? " active" : ""
+                  }${pending ? ` ${styles.pending}` : ""}`}
+                  href={href}
+                  key={href}
+                  prefetch={false}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    if (!active) setPendingHref(href);
+                  }}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{label}</span>
+                  {pending ? (
+                    <span className={styles.spinner} aria-label="Opening page" />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {navigationGroups.map((group) => {
+          const open = openGroups[group.key];
+          const groupActive = group.links.some(([href]) =>
+            isRouteActive(pathname, href),
+          );
+          const panelId = `sidebar-group-${group.key}`;
 
           return (
-            <Link
-              className={`side-link ${styles.link}${active ? " active" : ""}${
-                pending ? ` ${styles.pending}` : ""
-              }`}
-              href={href}
-              key={href}
-              prefetch={false}
-              aria-current={active ? "page" : undefined}
-              onClick={() => {
-                if (!active) setPendingHref(href);
-              }}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <span>{label}</span>
-              {pending ? (
-                <span className={styles.spinner} aria-label="Opening page" />
+            <section className={styles.navigationGroup} key={group.key}>
+              <button
+                type="button"
+                className={`${styles.groupButton}${
+                  groupActive ? ` ${styles.groupButtonActive}` : ""
+                }`}
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={() =>
+                  setOpenGroups((current) => ({
+                    ...current,
+                    [group.key]: !current[group.key],
+                  }))
+                }
+              >
+                <span>{group.label}</span>
+                <ChevronDown
+                  className={`${styles.groupChevron}${
+                    open ? ` ${styles.groupChevronOpen}` : ""
+                  }`}
+                  size={15}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {open ? (
+                <div
+                  className={styles.groupLinks}
+                  id={panelId}
+                  data-testid={`sidebar-${group.key}`}
+                >
+                  {group.links.map(([href, Icon, label]) => {
+                    const active = isRouteActive(pathname, href);
+                    const pending = pendingHref === href;
+
+                    return (
+                      <Link
+                        className={`side-link ${styles.link}${
+                          active ? " active" : ""
+                        }${pending ? ` ${styles.pending}` : ""}`}
+                        href={href}
+                        key={href}
+                        prefetch={false}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => {
+                          if (!active) setPendingHref(href);
+                        }}
+                      >
+                        <Icon size={18} aria-hidden="true" />
+                        <span>{label}</span>
+                        {pending ? (
+                          <span
+                            className={styles.spinner}
+                            aria-label="Opening page"
+                          />
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
               ) : null}
-            </Link>
+            </section>
           );
         })}
       </nav>

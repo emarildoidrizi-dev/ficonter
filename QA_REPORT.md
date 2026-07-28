@@ -1,9 +1,16 @@
-# QA report
+# Verification report
 
-- 27 Guided Financial Setup verification checks passed.
-- 26 Financial Health verification checks passed.
-- 32 Wealth Score verification checks passed.
-- All 10 changed TypeScript/TSX implementation files passed isolated syntax transpilation.
-- Phase 1 security scan included the new components and found no privileged credential references.
+Passed:
 
-A full dependency installation and `next build` could not be executed in the packaging environment because the package registry returned temporary 503 responses. No build-success claim is made beyond the verification results above.
+- Financial GPS deterministic verification: 32 checks
+- Guided Financial Setup verification: 27 checks
+- Smart Insights verification: 37 checks
+- Financial Health verification: 26 checks
+- Wealth Score verification: 32 checks
+- TypeScript semantic check for all Wealth Engine library files
+- TypeScript semantic check for the new Financial GPS client components using local dependency stubs
+- Syntax transpilation for every changed TypeScript and TSX file
+
+A complete Next.js production build could not be run because the available package registry does not contain `@supabase/ssr`.
+
+The repository-wide `verify:all` command also stops on five pre-existing Phase 1 QA inventory/atomic-operation checks in the uploaded baseline. The new Financial GPS checks pass and did not introduce those failures.

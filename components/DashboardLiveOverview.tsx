@@ -19,7 +19,12 @@ import {
 } from "@/lib/wealth/financialHealth";
 import { FinancialHealthScore } from "@/components/FinancialHealthScore";
 import { FinancialSetupSummary } from "@/components/FinancialSetupSummary";
+import { FinancialGpsSummary } from "@/components/FinancialGpsSummary";
 import type { SetupAcknowledgements } from "@/lib/wealth/setupReadiness";
+import {
+  normalizeAiInsightsInputs,
+  type AiInsightsInputs,
+} from "@/lib/wealth/aiInsights";
 import styles from "./DashboardLiveOverview.module.css";
 
 type Transaction = {
@@ -44,8 +49,10 @@ type Props = {
   initialTransactions: Transaction[];
   initialHealthInputs: FinancialHealthInputs;
   initialSetupAcknowledgements: SetupAcknowledgements;
+  initialGpsInputs: AiInsightsInputs;
   initialError?: string;
   initialHealthError?: string;
+  initialGpsError?: string;
 };
 
 function euroValue(transaction: Transaction) {
@@ -95,8 +102,10 @@ export function DashboardLiveOverview({
   initialTransactions,
   initialHealthInputs,
   initialSetupAcknowledgements,
+  initialGpsInputs,
   initialError = "",
   initialHealthError = "",
+  initialGpsError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
@@ -105,6 +114,11 @@ export function DashboardLiveOverview({
   );
   const [healthInputs, setHealthInputs] = useState(initialHealthInputs);
   const [healthError, setHealthError] = useState(initialHealthError);
+  const [gpsInputs, setGpsInputs] = useState(initialGpsInputs);
+  const [gpsError, setGpsError] = useState(initialGpsError);
+  const [setupAcknowledgements, setSetupAcknowledgements] = useState(
+    initialSetupAcknowledgements,
+  );
   const [connectionState, setConnectionState] = useState<
     "connecting" | "live" | "offline"
   >("connecting");
@@ -118,6 +132,15 @@ export function DashboardLiveOverview({
     setHealthError(initialHealthError);
   }, [initialHealthInputs, initialHealthError]);
 
+  useEffect(() => {
+    setGpsInputs(initialGpsInputs);
+    setGpsError(initialGpsError);
+  }, [initialGpsInputs, initialGpsError]);
+
+  useEffect(() => {
+    setSetupAcknowledgements(initialSetupAcknowledgements);
+  }, [initialSetupAcknowledgements]);
+
   const refreshHealthInputs = useCallback(async () => {
     const { data, error } = await supabase.rpc("get_financial_health_inputs");
 
@@ -130,6 +153,18 @@ export function DashboardLiveOverview({
     setHealthError("");
   }, [supabase]);
 
+  const refreshGpsInputs = useCallback(async () => {
+    const { data, error } = await supabase.rpc("get_ai_insights_inputs");
+
+    if (error) {
+      setGpsError(error.message);
+      return;
+    }
+
+    setGpsInputs(normalizeAiInsightsInputs(data));
+    setGpsError("");
+  }, [supabase]);
+
   const scheduleHealthRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
       window.clearTimeout(refreshTimerRef.current);
@@ -137,9 +172,9 @@ export function DashboardLiveOverview({
 
     refreshTimerRef.current = window.setTimeout(() => {
       refreshTimerRef.current = null;
-      void refreshHealthInputs();
+      void Promise.all([refreshHealthInputs(), refreshGpsInputs()]);
     }, 180);
-  }, [refreshHealthInputs]);
+  }, [refreshGpsInputs, refreshHealthInputs]);
 
   useEffect(() => {
     function upsert(event: Event) {
@@ -165,11 +200,17 @@ export function DashboardLiveOverview({
       scheduleHealthRefresh();
     }
 
+    function updateSetup(event: Event) {
+      const detail = (event as CustomEvent<SetupAcknowledgements>).detail;
+      if (detail) setSetupAcknowledgements(detail);
+    }
+
     window.addEventListener("ficonter:transaction-created", upsert);
     window.addEventListener("ficonter:transaction-upserted", upsert);
     window.addEventListener("ficonter:transaction-deleted", remove);
     window.addEventListener("ficonter:transaction-save-failed", remove);
     window.addEventListener("ficonter:data-changed", refreshFromPlatformEvent);
+    window.addEventListener("ficonter:setup-updated", updateSetup);
 
     return () => {
       window.removeEventListener("ficonter:transaction-created", upsert);
@@ -180,6 +221,7 @@ export function DashboardLiveOverview({
         "ficonter:data-changed",
         refreshFromPlatformEvent,
       );
+      window.removeEventListener("ficonter:setup-updated", updateSetup);
     };
   }, [scheduleHealthRefresh]);
 
@@ -330,7 +372,13 @@ export function DashboardLiveOverview({
 
       <FinancialSetupSummary
         inputs={healthInputs}
-        acknowledgements={initialSetupAcknowledgements}
+        acknowledgements={setupAcknowledgements}
+      />
+
+      <FinancialGpsSummary
+        inputs={gpsInputs}
+        acknowledgements={setupAcknowledgements}
+        error={gpsError}
       />
 
       <section className="kpis">

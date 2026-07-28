@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   ArrowLeftRight,
   ChartPie,
+  Compass,
   ChevronUp,
   CircleHelp,
   CreditCard,
@@ -54,6 +55,7 @@ type ProfileUpdatedDetail = {
 
 const standardLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
+  ["/dashboard/gps", Compass, "Financial GPS"],
   ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
   ["/dashboard/cash-flow", Activity, "Cash flow"],
   ["/dashboard/emergency-fund", Umbrella, "Emergency fund"],

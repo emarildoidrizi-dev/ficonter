@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
 import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
+import { normalizeAiInsightsInputs } from "@/lib/wealth/aiInsights";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const [transactionResult, healthResult] = await Promise.all([
+  const [transactionResult, healthResult, gpsResult] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
       .order("occurred_at", { ascending: false })
       .limit(250),
     supabase.rpc("get_financial_health_inputs"),
+    supabase.rpc("get_ai_insights_inputs"),
   ]);
 
   const name =
@@ -38,8 +40,10 @@ export default async function DashboardPage() {
       initialTransactions={transactionResult.data ?? []}
       initialHealthInputs={normalizeFinancialHealthInputs(healthResult.data)}
       initialSetupAcknowledgements={readSetupAcknowledgements(user.user_metadata)}
+      initialGpsInputs={normalizeAiInsightsInputs(gpsResult.data)}
       initialError={transactionResult.error?.message ?? ""}
       initialHealthError={healthResult.error?.message ?? ""}
+      initialGpsError={gpsResult.error?.message ?? ""}
     />
   );
 }

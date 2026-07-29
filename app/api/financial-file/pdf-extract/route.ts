@@ -62,6 +62,25 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 }
 
+type DisposablePdfDocument = {
+  destroy?: () => void | Promise<void>;
+  cleanup?: () => void | Promise<void>;
+};
+
+async function disposePdfDocument(document: unknown) {
+  const disposable = document as DisposablePdfDocument | null;
+  if (!disposable) return;
+
+  if (typeof disposable.destroy === "function") {
+    await disposable.destroy();
+    return;
+  }
+
+  if (typeof disposable.cleanup === "function") {
+    await disposable.cleanup();
+  }
+}
+
 function positionedItemsToLines(
   pages: Array<Array<{ str: string; x: number; y: number; width: number }>>,
 ) {
@@ -181,12 +200,10 @@ export async function POST(request: NextRequest) {
     });
     return errorResponse(error);
   } finally {
-    if (pdf) {
-      try {
-        await pdf.destroy();
-      } catch {
-        // The response result is more important than cleanup failure.
-      }
+    try {
+      await disposePdfDocument(pdf);
+    } catch {
+      // The response result is more important than cleanup failure.
     }
   }
 }

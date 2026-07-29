@@ -120,13 +120,19 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const left=startBalance+totalIncome-totalOut;
   const leftToBudget=left;
   const availableCash=startBalance+totalIncome;
-  const breakdownParts:{key:BreakdownKey;label:string;value:number;color:string}[]=[
-    {key:"bills",label:"Bills",value:actual("bills"),color:"var(--breakdown-bills)"},
-    {key:"expenses",label:"Expenses",value:actual("expenses"),color:"var(--breakdown-expenses)"},
-    {key:"savings",label:"Savings",value:actual("savings"),color:"var(--breakdown-savings)"},
-    {key:"goals",label:"Goals",value:goalInvestments,color:"var(--breakdown-goals)"},
-    {key:"debt",label:"Debt",value:actual("debt"),color:"var(--breakdown-debt)"},
-  ].filter(part=>part.value>0);
+  const breakdownCandidates: {
+    key: BreakdownKey;
+    label: string;
+    value: number;
+    color: string;
+  }[] = [
+    { key: "bills", label: "Bills", value: actual("bills"), color: "var(--breakdown-bills)" },
+    { key: "expenses", label: "Expenses", value: actual("expenses"), color: "var(--breakdown-expenses)" },
+    { key: "savings", label: "Savings", value: actual("savings"), color: "var(--breakdown-savings)" },
+    { key: "goals", label: "Goals", value: goalInvestments, color: "var(--breakdown-goals)" },
+    { key: "debt", label: "Debt", value: actual("debt"), color: "var(--breakdown-debt)" },
+  ];
+  const breakdownParts = breakdownCandidates.filter((part) => part.value > 0);
   const breakdownTotal=breakdownParts.reduce((sum,part)=>sum+part.value,0);
   let cursor=0;
   const gradient=breakdownParts.length

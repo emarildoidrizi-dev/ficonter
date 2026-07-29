@@ -478,3 +478,39 @@
     animation: none;
   }
 }
+
+/* Keep the desktop navigation docked while allowing only its middle list to scroll. */
+@media (min-width: 901px) {
+  .sidebarRoot {
+    height: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .navigation {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .accountDock {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebarRoot {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .navigation {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+}

@@ -1150,3 +1150,52 @@ html[data-layout="horizon"] :where(a, button, input, select, textarea):focus-vis
     transition-duration: .01ms !important;
   }
 }
+
+/* FICONTER FIXED DASHBOARD SIDEBAR
+   Desktop: the dashboard shell occupies the viewport, the sidebar stays anchored,
+   and only the main workspace scrolls. Mobile retains the normal page flow. */
+@media (min-width: 901px) {
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    align-items: stretch;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .app-main {
+    min-width: 0;
+    min-height: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-main {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}

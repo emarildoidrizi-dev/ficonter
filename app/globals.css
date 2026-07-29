@@ -455,3 +455,185 @@ html[data-resolved-theme="dark"] .btn-primary {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
+
+/* Effortless Entry v1 */
+.transaction-effortless-panel {
+  padding: 14px;
+}
+
+.effortless-preset-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
+}
+
+.effortless-preset-notice span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 800;
+}
+
+.effortless-preset-notice strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-type-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.transaction-type-buttons button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.transaction-type-buttons button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.transaction-type-buttons button.is-active {
+  border-color: color-mix(in srgb, var(--gold) 64%, var(--line));
+  background: color-mix(in srgb, var(--gold) 11%, var(--control-bg));
+  color: var(--text-primary);
+}
+
+.effortless-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0 13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.effortless-advanced-toggle svg {
+  transition: transform 150ms ease;
+}
+
+.effortless-advanced-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+
+.effortless-advanced-fields {
+  display: grid;
+  gap: 0;
+}
+
+.effortless-reuse-details {
+  margin: 2px 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-subtle) 76%, transparent);
+}
+
+.effortless-reuse-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+  list-style: none;
+  cursor: pointer;
+}
+
+.effortless-reuse-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.effortless-reuse-details summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.effortless-reuse-details[open] summary > svg {
+  transform: rotate(180deg);
+}
+
+.effortless-reuse-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.effortless-check-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 10px;
+  background: var(--surface-card);
+  cursor: pointer;
+}
+
+.effortless-check-row input {
+  margin: 2px 0 0;
+  accent-color: var(--gold);
+}
+
+.effortless-check-row strong,
+.effortless-check-row small {
+  display: block;
+}
+
+.effortless-check-row strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.effortless-check-row small {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.effortless-reuse-body .field label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@media (max-width: 700px) {
+  .transaction-effortless-panel {
+    padding: 10px;
+  }
+
+  .transaction-type-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
+.transaction-entry-panel.transaction-effortless-panel {
+  position: static;
+}

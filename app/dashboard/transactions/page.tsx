@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { TransactionForm } from "@/components/TransactionForm";
+import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +40,15 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       <header className="topbar">
         <div className="page-title">
           <h1>Transactions</h1>
-          <p>Search, analyze and manage every movement of money.</p>
+          <p>Record less, reuse more, and keep the full financial picture accurate.</p>
         </div>
       </header>
       <section className="transactions-layout">
-        <div className="panel transaction-entry-panel">
-          <h3>Add transaction</h3>
-          <p className="muted transaction-intro">Record income and expenses as they happen.</p>
-          <TransactionForm initialType={initialType} />
+        <div className="panel transaction-entry-panel transaction-effortless-panel">
+          <EffortlessEntryWorkspace
+            initialTransactions={data ?? []}
+            initialType={initialType}
+          />
         </div>
         <div className="panel transaction-ledger-panel">
           <div className="panel-head">

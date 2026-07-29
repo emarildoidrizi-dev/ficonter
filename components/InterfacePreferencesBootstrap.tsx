@@ -1,8 +1,12 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import {
+  normalizeAppearance,
+  resolveAppearance,
+  type AppearancePreference,
+} from "@/lib/interfaceThemes";
 
-type AppearancePreference = "light" | "dark" | "system";
 type DensityPreference = "comfortable" | "compact";
 
 type Props = {
@@ -10,18 +14,17 @@ type Props = {
   density?: string | null;
 };
 
-function normalizeAppearance(value: string | null | undefined): AppearancePreference {
-  return value === "dark" || value === "system" ? value : "light";
-}
-
 function normalizeDensity(value: string | null | undefined): DensityPreference {
   return value === "compact" ? "compact" : "comfortable";
 }
 
-function applyPreferences(appearance: AppearancePreference, density: DensityPreference) {
+function applyPreferences(
+  appearance: AppearancePreference,
+  density: DensityPreference,
+) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const resolvedTheme = appearance === "system" ? (prefersDark ? "dark" : "light") : appearance;
+  const resolvedTheme = resolveAppearance(appearance, prefersDark);
 
   root.dataset.theme = appearance;
   root.dataset.resolvedTheme = resolvedTheme;
@@ -78,20 +81,30 @@ export function InterfacePreferencesBootstrap({ appearance, density }: Props) {
     };
 
     const handlePreferencesUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ appearance?: string; density?: string }>).detail;
-      currentAppearance = normalizeAppearance(detail?.appearance ?? currentAppearance);
+      const detail = (
+        event as CustomEvent<{ appearance?: string; density?: string }>
+      ).detail;
+      currentAppearance = normalizeAppearance(
+        detail?.appearance ?? currentAppearance,
+      );
       currentDensity = normalizeDensity(detail?.density ?? currentDensity);
       applyPreferences(currentAppearance, currentDensity);
     };
 
     media.addEventListener("change", handleMediaChange);
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("ficonter:preferences-updated", handlePreferencesUpdated);
+    window.addEventListener(
+      "ficonter:preferences-updated",
+      handlePreferencesUpdated,
+    );
 
     return () => {
       media.removeEventListener("change", handleMediaChange);
       window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("ficonter:preferences-updated", handlePreferencesUpdated);
+      window.removeEventListener(
+        "ficonter:preferences-updated",
+        handlePreferencesUpdated,
+      );
     };
   }, [appearance, density]);
 

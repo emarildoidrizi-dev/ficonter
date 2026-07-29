@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./theme-palettes.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
+import { APPEARANCE_VALUES, DARK_APPEARANCE_VALUES } from "@/lib/interfaceThemes";
 
 export const metadata: Metadata = {
   title: {
@@ -28,12 +30,16 @@ const interfacePreferenceScript = `
 (function () {
   try {
     var root = document.documentElement;
+    var supported = ${JSON.stringify(APPEARANCE_VALUES)};
+    var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
-    if (appearance !== "dark" && appearance !== "system") appearance = "light";
+    if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var resolved = appearance === "system" ? (prefersDark ? "dark" : "light") : appearance;
+    var resolved = appearance === "system"
+      ? (prefersDark ? "dark" : "light")
+      : (darkThemes.indexOf(appearance) >= 0 ? "dark" : "light");
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;

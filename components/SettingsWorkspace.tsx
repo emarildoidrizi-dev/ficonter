@@ -49,6 +49,12 @@ import {
   type AccountExportPayload,
   type AccountExportTable,
 } from "@/lib/accountExport";
+import {
+  INTERFACE_THEME_OPTIONS,
+  normalizeAppearance,
+  resolveAppearance,
+  type AppearancePreference,
+} from "@/lib/interfaceThemes";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -74,7 +80,7 @@ type Preferences = {
   weekStart: string;
   plannerStartBalance: string;
   density: "comfortable" | "compact";
-  appearance: "light" | "dark" | "system";
+  appearance: AppearancePreference;
   language: "en";
   notifications: {
     billReminders: boolean;
@@ -150,6 +156,9 @@ function readPreferences(metadata: Metadata): Preferences {
   return {
     ...defaultPreferences,
     ...stored,
+    appearance: normalizeAppearance(
+      typeof stored.appearance === "string" ? stored.appearance : undefined,
+    ),
     notifications: {
       ...defaultPreferences.notifications,
       ...(stored.notifications ?? {}),
@@ -190,12 +199,7 @@ function applyInterface(preferences: Preferences) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const resolvedTheme =
-    preferences.appearance === "system"
-      ? prefersDark
-        ? "dark"
-        : "light"
-      : preferences.appearance;
+  const resolvedTheme = resolveAppearance(preferences.appearance, prefersDark);
 
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
@@ -927,7 +931,35 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
 
         {active === "appearance" ? (
           <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
-            <fieldset className={styles.optionGroup}><legend>Theme</legend><div className={styles.optionGrid}>{[['light','Light','Bright private workspace'],['dark','Dark','Low-light interface'],['system','System default','Follow device preference']].map(([value,label,description]) => <label className={styles.optionCard} key={value}><input type="radio" checked={preferences.appearance === value} onChange={() => { const next = { ...preferences, appearance: value as Preferences['appearance'] }; setPreferences(next); applyInterface(next); }} /><span className={styles.optionPreview} data-theme={value} /><strong>{label}</strong><small>{description}</small></label>)}</div></fieldset>
+            <fieldset className={styles.optionGroup}>
+              <legend>Theme</legend>
+              <p className={styles.themeHelp}>
+                Choose the atmosphere that feels most comfortable. Every theme uses
+                high-contrast text and controls for reliable readability.
+              </p>
+              <div className={styles.optionGrid}>
+                {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => (
+                  <label className={styles.optionCard} key={value}>
+                    <input
+                      type="radio"
+                      checked={preferences.appearance === value}
+                      onChange={() => {
+                        const next = { ...preferences, appearance: value };
+                        setPreferences(next);
+                        applyInterface(next);
+                      }}
+                    />
+                    <span
+                      className={styles.optionPreview}
+                      data-theme={value}
+                      aria-hidden="true"
+                    />
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>
               <div className={styles.densityGrid}>

@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import styles from "./MonthlyPlanner.module.css";
 
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
+type BreakdownView = "ring" | "bars" | "tiles";
+type BreakdownKey = Section | "goals";
 type Tx = { id:string; user_id:string; description:string; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null };
 type Bill = { id:string; user_id:string; name:string; category:string; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
 type Plan = { id:string; user_id:string; month:string; start_balance:number|string; created_at:string; updated_at:string };
@@ -41,8 +43,19 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const [goals,setGoals]=useState(initialGoals);
   const [notice,setNotice]=useState("");
   const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
+  const [breakdownView,setBreakdownView]=useState<BreakdownView>("ring");
 
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
+  useEffect(()=>{
+    const saved=window.localStorage.getItem("ficonter:planner-breakdown-view");
+    if(saved==="ring"||saved==="bars"||saved==="tiles")setBreakdownView(saved);
+  },[]);
+
+  function chooseBreakdownView(view:BreakdownView){
+    setBreakdownView(view);
+    window.localStorage.setItem("ficonter:planner-breakdown-view",view);
+  }
+
   useEffect(()=>{
     let active=true;
     async function loadPlannerPreference(){
@@ -107,9 +120,18 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const left=startBalance+totalIncome-totalOut;
   const leftToBudget=left;
   const availableCash=startBalance+totalIncome;
-  const spendingParts=["bills","expenses","savings","debt"].map(k=>({key:k as Section,value:actual(k as Section)})).filter(x=>x.value>0);
-  let cursor=0; const palette=["#e5cedd","#edd0b3","#cbdbea","#d6cceb"];
-  const gradient=spendingParts.length?`conic-gradient(${spendingParts.map((p,i)=>{const a=cursor;cursor+=p.value/Math.max(totalOut,1)*100;return `${palette[i%palette.length]} ${a}% ${cursor}%`}).join(",")})`:"conic-gradient(#eee 0 100%)";
+  const breakdownParts:{key:BreakdownKey;label:string;value:number;color:string}[]=[
+    {key:"bills",label:"Bills",value:actual("bills"),color:"var(--breakdown-bills)"},
+    {key:"expenses",label:"Expenses",value:actual("expenses"),color:"var(--breakdown-expenses)"},
+    {key:"savings",label:"Savings",value:actual("savings"),color:"var(--breakdown-savings)"},
+    {key:"goals",label:"Goals",value:goalInvestments,color:"var(--breakdown-goals)"},
+    {key:"debt",label:"Debt",value:actual("debt"),color:"var(--breakdown-debt)"},
+  ].filter(part=>part.value>0);
+  const breakdownTotal=breakdownParts.reduce((sum,part)=>sum+part.value,0);
+  let cursor=0;
+  const gradient=breakdownParts.length
+    ?`conic-gradient(${breakdownParts.map(part=>{const start=cursor;cursor+=part.value/Math.max(breakdownTotal,1)*100;return `${part.color} ${start}% ${cursor}%`}).join(",")})`
+    :"conic-gradient(var(--breakdown-track) 0 100%)";
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
   async function saveStartBalance(v:string){const value=Number(v)||0; const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.")}}
@@ -122,7 +144,21 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
       <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{eur(left)}</strong></div></article>
       <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{eur(actual(s.key))}</strong></div>})}</article>
-      <article className={styles.breakdown}><h3>Breakdown</h3><div className={styles.pie} style={{background:gradient}}/><div>{spendingParts.map((p,i)=><span key={p.key}><i style={{background:palette[i%palette.length]}}/>{p.key} {totalOut?Math.round(p.value/totalOut*100):0}%</span>)}</div></article>
+      <article className={styles.breakdown}>
+        <div className={styles.breakdownHeader}>
+          <h3>Breakdown</h3>
+          <div className={styles.breakdownControls} role="group" aria-label="Choose breakdown view">
+            {(["ring","bars","tiles"] as BreakdownView[]).map(view=><button key={view} type="button" className={breakdownView===view?styles.activeBreakdownView:""} aria-pressed={breakdownView===view} onClick={()=>chooseBreakdownView(view)}>{view==="ring"?"Ring":view==="bars"?"Bars":"Tiles"}</button>)}
+          </div>
+        </div>
+        {!breakdownParts.length?<div className={styles.breakdownEmpty}>No outgoing activity recorded yet.</div>:null}
+        {breakdownParts.length>0&&breakdownView==="ring"?<div className={styles.ringView}>
+          <div className={styles.breakdownRing} style={{background:gradient}}><div><span>Total activity</span><strong>{eur(breakdownTotal)}</strong></div></div>
+          <div className={styles.breakdownLegend}>{breakdownParts.map(part=><span key={part.key}><i style={{background:part.color}}/>{part.label}<b>{Math.round(part.value/breakdownTotal*100)}%</b></span>)}</div>
+        </div>:null}
+        {breakdownParts.length>0&&breakdownView==="bars"?<div className={styles.breakdownBars}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div className={styles.breakdownBarRow} key={part.key}><div><span>{part.label}</span><strong>{eur(part.value)}</strong></div><i><em style={{width:`${percent}%`,background:part.color}}/></i><small>{percent.toFixed(1)}%</small></div>})}</div>:null}
+        {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{eur(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
+      </article>
     </div>
     <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
     <div className={styles.sectionGrid}>

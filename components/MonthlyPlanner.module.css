@@ -74,3 +74,308 @@
 :global(html[data-resolved-theme="dark"]) .modal input { background: var(--control-bg) !important; color: var(--text-primary) !important; border-color: var(--border-subtle) !important; }
 
 :global(html[data-resolved-theme="dark"]) .expenseScrollHint { color: var(--text-secondary) !important; }
+
+/* Monthly Planner breakdown view selector */
+.breakdown {
+  --breakdown-bills: var(--gold, #c9a45e);
+  --breakdown-expenses: var(--burgundy, #bd737c);
+  --breakdown-savings: var(--sage, #6fa28a);
+  --breakdown-goals: #8e9fd2;
+  --breakdown-debt: #a990c7;
+  --breakdown-track: var(--surface-subtle, #eeeae4);
+  min-width: 0;
+}
+
+.breakdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.breakdownHeader h3 {
+  margin: 0;
+  text-align: left;
+}
+
+.breakdownControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 10px;
+  background: var(--surface-subtle, #f4f0ea);
+}
+
+.breakdownControls button {
+  min-height: 29px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary, #706961);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+
+.breakdownControls button:hover {
+  background: var(--surface-hover, #ebe4da);
+  color: var(--text-primary, #222524);
+}
+
+.breakdownControls .activeBreakdownView {
+  background: var(--surface-raised, #fff);
+  color: var(--text-primary, #222524);
+  box-shadow: 0 3px 10px rgba(31, 35, 38, .09);
+}
+
+.breakdownEmpty {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  color: var(--text-secondary, #77716a);
+  font-size: 12px;
+  text-align: center;
+}
+
+.ringView {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+}
+
+.breakdownRing {
+  position: relative;
+  display: grid;
+  width: 156px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-subtle, #ddd5c9) 74%, transparent);
+}
+
+.breakdownRing::after {
+  content: "";
+  position: absolute;
+  inset: 31px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 50%;
+  background: var(--surface-card, #fff);
+}
+
+.breakdownRing > div {
+  position: relative;
+  z-index: 1;
+  max-width: 92px;
+  text-align: center;
+}
+
+.breakdownRing span,
+.breakdownRing strong {
+  display: block;
+}
+
+.breakdownRing span {
+  color: var(--text-secondary, #706961);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.breakdownRing strong {
+  margin-top: 5px;
+  color: var(--text-primary, #222524);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px 11px;
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+}
+
+.breakdownLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.breakdownLegend i,
+.breakdownTiles span i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.breakdownLegend b {
+  color: var(--text-primary, #222524);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownBars {
+  display: grid;
+  gap: 13px;
+  padding-top: 3px;
+}
+
+.breakdownBarRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.breakdownBarRow > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.breakdownBarRow span {
+  color: var(--text-secondary, #706961);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.breakdownBarRow strong {
+  color: var(--text-primary, #222524);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownBarRow > i {
+  position: relative;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--breakdown-track);
+}
+
+.breakdownBarRow em {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 3px;
+  border-radius: inherit;
+}
+
+.breakdownBarRow small {
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownTiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.breakdownTiles > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 12px;
+  background: var(--surface-subtle, #f7f3ed);
+}
+
+.breakdownTiles span,
+.breakdownTiles strong,
+.breakdownTiles small {
+  display: block;
+}
+
+.breakdownTiles span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.breakdownTiles strong {
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--text-primary, #222524);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdownTiles small {
+  margin-top: 4px;
+  color: var(--text-secondary, #706961);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .breakdownHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .breakdownControls {
+    width: 100%;
+  }
+
+  .breakdownControls button {
+    flex: 1;
+  }
+
+  .breakdownTiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* All FICONTER themes use shared contrast tokens for this switcher. */
+:global(html[data-theme]) .breakdownControls,
+:global(html[data-resolved-theme]) .breakdownControls,
+:global(html[data-theme]) .breakdownTiles > div,
+:global(html[data-resolved-theme]) .breakdownTiles > div,
+:global(html[data-theme]) .breakdownRing::after,
+:global(html[data-resolved-theme]) .breakdownRing::after {
+  border-color: var(--border-subtle) !important;
+}
+
+:global(html[data-theme]) .breakdownControls,
+:global(html[data-resolved-theme]) .breakdownControls,
+:global(html[data-theme]) .breakdownTiles > div,
+:global(html[data-resolved-theme]) .breakdownTiles > div {
+  background: var(--surface-subtle) !important;
+}
+
+:global(html[data-theme]) .breakdownControls .activeBreakdownView,
+:global(html[data-resolved-theme]) .breakdownControls .activeBreakdownView,
+:global(html[data-theme]) .breakdownRing::after,
+:global(html[data-resolved-theme]) .breakdownRing::after {
+  background: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-theme]) :is(.breakdownHeader h3,.breakdownRing strong,.breakdownLegend b,.breakdownBarRow strong,.breakdownTiles strong),
+:global(html[data-resolved-theme]) :is(.breakdownHeader h3,.breakdownRing strong,.breakdownLegend b,.breakdownBarRow strong,.breakdownTiles strong) {
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-theme]) :is(.breakdownControls button,.breakdownEmpty,.breakdownRing span,.breakdownLegend,.breakdownBarRow span,.breakdownBarRow small,.breakdownTiles span,.breakdownTiles small),
+:global(html[data-resolved-theme]) :is(.breakdownControls button,.breakdownEmpty,.breakdownRing span,.breakdownLegend,.breakdownBarRow span,.breakdownBarRow small,.breakdownTiles span,.breakdownTiles small) {
+  color: var(--text-secondary) !important;
+}

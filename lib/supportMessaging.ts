@@ -39,8 +39,6 @@ export type NotificationItem = {
   kind:
     | "support_reply"
     | "support_status"
-    | "document_uploaded"
-    | "document_deleted"
     | "system";
   title: string;
   body: string;

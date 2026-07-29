@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
     }).select("id,original_name,display_name,category,mime_type,size_bytes,document_date,notes,created_at,updated_at").single();
     if (insertError || !created) throw insertError ?? new Error("Missing document row");
     await service.from("document_upload_intents").delete().eq("id", intent.id);
-    await service.from("user_notifications").insert({ user_id: user.id, kind: "document_uploaded", title: "Document saved", body: `${intent.display_name} is now stored in your private vault.`, href: "/dashboard/documents", metadata: { document_id: created.id } });
 
     return NextResponse.json({ document: {
       id: created.id,

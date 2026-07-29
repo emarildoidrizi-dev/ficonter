@@ -47,6 +47,5 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   if (storageError) return NextResponse.json({ error: "The stored file could not be deleted." }, { status: 500, headers: noStoreHeaders() });
   const { error: deleteError } = await service.from("financial_documents").delete().eq("id", id).eq("user_id", user.id);
   if (deleteError) return NextResponse.json({ error: "The document record could not be deleted." }, { status: 500, headers: noStoreHeaders() });
-  await service.from("user_notifications").insert({ user_id: user.id, kind: "document_deleted", title: "Document deleted", body: `${data.display_name} was permanently removed from your vault.`, href: "/dashboard/documents", metadata: { document_id: id } });
   return NextResponse.json({ ok: true }, { headers: noStoreHeaders() });
 }

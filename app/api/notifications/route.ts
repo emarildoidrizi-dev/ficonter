@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const INCOMING_NOTIFICATION_KINDS = ["support_reply", "support_status", "system"] as const;
+
 export async function GET() {
   try {
     const { user, admin } = await requireAdmin();
@@ -15,12 +17,13 @@ export async function GET() {
       .from("user_notifications")
       .select("id,kind,title,body,href,read_at,created_at")
       .eq("user_id", user.id)
+      .in("kind", [...INCOMING_NOTIFICATION_KINDS])
       .order("created_at", { ascending: false })
       .limit(30);
     if (error) throw error;
     const notifications = ((data ?? []) as Array<{
       id: string;
-      kind: "support_reply" | "support_status" | "document_uploaded" | "document_deleted" | "system";
+      kind: "support_reply" | "support_status" | "system";
       title: string;
       body: string;
       href: string | null;

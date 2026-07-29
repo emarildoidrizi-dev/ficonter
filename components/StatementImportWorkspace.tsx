@@ -68,7 +68,7 @@ type PdfMeta = {
 };
 
 const MAX_DELIMITED_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_PDF_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_ROWS = 2000;
 const PAGE_SIZE = 25;
 
@@ -248,7 +248,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
     try {
       if (extension === "pdf") {
         if (file.size > MAX_PDF_FILE_BYTES) {
-          throw new Error("Choose a PDF smaller than 10 MB.");
+          throw new Error("Choose a searchable PDF smaller than 4 MB.");
         }
 
         const body = new FormData();
@@ -692,7 +692,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
               <label className={`${styles.dropZone} ${readingFile ? styles.dropZoneBusy : ""}`}>
                 {readingFile ? <Loader2 className={styles.spin} size={28} /> : <Upload size={28} />}
                 <strong>{readingFile ? "Reading your financial file…" : "Choose a financial file"}</strong>
-                <span>PDF up to 10 MB · CSV, TSV or TXT up to 5 MB · maximum 2,000 transactions</span>
+                <span>Searchable PDF up to 4 MB · CSV, TSV or TXT up to 5 MB · maximum 2,000 transactions</span>
                 <input
                   type="file"
                   accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv,text/plain,text/tab-separated-values"

@@ -214,8 +214,8 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
             )) : (
               <div className={styles.empty}>
                 <Bell size={21} aria-hidden="true" />
-                <strong>No notifications yet</strong>
-                <small>Support replies and important account updates will appear here.</small>
+                <strong>No incoming notifications</strong>
+                <small>Replies from support, support-status changes and important FICONTER notices will appear here.</small>
               </div>
             )}
           </div>

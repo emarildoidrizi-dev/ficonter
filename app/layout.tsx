@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./theme-palettes.css";
+import "./living-themes.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
-import { APPEARANCE_VALUES, DARK_APPEARANCE_VALUES } from "@/lib/interfaceThemes";
-import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
+import {
+  APPEARANCE_VALUES,
+  BACKGROUND_MOTION_VALUES,
+  DARK_APPEARANCE_VALUES,
+} from "@/lib/interfaceThemes";
 
 export const metadata: Metadata = {
   title: {
@@ -35,11 +39,11 @@ const interfacePreferenceScript = `
     var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
-    var layout = localStorage.getItem("ficonter-layout") || "horizon";
+    var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
     if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
-    var supportedLayouts = ${JSON.stringify(INTERFACE_LAYOUT_VALUES)};
-    if (supportedLayouts.indexOf(layout) === -1) layout = "horizon";
+    var supportedMotion = ${JSON.stringify(BACKGROUND_MOTION_VALUES)};
+    if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var resolved = appearance === "system"
       ? (prefersDark ? "dark" : "light")
@@ -47,7 +51,7 @@ const interfacePreferenceScript = `
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;
-    root.dataset.layout = layout;
+    root.dataset.backgroundMotion = backgroundMotion;
     root.style.colorScheme = resolved;
   } catch (_) {}
 })();`;

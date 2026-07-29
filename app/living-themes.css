@@ -1,0 +1,224 @@
+/*
+ * FICONTER Living Themes
+ * Subtle CSS-only atmospheric backgrounds for every interface theme.
+ * All financial content remains on opaque, high-contrast cards.
+ */
+
+:root {
+  --living-base: #f5f2ec;
+  --living-primary: rgba(183, 155, 108, 0.18);
+  --living-secondary: rgba(104, 135, 126, 0.13);
+  --living-tertiary: rgba(143, 119, 156, 0.09);
+  --living-grid: rgba(31, 35, 38, 0.035);
+  --living-opacity: 0.72;
+  --living-blur: 54px;
+}
+
+html[data-resolved-theme="dark"] {
+  --living-base: #121517;
+  --living-primary: rgba(200, 170, 120, 0.15);
+  --living-secondary: rgba(70, 118, 109, 0.15);
+  --living-tertiary: rgba(92, 105, 135, 0.12);
+  --living-grid: rgba(255, 255, 255, 0.025);
+  --living-opacity: 0.78;
+  --living-blur: 68px;
+}
+
+html[data-theme="midnight"] {
+  --living-base: #0b1420;
+  --living-primary: rgba(38, 124, 154, 0.24);
+  --living-secondary: rgba(37, 178, 157, 0.15);
+  --living-tertiary: rgba(216, 185, 120, 0.13);
+  --living-grid: rgba(117, 173, 196, 0.035);
+}
+
+html[data-theme="emerald"] {
+  --living-base: #0c1712;
+  --living-primary: rgba(38, 142, 98, 0.22);
+  --living-secondary: rgba(118, 186, 144, 0.13);
+  --living-tertiary: rgba(203, 183, 124, 0.12);
+  --living-grid: rgba(139, 201, 170, 0.03);
+}
+
+html[data-theme="bordeaux"] {
+  --living-base: #1a0e14;
+  --living-primary: rgba(142, 42, 74, 0.24);
+  --living-secondary: rgba(194, 91, 103, 0.14);
+  --living-tertiary: rgba(211, 173, 120, 0.13);
+  --living-grid: rgba(240, 163, 174, 0.025);
+}
+
+html[data-theme="ocean"] {
+  --living-base: #eaf2f4;
+  --living-primary: rgba(64, 157, 178, 0.19);
+  --living-secondary: rgba(115, 190, 190, 0.14);
+  --living-tertiary: rgba(92, 127, 173, 0.09);
+  --living-grid: rgba(23, 60, 71, 0.032);
+  --living-opacity: 0.68;
+  --living-blur: 58px;
+}
+
+html[data-theme="sandstone"] {
+  --living-base: #eee5d7;
+  --living-primary: rgba(185, 128, 66, 0.18);
+  --living-secondary: rgba(155, 112, 82, 0.12);
+  --living-tertiary: rgba(111, 132, 102, 0.09);
+  --living-grid: rgba(68, 56, 47, 0.032);
+  --living-opacity: 0.67;
+  --living-blur: 56px;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background: var(--living-base, var(--surface-canvas));
+}
+
+.living-theme-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--living-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--living-grid) 1px, transparent 1px),
+    var(--living-base);
+  background-size: 72px 72px, 72px 72px, auto;
+  opacity: var(--living-opacity);
+  contain: strict;
+}
+
+.living-theme-field {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(var(--living-blur));
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+}
+
+.living-theme-field-primary {
+  left: -24vmax;
+  top: -28vmax;
+  background:
+    radial-gradient(circle at 38% 42%, var(--living-primary), transparent 62%),
+    radial-gradient(circle at 64% 60%, var(--living-tertiary), transparent 58%);
+}
+
+.living-theme-field-secondary {
+  right: -30vmax;
+  bottom: -34vmax;
+  background:
+    radial-gradient(circle at 46% 45%, var(--living-secondary), transparent 61%),
+    radial-gradient(circle at 70% 28%, var(--living-tertiary), transparent 55%);
+}
+
+.living-theme-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image:
+    repeating-linear-gradient(
+      115deg,
+      transparent 0,
+      transparent 7px,
+      rgba(255, 255, 255, 0.18) 8px,
+      transparent 9px
+    );
+  mix-blend-mode: soft-light;
+}
+
+html[data-background-motion="animated"] .living-theme-field-primary {
+  animation: ficonter-living-drift-primary 42s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-field-secondary {
+  animation: ficonter-living-drift-secondary 54s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-grain {
+  animation: ficonter-living-breathe 24s ease-in-out infinite;
+}
+
+html[data-background-motion="off"] .living-theme-backdrop {
+  display: none;
+}
+
+html:not([data-background-motion="off"]) .app-main {
+  background: transparent !important;
+}
+
+.sidebar,
+.app-main {
+  position: relative;
+}
+
+.sidebar {
+  z-index: 2;
+}
+
+.app-main {
+  z-index: 1;
+}
+
+@keyframes ficonter-living-drift-primary {
+  0% {
+    transform: translate3d(-2%, -1%, 0) scale(0.96) rotate(-4deg);
+    opacity: 0.78;
+  }
+  50% {
+    transform: translate3d(17%, 10%, 0) scale(1.08) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(7%, 22%, 0) scale(1.02) rotate(9deg);
+    opacity: 0.82;
+  }
+}
+
+@keyframes ficonter-living-drift-secondary {
+  0% {
+    transform: translate3d(2%, 4%, 0) scale(1.02) rotate(3deg);
+    opacity: 0.72;
+  }
+  50% {
+    transform: translate3d(-16%, -10%, 0) scale(1.1) rotate(-5deg);
+    opacity: 0.96;
+  }
+  100% {
+    transform: translate3d(-7%, -20%, 0) scale(0.98) rotate(-9deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes ficonter-living-breathe {
+  0%,
+  100% {
+    opacity: 0.025;
+  }
+  50% {
+    opacity: 0.055;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-background-motion="animated"] .living-theme-field,
+  html[data-background-motion="animated"] .living-theme-grain {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .living-theme-backdrop {
+    background-size: 96px 96px, 96px 96px, auto;
+    opacity: calc(var(--living-opacity) * 0.82);
+  }
+
+  .living-theme-field {
+    width: 88vmax;
+    height: 88vmax;
+    filter: blur(calc(var(--living-blur) * 0.86));
+  }
+}

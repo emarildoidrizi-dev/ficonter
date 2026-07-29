@@ -9,7 +9,15 @@ export const APPEARANCE_VALUES = [
   "sandstone",
 ] as const;
 
+export const BACKGROUND_MOTION_VALUES = [
+  "animated",
+  "static",
+  "off",
+] as const;
+
 export type AppearancePreference = (typeof APPEARANCE_VALUES)[number];
+export type BackgroundMotionPreference =
+  (typeof BACKGROUND_MOTION_VALUES)[number];
 export type ResolvedTheme = "light" | "dark";
 
 export const DARK_APPEARANCE_VALUES: AppearancePreference[] = [
@@ -66,12 +74,42 @@ export const INTERFACE_THEME_OPTIONS = [
   description: string;
 }>;
 
+export const BACKGROUND_MOTION_OPTIONS = [
+  {
+    value: "animated",
+    label: "Subtle motion",
+    description: "Very slow theme-specific movement behind the workspace.",
+  },
+  {
+    value: "static",
+    label: "Static atmosphere",
+    description: "Keep the themed background depth without movement.",
+  },
+  {
+    value: "off",
+    label: "None",
+    description: "Use the standard solid theme background.",
+  },
+] as const satisfies ReadonlyArray<{
+  value: BackgroundMotionPreference;
+  label: string;
+  description: string;
+}>;
+
 export function normalizeAppearance(
   value: string | null | undefined,
 ): AppearancePreference {
   return APPEARANCE_VALUES.includes(value as AppearancePreference)
     ? (value as AppearancePreference)
     : "light";
+}
+
+export function normalizeBackgroundMotion(
+  value: string | null | undefined,
+): BackgroundMotionPreference {
+  return BACKGROUND_MOTION_VALUES.includes(value as BackgroundMotionPreference)
+    ? (value as BackgroundMotionPreference)
+    : "animated";
 }
 
 export function resolveAppearance(

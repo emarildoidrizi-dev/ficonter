@@ -20,11 +20,15 @@ import {
 import { FinancialHealthScore } from "@/components/FinancialHealthScore";
 import { FinancialSetupSummary } from "@/components/FinancialSetupSummary";
 import { FinancialGpsSummary } from "@/components/FinancialGpsSummary";
+import { HorizonCommandStrip } from "@/components/HorizonCommandStrip";
+import { HorizonOverviewBoard } from "@/components/HorizonOverviewBoard";
+import { FinancialJourneyRail } from "@/components/FinancialJourneyRail";
 import type { SetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 import {
   normalizeAiInsightsInputs,
   type AiInsightsInputs,
 } from "@/lib/wealth/aiInsights";
+import { calculateFinancialGps } from "@/lib/wealth/financialGps";
 import styles from "./DashboardLiveOverview.module.css";
 
 type Transaction = {
@@ -337,6 +341,17 @@ export function DashboardLiveOverview({
   );
   const recent = transactions;
   const { metrics } = financialHealth;
+  const financialGps = useMemo(
+    () => calculateFinancialGps(gpsInputs, setupAcknowledgements),
+    [gpsInputs, setupAcknowledgements],
+  );
+  const horizonActivity = useMemo(
+    () => recent.slice(0, 24).map((transaction) => ({
+      amount: euroValue(transaction),
+      income: isIncome(transaction),
+    })),
+    [recent],
+  );
 
   return (
     <>
@@ -370,45 +385,74 @@ export function DashboardLiveOverview({
 
       {initialError ? <div className="alert alert-error">{initialError}</div> : null}
 
-      <FinancialSetupSummary
-        inputs={healthInputs}
-        acknowledgements={setupAcknowledgements}
-      />
+      <div className={styles.horizonOnly}>
+        <HorizonCommandStrip gps={financialGps} />
+        {gpsError ? (
+          <div className="alert alert-error">
+            Financial GPS could not refresh. Your recorded data remains unchanged.
+          </div>
+        ) : null}
+      </div>
 
-      <FinancialGpsSummary
-        inputs={gpsInputs}
-        acknowledgements={setupAcknowledgements}
-        error={gpsError}
-      />
+      <div className={styles.horizonOnly}>
+        {!financialGps.active || financialGps.setupCompletion < 100 ? (
+          <FinancialSetupSummary
+            inputs={healthInputs}
+            acknowledgements={setupAcknowledgements}
+          />
+        ) : null}
+        <HorizonOverviewBoard
+          income={metrics.totalIncome}
+          expenses={metrics.totalExpenses}
+          savings={metrics.totalSavings}
+          cashFlow={metrics.netCashFlow}
+          savingsRate={metrics.savingsRate * 100}
+          activity={horizonActivity}
+          gps={financialGps}
+        />
+        <FinancialJourneyRail gps={financialGps} />
+      </div>
 
-      <section className="kpis">
-        <div className="kpi">
-          <span>Income recorded</span>
-          <strong>{formatCurrency(metrics.totalIncome, "EUR")}</strong>
-          <small className={styles.kpiNote}>All currencies converted to EUR</small>
-        </div>
-        <div className="kpi">
-          <span>Expenses recorded</span>
-          <strong>{formatCurrency(metrics.totalExpenses, "EUR")}</strong>
-          <small className={styles.kpiNote}>Saving transfers are shown separately</small>
-        </div>
-        <div className="kpi">
-          <span>Cash flow</span>
-          <strong
-            className={
-              metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
-            }
-          >
-            {formatCurrency(metrics.netCashFlow, "EUR")}
-          </strong>
-          <small className={styles.kpiNote}>Income minus expenses and savings</small>
-        </div>
-        <div className="kpi">
-          <span>Savings rate</span>
-          <strong>{(metrics.savingsRate * 100).toFixed(1)}%</strong>
-          <small className={styles.kpiNote}>Recorded savings divided by income</small>
-        </div>
-      </section>
+      <div className={styles.classicOnly}>
+        <FinancialSetupSummary
+          inputs={healthInputs}
+          acknowledgements={setupAcknowledgements}
+        />
+        <FinancialGpsSummary
+          inputs={gpsInputs}
+          acknowledgements={setupAcknowledgements}
+          error={gpsError}
+        />
+
+        <section className="kpis">
+          <div className="kpi">
+            <span>Income recorded</span>
+            <strong>{formatCurrency(metrics.totalIncome, "EUR")}</strong>
+            <small className={styles.kpiNote}>All currencies converted to EUR</small>
+          </div>
+          <div className="kpi">
+            <span>Expenses recorded</span>
+            <strong>{formatCurrency(metrics.totalExpenses, "EUR")}</strong>
+            <small className={styles.kpiNote}>Saving transfers are shown separately</small>
+          </div>
+          <div className="kpi">
+            <span>Cash flow</span>
+            <strong
+              className={
+                metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
+              }
+            >
+              {formatCurrency(metrics.netCashFlow, "EUR")}
+            </strong>
+            <small className={styles.kpiNote}>Income minus expenses and savings</small>
+          </div>
+          <div className="kpi">
+            <span>Savings rate</span>
+            <strong>{(metrics.savingsRate * 100).toFixed(1)}%</strong>
+            <small className={styles.kpiNote}>Recorded savings divided by income</small>
+          </div>
+        </section>
+      </div>
 
       <FinancialHealthScore result={financialHealth} error={healthError} />
 

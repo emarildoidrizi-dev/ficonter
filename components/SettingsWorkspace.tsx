@@ -55,6 +55,10 @@ import {
   resolveAppearance,
   type AppearancePreference,
 } from "@/lib/interfaceThemes";
+import {
+  normalizeInterfaceLayout,
+  type InterfaceLayoutPreference,
+} from "@/lib/interfaceLayout";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -81,6 +85,7 @@ type Preferences = {
   plannerStartBalance: string;
   density: "comfortable" | "compact";
   appearance: AppearancePreference;
+  layout: InterfaceLayoutPreference;
   language: "en";
   notifications: {
     billReminders: boolean;
@@ -122,7 +127,7 @@ const sections = [
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
-  { id: "appearance", label: "Appearance", description: "Theme and layout density", icon: Palette },
+  { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
   { id: "language", label: "Language", description: "English by default", icon: Globe2 },
@@ -136,6 +141,7 @@ const defaultPreferences: Preferences = {
   plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
+  layout: "horizon",
   language: "en",
   notifications: {
     billReminders: true,
@@ -158,6 +164,9 @@ function readPreferences(metadata: Metadata): Preferences {
     ...stored,
     appearance: normalizeAppearance(
       typeof stored.appearance === "string" ? stored.appearance : undefined,
+    ),
+    layout: normalizeInterfaceLayout(
+      typeof stored.layout === "string" ? stored.layout : undefined,
     ),
     notifications: {
       ...defaultPreferences.notifications,
@@ -204,11 +213,13 @@ function applyInterface(preferences: Preferences) {
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
+  root.dataset.layout = preferences.layout;
   root.style.colorScheme = resolvedTheme;
 
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
     localStorage.setItem("ficonter-density", preferences.density);
+    localStorage.setItem("ficonter-layout", preferences.layout);
   } catch {
     // The interface still updates when browser storage is unavailable.
   }
@@ -954,6 +965,39 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
                       data-theme={value}
                       aria-hidden="true"
                     />
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.optionGroup}>
+              <legend>Dashboard layout</legend>
+              <p className={styles.themeHelp}>
+                Choose the visual structure of the Overview. Horizon adds a live command strip,
+                Financial GPS board and journey rail. Classic preserves the original dashboard.
+              </p>
+              <div className={styles.layoutGrid}>
+                {([
+                  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
+                  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
+                ] as const).map(([value, label, description]) => (
+                  <label className={styles.layoutCard} key={value}>
+                    <input
+                      type="radio"
+                      checked={preferences.layout === value}
+                      onChange={() => {
+                        const next = { ...preferences, layout: value };
+                        setPreferences(next);
+                        applyInterface(next);
+                      }}
+                    />
+                    <span className={styles.layoutPreview} data-layout={value} aria-hidden="true">
+                      <i />
+                      <b />
+                      <b />
+                      <b />
+                    </span>
                     <strong>{label}</strong>
                     <small>{description}</small>
                   </label>

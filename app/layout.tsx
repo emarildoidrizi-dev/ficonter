@@ -3,6 +3,7 @@ import "./globals.css";
 import "./theme-palettes.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { APPEARANCE_VALUES, DARK_APPEARANCE_VALUES } from "@/lib/interfaceThemes";
+import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
 
 export const metadata: Metadata = {
   title: {
@@ -34,8 +35,11 @@ const interfacePreferenceScript = `
     var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
+    var layout = localStorage.getItem("ficonter-layout") || "horizon";
     if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
+    var supportedLayouts = ${JSON.stringify(INTERFACE_LAYOUT_VALUES)};
+    if (supportedLayouts.indexOf(layout) === -1) layout = "horizon";
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var resolved = appearance === "system"
       ? (prefersDark ? "dark" : "light")
@@ -43,6 +47,7 @@ const interfacePreferenceScript = `
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;
+    root.dataset.layout = layout;
     root.style.colorScheme = resolved;
   } catch (_) {}
 })();`;

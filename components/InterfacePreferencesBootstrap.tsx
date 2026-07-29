@@ -6,12 +6,17 @@ import {
   resolveAppearance,
   type AppearancePreference,
 } from "@/lib/interfaceThemes";
+import {
+  normalizeInterfaceLayout,
+  type InterfaceLayoutPreference,
+} from "@/lib/interfaceLayout";
 
 type DensityPreference = "comfortable" | "compact";
 
 type Props = {
   appearance?: string | null;
   density?: string | null;
+  layout?: string | null;
 };
 
 function normalizeDensity(value: string | null | undefined): DensityPreference {
@@ -21,6 +26,7 @@ function normalizeDensity(value: string | null | undefined): DensityPreference {
 function applyPreferences(
   appearance: AppearancePreference,
   density: DensityPreference,
+  layout: InterfaceLayoutPreference,
 ) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -29,17 +35,19 @@ function applyPreferences(
   root.dataset.theme = appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = density;
+  root.dataset.layout = layout;
   root.style.colorScheme = resolvedTheme;
 
   try {
     localStorage.setItem("ficonter-appearance", appearance);
     localStorage.setItem("ficonter-density", density);
+    localStorage.setItem("ficonter-layout", layout);
   } catch {
     // Browsers can block storage in strict privacy modes. The live DOM state still applies.
   }
 }
 
-export function InterfacePreferencesBootstrap({ appearance, density }: Props) {
+export function InterfacePreferencesBootstrap({ appearance, density, layout }: Props) {
   useLayoutEffect(() => {
     const storedAppearance = (() => {
       try {
@@ -55,16 +63,24 @@ export function InterfacePreferencesBootstrap({ appearance, density }: Props) {
         return null;
       }
     })();
+    const storedLayout = (() => {
+      try {
+        return localStorage.getItem("ficonter-layout");
+      } catch {
+        return null;
+      }
+    })();
 
     let currentAppearance = normalizeAppearance(storedAppearance ?? appearance);
     let currentDensity = normalizeDensity(storedDensity ?? density);
-    applyPreferences(currentAppearance, currentDensity);
+    let currentLayout = normalizeInterfaceLayout(storedLayout ?? layout);
+    applyPreferences(currentAppearance, currentDensity, currentLayout);
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
 
     const handleMediaChange = () => {
       if (currentAppearance === "system") {
-        applyPreferences(currentAppearance, currentDensity);
+        applyPreferences(currentAppearance, currentDensity, currentLayout);
       }
     };
 
@@ -75,20 +91,32 @@ export function InterfacePreferencesBootstrap({ appearance, density }: Props) {
       if (event.key === "ficonter-density") {
         currentDensity = normalizeDensity(event.newValue);
       }
-      if (event.key === "ficonter-appearance" || event.key === "ficonter-density") {
-        applyPreferences(currentAppearance, currentDensity);
+      if (event.key === "ficonter-layout") {
+        currentLayout = normalizeInterfaceLayout(event.newValue);
+      }
+      if (
+        event.key === "ficonter-appearance" ||
+        event.key === "ficonter-density" ||
+        event.key === "ficonter-layout"
+      ) {
+        applyPreferences(currentAppearance, currentDensity, currentLayout);
       }
     };
 
     const handlePreferencesUpdated = (event: Event) => {
       const detail = (
-        event as CustomEvent<{ appearance?: string; density?: string }>
+        event as CustomEvent<{
+          appearance?: string;
+          density?: string;
+          layout?: string;
+        }>
       ).detail;
       currentAppearance = normalizeAppearance(
         detail?.appearance ?? currentAppearance,
       );
       currentDensity = normalizeDensity(detail?.density ?? currentDensity);
-      applyPreferences(currentAppearance, currentDensity);
+      currentLayout = normalizeInterfaceLayout(detail?.layout ?? currentLayout);
+      applyPreferences(currentAppearance, currentDensity, currentLayout);
     };
 
     media.addEventListener("change", handleMediaChange);
@@ -106,7 +134,7 @@ export function InterfacePreferencesBootstrap({ appearance, density }: Props) {
         handlePreferencesUpdated,
       );
     };
-  }, [appearance, density]);
+  }, [appearance, density, layout]);
 
   return null;
 }

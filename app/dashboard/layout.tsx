@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
+import { CommandPalette } from "@/components/CommandPalette";
 import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
   appearance?: string;
   density?: string;
+  layout?: string;
 };
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
@@ -18,6 +20,7 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   return {
     appearance: typeof value.appearance === "string" ? value.appearance : undefined,
     density: typeof value.density === "string" ? value.density : undefined,
+    layout: typeof value.layout === "string" ? value.layout : undefined,
   };
 }
 
@@ -37,8 +40,10 @@ export default async function DashboardLayout({
       <InterfacePreferencesBootstrap
         appearance={interfacePreferences.appearance}
         density={interfacePreferences.density}
+        layout={interfacePreferences.layout}
       />
       <RealtimeRefreshBridge />
+      <CommandPalette />
       <Sidebar
         isAdmin={Boolean(admin)}
         user={{

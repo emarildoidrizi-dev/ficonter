@@ -1,24 +1,29 @@
-# FICONTER Financial GPS
+# FICONTER Financial File Import v2
 
-## Purpose
+This update broadens the existing transaction-file importer and removes the narrow customer-facing name “Statement Import.”
 
-Financial GPS turns FICONTER's existing Wealth Engine data into a calm, prioritized customer journey. It does not create another balance, score, forecast, or data-entry module.
+## Customer-facing changes
 
-## Customer experience
+- Renames the workspace to **Financial File Import**.
+- Renames the collapsed card to **Import financial records**.
+- Accepts searchable PDF files in addition to CSV, TSV and TXT.
+- Describes supported sources as bank statements, card statements, payment reports and transaction exports.
+- Keeps the four-step review flow: upload, field matching, review and completion.
+- Shows PDF page count and extracted transaction count.
+- Warns customers when PDF transaction direction had to be inferred.
+- Clearly explains that scanned image-only and password-protected PDFs are not supported yet.
 
-- One clearly ranked action instead of a long undifferentiated report
-- Six understandable stages: Set up, Stabilize, Protect, Build, Grow, Freedom
-- A three-step action path with direct links to existing modules
-- Four plain-language snapshot metrics
-- Explicit guidance confidence and profile-completeness states
-- A compact Financial GPS card on Overview
-- Realtime recalculation when financial records change
-- A clear statement that FICONTER never holds, transfers, invests, or reserves money
+## PDF safeguards
 
-## Architecture
+- Authentication and same-origin verification are required.
+- PDF size is limited to 10 MB.
+- PDF length is limited to 80 pages.
+- A maximum of 2,000 possible transactions is extracted.
+- Files are processed in memory and are not stored by the extraction endpoint.
+- Nothing enters the FICONTER ledger until the customer reviews and confirms it.
 
-- Reuses `get_ai_insights_inputs`
-- Reuses the existing deterministic Smart Engine and Wealth Engine calculations
-- Reuses Guided Financial Setup acknowledgements
-- Does not duplicate transaction, bill, debt, savings, goal, net-worth, or financial-independence calculations
-- Requires no new database objects
+## Compatibility
+
+- Uses the existing Statement Import database tables and RPC internally, so no new Supabase SQL is required.
+- Existing CSV, TSV and TXT imports continue to work.
+- Existing duplicate detection, category rules, exchange-rate conversion and realtime updates remain unchanged.

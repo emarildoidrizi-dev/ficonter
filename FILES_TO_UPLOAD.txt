@@ -1,14 +1,15 @@
-NEW FILES
-app/dashboard/gps/page.tsx
-components/FinancialGps.tsx
-components/FinancialGps.module.css
-components/FinancialGpsSummary.tsx
-components/FinancialGpsSummary.module.css
-lib/wealth/financialGps.ts
-scripts/verify-financial-gps.mjs
+UPLOAD OR REPLACE THESE FILES IN THE SAME GITHUB PATHS
 
-REPLACE EXISTING FILES
-app/dashboard/page.tsx
-components/DashboardLiveOverview.tsx
-components/Sidebar.tsx
+app/api/financial-file/pdf-extract/route.ts
+components/StatementImportWorkspace.tsx
+components/StatementImportWorkspace.module.css
+lib/pdfFinancialImport.ts
+next.config.ts
 package.json
+
+OPTIONAL LOCAL VERIFICATION FILE
+scripts/verify-financial-file-import.mjs
+
+TEST FILES - DO NOT UPLOAD TO GITHUB
+sample/ficonter-financial-records-sample.csv
+sample/ficonter-financial-records-sample.pdf

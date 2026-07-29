@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   FileSpreadsheet,
+  FileText,
   Loader2,
   RotateCcw,
   Upload,
@@ -58,8 +59,16 @@ type ImportResult = {
 };
 
 type ReviewFilter = "all" | "ready" | "duplicate" | "invalid";
+type SourceKind = "delimited" | "pdf";
+type PdfMeta = {
+  pageCount: number;
+  transactionCount: number;
+  assumedDirectionCount: number;
+  extractedLineCount: number;
+};
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_DELIMITED_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_ROWS = 2000;
 const PAGE_SIZE = 25;
 
@@ -103,6 +112,8 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
   const [fileName, setFileName] = useState("");
   const [rawText, setRawText] = useState("");
   const [fileSize, setFileSize] = useState(0);
+  const [sourceKind, setSourceKind] = useState<SourceKind>("delimited");
+  const [pdfMeta, setPdfMeta] = useState<PdfMeta | null>(null);
   const [delimiter, setDelimiter] = useState(",");
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
   const [hasHeader, setHasHeader] = useState(true);
@@ -116,6 +127,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [page, setPage] = useState(1);
   const [loadingSettings, setLoadingSettings] = useState(false);
+  const [readingFile, setReadingFile] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
@@ -168,7 +180,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       if (firstError) {
         setError(
           firstError.message.includes("does not exist") || firstError.message.includes("schema cache")
-            ? "Statement Import needs its Supabase setup before saved formats and rules can be used."
+            ? "Financial File Import needs its Supabase setup before saved formats and rules can be used."
             : firstError.message,
         );
       }
@@ -205,6 +217,8 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
     setFileName("");
     setRawText("");
     setFileSize(0);
+    setSourceKind("delimited");
+    setPdfMeta(null);
     setDelimiter(",");
     setParsedRows([]);
     setHasHeader(true);
@@ -228,22 +242,71 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
 
     setError("");
     setNotice("");
-    if (file.size > MAX_FILE_BYTES) {
-      setError("Choose a CSV or text statement smaller than 5 MB.");
-      return;
-    }
-
+    setReadingFile(true);
     const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["csv", "txt", "tsv"].includes(extension)) {
-      setError("Choose a CSV, TSV or text statement file.");
-      return;
-    }
 
     try {
+      if (extension === "pdf") {
+        if (file.size > MAX_PDF_FILE_BYTES) {
+          throw new Error("Choose a PDF smaller than 10 MB.");
+        }
+
+        const body = new FormData();
+        body.append("file", file);
+        const response = await fetch("/api/financial-file/pdf-extract", {
+          method: "POST",
+          body,
+          cache: "no-store",
+        });
+        const payload = (await response.json().catch(() => null)) as {
+          rows?: string[][];
+          pageCount?: number;
+          transactionCount?: number;
+          assumedDirectionCount?: number;
+          extractedLineCount?: number;
+          error?: string;
+        } | null;
+        if (!response.ok || !payload?.rows?.length) {
+          throw new Error(payload?.error || "The PDF could not be analysed.");
+        }
+
+        const rows = payload.rows;
+        const nextHeaders = rows[0] ?? [];
+        setFileName(file.name);
+        setRawText("");
+        setFileSize(file.size);
+        setSourceKind("pdf");
+        setPdfMeta({
+          pageCount: Number(payload.pageCount ?? 0),
+          transactionCount: Number(payload.transactionCount ?? Math.max(0, rows.length - 1)),
+          assumedDirectionCount: Number(payload.assumedDirectionCount ?? 0),
+          extractedLineCount: Number(payload.extractedLineCount ?? 0),
+        });
+        setDelimiter(",");
+        setParsedRows(rows);
+        setHasHeader(true);
+        setMapping(autoMapHeaders(nextHeaders, "EUR"));
+        setRememberMapping(false);
+        setProfileName("");
+        setStep(2);
+        const assumed = Number(payload.assumedDirectionCount ?? 0);
+        setNotice(
+          `${Math.max(0, rows.length - 1)} possible transactions were extracted from ${Number(payload.pageCount ?? 0)} PDF page${Number(payload.pageCount ?? 0) === 1 ? "" : "s"}.${assumed ? ` Review ${assumed} transaction type${assumed === 1 ? "" : "s"} that required a direction assumption.` : ""}`,
+        );
+        return;
+      }
+
+      if (!extension || !["csv", "txt", "tsv"].includes(extension)) {
+        throw new Error("Choose a PDF, CSV, TSV or text financial file.");
+      }
+      if (file.size > MAX_DELIMITED_FILE_BYTES) {
+        throw new Error("Choose a CSV or text file smaller than 5 MB.");
+      }
+
       const text = await file.text();
       const detected = extension === "tsv" ? "\t" : detectDelimiter(text);
       const rows = parseDelimitedText(text, detected);
-      if (rows.length < 2) throw new Error("The statement does not contain enough rows.");
+      if (rows.length < 2) throw new Error("The file does not contain enough transaction rows.");
       if (rows.length - 1 > MAX_ROWS) {
         throw new Error("Import a maximum of 2,000 transaction rows at a time.");
       }
@@ -266,15 +329,20 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       setFileName(file.name);
       setRawText(text);
       setFileSize(file.size);
+      setSourceKind("delimited");
+      setPdfMeta(null);
       setDelimiter(detected);
       setParsedRows(rows);
       setHasHeader(nextHasHeader);
       setMapping(autoMapHeaders(nextHeaders, "EUR"));
+      setRememberMapping(true);
       setProfileName(file.name.replace(/\.[^.]+$/, "").slice(0, 80));
       setStep(2);
-      setNotice(`${rows.length - (nextHasHeader ? 1 : 0)} statement rows detected.`);
+      setNotice(`${rows.length - (nextHasHeader ? 1 : 0)} transaction rows detected.`);
     } catch (fileError) {
-      setError(fileError instanceof Error ? fileError.message : "The statement could not be read.");
+      setError(fileError instanceof Error ? fileError.message : "The financial file could not be read.");
+    } finally {
+      setReadingFile(false);
     }
   }
 
@@ -292,14 +360,14 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
 
   function applyProfile(profileId: string) {
     setSelectedProfile(profileId);
-    if (!profileId) return;
+    if (!profileId || sourceKind === "pdf") return;
     const profile = profiles.find((item) => item.id === profileId);
     if (!profile) return;
     setDelimiter(profile.delimiter);
     if (rawText) setParsedRows(parseDelimitedText(rawText, profile.delimiter));
     setMapping(profile.mapping);
     setProfileName(profile.name);
-    setNotice(`${profile.name} format applied. Review the columns before continuing.`);
+    setNotice(`${profile.name} format applied. Review the field matches before continuing.`);
   }
 
 
@@ -340,14 +408,14 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       mapping.debitColumn === null &&
       mapping.creditColumn === null
     ) {
-      setError("Choose one signed Amount column, or choose Debit and Credit columns.");
+      setError("Choose one signed Amount field, or choose Debit and Credit fields.");
       return;
     }
     if (
       mapping.amountColumn === null &&
       (mapping.debitColumn === null || mapping.creditColumn === null)
     ) {
-      setError("When no signed Amount column is used, choose both Debit and Credit columns.");
+      setError("When no signed Amount field is used, choose both Debit and Credit fields.");
       return;
     }
 
@@ -389,7 +457,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
             rateMap.set(currency, {
               rate: Number(payload.rate),
               date: payload.date,
-              source: `${payload.source} statement import`,
+              source: `${payload.source} financial file import`,
             });
           }),
       );
@@ -414,7 +482,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       setError(
         previewError instanceof Error
           ? previewError.message
-          : "The statement preview could not be prepared.",
+          : "The financial-file preview could not be prepared.",
       );
     } finally {
       setPreparing(false);
@@ -460,7 +528,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
   }, [preparedRows]);
 
   async function saveProfileAndRules(userId: string, importedRows: PreparedStatementRow[]) {
-    if (rememberMapping && profileName.trim()) {
+    if (sourceKind === "delimited" && rememberMapping && profileName.trim()) {
       const { error: profileError } = await supabase
         .from("statement_import_profiles")
         .upsert(
@@ -500,7 +568,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
   async function importStatement() {
     const rowsToImport = preparedRows.filter((row) => row.included && !row.parseError);
     if (!rowsToImport.length) {
-      setError("Select at least one valid statement row to import.");
+      setError("Select at least one valid transaction row to import.");
       return;
     }
 
@@ -544,9 +612,11 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
           p_file_name: fileName,
           p_rows: rpcRows,
           p_mapping: {
-            delimiter,
+            sourceKind,
+            delimiter: sourceKind === "delimited" ? delimiter : null,
             hasHeader,
             mapping,
+            pdfMeta: sourceKind === "pdf" ? pdfMeta : null,
           },
         },
       );
@@ -557,7 +627,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
         await saveProfileAndRules(user.id, rowsToImport);
       } catch {
         setPostImportWarning(
-          "The transactions were imported, but the saved bank format or category rules could not be stored.",
+          "The transactions were imported, but the saved file format or category rules could not be stored.",
         );
       }
       setResult(completedResult);
@@ -567,7 +637,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       setError(
         importFailure instanceof Error
           ? importFailure.message
-          : "The statement could not be imported.",
+          : "The financial file could not be imported.",
       );
     } finally {
       setImporting(false);
@@ -575,16 +645,16 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
   }
 
   return (
-    <section className={styles.shell} aria-label="Statement import">
+    <section className={styles.shell} aria-label="Financial file import">
       {!open ? (
         <div className={styles.closedCard}>
           <div className={styles.closedIcon}><FileSpreadsheet size={22} /></div>
           <div className={styles.closedCopy}>
-            <strong>Import a bank statement</strong>
-            <span>Upload a CSV, review the results, and approve only what should enter FICONTER.</span>
+            <strong>Import financial records</strong>
+            <span>Upload a bank or card statement, transaction export, or another supported financial file.</span>
           </div>
           <button className="button secondary" type="button" onClick={() => setOpen(true)}>
-            <Upload size={16} /> Import statement
+            <Upload size={16} /> Import file
           </button>
         </div>
       ) : (
@@ -592,16 +662,16 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
           <div className={styles.workspaceHead}>
             <div>
               <span className={styles.eyebrow}>Effortless Entry</span>
-              <h2>Statement Import</h2>
+              <h2>Financial File Import</h2>
               <p>Nothing is saved until you review and confirm it.</p>
             </div>
-            <button className={styles.iconButton} type="button" onClick={() => resetImport(false)} aria-label="Close statement import">
+            <button className={styles.iconButton} type="button" onClick={() => resetImport(false)} aria-label="Close financial file import">
               <X size={18} />
             </button>
           </div>
 
           <div className={styles.steps} aria-label="Import progress">
-            {["Upload", "Match columns", "Review", "Complete"].map((label, index) => {
+            {["Upload file", "Match fields", "Review", "Complete"].map((label, index) => {
               const number = index + 1;
               const active = step === number;
               const complete = step > number;
@@ -619,15 +689,34 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
 
           {step === 1 ? (
             <div className={styles.uploadStage}>
-              <label className={styles.dropZone}>
-                <Upload size={28} />
-                <strong>Choose your statement file</strong>
-                <span>CSV, TSV or TXT · up to 5 MB · maximum 2,000 transactions</span>
-                <input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" onChange={chooseFile} />
+              <label className={`${styles.dropZone} ${readingFile ? styles.dropZoneBusy : ""}`}>
+                {readingFile ? <Loader2 className={styles.spin} size={28} /> : <Upload size={28} />}
+                <strong>{readingFile ? "Reading your financial file…" : "Choose a financial file"}</strong>
+                <span>PDF up to 10 MB · CSV, TSV or TXT up to 5 MB · maximum 2,000 transactions</span>
+                <input
+                  type="file"
+                  accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv,text/plain,text/tab-separated-values"
+                  onChange={chooseFile}
+                  disabled={readingFile}
+                />
               </label>
+              <div className={styles.formatGrid}>
+                <div className={styles.formatCard}>
+                  <FileSpreadsheet size={19} />
+                  <div><strong>Structured exports</strong><span>CSV, TSV and TXT transaction files</span></div>
+                </div>
+                <div className={styles.formatCard}>
+                  <FileText size={19} />
+                  <div><strong>Searchable PDFs</strong><span>Bank, card and payment transaction reports</span></div>
+                </div>
+              </div>
               <div className={styles.privacyNote}>
                 <CheckCircle2 size={17} />
-                <span>FICONTER reads the file only to prepare your preview. No banking password or bank connection is required.</span>
+                <span>FICONTER reads the file only to prepare your preview. It does not require a banking password or bank connection.</span>
+              </div>
+              <div className={styles.pdfNote}>
+                <AlertTriangle size={16} />
+                <span>PDF layouts differ. Review extracted transaction types and categories before importing. Scanned image-only and password-protected PDFs are not supported yet.</span>
               </div>
             </div>
           ) : null}
@@ -636,13 +725,18 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
             <div className={styles.mappingStage}>
               <div className={styles.fileSummary}>
                 <FileSpreadsheet size={20} />
-                <div><strong>{fileName}</strong><span>{Math.max(1, Math.round(fileSize / 1024))} KB · {dataRows.length} rows · {delimiterLabel(delimiter)} separated</span></div>
+                <div>
+                  <strong>{fileName}</strong>
+                  <span>
+                    {Math.max(1, Math.round(fileSize / 1024))} KB · {dataRows.length} possible transaction{dataRows.length === 1 ? "" : "s"} · {sourceKind === "pdf" ? `${pdfMeta?.pageCount ?? 0} PDF page${pdfMeta?.pageCount === 1 ? "" : "s"}` : `${delimiterLabel(delimiter)} separated`}
+                  </span>
+                </div>
                 <button type="button" className={styles.textButton} onClick={() => resetImport(true)}>Choose another file</button>
               </div>
 
-              {profiles.length ? (
+              {sourceKind === "delimited" && profiles.length ? (
                 <label className={styles.fullField}>
-                  <span>Saved bank format</span>
+                  <span>Saved file format</span>
                   <select value={selectedProfile} onChange={(event: ChangeEvent<HTMLSelectElement>) => applyProfile(event.target.value)} disabled={loadingSettings}>
                     <option value="">Use automatic column matching</option>
                     {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
@@ -650,10 +744,17 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
                 </label>
               ) : null}
 
-              <label className={styles.checkboxLine}>
-                <input type="checkbox" checked={hasHeader} onChange={(event: ChangeEvent<HTMLInputElement>) => toggleHeader(event.target.checked)} />
-                <span>The first row contains column headings</span>
-              </label>
+              {sourceKind === "delimited" ? (
+                <label className={styles.checkboxLine}>
+                  <input type="checkbox" checked={hasHeader} onChange={(event: ChangeEvent<HTMLInputElement>) => toggleHeader(event.target.checked)} />
+                  <span>The first row contains column headings</span>
+                </label>
+              ) : (
+                <div className={styles.pdfExtractionNotice}>
+                  <FileText size={17} />
+                  <span>FICONTER extracted possible transaction rows from this PDF. Confirm the field matches below before continuing.</span>
+                </div>
+              )}
 
               <div className={styles.mappingGrid}>
                 <ColumnSelect label="Transaction date" value={mapping.dateColumn} headers={headers} required onChange={(value) => updateMapping("dateColumn", value)} />
@@ -662,19 +763,21 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
                 <ColumnSelect label="Signed amount" value={mapping.amountColumn} headers={headers} onChange={(value) => updateMapping("amountColumn", value)} help="Use this when income is positive and spending is negative." />
                 <ColumnSelect label="Debit / money out" value={mapping.debitColumn} headers={headers} onChange={(value) => updateMapping("debitColumn", value)} />
                 <ColumnSelect label="Credit / money in" value={mapping.creditColumn} headers={headers} onChange={(value) => updateMapping("creditColumn", value)} />
-                <ColumnSelect label="Currency" value={mapping.currencyColumn} headers={headers} onChange={(value) => updateMapping("currencyColumn", value)} help="Optional when the whole statement uses one currency." />
+                <ColumnSelect label="Currency" value={mapping.currencyColumn} headers={headers} onChange={(value) => updateMapping("currencyColumn", value)} help="Optional when the whole file uses one currency." />
 
+                {sourceKind === "delimited" ? (
+                  <label className={styles.field}>
+                    <span>Column separator</span>
+                    <select value={delimiter} onChange={(event: ChangeEvent<HTMLSelectElement>) => changeDelimiter(event.target.value)}>
+                      <option value=",">Comma</option>
+                      <option value=";">Semicolon</option>
+                      <option value="\t">Tab</option>
+                      <option value="|">Pipe</option>
+                    </select>
+                  </label>
+                ) : null}
                 <label className={styles.field}>
-                  <span>Column separator</span>
-                  <select value={delimiter} onChange={(event: ChangeEvent<HTMLSelectElement>) => changeDelimiter(event.target.value)}>
-                    <option value=",">Comma</option>
-                    <option value=";">Semicolon</option>
-                    <option value="\t">Tab</option>
-                    <option value="|">Pipe</option>
-                  </select>
-                </label>
-                <label className={styles.field}>
-                  <span>Statement currency</span>
+                  <span>Default currency</span>
                   <select value={mapping.defaultCurrency} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateMapping("defaultCurrency", event.target.value)}>
                     {CURRENCY_CODES.map((code) => <option key={code} value={code}>{currencyLabel(code)}</option>)}
                   </select>
@@ -701,7 +804,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
               </div>
 
               <div className={styles.mappingPreview}>
-                <strong>First statement row</strong>
+                <strong>{sourceKind === "pdf" ? "First extracted record" : "First file row"}</strong>
                 <div>{headers.map((header, index) => <span key={`${header}-${index}`}><small>{header}</small>{dataRows[0]?.[index] || "—"}</span>)}</div>
               </div>
 
@@ -777,16 +880,18 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
                 </div>
               ) : null}
 
-              <div className={styles.saveOptions}>
-                <label className={styles.checkboxLine}>
-                  <input type="checkbox" checked={rememberMapping} onChange={(event: ChangeEvent<HTMLInputElement>) => setRememberMapping(event.target.checked)} />
-                  <span>Remember this column format for future statements</span>
-                </label>
-                {rememberMapping ? <label className={styles.profileField}><span>Format name</span><input value={profileName} onChange={(event: ChangeEvent<HTMLInputElement>) => setProfileName(event.target.value.slice(0, 80))} placeholder="Example: Sparkasse current account" /></label> : null}
-              </div>
+              {sourceKind === "delimited" ? (
+                <div className={styles.saveOptions}>
+                  <label className={styles.checkboxLine}>
+                    <input type="checkbox" checked={rememberMapping} onChange={(event: ChangeEvent<HTMLInputElement>) => setRememberMapping(event.target.checked)} />
+                    <span>Remember this column format for future files</span>
+                  </label>
+                  {rememberMapping ? <label className={styles.profileField}><span>Format name</span><input value={profileName} onChange={(event: ChangeEvent<HTMLInputElement>) => setProfileName(event.target.value.slice(0, 80))} placeholder="Example: Sparkasse current account CSV" /></label> : null}
+                </div>
+              ) : null}
 
               <div className={styles.footerActions}>
-                <button className="button secondary" type="button" onClick={() => setStep(2)}><ArrowLeft size={16} /> Change columns</button>
+                <button className="button secondary" type="button" onClick={() => setStep(2)}><ArrowLeft size={16} /> Change fields</button>
                 <button className="button" type="button" onClick={importStatement} disabled={importing || counts.selected === 0}>
                   {importing ? <Loader2 className={styles.spin} size={16} /> : <Upload size={16} />}
                   Import {counts.selected} transaction{counts.selected === 1 ? "" : "s"}
@@ -798,7 +903,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
           {step === 4 && result ? (
             <div className={styles.completeStage}>
               <div className={styles.completeIcon}><CheckCircle2 size={34} /></div>
-              <h3>Statement import complete</h3>
+              <h3>Financial file import complete</h3>
               <p>Your approved transactions are now part of the same FICONTER ledger used by Overview, Cash Flow, Planner and Financial GPS.</p>
               {postImportWarning ? <div className="alert alert-error">{postImportWarning}</div> : null}
               <div className={styles.resultGrid}>
@@ -807,7 +912,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
                 <div><strong>{result.skippedInvalidCount}</strong><span>Invalid skipped</span></div>
               </div>
               <div className={styles.footerActionsCentered}>
-                <button className="button secondary" type="button" onClick={() => resetImport(true)}><RotateCcw size={16} /> Import another statement</button>
+                <button className="button secondary" type="button" onClick={() => resetImport(true)}><RotateCcw size={16} /> Import another file</button>
                 <button className="button" type="button" onClick={() => resetImport(false)}>Return to transactions</button>
               </div>
             </div>

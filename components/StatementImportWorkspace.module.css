@@ -639,3 +639,79 @@
     grid-template-columns: 1fr;
   }
 }
+
+.dropZoneBusy {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.formatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.formatCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 91%, transparent);
+}
+
+.formatCard > svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.formatCard div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.formatCard strong {
+  font-size: 0.92rem;
+}
+
+.formatCard span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.pdfNote,
+.pdfExtractionNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--warning, #b88a42) 28%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--warning, #b88a42) 7%, var(--surface));
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.pdfNote > svg,
+.pdfExtractionNotice > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+.pdfExtractionNotice {
+  margin-bottom: 14px;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+@media (max-width: 760px) {
+  .formatGrid {
+    grid-template-columns: 1fr;
+  }
+}

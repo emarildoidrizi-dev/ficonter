@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";
+import { StatementImportWorkspace } from "@/components/StatementImportWorkspace";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,6 +44,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           <p>Record less, reuse more, and keep the full financial picture accurate.</p>
         </div>
       </header>
+      <StatementImportWorkspace existingTransactions={data ?? []} />
       <section className="transactions-layout">
         <div className="panel transaction-entry-panel transaction-effortless-panel">
           <EffortlessEntryWorkspace

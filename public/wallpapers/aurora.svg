@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#071522"/><stop offset=".62" stop-color="#163746"/><stop offset="1" stop-color="#263c3f"/></linearGradient>
+    <linearGradient id="a1" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2be5c0" stop-opacity="0"/><stop offset=".35" stop-color="#48f1ba" stop-opacity=".85"/><stop offset=".65" stop-color="#5a8dff" stop-opacity=".75"/><stop offset="1" stop-color="#b66cff" stop-opacity="0"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="34"/></filter>
+    <pattern id="stars" width="170" height="130" patternUnits="userSpaceOnUse"><circle cx="24" cy="18" r="1" fill="#fff" opacity=".72"/><circle cx="126" cy="76" r="1.2" fill="#fff" opacity=".55"/><circle cx="62" cy="112" r=".8" fill="#cdefff" opacity=".72"/></pattern>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/><rect width="1920" height="740" fill="url(#stars)"/>
+  <path d="M-120 360 C280 30 590 530 920 180 C1260 -120 1530 470 2040 80" fill="none" stroke="url(#a1)" stroke-width="190" stroke-linecap="round" filter="url(#soft)" opacity=".92"/>
+  <path d="M-120 510 C310 170 680 620 1060 280 C1390 -10 1670 530 2030 240" fill="none" stroke="#66ffd4" stroke-opacity=".2" stroke-width="80" filter="url(#soft)"/>
+  <path d="M0 865 L280 620 L510 810 L760 540 L1010 820 L1270 590 L1510 800 L1750 630 L1920 760 L1920 1080 L0 1080 Z" fill="#0b1a1d"/>
+  <path d="M0 930 L250 780 L460 900 L710 700 L970 940 L1240 750 L1460 930 L1720 790 L1920 900 L1920 1080 L0 1080 Z" fill="#15282a" opacity=".9"/>
+</svg>

@@ -3,12 +3,15 @@ import { Sidebar } from "@/components/Sidebar";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
+import { CommandPalette } from "@/components/CommandPalette";
 import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
   appearance?: string;
   density?: string;
+  layout?: string;
   backgroundMotion?: string;
+  wallpaperScene?: string;
 };
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
@@ -20,10 +23,13 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   return {
     appearance: typeof value.appearance === "string" ? value.appearance : undefined,
     density: typeof value.density === "string" ? value.density : undefined,
+    layout: typeof value.layout === "string" ? value.layout : undefined,
     backgroundMotion:
       typeof value.backgroundMotion === "string"
         ? value.backgroundMotion
         : undefined,
+    wallpaperScene:
+      typeof value.wallpaperScene === "string" ? value.wallpaperScene : undefined,
   };
 }
 
@@ -43,10 +49,13 @@ export default async function DashboardLayout({
       <InterfacePreferencesBootstrap
         appearance={interfacePreferences.appearance}
         density={interfacePreferences.density}
+        layout={interfacePreferences.layout}
         backgroundMotion={interfacePreferences.backgroundMotion}
+        wallpaperScene={interfacePreferences.wallpaperScene}
       />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
+      <CommandPalette />
       <Sidebar
         isAdmin={Boolean(admin)}
         user={{

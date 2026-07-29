@@ -52,12 +52,19 @@ import {
 import {
   BACKGROUND_MOTION_OPTIONS,
   INTERFACE_THEME_OPTIONS,
+  WALLPAPER_SCENE_OPTIONS,
   normalizeAppearance,
   normalizeBackgroundMotion,
+  normalizeWallpaperScene,
   resolveAppearance,
   type AppearancePreference,
   type BackgroundMotionPreference,
+  type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
+import {
+  normalizeInterfaceLayout,
+  type InterfaceLayoutPreference,
+} from "@/lib/interfaceLayout";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -84,7 +91,9 @@ type Preferences = {
   plannerStartBalance: string;
   density: "comfortable" | "compact";
   appearance: AppearancePreference;
+  layout: InterfaceLayoutPreference;
   backgroundMotion: BackgroundMotionPreference;
+  wallpaperScene: WallpaperScenePreference;
   language: "en";
   notifications: {
     billReminders: boolean;
@@ -126,7 +135,7 @@ const sections = [
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
-  { id: "appearance", label: "Appearance", description: "Theme and layout density", icon: Palette },
+  { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
   { id: "language", label: "Language", description: "English by default", icon: Globe2 },
@@ -140,7 +149,9 @@ const defaultPreferences: Preferences = {
   plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
+  layout: "horizon",
   backgroundMotion: "animated",
+  wallpaperScene: "space-nebula",
   language: "en",
   notifications: {
     billReminders: true,
@@ -164,9 +175,17 @@ function readPreferences(metadata: Metadata): Preferences {
     appearance: normalizeAppearance(
       typeof stored.appearance === "string" ? stored.appearance : undefined,
     ),
+    layout: normalizeInterfaceLayout(
+      typeof stored.layout === "string" ? stored.layout : undefined,
+    ),
     backgroundMotion: normalizeBackgroundMotion(
       typeof stored.backgroundMotion === "string"
         ? stored.backgroundMotion
+        : undefined,
+    ),
+    wallpaperScene: normalizeWallpaperScene(
+      typeof stored.wallpaperScene === "string"
+        ? stored.wallpaperScene
         : undefined,
     ),
     notifications: {
@@ -214,16 +233,17 @@ function applyInterface(preferences: Preferences) {
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
+  root.dataset.layout = preferences.layout;
   root.dataset.backgroundMotion = preferences.backgroundMotion;
+  root.dataset.wallpaperScene = preferences.wallpaperScene;
   root.style.colorScheme = resolvedTheme;
 
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
     localStorage.setItem("ficonter-density", preferences.density);
-    localStorage.setItem(
-      "ficonter-background-motion",
-      preferences.backgroundMotion,
-    );
+    localStorage.setItem("ficonter-layout", preferences.layout);
+    localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);
+    localStorage.setItem("ficonter-wallpaper-scene", preferences.wallpaperScene);
   } catch {
     // The interface still updates when browser storage is unavailable.
   }
@@ -976,10 +996,41 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
               </div>
             </fieldset>
             <fieldset className={styles.optionGroup}>
-              <legend>Background motion</legend>
+              <legend>Scene wallpaper</legend>
               <p className={styles.themeHelp}>
-                Choose how much atmosphere you want behind the financial workspace.
-                Content cards remain opaque and readable in every theme.
+                Choose a real visual scene for the dashboard background. A theme-safe
+                readability veil protects headings, numbers and controls in every theme.
+              </p>
+              <div className={styles.wallpaperGrid}>
+                {WALLPAPER_SCENE_OPTIONS.map(({ value, label, description }) => (
+                  <label className={styles.wallpaperCard} key={value}>
+                    <input
+                      type="radio"
+                      checked={preferences.wallpaperScene === value}
+                      onChange={() => {
+                        const next = { ...preferences, wallpaperScene: value };
+                        setPreferences(next);
+                        applyInterface(next);
+                      }}
+                    />
+                    <span
+                      className={styles.wallpaperPreview}
+                      data-wallpaper={value}
+                      aria-hidden="true"
+                    >
+                      <i />
+                    </span>
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.optionGroup}>
+              <legend>Wallpaper motion</legend>
+              <p className={styles.themeHelp}>
+                Animated uses a very slow cinematic drift. Static keeps the selected
+                scene still. Off restores the standard solid theme background.
               </p>
               <div className={styles.motionGrid}>
                 {BACKGROUND_MOTION_OPTIONS.map(({ value, label, description }) => (
@@ -996,10 +1047,43 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
                     <span
                       className={styles.motionPreview}
                       data-motion={value}
+                      data-wallpaper={preferences.wallpaperScene}
                       aria-hidden="true"
                     >
                       <i />
+                    </span>
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.optionGroup}>
+              <legend>Dashboard layout</legend>
+              <p className={styles.themeHelp}>
+                Choose the visual structure of the Overview. Horizon adds a live command strip,
+                Financial GPS board and journey rail. Classic preserves the original dashboard.
+              </p>
+              <div className={styles.layoutGrid}>
+                {([
+                  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
+                  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
+                ] as const).map(([value, label, description]) => (
+                  <label className={styles.layoutCard} key={value}>
+                    <input
+                      type="radio"
+                      checked={preferences.layout === value}
+                      onChange={() => {
+                        const next = { ...preferences, layout: value };
+                        setPreferences(next);
+                        applyInterface(next);
+                      }}
+                    />
+                    <span className={styles.layoutPreview} data-layout={value} aria-hidden="true">
                       <i />
+                      <b />
+                      <b />
+                      <b />
                     </span>
                     <strong>{label}</strong>
                     <small>{description}</small>

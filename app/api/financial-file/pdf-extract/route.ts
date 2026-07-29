@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
     const loadingTask = pdfjs.getDocument({
       data: buffer,
       disableFontFace: true,
-      isEvalSupported: false,
       useSystemFonts: true,
     });
     const pdf = await loadingTask.promise;

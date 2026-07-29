@@ -98,6 +98,35 @@ function effectiveStatus(bill: Bill): "pending" | "paid" | "cancelled" | "overdu
   return due < today ? "overdue" : "pending";
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message ?? "").trim();
+    if (message) return message;
+  }
+
+  return fallback;
+}
+
+function isMissingMarkUnpaidRpc(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message =
+    "message" in error
+      ? String((error as { message?: unknown }).message ?? "").toLowerCase()
+      : "";
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    message.includes("mark_bill_unpaid") ||
+    message.includes("schema cache") ||
+    message.includes("could not find the function")
+  );
+}
+
 
 async function convertToEur(amount: number, currency: string) {
   if (currency === "EUR") return { rate: 1, eur: amount };
@@ -396,37 +425,99 @@ export function BillsManager({
     setMessage("");
 
     try {
-      const { data, error } = await supabase.rpc("mark_bill_unpaid", {
+      const { data, error: rpcError } = await supabase.rpc("mark_bill_unpaid", {
         p_bill_id: bill.id,
       });
 
-      if (error) throw error;
+      if (!rpcError) {
+        const result = data as {
+          bill?: Bill;
+          deleted_transaction_count?: number;
+        } | null;
+        const updatedBill = result?.bill;
 
-      const result = data as {
-        bill?: Bill;
-        deleted_transaction_count?: number;
-      } | null;
-      const updatedBill = result?.bill;
+        if (!updatedBill?.id) {
+          throw new Error("The bill was updated, but its new state could not be loaded.");
+        }
 
-      if (!updatedBill?.id) {
-        throw new Error("The bill was updated, but its new state could not be loaded.");
+        setBills((current) =>
+          current.map((item) => (item.id === bill.id ? updatedBill : item)),
+        );
+
+        notifyFiconterDataChange("all");
+        setMessage(
+          Number(result?.deleted_transaction_count ?? 0) > 0
+            ? "Bill marked unpaid and its linked transaction removed everywhere."
+            : "Bill marked unpaid everywhere.",
+        );
+        return;
+      }
+
+      // Some deployments may not have the paid-to-unpaid RPC installed yet.
+      // Fall back to the customer's existing RLS-protected update/delete rights
+      // so the button still works, then preserve the RPC as the preferred atomic path.
+      if (!isMissingMarkUnpaidRpc(rpcError)) {
+        console.warn("mark_bill_unpaid RPC failed; using protected fallback", rpcError);
+      }
+
+      const now = new Date().toISOString();
+      const { data: updated, error: updateError } = await supabase
+        .from("bills")
+        .update({
+          status: "pending",
+          paid_at: null,
+          transaction_id: null,
+          updated_at: now,
+        })
+        .eq("id", bill.id)
+        .eq("user_id", userId)
+        .eq("status", "paid")
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      if (!updated?.id) throw new Error("The paid bill could not be reopened.");
+
+      if (bill.transaction_id) {
+        const { error: transactionError } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", bill.transaction_id)
+          .eq("user_id", userId);
+
+        if (transactionError) {
+          // Restore the original paid state if the linked transaction cannot be
+          // removed, preventing Bills and Transactions from disagreeing.
+          await supabase
+            .from("bills")
+            .update({
+              status: "paid",
+              paid_at: bill.paid_at,
+              transaction_id: bill.transaction_id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", bill.id)
+            .eq("user_id", userId);
+
+          throw transactionError;
+        }
       }
 
       setBills((current) =>
-        current.map((item) => (item.id === bill.id ? updatedBill : item)),
+        current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
-
       notifyFiconterDataChange("all");
       setMessage(
-        Number(result?.deleted_transaction_count ?? 0) > 0
+        bill.transaction_id
           ? "Bill marked unpaid and its linked transaction removed everywhere."
           : "Bill marked unpaid everywhere.",
       );
     } catch (error) {
+      const details = errorMessage(error, "The bill could not be marked unpaid.");
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "The bill could not be marked unpaid.",
+        details.toLowerCase().includes("row-level security")
+          ? "The bill could not be changed because your session is no longer authorized. Please sign in again."
+          : details,
       );
     } finally {
       setBusy(null);

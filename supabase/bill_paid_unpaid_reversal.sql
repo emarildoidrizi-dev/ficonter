@@ -77,4 +77,7 @@ grant execute on function public.mark_bill_unpaid(uuid)
 comment on function public.mark_bill_unpaid(uuid)
 is 'Atomically reopens a customer-owned paid Bill and removes only its linked generated transaction.';
 
+-- Make the RPC visible immediately to PostgREST/Supabase after deployment.
+notify pgrst, 'reload schema';
+
 commit;

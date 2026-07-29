@@ -249,3 +249,73 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
     backdrop-filter: none;
   }
 }
+
+/* FICONTER scene-wallpaper scroll safety
+   The fixed wallpaper remains outside document flow and never becomes the
+   scroll container. Desktop scrolls only the workspace; mobile uses normal
+   document scrolling. */
+.living-theme-backdrop {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100%;
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: none;
+}
+
+@media (min-width: 901px) {
+  html,
+  body {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden !important;
+  }
+
+  .app-main,
+  html[data-layout="horizon"] .app-main {
+    min-width: 0;
+    min-height: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-gutter: stable;
+  }
+}
+
+@media (max-width: 900px) {
+  html,
+  body {
+    min-height: 100%;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+  }
+
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-main,
+  html[data-layout="horizon"] .app-main {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto !important;
+    overflow: visible !important;
+    touch-action: pan-y;
+  }
+}

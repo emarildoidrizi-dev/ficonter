@@ -49,21 +49,29 @@ export const ENTRY_MODE_OPTIONS: Array<{
   value: EntryMode;
   label: string;
   description: string;
+  effort: string;
+  structure: string;
 }> = [
   {
     value: "simple",
     label: "Simple",
-    description: "Only the essentials for a quick monthly overview.",
+    description: "A compact quick-add screen with category shortcuts.",
+    effort: "About 10 seconds",
+    structure: "One screen · 3 choices",
   },
   {
     value: "guided",
     label: "Guided",
-    description: "Fast entry with helpful details when you need them.",
+    description: "A calm three-step flow that explains each choice.",
+    effort: "About 30 seconds",
+    structure: "3 steps · optional details",
   },
   {
     value: "detailed",
     label: "Detailed",
-    description: "Full transaction information and precise timing.",
+    description: "A complete ledger form with every field visible.",
+    effort: "Maximum control",
+    structure: "Full form · all fields",
   },
 ];
 

@@ -325,3 +325,38 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Effortless Entry v2 — visibly distinct mode cards */
+.modeButtonTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 20px;
+}
+
+.modeButtonTop small {
+  color: var(--gold);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.modeButton em,
+.modeActive em {
+  display: inline-flex;
+  margin-top: 9px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.modeActive em {
+  background: color-mix(in srgb, var(--gold) 13%, transparent);
+  color: var(--text-primary);
+}

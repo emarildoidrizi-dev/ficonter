@@ -331,8 +331,8 @@ export function EffortlessEntryWorkspace({
             <Settings2 size={17} />
           </span>
           <div>
-            <h4 id="entry-style-title">Choose how much detail you want</h4>
-            <p>FICONTER adapts the form. Your financial records stay unchanged.</p>
+            <h4 id="entry-style-title">Choose the experience that feels easiest</h4>
+            <p>Each mode now uses a genuinely different workflow. Change it at any time.</p>
           </div>
         </div>
         <div className={styles.modeGrid}>
@@ -345,8 +345,12 @@ export function EffortlessEntryWorkspace({
               aria-pressed={mode === option.value}
               disabled={savingMode}
             >
-              <strong>{option.label}</strong>
+              <div className={styles.modeButtonTop}>
+                <strong>{option.label}</strong>
+                <small>{option.effort}</small>
+              </div>
               <span>{option.description}</span>
+              <em>{option.structure}</em>
               {mode === option.value && <CheckCircle2 size={16} />}
             </button>
           ))}
@@ -489,16 +493,16 @@ export function EffortlessEntryWorkspace({
             <h3 id="add-transaction-title">Add transaction</h3>
             <p>
               {mode === "simple"
-                ? "Amount and category are enough. Add more only when useful."
+                ? "A compact quick-add screen with only the essentials."
                 : mode === "guided"
-                  ? "The recommended balance between speed and useful detail."
-                  : "Capture the complete transaction record."}
+                  ? "A calm three-step journey with explanations and review."
+                  : "A complete ledger form with every field visible."}
             </p>
           </div>
           <span>{ENTRY_MODE_OPTIONS.find((option) => option.value === mode)?.label}</span>
         </div>
         <TransactionForm
-          key={activePreset?.key ?? `blank:${mode}:${initialType}`}
+          key={`${mode}:${activePreset?.key ?? `blank:${initialType}`}`}
           initialType={initialType}
           entryMode={mode}
           preset={activePreset}

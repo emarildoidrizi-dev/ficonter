@@ -19,8 +19,16 @@ const globals = read("app/globals.css");
 
 check("Transactions page uses EffortlessEntryWorkspace", page.includes("EffortlessEntryWorkspace"));
 check("Entry modes are defined", helper.includes('"simple" | "guided" | "detailed"'));
-check("Simple mode is selectable", workspace.includes('value === "simple"') || workspace.includes("ENTRY_MODE_OPTIONS"));
+check("Mode choices describe different effort", helper.includes("About 10 seconds") && helper.includes("About 30 seconds") && helper.includes("Maximum control"));
+check("Mode choices describe different structures", helper.includes("One screen · 3 choices") && helper.includes("3 steps · optional details") && helper.includes("Full form · all fields"));
 check("Preferences persist in Supabase", workspace.includes("money_entry_preferences") && workspace.includes("upsert"));
+check("Simple mode has a dedicated branch", form.includes('entryMode === "simple"') && form.includes("effortless-simple-form"));
+check("Simple mode uses quick category chips", form.includes("QUICK_CATEGORIES") && form.includes("effortless-category-chips"));
+check("Simple mode defaults date and description", form.includes("Saved for today at the current time") && form.includes("description.trim() || finalCategory"));
+check("Guided mode has a dedicated branch", form.includes('entryMode === "guided"') && form.includes("effortless-guided-form"));
+check("Guided mode has three steps", form.includes("guidedStep") && form.includes("Step 1 of 3") && form.includes("Step 2 of 3") && form.includes("Step 3 of 3"));
+check("Detailed mode exposes a full ledger form", form.includes("effortless-detailed-form") && form.includes("Save complete transaction"));
+check("Detailed mode shows exact date and time", form.includes("Exact date and time"));
 check("Favourites are supported", form.includes("rememberFavorite") && workspace.includes("is_favorite"));
 check("Recent entries are reusable", workspace.includes("createRecentPresets"));
 check("Recurring entries are supported", form.includes("repeatMonthly") && workspace.includes("post_monthly_transaction_template"));
@@ -33,11 +41,11 @@ check("RLS is enabled for templates", sql.includes("alter table public.transacti
 check("RLS is enabled for postings", sql.includes("alter table public.transaction_template_postings enable row level security"));
 check("Transaction creation still emits realtime event", form.includes("ficonter:transaction-created"));
 check("Connected modules are notified", form.includes('notifyFiconterDataChange("all")'));
-check("Description is optional", form.includes("description.trim() || finalCategory"));
-check("Advanced fields are collapsible", form.includes("More details") && form.includes("showAdvanced"));
+check("Mode changes remount the form safely", workspace.includes('key={`${mode}:'));
 check("Shortcut deletion keeps transactions", workspace.includes("Existing transactions were not changed"));
 check("Effortless panel is not sticky", globals.includes("transaction-entry-panel.transaction-effortless-panel") && globals.includes("position: static"));
-check("Mobile layout is covered", styles.includes("@media (max-width: 720px)"));
+check("Distinct mode styles are included", globals.includes("Effortless Entry v2") && globals.includes("effortless-stepper") && globals.includes("effortless-simple-amount"));
+check("Mobile layout is covered", styles.includes("@media (max-width: 720px)") && globals.includes("@media (max-width: 700px)"));
 
 const failed = checks.filter((item) => !item.condition);
 for (const item of checks) {

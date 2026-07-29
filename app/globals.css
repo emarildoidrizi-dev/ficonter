@@ -637,3 +637,472 @@ html[data-resolved-theme="dark"] .btn-primary {
 .transaction-entry-panel.transaction-effortless-panel {
   position: static;
 }
+
+/* Effortless Entry v2 — distinct Simple, Guided and Detailed experiences */
+.effortless-simple-form,
+.effortless-guided-form,
+.effortless-detailed-form {
+  display: grid;
+  gap: 16px;
+}
+
+.effortless-simple-intro,
+.effortless-detailed-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gold) 6%, var(--surface-card));
+}
+
+.effortless-simple-intro > div,
+.effortless-detailed-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.effortless-simple-intro strong,
+.effortless-detailed-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.effortless-simple-intro p,
+.effortless-detailed-header p {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.effortless-mode-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  color: var(--gold);
+}
+
+.effortless-time-pill,
+.effortless-detail-pill {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 11%, transparent);
+  color: var(--gold);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.effortless-simple-amount {
+  display: grid;
+  gap: 7px;
+}
+
+.effortless-simple-amount > label {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 750;
+}
+
+.effortless-simple-amount > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 66px;
+  padding: 0 15px;
+  border: 1px solid color-mix(in srgb, var(--gold) 38%, var(--line));
+  border-radius: 15px;
+  background: var(--control-bg);
+}
+
+.effortless-simple-amount > div > span {
+  color: var(--gold);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.effortless-simple-amount input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 29px;
+  font-weight: 720;
+  letter-spacing: -.03em;
+}
+
+.effortless-simple-amount input::placeholder {
+  color: color-mix(in srgb, var(--text-secondary) 60%, transparent);
+}
+
+.effortless-simple-amount small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.effortless-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.effortless-field-heading > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.effortless-category-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.effortless-category-chips button {
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 720;
+  text-align: left;
+  cursor: pointer;
+}
+
+.effortless-category-chips button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.effortless-category-chips button.is-active {
+  border-color: color-mix(in srgb, var(--gold) 64%, var(--line));
+  background: color-mix(in srgb, var(--gold) 10%, var(--control-bg));
+  color: var(--text-primary);
+}
+
+.effortless-custom-category {
+  margin-top: 8px;
+}
+
+.effortless-simple-defaults {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: -2px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.effortless-simple-defaults svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.effortless-simple-fx-note {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.effortless-primary-action {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+}
+
+.effortless-mode-footnote {
+  margin: -7px 0 0;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.effortless-stepper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.effortless-stepper > div {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+}
+
+.effortless-stepper > div:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 18px);
+  width: calc(100% - 36px);
+  height: 1px;
+  background: var(--line);
+}
+
+.effortless-stepper > div > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-card);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.effortless-stepper > div > small {
+  font-size: 9.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.effortless-stepper > div.is-current,
+.effortless-stepper > div.is-complete {
+  color: var(--gold);
+}
+
+.effortless-stepper > div.is-current > span,
+.effortless-stepper > div.is-complete > span {
+  border-color: color-mix(in srgb, var(--gold) 65%, var(--line));
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface-card));
+}
+
+.effortless-guided-step {
+  display: grid;
+  gap: 16px;
+  min-height: 330px;
+  align-content: start;
+}
+
+.effortless-guided-heading > span,
+.effortless-detailed-header > div > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-size: 9.5px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.effortless-guided-heading h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.effortless-guided-heading p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.effortless-guided-type-cards {
+  display: grid;
+  gap: 8px;
+}
+
+.effortless-guided-type-cards button {
+  display: grid;
+  gap: 3px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--control-bg);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.effortless-guided-type-cards button strong {
+  font-size: 12.5px;
+}
+
+.effortless-guided-type-cards button span {
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.effortless-guided-type-cards button.is-active {
+  border-color: color-mix(in srgb, var(--gold) 64%, var(--line));
+  background: color-mix(in srgb, var(--gold) 9%, var(--control-bg));
+}
+
+.effortless-guided-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 9px;
+  margin-top: auto;
+}
+
+.effortless-guided-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 118px;
+}
+
+.effortless-secondary-action {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.effortless-guided-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--gold) 6%, var(--surface-card));
+}
+
+.effortless-guided-summary > div span,
+.effortless-guided-summary > div strong {
+  display: block;
+}
+
+.effortless-guided-summary > div span {
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.effortless-guided-summary > div strong,
+.effortless-guided-summary > strong {
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: 12.5px;
+}
+
+.effortless-optional-label {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+.effortless-reuse-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-subtle) 76%, transparent);
+}
+
+.effortless-reuse-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--gold);
+}
+
+.effortless-reuse-title > div {
+  min-width: 0;
+}
+
+.effortless-reuse-title strong,
+.effortless-reuse-title span {
+  display: block;
+}
+
+.effortless-reuse-title strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.effortless-reuse-title span {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+
+.effortless-reuse-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.effortless-template-fields {
+  margin-top: 2px;
+}
+
+.effortless-detailed-form {
+  gap: 14px;
+}
+
+.effortless-detailed-header {
+  align-items: flex-start;
+}
+
+.effortless-detailed-header h4 {
+  font-size: 15px;
+}
+
+@media (max-width: 700px) {
+  .effortless-simple-intro,
+  .effortless-detailed-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .effortless-time-pill,
+  .effortless-detail-pill {
+    margin-left: 45px;
+  }
+
+  .effortless-category-chips,
+  .effortless-reuse-options {
+    grid-template-columns: 1fr;
+  }
+
+  .effortless-guided-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .effortless-guided-actions .btn {
+    min-width: 0;
+  }
+}

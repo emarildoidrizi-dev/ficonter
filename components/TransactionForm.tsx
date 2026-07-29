@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Repeat2, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import type {
@@ -46,6 +46,39 @@ function categoryForType(type: TransactionKind) {
   return "Groceries";
 }
 
+const QUICK_CATEGORIES: Record<TransactionKind, string[]> = {
+  expense: [
+    "Groceries",
+    "Restaurants",
+    "Public transport",
+    "Fuel",
+    "Haircut",
+    "Other / custom",
+  ],
+  income: [
+    "Salary",
+    "Wages",
+    "Bonus",
+    "Freelance",
+    "Reimbursement",
+    "Other income",
+  ],
+  saving: [
+    "Emergency fund",
+    "General savings",
+    "Holiday savings",
+    "House deposit",
+    "Retirement",
+    "Other / custom",
+  ],
+};
+
+function actionLabel(type: TransactionKind) {
+  if (type === "income") return "Add income";
+  if (type === "saving") return "Add saving";
+  return "Add expense";
+}
+
 export function TransactionForm({
   initialType = "expense",
   initialCategory,
@@ -73,7 +106,8 @@ export function TransactionForm({
   const transactionTimeWasEdited = useRef(Boolean(preset?.occurredAt));
   const [category, setCategory] = useState(defaultCategory);
   const [customCategory, setCustomCategory] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(entryMode === "detailed");
+  const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(preset ? 2 : 1);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [rememberFavorite, setRememberFavorite] = useState(false);
   const [repeatMonthly, setRepeatMonthly] = useState(false);
   const [recurringDay, setRecurringDay] = useState(() =>
@@ -97,10 +131,6 @@ export function TransactionForm({
       })).sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
-
-  useEffect(() => {
-    if (entryMode === "detailed") setShowAdvanced(true);
-  }, [entryMode]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -165,6 +195,32 @@ export function TransactionForm({
     Number.isFinite(numericAmount) && numericAmount > 0
       ? numericAmount * rate.rate
       : 0;
+
+  const quickCategories = QUICK_CATEGORIES[type];
+  const visibleQuickCategories = quickCategories.includes(category)
+    ? quickCategories
+    : [category, ...quickCategories.slice(0, 5)];
+
+  function changeType(nextType: TransactionKind) {
+    setType(nextType);
+    setCategory(categoryForType(nextType));
+    setCustomCategory("");
+    setShowAllCategories(false);
+  }
+
+  function continueGuidedEntry() {
+    const enteredAmount = Number(amount);
+    if (!Number.isFinite(enteredAmount) || enteredAmount <= 0) {
+      setError("Enter an amount greater than zero before continuing.");
+      return;
+    }
+    if (category === "Other / custom" && !customCategory.trim()) {
+      setError("Enter your custom category before continuing.");
+      return;
+    }
+    setError("");
+    setGuidedStep(3);
+  }
 
   async function createReusableTemplate({
     supabase,
@@ -357,6 +413,8 @@ export function TransactionForm({
       setRememberFavorite(false);
       setRepeatMonthly(false);
       setTemplateLabel("");
+      setGuidedStep(1);
+      setShowAllCategories(false);
       transactionTimeWasEdited.current = false;
       setOccurredAt(localDateTimeValue());
       notifyFiconterDataChange("all");
@@ -372,8 +430,520 @@ export function TransactionForm({
     }
   }
 
+  const typeSelector = (
+    <div className="transaction-type-buttons" role="group" aria-label="Transaction type">
+      {TRANSACTION_TYPES.map((option) => {
+        const optionType = option.value as TransactionKind;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            className={type === option.value ? "is-active" : ""}
+            aria-pressed={type === option.value}
+            onClick={() => changeType(optionType)}
+          >
+            {option.value === "expense"
+              ? "Expense"
+              : option.value === "income"
+                ? "Income"
+                : "Saving"}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const categorySelect = (
+    <>
+      <select
+        className="input"
+        name="category"
+        value={category}
+        onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+          setCategory(event.target.value)
+        }
+      >
+        {CATEGORY_GROUPS.map((group) => (
+          <optgroup key={group.group} label={group.group}>
+            {group.items.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      {category === "Other / custom" && (
+        <input
+          className="input effortless-custom-category"
+          value={customCategory}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setCustomCategory(event.target.value)
+          }
+          placeholder="Enter your own category"
+          maxLength={80}
+          required
+        />
+      )}
+    </>
+  );
+
+  const exchangePreview = (
+    <div className="fx-preview" aria-live="polite">
+      {rateLoading ? (
+        <span>Retrieving the latest EUR reference rate…</span>
+      ) : rateError ? (
+        <span className="fx-preview-error">{rateError}</span>
+      ) : (
+        <>
+          <div>
+            <span>EUR equivalent</span>
+            <strong>{formatCurrency(euroAmount, "EUR")}</strong>
+          </div>
+          <small>
+            {currency === "EUR"
+              ? "No conversion required."
+              : `1 ${currency} = ${rate.rate.toFixed(6)} EUR · rate date ${rate.date}`}
+          </small>
+        </>
+      )}
+    </div>
+  );
+
+  const reusableSettings = (
+    <div className="effortless-reuse-panel">
+      <div className="effortless-reuse-title">
+        <Star size={16} />
+        <div>
+          <strong>Save time next time</strong>
+          <span>Optional shortcuts for entries you use again.</span>
+        </div>
+      </div>
+
+      <div className="effortless-reuse-options">
+        <label className="effortless-check-row">
+          <input
+            type="checkbox"
+            checked={rememberFavorite}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setRememberFavorite(event.target.checked)
+            }
+          />
+          <span>
+            <strong>Save as a favourite</strong>
+            <small>Reuse this entry later with one tap.</small>
+          </span>
+        </label>
+
+        <label className="effortless-check-row">
+          <input
+            type="checkbox"
+            checked={repeatMonthly}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setRepeatMonthly(event.target.checked)
+            }
+          />
+          <span>
+            <strong>Repeat monthly</strong>
+            <small>Place it in your monthly confirmation queue.</small>
+          </span>
+        </label>
+      </div>
+
+      {(rememberFavorite || repeatMonthly) && (
+        <div className="transaction-form-grid effortless-template-fields">
+          <div className="field">
+            <label>Shortcut name</label>
+            <input
+              className="input"
+              value={templateLabel}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setTemplateLabel(event.target.value)
+              }
+              placeholder={description || category || "Monthly entry"}
+              maxLength={80}
+            />
+          </div>
+          {repeatMonthly && (
+            <div className="field">
+              <label>
+                <Repeat2 size={14} /> Day of month
+              </label>
+              <input
+                className="input"
+                type="number"
+                min="1"
+                max="31"
+                step="1"
+                value={recurringDay}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setRecurringDay(event.target.value)
+                }
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const statusMessages = (
+    <>
+      {error && <div className="alert alert-error">{error}</div>}
+      {notice && <div className="alert alert-success">{notice}</div>}
+    </>
+  );
+
+  if (entryMode === "simple") {
+    return (
+      <form className="form effortless-simple-form" onSubmit={submit}>
+        {preset && (
+          <div className="effortless-preset-notice">
+            <span>Shortcut loaded</span>
+            <strong>{preset.label}</strong>
+          </div>
+        )}
+
+        <div className="effortless-simple-intro">
+          <span className="effortless-mode-icon">
+            <Zap size={18} />
+          </span>
+          <div>
+            <strong>Quick add</strong>
+            <p>Choose what happened, enter the amount, and tap a category.</p>
+          </div>
+          <span className="effortless-time-pill">About 10 seconds</span>
+        </div>
+
+        <div className="field">
+          <label>What happened?</label>
+          {typeSelector}
+        </div>
+
+        <div className="effortless-simple-amount">
+          <label htmlFor="simple-amount">Amount</label>
+          <div>
+            <span>{currencySymbol(currency)}</span>
+            <input
+              id="simple-amount"
+              name="amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              required
+              autoFocus={!preset}
+              value={amount}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setAmount(event.target.value)
+              }
+              placeholder="0.00"
+            />
+            <small>{currency}</small>
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="effortless-field-heading">
+            <label>Choose a category</label>
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((current) => !current)}
+            >
+              {showAllCategories ? "Use quick choices" : "More categories"}
+            </button>
+          </div>
+
+          {!showAllCategories ? (
+            <div className="effortless-category-chips" role="group" aria-label="Quick categories">
+              {visibleQuickCategories.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={category === item ? "is-active" : ""}
+                  aria-pressed={category === item}
+                  onClick={() => {
+                    setCategory(item);
+                    if (item !== "Other / custom") setCustomCategory("");
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          ) : (
+            categorySelect
+          )}
+        </div>
+
+        {category === "Other / custom" && !showAllCategories && (
+          <div className="field">
+            <label>Custom category</label>
+            <input
+              className="input"
+              value={customCategory}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setCustomCategory(event.target.value)
+              }
+              placeholder="What was it for?"
+              maxLength={80}
+              required
+            />
+          </div>
+        )}
+
+        {currency !== "EUR" && (
+          <div className="effortless-simple-fx-note">
+            This shortcut uses {currency}. The current EUR conversion is reviewed automatically.
+            {exchangePreview}
+          </div>
+        )}
+
+        <div className="effortless-simple-defaults">
+          <CalendarClock size={15} />
+          <span>Saved for today at the current time. Description uses the category.</span>
+        </div>
+
+        {statusMessages}
+        <button
+          className="btn btn-primary effortless-primary-action"
+          disabled={loading || rateLoading || Boolean(rateError)}
+        >
+          {loading
+            ? "Saving…"
+            : rateLoading
+              ? "Retrieving rate…"
+              : actionLabel(type)}
+        </button>
+        <p className="effortless-mode-footnote">
+          Need another currency, a different date, or a recurring shortcut? Use Guided or Detailed entry.
+        </p>
+      </form>
+    );
+  }
+
+  if (entryMode === "guided") {
+    return (
+      <form className="form effortless-guided-form" onSubmit={submit}>
+        {preset && (
+          <div className="effortless-preset-notice">
+            <span>Shortcut loaded</span>
+            <strong>{preset.label}</strong>
+          </div>
+        )}
+
+        <div className="effortless-stepper" aria-label="Guided entry progress">
+          {[1, 2, 3].map((step) => (
+            <div
+              key={step}
+              className={guidedStep === step ? "is-current" : guidedStep > step ? "is-complete" : ""}
+            >
+              <span>{guidedStep > step ? <Check size={14} /> : step}</span>
+              <small>
+                {step === 1 ? "Type" : step === 2 ? "Amount" : "Review"}
+              </small>
+            </div>
+          ))}
+        </div>
+
+        {guidedStep === 1 && (
+          <section className="effortless-guided-step">
+            <div className="effortless-guided-heading">
+              <span>Step 1 of 3</span>
+              <h4>What kind of money movement is this?</h4>
+              <p>Choose one. FICONTER will prepare the right categories.</p>
+            </div>
+            <div className="effortless-guided-type-cards">
+              <button
+                type="button"
+                className={type === "expense" ? "is-active" : ""}
+                onClick={() => changeType("expense")}
+              >
+                <strong>Expense</strong>
+                <span>Money spent on everyday needs or purchases.</span>
+              </button>
+              <button
+                type="button"
+                className={type === "income" ? "is-active" : ""}
+                onClick={() => changeType("income")}
+              >
+                <strong>Income</strong>
+                <span>Salary, wages, refunds, or other money received.</span>
+              </button>
+              <button
+                type="button"
+                className={type === "saving" ? "is-active" : ""}
+                onClick={() => changeType("saving")}
+              >
+                <strong>Saving</strong>
+                <span>Money intentionally moved toward future security.</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary effortless-primary-action"
+              onClick={() => {
+                setError("");
+                setGuidedStep(2);
+              }}
+            >
+              Continue <ArrowRight size={16} />
+            </button>
+          </section>
+        )}
+
+        {guidedStep === 2 && (
+          <section className="effortless-guided-step">
+            <div className="effortless-guided-heading">
+              <span>Step 2 of 3</span>
+              <h4>How much was it, and where does it belong?</h4>
+              <p>These are the only required details.</p>
+            </div>
+            <div className="transaction-form-grid transaction-form-grid-amount">
+              <div className="field">
+                <label>Amount</label>
+                <input
+                  className="input"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputMode="decimal"
+                  required
+                  autoFocus
+                  value={amount}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setAmount(event.target.value)
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field">
+                <label>Category</label>
+                {categorySelect}
+              </div>
+            </div>
+            {statusMessages}
+            <div className="effortless-guided-actions">
+              <button
+                type="button"
+                className="btn effortless-secondary-action"
+                onClick={() => {
+                  setError("");
+                  setGuidedStep(1);
+                }}
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={continueGuidedEntry}
+              >
+                Continue <ArrowRight size={16} />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {guidedStep === 3 && (
+          <section className="effortless-guided-step">
+            <div className="effortless-guided-heading">
+              <span>Step 3 of 3</span>
+              <h4>Review or add optional details</h4>
+              <p>Your amount and category are ready. Everything below is optional unless you change currency.</p>
+            </div>
+
+            <div className="effortless-guided-summary">
+              <div>
+                <span>{type === "expense" ? "Expense" : type === "income" ? "Income" : "Saving"}</span>
+                <strong>{category === "Other / custom" ? customCategory : category}</strong>
+              </div>
+              <strong>{formatCurrency(Number(amount || 0), currency)}</strong>
+            </div>
+
+            <div className="field">
+              <label>Description <span className="effortless-optional-label">Optional</span></label>
+              <input
+                className="input"
+                name="description"
+                value={description}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setDescription(event.target.value)
+                }
+                placeholder="FICONTER will use the category when left empty"
+                maxLength={120}
+              />
+            </div>
+
+            <div className="transaction-form-grid">
+              <div className="field">
+                <label>Currency</label>
+                <select
+                  className="input"
+                  name="currency"
+                  value={currency}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                    setCurrency(event.target.value)
+                  }
+                >
+                  {currencyOptions.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.symbol} {option.code} — {option.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Date and time</label>
+                <input
+                  className="input"
+                  name="occurred_at"
+                  type="datetime-local"
+                  required
+                  value={occurredAt}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    transactionTimeWasEdited.current = true;
+                    setOccurredAt(event.target.value);
+                  }}
+                />
+              </div>
+            </div>
+
+            {exchangePreview}
+            {reusableSettings}
+            {statusMessages}
+
+            <div className="effortless-guided-actions">
+              <button
+                type="button"
+                className="btn effortless-secondary-action"
+                onClick={() => {
+                  setError("");
+                  setGuidedStep(2);
+                }}
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={loading || rateLoading || Boolean(rateError)}
+              >
+                {loading
+                  ? "Saving…"
+                  : rateLoading
+                    ? "Retrieving rate…"
+                    : actionLabel(type)}
+              </button>
+            </div>
+          </section>
+        )}
+      </form>
+    );
+  }
+
   return (
-    <form className="form" onSubmit={submit}>
+    <form className="form effortless-detailed-form" onSubmit={submit}>
       {preset && (
         <div className="effortless-preset-notice">
           <span>Shortcut loaded</span>
@@ -381,31 +951,18 @@ export function TransactionForm({
         </div>
       )}
 
+      <div className="effortless-detailed-header">
+        <div>
+          <span>Full ledger entry</span>
+          <h4>Record the complete transaction</h4>
+          <p>Every available field is visible for precise control and reporting.</p>
+        </div>
+        <span className="effortless-detail-pill">Maximum detail</span>
+      </div>
+
       <div className="field">
         <label>Money movement</label>
-        <div className="transaction-type-buttons" role="group" aria-label="Transaction type">
-          {TRANSACTION_TYPES.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={type === option.value ? "is-active" : ""}
-              aria-pressed={type === option.value}
-              onClick={() => {
-                const nextType = option.value as TransactionKind;
-                setType(nextType);
-                if (!category || category === categoryForType(type)) {
-                  setCategory(categoryForType(nextType));
-                }
-              }}
-            >
-              {option.value === "expense"
-                ? "Expense"
-                : option.value === "income"
-                  ? "Income"
-                  : "Saving"}
-            </button>
-          ))}
-        </div>
+        {typeSelector}
       </div>
 
       <div className="transaction-form-grid transaction-form-grid-amount">
@@ -421,199 +978,79 @@ export function TransactionForm({
             required
             autoFocus={!preset}
             value={amount}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setAmount(event.target.value)
+            }
             placeholder="0.00"
           />
         </div>
         <div className="field">
           <label>Category</label>
-          <select
-            className="input"
-            name="category"
-            value={category}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) => setCategory(event.target.value)}
-          >
-            {CATEGORY_GROUPS.map((group) => (
-              <optgroup key={group.group} label={group.group}>
-                {group.items.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          {categorySelect}
         </div>
       </div>
 
-      {category === "Other / custom" && (
-        <div className="field">
-          <label>Custom category</label>
-          <input
-            className="input"
-            value={customCategory}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setCustomCategory(event.target.value)}
-            placeholder="Enter your own category"
-            maxLength={80}
-            required
-          />
-        </div>
-      )}
-
       <div className="field">
-        <label>
-          {entryMode === "simple" ? "Note (optional)" : "Description (optional)"}
-        </label>
+        <label>Description</label>
         <input
           className="input"
           name="description"
           value={description}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setDescription(event.target.value)}
-          placeholder="FICONTER will use the category when left empty"
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setDescription(event.target.value)
+          }
+          placeholder="Merchant, purpose, or reference"
           maxLength={120}
         />
       </div>
 
-      {entryMode !== "detailed" && (
-        <button
-          type="button"
-          className="effortless-advanced-toggle"
-          onClick={() => setShowAdvanced((current) => !current)}
-          aria-expanded={showAdvanced}
-        >
-          More details
-          <ChevronDown size={16} className={showAdvanced ? "is-open" : ""} />
-        </button>
-      )}
-
-      {showAdvanced && (
-        <div className="effortless-advanced-fields">
-          <div className="transaction-form-grid">
-            <div className="field">
-              <label>Currency</label>
-              <select
-                className="input"
-                name="currency"
-                value={currency}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => setCurrency(event.target.value)}
-              >
-                {currencyOptions.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.symbol} {option.code} — {option.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Exact date and time</label>
-              <input
-                className="input"
-                name="occurred_at"
-                type="datetime-local"
-                required
-                value={occurredAt}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                  transactionTimeWasEdited.current = true;
-                  setOccurredAt(event.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="fx-preview" aria-live="polite">
-            {rateLoading ? (
-              <span>Retrieving the latest EUR reference rate…</span>
-            ) : rateError ? (
-              <span className="fx-preview-error">{rateError}</span>
-            ) : (
-              <>
-                <div>
-                  <span>EUR equivalent</span>
-                  <strong>{formatCurrency(euroAmount, "EUR")}</strong>
-                </div>
-                <small>
-                  {currency === "EUR"
-                    ? "No conversion required."
-                    : `1 ${currency} = ${rate.rate.toFixed(6)} EUR · rate date ${rate.date}`}
-                </small>
-              </>
-            )}
-          </div>
+      <div className="transaction-form-grid">
+        <div className="field">
+          <label>Currency</label>
+          <select
+            className="input"
+            name="currency"
+            value={currency}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setCurrency(event.target.value)
+            }
+          >
+            {currencyOptions.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.symbol} {option.code} — {option.name}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
-
-      <details className="effortless-reuse-details">
-        <summary>
-          <span>
-            <Star size={16} /> Save time next time
-          </span>
-          <ChevronDown size={16} />
-        </summary>
-        <div className="effortless-reuse-body">
-          <label className="effortless-check-row">
-            <input
-              type="checkbox"
-              checked={rememberFavorite}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setRememberFavorite(event.target.checked)}
-            />
-            <span>
-              <strong>Save as a favourite</strong>
-              <small>Reuse this entry later with one tap.</small>
-            </span>
-          </label>
-
-          <label className="effortless-check-row">
-            <input
-              type="checkbox"
-              checked={repeatMonthly}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setRepeatMonthly(event.target.checked)}
-            />
-            <span>
-              <strong>Repeat monthly</strong>
-              <small>Place it in a calm monthly confirmation queue.</small>
-            </span>
-          </label>
-
-          {(rememberFavorite || repeatMonthly) && (
-            <div className="transaction-form-grid">
-              <div className="field">
-                <label>Shortcut name</label>
-                <input
-                  className="input"
-                  value={templateLabel}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setTemplateLabel(event.target.value)}
-                  placeholder={description || category || "Monthly entry"}
-                  maxLength={80}
-                />
-              </div>
-              {repeatMonthly && (
-                <div className="field">
-                  <label>
-                    <Repeat2 size={14} /> Day of month
-                  </label>
-                  <input
-                    className="input"
-                    type="number"
-                    min="1"
-                    max="31"
-                    step="1"
-                    value={recurringDay}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setRecurringDay(event.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+        <div className="field">
+          <label>Exact date and time</label>
+          <input
+            className="input"
+            name="occurred_at"
+            type="datetime-local"
+            required
+            value={occurredAt}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              transactionTimeWasEdited.current = true;
+              setOccurredAt(event.target.value);
+            }}
+          />
         </div>
-      </details>
+      </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {notice && <div className="alert alert-success">{notice}</div>}
+      {exchangePreview}
+      {reusableSettings}
+      {statusMessages}
+
       <button
-        className="btn btn-primary"
+        className="btn btn-primary effortless-primary-action"
         disabled={loading || rateLoading || Boolean(rateError)}
       >
-        {loading ? "Saving…" : rateLoading ? "Retrieving rate…" : "Save transaction"}
+        {loading
+          ? "Saving…"
+          : rateLoading
+            ? "Retrieving rate…"
+            : "Save complete transaction"}
       </button>
     </form>
   );

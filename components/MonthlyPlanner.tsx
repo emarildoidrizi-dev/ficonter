@@ -12,7 +12,7 @@ type Plan = { id:string; user_id:string; month:string; start_balance:number|stri
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 
-const compactSections = new Set<Section>(["income","bills","savings","debt"]);
+const compactSections = new Set<Section>(["income","bills","expenses","savings","debt"]);
 const sections: {key:Section; title:string}[] = [
   {key:"income",title:"Income"},{key:"bills",title:"Bills"},{key:"expenses",title:"Expenses"},{key:"savings",title:"Savings"},{key:"debt",title:"Debt"},
 ];
@@ -189,16 +189,36 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 }, {})
             : {};
 
+        const expenseRows =
+          s.key === "expenses"
+            ? monthTx
+                .filter(
+                  (transaction) =>
+                    transaction.type !== "income" &&
+                    !paidBillTxIds.has(transaction.id) &&
+                    !isGoalInvestment(transaction) &&
+                    classify(transaction) === "expenses",
+                )
+                .reduce<Record<string, number>>((rows, transaction) => {
+                  const label = transaction.category || "Uncategorized";
+                  rows[label] =
+                    (rows[label] || 0) + Number(transaction.amount_eur);
+                  return rows;
+                }, {})
+            : {};
+
         const compactRows =
           s.key === "income"
             ? Object.entries(incomeRows)
             : s.key === "bills"
               ? Object.entries(billRows)
-              : s.key === "savings"
-              ? Object.entries(savingsRows)
-              : s.key === "debt"
-                ? Object.entries(debtRows)
-                : [];
+              : s.key === "expenses"
+                ? Object.entries(expenseRows).sort((a, b) => b[1] - a[1])
+                : s.key === "savings"
+                  ? Object.entries(savingsRows)
+                  : s.key === "debt"
+                    ? Object.entries(debtRows)
+                    : [];
 
         return (
           <article

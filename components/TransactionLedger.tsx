@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   CalendarRange,
   Download,
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
 import {
   CATEGORY_GROUPS,
@@ -49,18 +51,20 @@ type Props = { transactions: Transaction[] };
 type DirectionFilter = "all" | FlowDirection;
 type SortMode = "newest" | "oldest" | "highest" | "lowest" | "description";
 
+const ledgerDateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZoneName: "short",
+});
+
 const readableDateTime = (value: string | null, fallbackDate: string) => {
   const date = value ? new Date(value) : new Date(`${fallbackDate}T00:00:00`);
-  return date.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
+  return ledgerDateTimeFormatter.format(date);
 };
 
 const toLocalDateTimeInput = (value: string | null, fallbackDate: string) => {
@@ -85,13 +89,15 @@ const groupedTypes = TRANSACTION_TYPES.reduce<Record<string, typeof TRANSACTION_
 function signedEuroValue(item: Transaction) {
   const direction = directionOf(item.type);
   const sign = direction === "inflow" ? 1 : direction === "outflow" ? -1 : 0;
-  return Number(item.amount_eur ?? item.amount) * sign;
+  return finiteNumber(item.amount_eur ?? item.amount) * sign;
 }
 
 export function TransactionLedger({ transactions: initialTransactions }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [visibleLimit, setVisibleLimit] = useState(120);
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("all");
@@ -214,7 +220,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
   }, [transactions]);
 
   const visible = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     return transactions
       .filter((item) => {
         const matchesSearch =
@@ -233,12 +239,30 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       })
       .sort((a, b) => {
         if (sortMode === "oldest") return (a.occurred_at ?? a.transaction_date).localeCompare(b.occurred_at ?? b.transaction_date);
-        if (sortMode === "highest") return Number(b.amount_eur ?? b.amount) - Number(a.amount_eur ?? a.amount);
-        if (sortMode === "lowest") return Number(a.amount_eur ?? a.amount) - Number(b.amount_eur ?? b.amount);
+        if (sortMode === "highest") return finiteNumber(b.amount_eur ?? b.amount) - finiteNumber(a.amount_eur ?? a.amount);
+        if (sortMode === "lowest") return finiteNumber(a.amount_eur ?? a.amount) - finiteNumber(b.amount_eur ?? b.amount);
         if (sortMode === "description") return a.description.localeCompare(b.description);
         return (b.occurred_at ?? b.transaction_date).localeCompare(a.occurred_at ?? a.transaction_date);
       });
-  }, [transactions, search, directionFilter, categoryFilter, currencyFilter, monthFilter, dateFrom, dateTo, sortMode]);
+  }, [transactions, deferredSearch, directionFilter, categoryFilter, currencyFilter, monthFilter, dateFrom, dateTo, sortMode]);
+
+  const renderedVisible = useMemo(
+    () => visible.slice(0, visibleLimit),
+    [visible, visibleLimit],
+  );
+
+  useEffect(() => {
+    setVisibleLimit(120);
+  }, [
+    deferredSearch,
+    directionFilter,
+    categoryFilter,
+    currencyFilter,
+    monthFilter,
+    dateFrom,
+    dateTo,
+    sortMode,
+  ]);
 
   const visibleIds = useMemo(() => new Set(visible.map((item) => item.id)), [visible]);
   const selectedTransactions = useMemo(
@@ -257,19 +281,24 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
   }, [visibleIds]);
 
   const totals = useMemo(() => {
-    let inflow = 0;
-    let outflow = 0;
-    let net = 0;
+    const inflowValues: unknown[] = [];
+    const outflowValues: unknown[] = [];
+    const netValues: unknown[] = [];
     let neutralCount = 0;
     visible.forEach((item) => {
       const direction = directionOf(item.type);
-      const euro = Number(item.amount_eur ?? item.amount);
-      if (direction === "inflow") inflow += euro;
-      else if (direction === "outflow") outflow += euro;
+      const euro = finiteNumber(item.amount_eur ?? item.amount);
+      if (direction === "inflow") inflowValues.push(euro);
+      else if (direction === "outflow") outflowValues.push(euro);
       else neutralCount += 1;
-      net += signedEuroValue(item);
+      netValues.push(signedEuroValue(item));
     });
-    return { inflow, outflow, net, neutralCount };
+    return {
+      inflow: sumMoney(inflowValues),
+      outflow: sumMoney(outflowValues),
+      net: sumMoney(netValues),
+      neutralCount,
+    };
   }, [visible]);
 
 
@@ -340,9 +369,9 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       typeLabel(item.type),
       directionOf(item.type),
       item.currency,
-      Number(item.amount).toFixed(2),
-      Number(item.amount_eur ?? item.amount).toFixed(2),
-      Number(item.exchange_rate_to_eur ?? 1).toFixed(8),
+      finiteNumber(item.amount).toFixed(2),
+      finiteNumber(item.amount_eur ?? item.amount).toFixed(2),
+      finiteNumber(item.exchange_rate_to_eur ?? 1).toFixed(8),
       item.exchange_rate_date ?? "",
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
@@ -378,8 +407,8 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
           type: typeLabel(transaction.type),
           direction: directionOf(transaction.type),
           currency: transaction.currency || "EUR",
-          amount: Number(transaction.amount),
-          amount_eur: Number(transaction.amount_eur ?? transaction.amount),
+          amount: finiteNumber(transaction.amount),
+          amount_eur: finiteNumber(transaction.amount_eur ?? transaction.amount),
           occurred_at: transaction.occurred_at ?? `${transaction.transaction_date}T00:00:00`,
         })),
         { ownerName, email: user.email ?? "", locale: "en-US", exportedAt },
@@ -403,7 +432,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     setEditAmount(String(transaction.amount));
     setEditOccurredAt(toLocalDateTimeInput(transaction.occurred_at, transaction.transaction_date));
     setEditRate({
-      rate: Number(transaction.exchange_rate_to_eur ?? 1),
+      rate: roundRate(transaction.exchange_rate_to_eur ?? 1),
       date: transaction.exchange_rate_date ?? new Date().toISOString().slice(0, 10),
       source: transaction.exchange_rate_source ?? (transaction.currency === "EUR" ? "identity" : "Frankfurter"),
     });
@@ -425,10 +454,10 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setEditRateLoading(true);
       setEditRateError("");
       try {
-        const response = await fetch(`/api/exchange-rate?from=${encodeURIComponent(editCurrency)}&to=EUR`, { signal: controller.signal, cache: "no-store" });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Unable to retrieve an exchange rate.");
-        setEditRate({ rate: Number(data.rate), date: data.date, source: data.source });
+        const data = await getExchangeRate(editCurrency, "EUR", {
+          signal: controller.signal,
+        });
+        setEditRate({ rate: data.rate, date: data.date, source: data.source });
       } catch (rateFetchError) {
         if ((rateFetchError as Error).name !== "AbortError") setEditRateError((rateFetchError as Error).message);
       } finally {
@@ -466,7 +495,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setSelectedIds((current) => new Set([...current].filter((id) => !deletedIdSet.has(id))));
       setDeleteTarget(null);
       setBulkDeleteOpen(false);
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("transactions");
 
       if (mode === "bulk") {
         const linkedChanges: string[] = [];
@@ -537,7 +566,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setLoading(false);
       return;
     }
-    const originalAmount = Number(form.get("amount"));
+    const originalAmount = roundMoney(form.get("amount"));
     const description = String(form.get("description") ?? "").trim();
     if (!description) {
       setError("Please enter a description.");
@@ -551,10 +580,10 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     }
     const update = {
       description,
-      amount: originalAmount,
+      amount: roundMoney(originalAmount),
       currency: editCurrency,
-      amount_eur: Number((originalAmount * editRate.rate).toFixed(6)),
-      exchange_rate_to_eur: editRate.rate,
+      amount_eur: convertToReportingCurrency(originalAmount, editRate.rate),
+      exchange_rate_to_eur: roundRate(editRate.rate),
       exchange_rate_date: editRate.date,
       exchange_rate_source: editRate.source,
       type: String(form.get("type")),
@@ -572,7 +601,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     else if (data) {
       setTransactions((current) => current.map((item) => (item.id === data.id ? data : item)));
       setEditTarget(null);
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("transactions");
       setNotice("Transaction updated.");
       window.setTimeout(() => setNotice(""), 2600);
     }
@@ -654,7 +683,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         aria-label="Transaction history. The newest ten transactions are visible first; scroll for older records."
       >
         <div className={styles.list}>
-        {visible.map((transaction) => {
+        {renderedVisible.map((transaction) => {
           const direction = directionOf(transaction.type);
           return (
             <article className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`} key={transaction.id}>
@@ -669,8 +698,8 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
               <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
-                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{formatCurrency(Number(transaction.amount_eur ?? transaction.amount), "EUR")}</strong>
-                <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(Number(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${Number(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
+                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{formatCurrency(finiteNumber(transaction.amount_eur ?? transaction.amount), "EUR")}</strong>
+                <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${finiteNumber(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>
             </article>
@@ -678,7 +707,20 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         })}
         </div>
       </div>
-      {visible.length > 10 && <div className={styles.scrollHint}>Showing 10 transactions at a time · Scroll for {visible.length - 10} older matching records</div>}
+      {visible.length > 10 ? (
+        <div className={styles.scrollHint}>
+          Rendering {Math.min(renderedVisible.length, visible.length)} of {visible.length} matching records
+          {renderedVisible.length < visible.length ? (
+            <button
+              type="button"
+              className={styles.loadMoreButton}
+              onClick={() => setVisibleLimit((current) => current + 120)}
+            >
+              Load 120 more
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {!visible.length && <div className={styles.empty}>No transactions match your filters.</div>}
 
       {editTarget && (
@@ -698,7 +740,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving EUR rate…" : editRateError ? editRateError : `EUR equivalent: ${formatCurrency(Number(editAmount || 0) * editRate.rate, "EUR")} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}</div>
+              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving EUR rate…" : editRateError ? editRateError : `EUR equivalent: ${formatCurrency(convertToReportingCurrency(editAmount, editRate.rate), "EUR")} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}</div>
               {error && <div className={styles.error}>{error}</div>}
               <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
             </form>

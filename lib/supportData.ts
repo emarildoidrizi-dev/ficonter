@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { supportReference, type SupportCategory, type SupportStatus } from "@/lib/support";
 import type { SupportMessage, SupportThread } from "@/lib/supportMessaging";
 
@@ -59,10 +59,7 @@ export function mapSupportThread(row: ThreadRow): SupportThread {
 }
 
 export async function loadCustomerSupportThreads(): Promise<SupportThread[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
   if (!user) return [];
 
   const { data, error } = await supabase

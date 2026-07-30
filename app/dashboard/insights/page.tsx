@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { AiInsights } from "@/components/AiInsights";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import {
   SMART_INSIGHTS_ENGINE_VERSION,
   calculateAiInsightsContext,
@@ -12,10 +12,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function SmartInsightsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 

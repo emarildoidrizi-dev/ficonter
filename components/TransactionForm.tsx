@@ -4,6 +4,8 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate } from "@/lib/finance/money";
 import type {
   EntryMode,
   TransactionPreset,
@@ -91,6 +93,8 @@ export function TransactionForm({
   const defaultCategory =
     preset?.category ?? initialCategory ?? categoryForType(defaultType);
 
+  const supabase = useMemo(() => createClient(), []);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -133,16 +137,6 @@ export function TransactionForm({
   );
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!transactionTimeWasEdited.current && !preset?.occurredAt) {
-        setOccurredAt(localDateTimeValue());
-      }
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [preset?.occurredAt]);
-
-  useEffect(() => {
     const controller = new AbortController();
 
     if (currency === "EUR") {
@@ -160,23 +154,10 @@ export function TransactionForm({
       setRateLoading(true);
       setRateError("");
       try {
-        const response = await fetch(
-          `/api/exchange-rate?from=${encodeURIComponent(currency)}&to=EUR`,
-          {
-            signal: controller.signal,
-            cache: "no-store",
-          },
-        );
-        const data = (await response.json()) as {
-          error?: string;
-          rate?: number;
-          date?: string;
-          source?: string;
-        };
-        if (!response.ok || !data.rate || !data.date || !data.source) {
-          throw new Error(data.error || "Unable to retrieve an exchange rate.");
-        }
-        setRate({ rate: Number(data.rate), date: data.date, source: data.source });
+        const data = await getExchangeRate(currency, "EUR", {
+          signal: controller.signal,
+        });
+        setRate({ rate: data.rate, date: data.date, source: data.source });
       } catch (rateFetchError) {
         if ((rateFetchError as Error).name !== "AbortError") {
           setRateError((rateFetchError as Error).message);
@@ -190,10 +171,10 @@ export function TransactionForm({
     return () => controller.abort();
   }, [currency]);
 
-  const numericAmount = Number(amount);
+  const numericAmount = finiteNumber(amount);
   const euroAmount =
-    Number.isFinite(numericAmount) && numericAmount > 0
-      ? numericAmount * rate.rate
+    numericAmount > 0
+      ? convertToReportingCurrency(numericAmount, rate.rate)
       : 0;
 
   const quickCategories = QUICK_CATEGORIES[type];
@@ -209,7 +190,7 @@ export function TransactionForm({
   }
 
   function continueGuidedEntry() {
-    const enteredAmount = Number(amount);
+    const enteredAmount = finiteNumber(amount);
     if (!Number.isFinite(enteredAmount) || enteredAmount <= 0) {
       setError("Enter an amount greater than zero before continuing.");
       return;
@@ -252,8 +233,8 @@ export function TransactionForm({
         description: finalDescription,
         amount: originalAmount,
         currency,
-        amount_eur: Number((originalAmount * rate.rate).toFixed(6)),
-        exchange_rate_to_eur: rate.rate,
+        amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+        exchange_rate_to_eur: roundRate(rate.rate),
         exchange_rate_date: rate.date,
         exchange_rate_source: rate.source,
         type,
@@ -299,7 +280,6 @@ export function TransactionForm({
     setNotice("");
 
     try {
-      const supabase = createClient();
       const {
         data: { user },
         error: userError,
@@ -317,12 +297,15 @@ export function TransactionForm({
         category === "Other / custom" ? customCategory.trim() : category;
       if (!finalCategory) throw new Error("Please enter a custom category.");
 
-      const localInstant = new Date(occurredAt);
+      const resolvedOccurredAt = transactionTimeWasEdited.current
+        ? occurredAt
+        : localDateTimeValue();
+      const localInstant = new Date(resolvedOccurredAt);
       if (Number.isNaN(localInstant.getTime())) {
         throw new Error("Please choose a valid transaction date and time.");
       }
 
-      const originalAmount = Number(amount);
+      const originalAmount = roundMoney(amount);
       if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
         throw new Error("Please enter a valid amount greater than zero.");
       }
@@ -343,13 +326,13 @@ export function TransactionForm({
         description: finalDescription,
         amount: originalAmount,
         currency,
-        amount_eur: Number((originalAmount * rate.rate).toFixed(6)),
-        exchange_rate_to_eur: rate.rate,
+        amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+        exchange_rate_to_eur: roundRate(rate.rate),
         exchange_rate_date: rate.date,
         exchange_rate_source: rate.source,
         type,
         category: finalCategory,
-        transaction_date: occurredAt.slice(0, 10),
+        transaction_date: resolvedOccurredAt.slice(0, 10),
         occurred_at: localInstant.toISOString(),
       };
 
@@ -387,7 +370,7 @@ export function TransactionForm({
         supabase,
         userId: user.id,
         transactionId: savedTransaction.id,
-        transactionPeriodKey: `${occurredAt.slice(0, 7)}-01`,
+        transactionPeriodKey: `${resolvedOccurredAt.slice(0, 7)}-01`,
         finalDescription,
         finalCategory,
         originalAmount,
@@ -417,7 +400,7 @@ export function TransactionForm({
       setShowAllCategories(false);
       transactionTimeWasEdited.current = false;
       setOccurredAt(localDateTimeValue());
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("transactions");
       onSaved?.();
     } catch (submitError) {
       setError(
@@ -859,7 +842,7 @@ export function TransactionForm({
                 <span>{type === "expense" ? "Expense" : type === "income" ? "Income" : "Saving"}</span>
                 <strong>{category === "Other / custom" ? customCategory : category}</strong>
               </div>
-              <strong>{formatCurrency(Number(amount || 0), currency)}</strong>
+              <strong>{formatCurrency(finiteNumber(amount), currency)}</strong>
             </div>
 
             <div className="field">

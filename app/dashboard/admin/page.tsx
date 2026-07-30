@@ -6,7 +6,7 @@ import {
   loadAdminDirectorySnapshot,
   type AdminAuditRow,
 } from "@/lib/admin/snapshot";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,7 +17,7 @@ export default async function AdminPage() {
   if (!user) redirect("/login");
   if (!admin) redirect("/dashboard");
 
-  const supabase = await createClient();
+  const { supabase } = await getCurrentUser();
 
   const [snapshot, logsResult, health] = await Promise.all([
     loadAdminDirectorySnapshot(supabase),

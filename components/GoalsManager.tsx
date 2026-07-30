@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
+import { formatCurrency } from "@/lib/financialOptions";
 import {
   AVERAGE_PERIODS,
   summarizeDatedAmounts,
@@ -46,10 +48,7 @@ type GoalInvestment = {
 };
 
 const money = (value: number | string) =>
-  new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value) || 0);
+  formatCurrency(finiteNumber(value), "EUR");
 
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -165,7 +164,7 @@ export function GoalsManager({
     try {
       const form = new FormData(event.currentTarget);
       const name = String(form.get("name") ?? "").trim();
-      const targetAmount = Number(form.get("target_amount"));
+      const targetAmount = roundMoney(form.get("target_amount"));
       const targetDate = String(form.get("target_date") ?? "");
 
       if (!name) throw new Error("Enter a goal name.");
@@ -179,7 +178,7 @@ export function GoalsManager({
         user_id: userId,
         name,
         target_amount: targetAmount,
-        current_amount: editing ? Number(editing.current_amount) : 0,
+        current_amount: editing ? roundMoney(editing.current_amount) : 0,
         target_date: targetDate || null,
         status: String(form.get("status") ?? "active") as GoalStatus,
         updated_at: new Date().toISOString(),
@@ -204,7 +203,7 @@ export function GoalsManager({
       setOpen(false);
       setEditing(null);
       setNotice(editing ? "Goal updated." : "Goal created.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("goals");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The goal could not be saved.");
     } finally {
@@ -221,13 +220,16 @@ export function GoalsManager({
 
     try {
       const form = new FormData(event.currentTarget);
-      const amount = Number(form.get("amount"));
+      const amount = roundMoney(form.get("amount"));
       const investmentDate = String(form.get("investment_date") ?? "");
       const investmentTime = String(form.get("investment_time") ?? "");
       const notes = String(form.get("notes") ?? "").trim();
       const remaining = Math.max(
         0,
-        Number(investmentGoal.target_amount) - Number(investmentGoal.current_amount),
+        subtractMoney(
+          investmentGoal.target_amount,
+          investmentGoal.current_amount,
+        ),
       );
 
       if (!Number.isFinite(amount) || amount <= 0) {
@@ -250,7 +252,7 @@ export function GoalsManager({
 
       const { data, error } = await supabase.rpc("record_goal_investment", {
         p_goal_id: investmentGoal.id,
-        p_amount: amount,
+        p_amount: roundMoney(amount),
         p_invested_at: recordedAt.toISOString(),
         p_notes: notes || null,
       });
@@ -272,7 +274,7 @@ export function GoalsManager({
       ]);
       setInvestmentGoal(null);
       setNotice("Investment recorded and deducted from cash flow.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("goals");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -309,7 +311,7 @@ export function GoalsManager({
       );
       setReversing(null);
       setNotice("Investment reversed and cash flow restored.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("goals");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -341,7 +343,7 @@ export function GoalsManager({
       );
       setDeleting(null);
       setNotice("Goal and linked investments deleted.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("goals");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The goal could not be deleted.");
     } finally {
@@ -349,14 +351,8 @@ export function GoalsManager({
     }
   }
 
-  const totalTarget = goals.reduce(
-    (sum, goal) => sum + Number(goal.target_amount),
-    0,
-  );
-  const totalSaved = goals.reduce(
-    (sum, goal) => sum + Number(goal.current_amount),
-    0,
-  );
+  const totalTarget = sumMoney(goals.map((goal) => goal.target_amount));
+  const totalSaved = sumMoney(goals.map((goal) => goal.current_amount));
 
   const goalFundingPeriod = useMemo(
     () =>
@@ -364,7 +360,7 @@ export function GoalsManager({
         investments,
         averagePeriod,
         (investment) => investment.invested_at,
-        (investment) => Number(investment.amount),
+        (investment) => finiteNumber(investment.amount),
       ),
     [averagePeriod, investments],
   );
@@ -446,8 +442,8 @@ export function GoalsManager({
       <div className={`${styles.grid} ficonter-scroll-region`}>
         {goals.length ? (
           goals.map((goal) => {
-            const target = Number(goal.target_amount);
-            const current = Number(goal.current_amount);
+            const target = finiteNumber(goal.target_amount);
+            const current = finiteNumber(goal.current_amount);
             const progress = target
               ? Math.min(100, (current / target) * 100)
               : 0;
@@ -652,8 +648,10 @@ export function GoalsManager({
               {money(
                 Math.max(
                   0,
-                  Number(investmentGoal.target_amount) -
-                    Number(investmentGoal.current_amount),
+                  subtractMoney(
+                    investmentGoal.target_amount,
+                    investmentGoal.current_amount,
+                  ),
                 ),
               )}
             </p>
@@ -666,8 +664,10 @@ export function GoalsManager({
                 min="0.01"
                 max={Math.max(
                   0.01,
-                  Number(investmentGoal.target_amount) -
-                    Number(investmentGoal.current_amount),
+                  subtractMoney(
+                    investmentGoal.target_amount,
+                    investmentGoal.current_amount,
+                  ),
                 )}
                 step="0.01"
                 required

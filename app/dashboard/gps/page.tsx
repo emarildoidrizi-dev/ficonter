@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { FinancialGps } from "@/components/FinancialGps";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { normalizeAiInsightsInputs } from "@/lib/wealth/aiInsights";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
@@ -8,10 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function FinancialGpsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 

@@ -15,6 +15,9 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
+import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
+import { formatCurrency } from "@/lib/financialOptions";
 import styles from "./BillsManager.module.css";
 
 type BillStatus = "pending" | "paid" | "cancelled";
@@ -68,13 +71,20 @@ const PAYMENT_METHODS = [
   "Apple Pay","Google Pay","Crypto","Other"
 ];
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const EMPTY_FORM = {
   name: "",
   company: "",
   category: "Housing",
   amount: "",
   currency: "EUR",
-  due_date: new Date().toISOString().slice(0, 10),
+  due_date: localDateKey(),
   recurrence: "monthly" as Recurrence,
   payment_method: "Direct debit",
   autopay: false,
@@ -83,19 +93,15 @@ const EMPTY_FORM = {
 };
 
 function money(value: number | string, currency = "EUR") {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value) || 0);
+  return formatCurrency(finiteNumber(value), currency);
 }
 
-function effectiveStatus(bill: Bill): "pending" | "paid" | "cancelled" | "overdue" {
+function effectiveStatus(
+  bill: Bill,
+  today = localDateKey(),
+): "pending" | "paid" | "cancelled" | "overdue" {
   if (bill.status === "paid" || bill.status === "cancelled") return bill.status;
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const due = new Date(`${bill.due_date}T00:00:00`);
-  return due < today ? "overdue" : "pending";
+  return bill.due_date < today ? "overdue" : "pending";
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -147,21 +153,11 @@ function isMissingMarkUnpaidRpc(error: unknown) {
 
 
 async function convertToEur(amount: number, currency: string) {
-  if (currency === "EUR") return { rate: 1, eur: amount };
-
-  const response = await fetch(
-    `https://api.frankfurter.app/latest?amount=${encodeURIComponent(amount)}&from=${currency}&to=EUR`,
-    { cache: "no-store" },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Live EUR conversion is unavailable for ${currency}.`);
+  const result = await convertWithCachedRate(amount, currency, "EUR");
+  if (result.convertedAmount === null) {
+    throw new Error("The exchange rate could not be calculated.");
   }
-
-  const data = await response.json();
-  const eur = Number(data?.rates?.EUR);
-  if (!Number.isFinite(eur)) throw new Error("The exchange rate could not be calculated.");
-  return { rate: eur / amount, eur };
+  return { rate: result.rate, eur: result.convertedAmount };
 }
 
 export function BillsManager({
@@ -249,11 +245,13 @@ export function BillsManager({
     };
   }, [supabase, userId]);
 
+  const todayKey = localDateKey();
+
   const filteredBills = useMemo(() => {
     const query = search.trim().toLowerCase();
     return bills
       .filter((bill) => {
-        const status = effectiveStatus(bill);
+        const status = effectiveStatus(bill, todayKey);
         const matchesText =
           !query ||
           bill.name.toLowerCase().includes(query) ||
@@ -265,27 +263,33 @@ export function BillsManager({
         return matchesText && matchesStatus && matchesCategory;
       })
       .sort((a, b) => a.due_date.localeCompare(b.due_date));
-  }, [bills, search, statusFilter, categoryFilter]);
+  }, [bills, search, statusFilter, categoryFilter, todayKey]);
 
   const summary = useMemo(() => {
     const active = bills.filter((bill) => bill.status !== "cancelled");
-    const pending = active.filter((bill) => effectiveStatus(bill) === "pending");
-    const overdue = active.filter((bill) => effectiveStatus(bill) === "overdue");
+    const pending = active.filter(
+      (bill) => effectiveStatus(bill, todayKey) === "pending",
+    );
+    const overdue = active.filter(
+      (bill) => effectiveStatus(bill, todayKey) === "overdue",
+    );
     const nextSeven = new Date();
     nextSeven.setDate(nextSeven.getDate() + 7);
+    const nextSevenKey = localDateKey(nextSeven);
     const dueThisWeek = pending.filter(
-      (bill) => new Date(`${bill.due_date}T23:59:59`) <= nextSeven,
+      (bill) => bill.due_date <= nextSevenKey,
     );
-    const monthly = active
-      .filter((bill) => bill.recurrence === "monthly")
-      .reduce((sum, bill) => sum + Number(bill.amount_eur), 0);
+    const monthlyBills = active.filter(
+      (bill) => bill.recurrence === "monthly",
+    );
+    const monthly = sumMoney(monthlyBills.map((bill) => bill.amount_eur));
     return { pending: pending.length, overdue: overdue.length, dueThisWeek: dueThisWeek.length, monthly };
-  }, [bills]);
+  }, [bills, todayKey]);
 
   function resetForm() {
     setForm({
       ...EMPTY_FORM,
-      due_date: new Date().toISOString().slice(0, 10),
+      due_date: localDateKey(),
     });
     setEditingId(null);
     setShowForm(false);
@@ -317,7 +321,7 @@ export function BillsManager({
     setMessage("");
 
     try {
-      const amount = Number(form.amount);
+      const amount = roundMoney(form.amount);
       if (!form.name.trim() || !Number.isFinite(amount) || amount <= 0) {
         throw new Error("Enter a bill name and a valid amount.");
       }
@@ -330,13 +334,13 @@ export function BillsManager({
         category: form.category,
         amount,
         currency: form.currency,
-        amount_eur: Number(conversion.eur.toFixed(2)),
-        exchange_rate_to_eur: Number(conversion.rate.toFixed(8)),
+        amount_eur: roundMoney(conversion.eur),
+        exchange_rate_to_eur: roundRate(conversion.rate),
         due_date: form.due_date,
         recurrence: form.recurrence,
         payment_method: form.payment_method,
         autopay: form.autopay,
-        reminder_days: Number(form.reminder_days),
+        reminder_days: Math.min(365, Math.max(0, Math.round(finiteNumber(form.reminder_days)))),
         notes: form.notes.trim() || null,
         status: "pending" as BillStatus,
         updated_at: new Date().toISOString(),
@@ -423,7 +427,7 @@ export function BillsManager({
             ),
           );
           setMessage("Bill marked paid. Its existing transaction was preserved.");
-          notifyFiconterDataChange("all");
+          notifyFiconterDataChange("bills");
           return;
         }
       }
@@ -459,7 +463,7 @@ export function BillsManager({
           current.map((item) => (item.id === bill.id ? updatedBill! : item)),
         );
         setMessage("Bill marked paid and added to Transactions.");
-        notifyFiconterDataChange("all");
+        notifyFiconterDataChange("bills");
         return;
       }
 
@@ -474,10 +478,10 @@ export function BillsManager({
           description: bill.company
             ? `${bill.name} · ${bill.company}`
             : bill.name,
-          amount: Number(bill.amount),
+          amount: roundMoney(bill.amount),
           currency: bill.currency,
-          amount_eur: Number(bill.amount_eur),
-          exchange_rate_to_eur: Number(bill.exchange_rate_to_eur),
+          amount_eur: roundMoney(bill.amount_eur),
+          exchange_rate_to_eur: roundRate(bill.exchange_rate_to_eur),
           exchange_rate_date: transactionDate,
           exchange_rate_source: "Bill conversion",
           type: "expense",
@@ -516,7 +520,7 @@ export function BillsManager({
         current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
       setMessage("Bill marked paid and added to Transactions.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("bills");
     } catch (error) {
       setMessage(errorMessage(error, "The bill could not be marked paid."));
     } finally {
@@ -551,7 +555,7 @@ export function BillsManager({
           current.map((item) => (item.id === bill.id ? updatedBill : item)),
         );
 
-        notifyFiconterDataChange("all");
+        notifyFiconterDataChange("bills");
         setMessage(
           Number(result?.deleted_transaction_count ?? 0) > 0
             ? "Bill marked unpaid and its linked transaction removed everywhere."
@@ -613,7 +617,7 @@ export function BillsManager({
       setBills((current) =>
         current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("bills");
       setMessage(
         bill.transaction_id
           ? "Bill marked unpaid and its linked transaction removed everywhere."
@@ -667,7 +671,7 @@ export function BillsManager({
       // Update this page immediately; Realtime handles other tabs and sections.
       setBills((current) => current.filter((item) => item.id !== bill.id));
       setBillPendingDeletion(null);
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("bills");
       setMessage(
         bill.transaction_id
           ? "Bill and linked transaction deleted."
@@ -749,7 +753,7 @@ export function BillsManager({
             <p>Add your first bill or reset the current filters.</p>
           </div>
         ) : filteredBills.map((bill) => {
-          const status = effectiveStatus(bill);
+          const status = effectiveStatus(bill, todayKey);
           return (
             <article className={styles.billCard} key={bill.id}>
               <div className={styles.dateBox}>

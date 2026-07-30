@@ -11,7 +11,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { parseFiconterDataChange } from "@/lib/ficonterRealtime";
 import { formatCurrency } from "@/lib/financialOptions";
+import { finiteNumber } from "@/lib/finance/money";
 import {
   calculateFinancialHealth,
   normalizeFinancialHealthInputs,
@@ -61,10 +63,10 @@ type Props = {
 
 function euroValue(transaction: Transaction) {
   if (transaction.amount_eur !== null && transaction.amount_eur !== undefined) {
-    return Number(transaction.amount_eur);
+    return finiteNumber(transaction.amount_eur);
   }
   return transaction.currency === "EUR" || !transaction.currency
-    ? Number(transaction.amount)
+    ? finiteNumber(transaction.amount)
     : 0;
 }
 
@@ -72,22 +74,24 @@ function isIncome(transaction: Transaction) {
   return transaction.type === "income";
 }
 
+const transactionDateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZoneName: "short",
+});
+
 function readableDateTime(transaction: Transaction) {
   const value =
     transaction.occurred_at ??
     transaction.created_at ??
     `${transaction.transaction_date}T00:00:00`;
   const date = new Date(value);
-  return date.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
+  return transactionDateTimeFormatter.format(date);
 }
 
 function newestFirst(a: Transaction, b: Transaction) {
@@ -113,6 +117,8 @@ export function DashboardLiveOverview({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+  const refreshQueuedRef = useRef(false);
   const [transactions, setTransactions] = useState(
     [...initialTransactions].sort(newestFirst),
   );
@@ -145,28 +151,40 @@ export function DashboardLiveOverview({
     setSetupAcknowledgements(initialSetupAcknowledgements);
   }, [initialSetupAcknowledgements]);
 
-  const refreshHealthInputs = useCallback(async () => {
-    const { data, error } = await supabase.rpc("get_financial_health_inputs");
-
-    if (error) {
-      setHealthError(error.message);
-      return;
+  const refreshWealthInputs = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      refreshQueuedRef.current = true;
+      return refreshInFlightRef.current;
     }
 
-    setHealthInputs(normalizeFinancialHealthInputs(data));
-    setHealthError("");
-  }, [supabase]);
+    const request = (async () => {
+      do {
+        refreshQueuedRef.current = false;
+        const [healthResult, gpsResult] = await Promise.all([
+          supabase.rpc("get_financial_health_inputs"),
+          supabase.rpc("get_ai_insights_inputs"),
+        ]);
 
-  const refreshGpsInputs = useCallback(async () => {
-    const { data, error } = await supabase.rpc("get_ai_insights_inputs");
+        if (healthResult.error) setHealthError(healthResult.error.message);
+        else {
+          setHealthInputs(normalizeFinancialHealthInputs(healthResult.data));
+          setHealthError("");
+        }
 
-    if (error) {
-      setGpsError(error.message);
-      return;
+        if (gpsResult.error) setGpsError(gpsResult.error.message);
+        else {
+          setGpsInputs(normalizeAiInsightsInputs(gpsResult.data));
+          setGpsError("");
+        }
+      } while (refreshQueuedRef.current);
+    })();
+
+    refreshInFlightRef.current = request;
+    try {
+      await request;
+    } finally {
+      refreshInFlightRef.current = null;
     }
-
-    setGpsInputs(normalizeAiInsightsInputs(data));
-    setGpsError("");
   }, [supabase]);
 
   const scheduleHealthRefresh = useCallback(() => {
@@ -176,9 +194,9 @@ export function DashboardLiveOverview({
 
     refreshTimerRef.current = window.setTimeout(() => {
       refreshTimerRef.current = null;
-      void Promise.all([refreshHealthInputs(), refreshGpsInputs()]);
+      void refreshWealthInputs();
     }, 180);
-  }, [refreshGpsInputs, refreshHealthInputs]);
+  }, [refreshWealthInputs]);
 
   useEffect(() => {
     function upsert(event: Event) {
@@ -200,7 +218,11 @@ export function DashboardLiveOverview({
       scheduleHealthRefresh();
     }
 
-    function refreshFromPlatformEvent() {
+    function refreshFromPlatformEvent(event: Event) {
+      const change = parseFiconterDataChange(
+        (event as CustomEvent<unknown>).detail,
+      );
+      if (change?.scope === "profile" || change?.scope === "settings") return;
       scheduleHealthRefresh();
     }
 
@@ -339,7 +361,7 @@ export function DashboardLiveOverview({
     () => calculateFinancialHealth(healthInputs),
     [healthInputs],
   );
-  const recent = transactions;
+  const recent = useMemo(() => transactions.slice(0, 120), [transactions]);
   const { metrics } = financialHealth;
   const financialGps = useMemo(
     () => calculateFinancialGps(gpsInputs, setupAcknowledgements),
@@ -475,7 +497,7 @@ export function DashboardLiveOverview({
               >
                 {recent.map((transaction) => {
                   const currency = transaction.currency || "EUR";
-                  const originalAmount = Number(transaction.amount);
+                  const originalAmount = finiteNumber(transaction.amount);
                   const converted = euroValue(transaction);
                   const income = isIncome(transaction);
                   const foreign = currency !== "EUR";

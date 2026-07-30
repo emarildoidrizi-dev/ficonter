@@ -1,21 +1,18 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { BillsManager } from "@/components/BillsManager";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function BillsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 
   const { data: bills, error } = await supabase
     .from("bills")
-    .select("*")
+    .select("id,user_id,name,company,category,amount,currency,amount_eur,exchange_rate_to_eur,due_date,recurrence,payment_method,autopay,reminder_days,status,notes,paid_at,transaction_id,created_at,updated_at")
     .eq("user_id", user.id)
     .order("due_date", { ascending: true });
 

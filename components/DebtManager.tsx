@@ -17,6 +17,8 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { convertWithCachedRate, getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import { finiteNumber, roundMoney, roundRate, subtractMoney, sumMoney } from "@/lib/finance/money";
 import {
   CURRENCY_CODES,
   currencyName,
@@ -93,6 +95,13 @@ const CATEGORIES: DebtCategory[] = [
   "Other",
 ];
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const EMPTY_DEBT = {
   name: "",
   lender: "",
@@ -104,38 +113,26 @@ const EMPTY_DEBT = {
   annual_interest_rate: "0",
   minimum_payment: "",
   payment_due_day: "",
-  start_date: new Date().toISOString().slice(0, 10),
+  start_date: localDateKey(),
   maturity_date: "",
   status: "active" as DebtStatus,
 };
 
 function money(value: number | string, currency = "EUR") {
-  return formatCurrency(Number(value) || 0, currency);
+  return formatCurrency(finiteNumber(value), currency);
 }
 
 async function convertToEur(amount: number, currency: string) {
-  if (currency === "EUR") return { rate: 1, eur: amount };
-
-  const response = await fetch(
-    `/api/exchange-rate?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(
-      currency,
-    )}&to=EUR`,
-    { cache: "no-store" },
-  );
-
-  if (!response.ok) {
-    throw new Error(`EUR conversion is unavailable for ${currency}.`);
+  if (amount === 0) {
+    const rateResult = await getExchangeRate(currency, "EUR");
+    return { rate: rateResult.rate, eur: 0 };
   }
 
-  const data = await response.json();
-  const eur = Number(data?.convertedAmount ?? data?.amount_eur ?? data?.result);
-  const rate = Number(data?.rate ?? (eur / amount));
-
-  if (!Number.isFinite(eur) || !Number.isFinite(rate) || rate <= 0) {
+  const result = await convertWithCachedRate(amount, currency, "EUR");
+  if (result.convertedAmount === null) {
     throw new Error("The exchange rate could not be calculated.");
   }
-
-  return { rate, eur };
+  return { rate: result.rate, eur: result.convertedAmount };
 }
 
 function categoryIcon(category: DebtCategory) {
@@ -244,19 +241,16 @@ export function DebtManager({
 
   const activeDebts = debts.filter((debt) => debt.status !== "paid_off");
   const totals = useMemo(() => {
-    const outstanding = activeDebts.reduce(
-      (sum, debt) => sum + Number(debt.current_balance_eur),
-      0,
+    const outstanding = sumMoney(
+      activeDebts.map((debt) => debt.current_balance_eur),
     );
-    const original = debts.reduce(
-      (sum, debt) => sum + Number(debt.original_balance_eur),
-      0,
+    const original = sumMoney(
+      debts.map((debt) => debt.original_balance_eur),
     );
-    const minimum = activeDebts.reduce(
-      (sum, debt) => sum + Number(debt.minimum_payment_eur),
-      0,
+    const minimum = sumMoney(
+      activeDebts.map((debt) => debt.minimum_payment_eur),
     );
-    const paid = Math.max(0, original - outstanding);
+    const paid = Math.max(0, subtractMoney(original, outstanding));
     return { outstanding, original, minimum, paid };
   }, [debts]);
 
@@ -274,7 +268,7 @@ export function DebtManager({
           (statusFilter === "all" || debt.status === statusFilter)
         );
       })
-      .sort((a, b) => Number(b.current_balance_eur) - Number(a.current_balance_eur));
+      .sort((a, b) => finiteNumber(b.current_balance_eur) - finiteNumber(a.current_balance_eur));
   }, [debts, search, categoryFilter, statusFilter]);
 
   function resetDebtForm() {
@@ -311,10 +305,10 @@ export function DebtManager({
     setNotice("");
 
     try {
-      const originalBalance = Number(form.original_balance);
-      const currentBalance = Number(form.current_balance || form.original_balance);
-      const minimumPayment = Number(form.minimum_payment || 0);
-      const annualInterest = Number(form.annual_interest_rate || 0);
+      const originalBalance = roundMoney(form.original_balance);
+      const currentBalance = roundMoney(form.current_balance || form.original_balance);
+      const minimumPayment = roundMoney(form.minimum_payment || 0);
+      const annualInterest = finiteNumber(form.annual_interest_rate || 0);
 
       if (!form.name.trim() || originalBalance <= 0 || currentBalance < 0) {
         throw new Error("Enter a debt name and valid balance.");
@@ -333,15 +327,15 @@ export function DebtManager({
         lender: form.lender.trim() || null,
         description: form.description.trim() || null,
         category: form.category,
-        original_balance: originalBalance,
-        current_balance: currentBalance,
+        original_balance: roundMoney(originalBalance),
+        current_balance: roundMoney(currentBalance),
         currency: form.currency,
-        original_balance_eur: Number(originalConversion.eur.toFixed(2)),
-        current_balance_eur: Number(currentConversion.eur.toFixed(2)),
-        exchange_rate_to_eur: Number(currentConversion.rate.toFixed(10)),
+        original_balance_eur: roundMoney(originalConversion.eur),
+        current_balance_eur: roundMoney(currentConversion.eur),
+        exchange_rate_to_eur: roundRate(currentConversion.rate),
         annual_interest_rate: annualInterest,
-        minimum_payment: minimumPayment,
-        minimum_payment_eur: Number(minimumConversion.eur.toFixed(2)),
+        minimum_payment: roundMoney(minimumPayment),
+        minimum_payment_eur: roundMoney(minimumConversion.eur),
         payment_due_day: form.payment_due_day
           ? Number(form.payment_due_day)
           : null,
@@ -365,7 +359,7 @@ export function DebtManager({
           current.map((item) => (item.id === editingId ? (data as Debt) : item)),
         );
         setNotice("Debt updated.");
-        notifyFiconterDataChange("all");
+        notifyFiconterDataChange("debts");
       } else {
         const { data, error } = await supabase
           .from("debts")
@@ -379,7 +373,7 @@ export function DebtManager({
             : [data as Debt, ...current],
         );
         setNotice("Debt added.");
-        notifyFiconterDataChange("all");
+        notifyFiconterDataChange("debts");
       }
 
       resetDebtForm();
@@ -396,9 +390,9 @@ export function DebtManager({
     if (!debt || busy) return;
 
     const data = new FormData(event.currentTarget);
-    const amount = Number(data.get("amount"));
+    const amount = roundMoney(data.get("amount"));
     const paidAt = String(
-      data.get("paid_at") || new Date().toISOString().slice(0, 10),
+      data.get("paid_at") || localDateKey(),
     );
     const notes = String(data.get("notes") || "").trim();
 
@@ -409,7 +403,7 @@ export function DebtManager({
       return;
     }
 
-    if (amount > Number(debt.current_balance)) {
+    if (amount > finiteNumber(debt.current_balance)) {
       setPaymentError("Payment cannot exceed the outstanding balance.");
       return;
     }
@@ -425,9 +419,9 @@ export function DebtManager({
         "record_debt_payment_with_transaction",
         {
           p_debt_id: debt.id,
-          p_amount: amount,
-          p_amount_eur: Number(conversion.eur.toFixed(2)),
-          p_exchange_rate: Number(conversion.rate.toFixed(10)),
+          p_amount: roundMoney(amount),
+          p_amount_eur: roundMoney(conversion.eur),
+          p_exchange_rate: roundRate(conversion.rate),
           p_paid_at: occurredAt,
           p_exchange_rate_date: paidAt,
           p_notes: notes || null,
@@ -456,7 +450,7 @@ export function DebtManager({
       setPaymentError("");
       setPaymentDebt(null);
       setNotice("Payment recorded and added to Transactions.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("debts");
     } catch (error) {
       setPaymentError(readableError(error, "Payment could not be recorded."));
     } finally {
@@ -487,7 +481,7 @@ export function DebtManager({
       setPayments((current) => current.filter((item) => item.id !== payment.id));
       setDeletingPayment(null);
       setNotice("Payment deleted, linked transaction removed and debt balance restored.");
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("debts");
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Payment could not be deleted.",
@@ -534,7 +528,7 @@ export function DebtManager({
             } deleted.`
           : "Debt deleted.",
       );
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("debts");
     } catch (error) {
       setNotice(readableError(error, "Debt could not be deleted."));
     } finally {
@@ -809,8 +803,8 @@ export function DebtManager({
         {filteredDebts.length ? (
           filteredDebts.map((debt) => {
             const Icon = categoryIcon(debt.category);
-            const original = Number(debt.original_balance_eur);
-            const current = Number(debt.current_balance_eur);
+            const original = finiteNumber(debt.original_balance_eur);
+            const current = finiteNumber(debt.current_balance_eur);
             const repaidPercentage = original
               ? Math.max(0, Math.min(100, ((original - current) / original) * 100))
               : 0;
@@ -874,7 +868,7 @@ export function DebtManager({
                   </div>
                   <div>
                     <span>Interest</span>
-                    <strong>{Number(debt.annual_interest_rate).toFixed(2)}%</strong>
+                    <strong>{finiteNumber(debt.annual_interest_rate).toFixed(2)}%</strong>
                     <small>Annual rate</small>
                   </div>
                 </div>
@@ -895,7 +889,7 @@ export function DebtManager({
                     setPaymentError("");
                     setPaymentDebt(debt);
                   }}
-                  disabled={debt.status === "paid_off" || Number(debt.current_balance) <= 0}
+                  disabled={debt.status === "paid_off" || finiteNumber(debt.current_balance) <= 0}
                 >
                   <Plus size={17} />
                   Record payment
@@ -962,7 +956,7 @@ export function DebtManager({
                 name="amount"
                 type="number"
                 min="0.01"
-                max={Number(paymentDebt.current_balance)}
+                max={finiteNumber(paymentDebt.current_balance)}
                 step="0.01"
                 defaultValue={Number(paymentDebt.minimum_payment) || ""}
                 required

@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export type AdminRole = "admin" | "super_admin";
@@ -20,12 +21,8 @@ export function isPrimarySuperAdminEmail(
   return email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
 }
 
-export async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+export const requireAdmin = cache(async () => {
+  const { user, error: userError } = await getCurrentUser();
 
   if (userError || !user) {
     return { user: null, admin: null };
@@ -71,7 +68,7 @@ export async function requireAdmin() {
     });
     return { user, admin: null };
   }
-}
+});
 
 export async function isProtectedSuperAdminAccount(
   userId: string,

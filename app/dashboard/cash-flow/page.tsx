@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { CashFlowIntelligence } from "@/components/CashFlowIntelligence";
 import { normalizeCashFlowIntelligenceInputs } from "@/lib/wealth/cashFlowIntelligence";
 
@@ -7,10 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CashFlowPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 

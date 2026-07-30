@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";
 import { StatementImportWorkspace } from "@/components/StatementImportWorkspace";
@@ -19,10 +19,7 @@ function setupTransactionType(value: string | undefined) {
 }
 
 export default async function TransactionsPage({ searchParams }: TransactionsPageProps) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 

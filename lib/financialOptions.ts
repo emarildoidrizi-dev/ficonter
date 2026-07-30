@@ -88,14 +88,28 @@ export function currencySymbol(code: string): string {
   }
 }
 
+const currencyFormatterCache = new Map<string, Intl.NumberFormat>();
+
+function currencyFormatter(currency: string): Intl.NumberFormat {
+  const normalized = currency.toUpperCase();
+  const cached = currencyFormatterCache.get(normalized);
+  if (cached) return cached;
+
+  const formatter = new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: normalized,
+    maximumFractionDigits: 2,
+  });
+  currencyFormatterCache.set(normalized, formatter);
+  return formatter;
+}
+
 export function formatCurrency(value: number, currency: string): string {
+  const numeric = Number.isFinite(value) ? value : 0;
+  const normalized = currency.toUpperCase();
   try {
-    return new Intl.NumberFormat("de-DE", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(value);
+    return currencyFormatter(normalized).format(numeric);
   } catch {
-    return `${currency} ${value.toFixed(2)}`;
+    return `${normalized} ${numeric.toFixed(2)}`;
   }
 }

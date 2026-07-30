@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { noStoreHeaders } from "@/lib/security/request";
+import { roundConvertedAmount, roundRate } from "@/lib/finance/money";
 
 export const runtime = "nodejs";
 
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = (await response.json()) as FrankfurterRate;
-    const rate = Number(data.rate);
+    const rate = roundRate(data.rate);
 
     if (!Number.isFinite(rate) || rate <= 0) {
       return NextResponse.json(
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
         quote: data.quote ?? to,
         rate,
         convertedAmount:
-          amount === null ? null : Number((amount * rate).toFixed(6)),
+          amount === null ? null : roundConvertedAmount(amount * rate),
         date: data.date ?? new Date().toISOString().slice(0, 10),
         source: "Frankfurter",
       },

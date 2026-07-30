@@ -265,7 +265,7 @@ export function EffortlessEntryWorkspace({
       window.dispatchEvent(
         new CustomEvent("ficonter:transaction-created", { detail: saved }),
       );
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("transactions");
       setNotice(`${template.label} was added for this month.`);
       window.setTimeout(() => setNotice(""), 2600);
     } catch (postingError) {
@@ -305,7 +305,7 @@ export function EffortlessEntryWorkspace({
         }
       }
 
-      notifyFiconterDataChange("all");
+      notifyFiconterDataChange("transactions");
       setNotice(
         completed === 1
           ? "1 recurring entry was confirmed."

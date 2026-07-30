@@ -3,6 +3,9 @@
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { addMoney, finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
+import { formatCurrency } from "@/lib/financialOptions";
 import styles from "./MonthlyPlanner.module.css";
 
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
@@ -20,10 +23,12 @@ const sections: {key:Section; title:string}[] = [
 ];
 const debtWords=["debt","loan","credit-card","credit card","mortgage principal","student-loan","personal-loan"];
 const savingWords=["savings","emergency fund","retirement","stocks","etfs","bonds","crypto","investment","house deposit","education fund"];
-const eur=(v:number)=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"}).format(v||0);
+const eur=(v:number)=>formatCurrency(finiteNumber(v),"EUR");
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
+const transactionActivityDate=(tx:Tx)=>tx.transaction_date||tx.occurred_at?.slice(0,10)||"";
+const billActivityDate=(bill:Bill)=>bill.status==="paid"?(bill.paid_at?.slice(0,10)??bill.due_date):bill.due_date;
 const isGoalInvestment=(tx:Tx)=>tx.description.startsWith("Goal investment ·");
 const classify=(tx:Tx):Section=>{
   if(tx.type==="income") return "income";
@@ -82,44 +87,42 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const plan=plans.find(p=>p.month===month);
   const previousMonth=(()=>{const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()-1);return monthKey(d)})();
   const previousPlan=plans.find(p=>p.month===previousMonth);
-  const previousTransactions=transactions.filter(t=>inMonth(t.transaction_date,previousMonth)||inMonth(t.occurred_at,previousMonth));
+  const previousTransactions=transactions.filter(t=>inMonth(transactionActivityDate(t),previousMonth));
   const previousPaidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
   const previousActual:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
   let previousGoalInvestments=0;
   previousTransactions.forEach(t=>{
     if(previousPaidBillTxIds.has(t.id))return;
-    if(isGoalInvestment(t)){previousGoalInvestments+=Number(t.amount_eur)||0;return;}
-    previousActual[classify(t)]+=Number(t.amount_eur)||0;
+    if(isGoalInvestment(t)){previousGoalInvestments=addMoney(previousGoalInvestments,t.amount_eur);return;}
+    previousActual[classify(t)]=addMoney(previousActual[classify(t)],t.amount_eur);
   });
-  bills.filter(b=>b.status==="paid"&&(inMonth(b.paid_at,previousMonth)||inMonth(b.due_date,previousMonth))).forEach(b=>previousActual.bills+=Number(b.amount_eur)||0);
-  const previousLeft=Number(previousPlan?.start_balance??0)+previousActual.income-previousActual.bills-previousActual.expenses-previousActual.savings-previousActual.debt-previousGoalInvestments;
+  bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),previousMonth)).forEach(b=>{previousActual.bills=addMoney(previousActual.bills,b.amount_eur)});
+  const previousLeft=subtractMoney(addMoney(previousPlan?.start_balance??0,previousActual.income),previousActual.bills,previousActual.expenses,previousActual.savings,previousActual.debt,previousGoalInvestments);
   const derivedStartBalance=startBalanceBehavior==="carry-forward"?previousLeft:0;
-  const startBalance=Number(plan?.start_balance??derivedStartBalance);
-  const paidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
-  const monthTx=transactions.filter(t=>inMonth(t.transaction_date,month)||inMonth(t.occurred_at,month));
-  const expenseTransactions=[...monthTx.filter(t=>t.type!=="income")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date));
+  const startBalance=roundMoney(plan?.start_balance??derivedStartBalance);
+  const paidBillTxIds=useMemo(()=>new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[bills]);
+  const monthTx=useMemo(()=>transactions.filter(t=>inMonth(transactionActivityDate(t),month)),[transactions,month]);
+  const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t))].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
   const actualBySection=useMemo(()=>{
     const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
     monthTx.forEach(t=>{
       if(paidBillTxIds.has(t.id)||isGoalInvestment(t))return;
-      totals[classify(t)]+=Number(t.amount_eur)||0;
+      totals[classify(t)]=addMoney(totals[classify(t)],t.amount_eur);
     });
-    bills.filter(b=>b.status==="paid"&&(inMonth(b.paid_at,month)||inMonth(b.due_date,month))).forEach(b=>totals.bills+=Number(b.amount_eur)||0);
+    bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),month)).forEach(b=>{totals.bills=addMoney(totals.bills,b.amount_eur)});
     return totals;
-  },[monthTx,bills,month]);
+  },[monthTx,bills,month,paidBillTxIds]);
   const monthItems=items.filter(i=>i.month===month);
-  const planned=(s:Section)=>monthItems.filter(i=>i.section===s).reduce((a,b)=>a+Number(b.planned_amount),0);
+  const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
   const actual=(s:Section)=>actualBySection[s];
   const totalIncome=actual("income");
-  const goalInvestments=monthTx
-    .filter(isGoalInvestment)
-    .reduce((sum,transaction)=>sum+(Number(transaction.amount_eur)||0),0);
-  const totalOut=actual("bills")+actual("expenses")+actual("savings")+actual("debt")+goalInvestments;
+  const goalInvestments=sumMoney(monthTx.filter(isGoalInvestment).map(transaction=>transaction.amount_eur));
+  const totalOut=sumMoney([actual("bills"),actual("expenses"),actual("savings"),actual("debt"),goalInvestments]);
   // Goal investments reduce available cash independently.
   // They never update the Monthly Planner Savings card.
-  const left=startBalance+totalIncome-totalOut;
+  const left=subtractMoney(addMoney(startBalance,totalIncome),totalOut);
   const leftToBudget=left;
-  const availableCash=startBalance+totalIncome;
+  const availableCash=addMoney(startBalance,totalIncome);
   const breakdownCandidates: {
     key: BreakdownKey;
     label: string;
@@ -133,15 +136,16 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     { key: "debt", label: "Debt", value: actual("debt"), color: "var(--breakdown-debt)" },
   ];
   const breakdownParts = breakdownCandidates.filter((part) => part.value > 0);
-  const breakdownTotal=breakdownParts.reduce((sum,part)=>sum+part.value,0);
+  const breakdownTotal=sumMoney(breakdownParts.map(part=>part.value));
   let cursor=0;
   const gradient=breakdownParts.length
     ?`conic-gradient(${breakdownParts.map(part=>{const start=cursor;cursor+=part.value/Math.max(breakdownTotal,1)*100;return `${part.color} ${start}% ${cursor}%`}).join(",")})`
     :"conic-gradient(var(--breakdown-track) 0 100%)";
+  const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)).reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
-  async function saveStartBalance(v:string){const value=Number(v)||0; const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.")}}
-  async function deleteItem(id:string){const {error}=await supabase.from("monthly_budget_items").delete().eq("id",id).eq("user_id",userId);if(error)setNotice(error.message);else setItems(c=>c.filter(i=>i.id!==id))}
+  async function saveStartBalance(v:string){const value=roundMoney(v); const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.");notifyFiconterDataChange("planner")}}
+  async function deleteItem(id:string){const {error}=await supabase.from("monthly_budget_items").delete().eq("id",id).eq("user_id",userId);if(error)setNotice(error.message);else {setItems(c=>c.filter(i=>i.id!==id));notifyFiconterDataChange("planner")}}
 
   return <section className={styles.planner}>
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your complete monthly activity and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
@@ -166,7 +170,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{eur(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
       </article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(actual("bills")+actual("expenses"))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(totalIncome)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);
@@ -178,8 +182,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 .filter((transaction) => transaction.type === "income")
                 .reduce<Record<string, number>>((rows, transaction) => {
                   rows[transaction.description] =
-                    (rows[transaction.description] || 0) +
-                    Number(transaction.amount_eur);
+                    addMoney(rows[transaction.description] || 0,transaction.amount_eur);
                   return rows;
                 }, {})
             : {};
@@ -190,10 +193,10 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 .filter(
                   (bill) =>
                     bill.status === "paid" &&
-                    (inMonth(bill.paid_at, month) || inMonth(bill.due_date, month)),
+                    inMonth(billActivityDate(bill), month),
                 )
                 .reduce<Record<string, number>>((rows, bill) => {
-                  rows[bill.name] = (rows[bill.name] || 0) + Number(bill.amount_eur);
+                  rows[bill.name] = addMoney(rows[bill.name] || 0,bill.amount_eur);
                   return rows;
                 }, {})
             : {};
@@ -208,8 +211,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 )
                 .reduce<Record<string, number>>((rows, transaction) => {
                   rows[transaction.description] =
-                    (rows[transaction.description] || 0) +
-                    Number(transaction.amount_eur);
+                    addMoney(rows[transaction.description] || 0,transaction.amount_eur);
                   return rows;
                 }, {})
             : {};
@@ -225,8 +227,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 )
                 .reduce<Record<string, number>>((rows, transaction) => {
                   rows[transaction.description] =
-                    (rows[transaction.description] || 0) +
-                    Number(transaction.amount_eur);
+                    addMoney(rows[transaction.description] || 0,transaction.amount_eur);
                   return rows;
                 }, {})
             : {};
@@ -244,7 +245,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                 .reduce<Record<string, number>>((rows, transaction) => {
                   const label = transaction.category || "Uncategorized";
                   rows[label] =
-                    (rows[label] || 0) + Number(transaction.amount_eur);
+                    addMoney(rows[label] || 0,transaction.amount_eur);
                   return rows;
                 }, {})
             : {};
@@ -321,7 +322,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                           )
                           .reduce(
                             (total, transaction) =>
-                              total + Number(transaction.amount_eur),
+                              addMoney(total,transaction.amount_eur),
                             0,
                           )
                       : 0;
@@ -356,8 +357,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
       <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
       {(() => {
-        const invested = goals.reduce((sum, goal) => sum + Number(goal.current_amount), 0);
-        const target = goals.reduce((sum, goal) => sum + Number(goal.target_amount), 0);
+        const invested = sumMoney(goals.map(goal=>goal.current_amount));
+        const target = sumMoney(goals.map(goal=>goal.target_amount));
         const progress = target ? Math.min(100, invested / target * 100) : 0;
         return <div className={styles.goalSummaryBody}>
           <div className={styles.goalSummaryAmounts}>
@@ -373,6 +374,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       })()}
     </article>
     </div>
-    <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div><div className={`${styles.expenseViewport} ficonter-scroll-region`} tabIndex={expenseTransactions.length>10?0:undefined} aria-label="Monthly expense transactions. The newest ten are visible first; scroll for older records.">{expenseTransactions.map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{eur(Number(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</div>{expenseTransactions.length>10&&<p className={styles.expenseScrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}</article><article className={styles.spending}><h3>Spending breakdown</h3>{monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{}) && Object.entries(monthTx.filter(t=>t.type!=="income").reduce<Record<string,number>>((a,t)=>(a[t.category]=(a[t.category]||0)+Number(t.amount_eur),a),{})).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=><div key={k}><span>{k}</span><b>{eur(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
+    <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div><div className={`${styles.expenseViewport} ficonter-scroll-region`} tabIndex={expenseTransactions.length>10?0:undefined} aria-label="Monthly expense transactions. The newest ten are visible first; scroll for older records.">{expenseTransactions.map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{eur(finiteNumber(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</div>{expenseTransactions.length>10&&<p className={styles.expenseScrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}</article><article className={styles.spending}><h3>Spending breakdown</h3>{spendingBreakdown.map(([k,v])=><div key={k}><span>{k}</span><b>{eur(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
   </section>
 }

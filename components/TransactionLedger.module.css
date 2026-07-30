@@ -49,3 +49,20 @@
 :global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading strong,.selectAllControl){color:var(--text-primary)!important}
 :global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading span,.dateRangeCard>label,.selectionCount){color:var(--text-secondary)!important}
 :global(html[data-resolved-theme="dark"]) .selectedRow{background:var(--surface-raised)!important;border-color:#8f774f!important}
+
+.loadMoreButton {
+  margin-left: 10px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.loadMoreButton:hover,
+.loadMoreButton:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}

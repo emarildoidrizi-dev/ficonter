@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { FinancialSetupGuide } from "@/components/FinancialSetupGuide";
 import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
@@ -8,10 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function FinancialSetupPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 

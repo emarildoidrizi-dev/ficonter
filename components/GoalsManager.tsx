@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
@@ -107,7 +108,7 @@ export function GoalsManager({
           table: "goals",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setGoals((current) => {
             if (payload.eventType === "DELETE") {
               const id = (payload.old as { id?: string }).id;
@@ -129,7 +130,7 @@ export function GoalsManager({
           table: "goal_investments",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setInvestments((current) => {
             if (payload.eventType === "DELETE") {
               const id = (payload.old as { id?: string }).id;

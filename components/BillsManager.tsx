@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
@@ -217,7 +218,7 @@ export function BillsManager({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bills", filter: `user_id=eq.${userId}` },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           if (payload.eventType === "INSERT") {
             const record = payload.new as Bill;
             setBills((current) =>

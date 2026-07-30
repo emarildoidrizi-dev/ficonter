@@ -10,6 +10,7 @@ import {
   RefreshCw,
   WalletCards,
 } from "lucide-react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { parseFiconterDataChange } from "@/lib/ficonterRealtime";
 import { formatCurrency } from "@/lib/financialOptions";
@@ -265,7 +266,7 @@ export function DashboardLiveOverview({
           table: "transactions",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setTransactions((current) => {
             if (payload.eventType === "DELETE") {
               const deletedId = (payload.old as { id?: string }).id;

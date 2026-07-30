@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate, getExchangeRate } from "@/lib/performance/exchangeRateCache";
@@ -199,7 +200,7 @@ export function DebtManager({
           table: "debts",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setDebts((current) => {
             if (payload.eventType === "DELETE") {
               const id = (payload.old as { id?: string }).id;
@@ -218,7 +219,7 @@ export function DebtManager({
           table: "debt_payments",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setPayments((current) => {
             if (payload.eventType === "DELETE") {
               const id = (payload.old as { id?: string }).id;

@@ -14,6 +14,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
@@ -183,7 +184,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             table: "transactions",
             filter: `user_id=eq.${user.id}`,
           },
-          (payload) => {
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
             setTransactions((current) => {
               if (payload.eventType === "DELETE") {
                 const deletedId = (payload.old as { id?: string }).id;

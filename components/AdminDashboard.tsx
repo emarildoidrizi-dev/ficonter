@@ -25,6 +25,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import {
   type AdminAuditRow,
   type AdminCounts,
@@ -387,7 +388,7 @@ export function AdminDashboard({
           schema: "public",
           table: "admin_audit_logs",
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<AdminAuditRow>) => {
           if (payload.eventType === "DELETE") {
             const removed = payload.old as Partial<AdminAuditRow>;
             if (removed.id) {

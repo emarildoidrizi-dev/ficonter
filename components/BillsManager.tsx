@@ -109,6 +109,24 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function isMissingMarkPaidRpc(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message =
+    "message" in error
+      ? String((error as { message?: unknown }).message ?? "").toLowerCase()
+      : "";
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    message.includes("mark_bill_paid") ||
+    message.includes("schema cache") ||
+    message.includes("could not find the function")
+  );
+}
+
 function isMissingMarkUnpaidRpc(error: unknown) {
   if (!error || typeof error !== "object") return false;
 
@@ -361,27 +379,110 @@ export function BillsManager({
   }
 
   async function markPaid(bill: Bill) {
-    if (busy || bill.status === "paid" || bill.transaction_id) return;
+    if (busy || bill.status === "paid") return;
+
     setBusy(bill.id);
     setMessage("");
 
     try {
       const paidAt = new Date().toISOString();
+      const transactionDate = paidAt.slice(0, 10);
 
+      // Recover safely when an earlier interrupted action left a linked
+      // transaction on a bill whose status is still pending. Reuse the
+      // existing transaction instead of creating a duplicate expense.
+      if (bill.transaction_id) {
+        const { data: linkedTransaction, error: linkedTransactionError } =
+          await supabase
+            .from("transactions")
+            .select("id")
+            .eq("id", bill.transaction_id)
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (linkedTransactionError) throw linkedTransactionError;
+
+        if (linkedTransaction?.id) {
+          const { data: recoveredBill, error: recoveryError } = await supabase
+            .from("bills")
+            .update({
+              status: "paid",
+              paid_at: paidAt,
+              updated_at: paidAt,
+            })
+            .eq("id", bill.id)
+            .eq("user_id", userId)
+            .select()
+            .single();
+
+          if (recoveryError) throw recoveryError;
+
+          setBills((current) =>
+            current.map((item) =>
+              item.id === bill.id ? (recoveredBill as Bill) : item,
+            ),
+          );
+          setMessage("Bill marked paid. Its existing transaction was preserved.");
+          notifyFiconterDataChange("all");
+          return;
+        }
+      }
+
+      // Use the atomic database function when it is installed. It creates the
+      // transaction and updates the bill as one operation, preventing partial
+      // updates and duplicate clicks.
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "mark_bill_paid",
+        {
+          p_bill_id: bill.id,
+          p_paid_at: paidAt,
+          p_transaction_date: transactionDate,
+        },
+      );
+
+      if (!rpcError) {
+        const payload = rpcData as { bill?: Bill } | null;
+        let updatedBill = payload?.bill ?? null;
+
+        if (!updatedBill) {
+          const { data, error } = await supabase
+            .from("bills")
+            .select("*")
+            .eq("id", bill.id)
+            .eq("user_id", userId)
+            .single();
+          if (error) throw error;
+          updatedBill = data as Bill;
+        }
+
+        setBills((current) =>
+          current.map((item) => (item.id === bill.id ? updatedBill! : item)),
+        );
+        setMessage("Bill marked paid and added to Transactions.");
+        notifyFiconterDataChange("all");
+        return;
+      }
+
+      if (!isMissingMarkPaidRpc(rpcError)) throw rpcError;
+
+      // Compatibility fallback for deployments that do not yet contain the
+      // atomic function. Roll back the transaction if updating the bill fails.
       const { data: transaction, error: transactionError } = await supabase
         .from("transactions")
         .insert({
           user_id: userId,
-          description: bill.company ? `${bill.name} · ${bill.company}` : bill.name,
+          description: bill.company
+            ? `${bill.name} · ${bill.company}`
+            : bill.name,
           amount: Number(bill.amount),
           currency: bill.currency,
           amount_eur: Number(bill.amount_eur),
           exchange_rate_to_eur: Number(bill.exchange_rate_to_eur),
-          exchange_rate_date: new Date().toISOString().slice(0, 10),
+          exchange_rate_date: transactionDate,
           exchange_rate_source: "Bill conversion",
           type: "expense",
           category: bill.category,
-          transaction_date: new Date().toISOString().slice(0, 10),
+          transaction_date: transactionDate,
           occurred_at: paidAt,
         })
         .select("id")
@@ -389,7 +490,7 @@ export function BillsManager({
 
       if (transactionError) throw transactionError;
 
-      const { data: updated, error } = await supabase
+      const { data: updated, error: billUpdateError } = await supabase
         .from("bills")
         .update({
           status: "paid",
@@ -402,16 +503,22 @@ export function BillsManager({
         .select()
         .single();
 
-      if (error) throw error;
+      if (billUpdateError) {
+        await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", transaction.id)
+          .eq("user_id", userId);
+        throw billUpdateError;
+      }
 
       setBills((current) =>
         current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
-
       setMessage("Bill marked paid and added to Transactions.");
       notifyFiconterDataChange("all");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The bill could not be marked paid.");
+      setMessage(errorMessage(error, "The bill could not be marked paid."));
     } finally {
       setBusy(null);
     }
@@ -664,9 +771,11 @@ export function BillsManager({
               <div className={styles.cardActions}>
                 {status !== "paid" && status !== "cancelled" && (
                   <button
+                    type="button"
                     className={styles.paidButton}
-                    onClick={() => markPaid(bill)}
+                    onClick={() => void markPaid(bill)}
                     disabled={Boolean(busy)}
+                    aria-busy={busy === bill.id}
                   >
                     <Check size={16} />
                     {busy === bill.id ? "Updating…" : "Mark paid"}
@@ -674,16 +783,18 @@ export function BillsManager({
                 )}
                 {status === "paid" && (
                   <button
+                    type="button"
                     className={`${styles.paidButton} ${styles.unpaidButton}`}
-                    onClick={() => markUnpaid(bill)}
+                    onClick={() => void markUnpaid(bill)}
                     disabled={Boolean(busy)}
+                    aria-busy={busy === `unpaid-${bill.id}`}
                   >
                     <RotateCcw size={16} />
                     {busy === `unpaid-${bill.id}` ? "Updating…" : "Mark unpaid"}
                   </button>
                 )}
-                <button className={styles.iconButton} onClick={()=>editBill(bill)} aria-label="Edit bill"><Edit3 size={17}/></button>
-                <button className={`${styles.iconButton} ${styles.deleteButton}`} onClick={()=>requestBillDeletion(bill)} aria-label="Delete bill"><Trash2 size={17}/></button>
+                <button type="button" className={styles.iconButton} onClick={()=>editBill(bill)} aria-label="Edit bill"><Edit3 size={17}/></button>
+                <button type="button" className={`${styles.iconButton} ${styles.deleteButton}`} onClick={()=>requestBillDeletion(bill)} aria-label="Delete bill"><Trash2 size={17}/></button>
               </div>
             </article>
           );

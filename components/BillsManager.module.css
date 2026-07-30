@@ -127,3 +127,41 @@
 
 /* High-volume bill list: internal scroll with page handoff at boundaries. */
 .billList{max-height:min(72vh,780px);overflow-y:auto;padding-right:6px;align-content:start}
+
+/* Mark-paid interaction reliability */
+.billCard {
+  position: relative;
+  isolation: isolate;
+}
+
+.cardActions {
+  position: relative;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.paidButton,
+.iconButton {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.paidButton:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.paidButton:focus-visible,
+.iconButton:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.paidButton:disabled,
+.iconButton:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}

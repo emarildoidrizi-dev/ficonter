@@ -649,27 +649,17 @@ export function BillsManager({
     setMessage("");
 
     try {
-      // A paid bill may have created a linked transaction. Delete that first so
-      // Transactions, Overview and every subscribed tab update immediately.
-      if (bill.transaction_id) {
-        const { error: transactionError } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", bill.transaction_id)
-          .eq("user_id", userId);
+      const { data: result, error } = await supabase.rpc(
+        "delete_bill_with_transaction",
+        { p_bill_id: bill.id },
+      );
+      if (error) throw error;
 
-        if (transactionError) throw transactionError;
+      const deletedBill = (result as { bill?: Bill } | null)?.bill;
+      if (!deletedBill || deletedBill.id !== bill.id) {
+        throw new Error("The deleted bill was not returned by the database.");
       }
 
-      const { error: billError } = await supabase
-        .from("bills")
-        .delete()
-        .eq("id", bill.id)
-        .eq("user_id", userId);
-
-      if (billError) throw billError;
-
-      // Update this page immediately; Realtime handles other tabs and sections.
       setBills((current) => current.filter((item) => item.id !== bill.id));
       setBillPendingDeletion(null);
       notifyFiconterDataChange("bills");
@@ -869,6 +859,7 @@ export function BillsManager({
               </button>
               <button
                 type="button"
+                data-enter-confirm="true"
                 className={styles.modalDelete}
                 onClick={confirmBillDeletion}
                 disabled={Boolean(busy)}

@@ -1,29 +1,32 @@
-# FICONTER Financial File Import v2
+# FICONTER Release Candidate 1 — Change Summary
 
-This update broadens the existing transaction-file importer and removes the narrow customer-facing name “Statement Import.”
+This release consolidates the latest complete FICONTER project and the accepted post-upload hardening packages into one official source tree.
 
-## Customer-facing changes
+## Merged
 
-- Renames the workspace to **Financial File Import**.
-- Renames the collapsed card to **Import financial records**.
-- Accepts searchable PDF files in addition to CSV, TSV and TXT.
-- Describes supported sources as bank statements, card statements, payment reports and transaction exports.
-- Keeps the four-step review flow: upload, field matching, review and completion.
-- Shows PDF page count and extracted transaction count.
-- Warns customers when PDF transaction direction had to be inferred.
-- Clearly explains that scanned image-only and password-protected PDFs are not supported yet.
+- Performance and accuracy hardening
+- Shared browser Supabase client typing and Realtime callback corrections
+- Scene wallpapers and scroll-safe fixed background behavior
+- Sidebar atmospheres and appearance persistence
+- Fixed desktop sidebar / independently scrolling workspace
+- Monthly Planner Recorded Activity and selectable breakdown views
+- Reliable Bill paid/unpaid behavior
+- Financial File Import PDF compatibility fixes
 
-## PDF safeguards
+## Corrected during consolidation
 
-- Authentication and same-origin verification are required.
-- PDF size is limited to 10 MB.
-- PDF length is limited to 80 pages.
-- A maximum of 2,000 possible transactions is extracted.
-- Files are processed in memory and are not stored by the extraction endpoint.
-- Nothing enters the FICONTER ledger until the customer reviews and confirms it.
+- Bills now use the atomic `delete_bill_with_transaction` database function.
+- Debt payment creation now calls the existing `record_debt_payment_atomic` function instead of a missing RPC name.
+- Destructive Bill and Debt confirmations support Enter-key confirmation consistently.
+- Horizon layout no longer declares a conflicting vertical overflow rule.
+- Scene-wallpaper transparency applies only while wallpapers are enabled.
+- Realtime verification now recognizes intentional module-scoped refresh events.
+- Obsolete gradient-only Living Themes verification scripts were removed.
+- Stale package-specific deployment files and unused root compatibility exports were removed.
 
-## Compatibility
+## Verification
 
-- Uses the existing Statement Import database tables and RPC internally, so no new Supabase SQL is required.
-- Existing CSV, TSV and TXT imports continue to work.
-- Existing duplicate detection, category rules, exchange-rate conversion and realtime updates remain unchanged.
+- 31 project verification suites passed.
+- TypeScript/TSX syntax transpilation passed across the repository.
+- Security, financial-engine, support, import, appearance and synchronization checks passed.
+- A complete dependency installation and `next build` could not be executed in the packaging environment because its npm registry did not provide `@supabase/ssr`. Vercel must perform the authoritative production build.

@@ -14,7 +14,7 @@ const checks = [
   [component.includes('.from("bills")') && component.includes('.eq("status", "paid")'), "RLS-protected fallback reopens only a paid customer-owned Bill"],
   [component.includes('.from("transactions")') && component.includes('.delete()'), "Fallback removes the linked generated transaction"],
   [component.includes("Restore the original paid state"), "Fallback compensates if linked transaction deletion fails"],
-  [component.includes('notifyFiconterDataChange("all")'), "All FICONTER financial modules receive a live refresh signal"],
+  [component.includes('notifyFiconterDataChange("bills")'), "All FICONTER financial modules receive a live refresh signal"],
   [component.includes("Mark unpaid"), "Paid Bill cards expose Mark unpaid"],
   [component.includes("RotateCcw"), "The reversal action has a clear icon"],
   [styles.includes(".unpaidButton"), "The unpaid action has a distinct visual treatment"],

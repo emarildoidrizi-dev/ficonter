@@ -29,8 +29,8 @@ check("PDF files are not stored", !route.includes("storage.from"));
 check("Text-based PDF parser included", parser.includes("groupPdfTextItemsIntoLines"));
 check("Transaction-line extraction included", parser.includes("extractTransactionsFromPdfLines"));
 check("Direction assumptions are counted", parser.includes("assumedDirectionCount"));
-check("pdfjs-dist dependency included", Boolean(packageJson.dependencies?.["pdfjs-dist"]));
-check("pdfjs-dist remains server-side", nextConfig.includes('serverExternalPackages: ["pdfjs-dist"]'));
+check("unpdf dependency included", Boolean(packageJson.dependencies?.["unpdf"]));
+check("unpdf remains server-side", route.includes('from "unpdf"') && route.includes('runtime = "nodejs"') && !component.includes('from "unpdf"'));
 
 const failed = checks.filter((item) => !item.ok);
 for (const item of checks) console.log(`${item.ok ? "PASS" : "FAIL"} ${item.name}`);

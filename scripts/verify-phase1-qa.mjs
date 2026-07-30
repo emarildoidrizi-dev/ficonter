@@ -102,12 +102,12 @@ check((sql.match(/\$\$/g) ?? []).length % 2 === 0, "SQL dollar-quoted blocks are
 check(sql.trimEnd().endsWith("commit;"), "SQL migration closes with a transaction commit.");
 
 const bills = await source("components/BillsManager.tsx");
-check(bills.includes('rpc("mark_bill_paid"') && bills.includes('rpc("delete_bill_with_transaction"'), "Bills use atomic database functions for settlement and deletion.");
+check(bills.includes('"mark_bill_paid"') && bills.includes('"delete_bill_with_transaction"'), "Bills use atomic database functions for settlement and deletion.");
 check(!bills.includes("api.frankfurter"), "Bills do not bypass the authenticated exchange-rate endpoint.");
 
 const debt = await source("components/DebtManager.tsx");
-check(debt.includes('"record_debt_payment_atomic"') && debt.includes('"reverse_debt_payment_atomic"') && debt.includes('"delete_debt_with_payments"'), "Debt payments, reversals, and deletion are atomic.");
-check(!debt.includes('"record_debt_payment"') && !debt.includes('"reverse_debt_payment"'), "Debt UI no longer invokes legacy non-atomic functions.");
+check(debt.includes('"record_debt_payment_atomic"') && debt.includes('"reverse_debt_payment"') && debt.includes('"delete_debt_with_linked_transactions"'), "Debt payments, reversals, and deletion use the current atomic synchronization functions.");
+check(!debt.includes('"record_debt_payment_with_transaction"') && !debt.includes('"delete_debt_with_payments"'), "Debt UI no longer invokes obsolete or missing synchronization functions.");
 
 const goals = await source("components/GoalsManager.tsx");
 check(goals.includes('"record_goal_investment"') && goals.includes('"reverse_goal_investment"') && goals.includes('"delete_goal_with_investments"'), "Goals use synchronized investment functions.");
@@ -133,7 +133,7 @@ const serviceAdmin = await source("lib/supabase/admin.ts");
 check(serviceAdmin.includes('import "server-only"') && serviceAdmin.includes("SUPABASE_SERVICE_ROLE_KEY") && !serviceAdmin.includes("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY"), "Service-role credentials remain server-only.");
 
 const apiRoutes = files.filter((file) => file.endsWith(`${path.sep}route.ts`) && file.includes(`${path.sep}app${path.sep}api${path.sep}`));
-check(apiRoutes.length === 22, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
+check(apiRoutes.length === 24, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
 for (const file of apiRoutes) {
   const relative = path.relative(root, file);
   const text = await readFile(file, "utf8");

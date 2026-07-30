@@ -12,7 +12,7 @@ const sql = read("supabase/debt_transaction_bidirectional_sync.sql");
 
 const assertions = [
   [
-    debtManager.includes('notifyFiconterDataChange("all")'),
+    debtManager.includes('notifyFiconterDataChange("debts")'),
     "DebtManager notifies the platform after debt/payment mutations",
   ],
   [

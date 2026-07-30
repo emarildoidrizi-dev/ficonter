@@ -77,12 +77,15 @@ body {
 .app-shell {
   position: relative;
   isolation: isolate;
-  background: transparent !important;
 }
 
 .app-main {
   position: relative;
   z-index: 2;
+}
+
+html:not([data-background-motion="off"]) .app-shell,
+html:not([data-background-motion="off"]) .app-main {
   background: transparent !important;
 }
 

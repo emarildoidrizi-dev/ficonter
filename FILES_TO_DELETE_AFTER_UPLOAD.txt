@@ -1,7 +1,19 @@
-Delete this obsolete file from the GitHub main branch after the bulk upload:
+Delete these obsolete files if they still exist in the GitHub repository:
 
+DashboardLiveOverview.tsx
+TransactionForm.tsx
+TransactionLedger.tsx
+FinancialHealthScore.tsx
+FinancialHealthScore.module.css
+navigation-speed.css
+NAVIGATION_SPEED_STYLES.txt
+FILES_INCLUDED.txt
+UPLOAD_INSTRUCTIONS.txt
+UPLOAD_INSTRUCTIONS_PHASE1_QA_FINAL.txt
+UPLOAD_INSTRUCTIONS_PLATFORM_HEALTH.txt
+SQL_ERROR_FIX_README.txt
+scripts/verify-living-themes.mjs
+scripts/verify-living-themes-v2.mjs
 lib/lumeraRealtime.ts
 
-It has been replaced by:
-
-lib/ficonterRealtime.ts
+The active implementations live under components/, app/, and lib/ficonterRealtime.ts.

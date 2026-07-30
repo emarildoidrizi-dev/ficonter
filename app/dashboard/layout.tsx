@@ -12,6 +12,9 @@ type StoredPreferences = {
   layout?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
+  sidebarAtmosphereMode?: string;
+  sidebarAtmosphereStyle?: string;
+  sidebarAtmosphereMotion?: string;
 };
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
@@ -21,7 +24,8 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
 
   const value = preferences as Record<string, unknown>;
   return {
-    appearance: typeof value.appearance === "string" ? value.appearance : undefined,
+    appearance:
+      typeof value.appearance === "string" ? value.appearance : undefined,
     density: typeof value.density === "string" ? value.density : undefined,
     layout: typeof value.layout === "string" ? value.layout : undefined,
     backgroundMotion:
@@ -30,6 +34,18 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
         : undefined,
     wallpaperScene:
       typeof value.wallpaperScene === "string" ? value.wallpaperScene : undefined,
+    sidebarAtmosphereMode:
+      typeof value.sidebarAtmosphereMode === "string"
+        ? value.sidebarAtmosphereMode
+        : undefined,
+    sidebarAtmosphereStyle:
+      typeof value.sidebarAtmosphereStyle === "string"
+        ? value.sidebarAtmosphereStyle
+        : undefined,
+    sidebarAtmosphereMotion:
+      typeof value.sidebarAtmosphereMotion === "string"
+        ? value.sidebarAtmosphereMotion
+        : undefined,
   };
 }
 
@@ -52,6 +68,9 @@ export default async function DashboardLayout({
         layout={interfacePreferences.layout}
         backgroundMotion={interfacePreferences.backgroundMotion}
         wallpaperScene={interfacePreferences.wallpaperScene}
+        sidebarAtmosphereMode={interfacePreferences.sidebarAtmosphereMode}
+        sidebarAtmosphereStyle={interfacePreferences.sidebarAtmosphereStyle}
+        sidebarAtmosphereMotion={interfacePreferences.sidebarAtmosphereMotion}
       />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />

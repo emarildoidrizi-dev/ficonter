@@ -514,3 +514,205 @@
     scrollbar-gutter: auto;
   }
 }
+
+/* FICONTER sidebar atmosphere system */
+.sidebarRoot {
+  position: relative;
+  isolation: isolate;
+  --sidebar-atmosphere-accent: 200, 170, 120;
+  --sidebar-atmosphere-secondary: 111, 134, 123;
+}
+
+.sidebarRoot::before,
+.sidebarRoot::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset-inline: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.sidebarRoot::before {
+  top: clamp(230px, 31vh, 330px);
+  bottom: 112px;
+  background-repeat: no-repeat;
+  transform-origin: 50% 58%;
+}
+
+.sidebarRoot::after {
+  top: clamp(300px, 42vh, 430px);
+  bottom: 128px;
+  filter: blur(0.2px);
+}
+
+.sidebarRoot :global(.brand),
+.navigation,
+.accountDock {
+  position: relative;
+  z-index: 1;
+}
+
+:global(html[data-wallpaper-scene="space-nebula"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 162, 143, 230;
+  --sidebar-atmosphere-secondary: 84, 147, 226;
+}
+
+:global(html[data-wallpaper-scene="aurora"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 109, 226, 173;
+  --sidebar-atmosphere-secondary: 71, 164, 204;
+}
+
+:global(html[data-wallpaper-scene="ocean-horizon"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 113, 195, 220;
+  --sidebar-atmosphere-secondary: 217, 184, 119;
+}
+
+:global(html[data-wallpaper-scene="sand-dunes"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 221, 177, 105;
+  --sidebar-atmosphere-secondary: 170, 115, 72;
+}
+
+:global(html[data-wallpaper-scene="marble-glow"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 224, 216, 201;
+  --sidebar-atmosphere-secondary: 197, 161, 108;
+}
+
+:global(html[data-wallpaper-scene="future-grid"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 91, 189, 228;
+  --sidebar-atmosphere-secondary: 159, 111, 218;
+}
+
+:global(html[data-wallpaper-scene="forest-mist"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 116, 170, 134;
+  --sidebar-atmosphere-secondary: 184, 203, 171;
+}
+
+:global(html[data-wallpaper-scene="minimal-luxe"]) .sidebarRoot {
+  --sidebar-atmosphere-accent: 200, 170, 120;
+  --sidebar-atmosphere-secondary: 231, 221, 204;
+}
+
+:global(html[data-sidebar-atmosphere-motion="animated"]:not([data-sidebar-atmosphere-style="none"])) .sidebarRoot::before,
+:global(html[data-sidebar-atmosphere-motion="static"]:not([data-sidebar-atmosphere-style="none"])) .sidebarRoot::before {
+  opacity: 0.72;
+}
+
+:global(html[data-sidebar-atmosphere-motion="animated"]:not([data-sidebar-atmosphere-style="none"])) .sidebarRoot::after,
+:global(html[data-sidebar-atmosphere-motion="static"]:not([data-sidebar-atmosphere-style="none"])) .sidebarRoot::after {
+  opacity: 0.58;
+}
+
+:global(html[data-sidebar-atmosphere-style="orbital"]) .sidebarRoot::before {
+  background-image:
+    radial-gradient(circle at 42% 72%, transparent 0 43px, rgba(var(--sidebar-atmosphere-accent), 0.16) 44px 45px, transparent 46px 78px, rgba(var(--sidebar-atmosphere-accent), 0.11) 79px 80px, transparent 81px 116px, rgba(var(--sidebar-atmosphere-secondary), 0.08) 117px 118px, transparent 119px),
+    radial-gradient(circle at 42% 72%, rgba(var(--sidebar-atmosphere-accent), 0.14) 0 3px, transparent 4px),
+    conic-gradient(from 214deg at 42% 72%, transparent 0 33%, rgba(var(--sidebar-atmosphere-accent), 0.12) 34% 34.4%, transparent 34.8% 67%, rgba(var(--sidebar-atmosphere-secondary), 0.1) 67.4% 67.8%, transparent 68.2% 100%);
+}
+
+:global(html[data-sidebar-atmosphere-style="orbital"]) .sidebarRoot::after {
+  background-image:
+    radial-gradient(circle at 77% 25%, rgba(var(--sidebar-atmosphere-accent), 0.65) 0 2px, transparent 3px),
+    radial-gradient(circle at 24% 58%, rgba(var(--sidebar-atmosphere-secondary), 0.48) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 62% 78%, rgba(var(--sidebar-atmosphere-accent), 0.42) 0 1.5px, transparent 2.5px);
+}
+
+:global(html[data-sidebar-atmosphere-style="lightbeam"]) .sidebarRoot::before {
+  background-image:
+    linear-gradient(90deg, transparent 4%, rgba(var(--sidebar-atmosphere-accent), 0.025) 25%, rgba(var(--sidebar-atmosphere-accent), 0.18) 48%, rgba(var(--sidebar-atmosphere-secondary), 0.09) 57%, transparent 82%),
+    radial-gradient(ellipse at 50% 92%, rgba(var(--sidebar-atmosphere-accent), 0.2), transparent 58%);
+  clip-path: polygon(20% 0, 72% 0, 94% 100%, 2% 100%);
+}
+
+:global(html[data-sidebar-atmosphere-style="lightbeam"]) .sidebarRoot::after {
+  background-image:
+    linear-gradient(90deg, transparent 20%, rgba(var(--sidebar-atmosphere-secondary), 0.08) 46%, transparent 48% 53%, rgba(var(--sidebar-atmosphere-accent), 0.1) 55%, transparent 80%);
+}
+
+:global(html[data-sidebar-atmosphere-style="topography"]) .sidebarRoot::before {
+  background-image:
+    repeating-radial-gradient(ellipse at 34% 76%, transparent 0 14px, rgba(var(--sidebar-atmosphere-accent), 0.11) 15px 16px, transparent 17px 29px),
+    repeating-radial-gradient(ellipse at 78% 34%, transparent 0 21px, rgba(var(--sidebar-atmosphere-secondary), 0.075) 22px 23px, transparent 24px 39px);
+  transform: rotate(-8deg) scale(1.12);
+}
+
+:global(html[data-sidebar-atmosphere-style="topography"]) .sidebarRoot::after {
+  background-image: radial-gradient(ellipse at 38% 70%, rgba(var(--sidebar-atmosphere-accent), 0.08), transparent 58%);
+}
+
+:global(html[data-sidebar-atmosphere-style="architectural"]) .sidebarRoot::before {
+  background-image:
+    linear-gradient(rgba(var(--sidebar-atmosphere-accent), 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sidebar-atmosphere-accent), 0.07) 1px, transparent 1px),
+    linear-gradient(135deg, transparent 49.6%, rgba(var(--sidebar-atmosphere-secondary), 0.13) 50%, transparent 50.4%),
+    radial-gradient(circle at 78% 76%, transparent 0 55px, rgba(var(--sidebar-atmosphere-accent), 0.13) 56px 57px, transparent 58px);
+  background-size: 44px 44px, 44px 44px, 100% 100%, 100% 100%;
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 90%, transparent);
+}
+
+:global(html[data-sidebar-atmosphere-style="architectural"]) .sidebarRoot::after {
+  background-image:
+    linear-gradient(90deg, transparent 12%, rgba(var(--sidebar-atmosphere-accent), 0.13) 12.4% 12.8%, transparent 13.2% 70%, rgba(var(--sidebar-atmosphere-secondary), 0.11) 70.4% 70.8%, transparent 71.2%),
+    linear-gradient(0deg, transparent 22%, rgba(var(--sidebar-atmosphere-accent), 0.08) 22.4% 22.8%, transparent 23.2% 67%, rgba(var(--sidebar-atmosphere-secondary), 0.08) 67.4% 67.8%, transparent 68.2%);
+}
+
+:global(html[data-sidebar-atmosphere-style="particles"]) .sidebarRoot::before {
+  background-image:
+    radial-gradient(circle, rgba(var(--sidebar-atmosphere-accent), 0.68) 0 1.4px, transparent 1.8px),
+    radial-gradient(circle, rgba(var(--sidebar-atmosphere-secondary), 0.48) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(var(--sidebar-atmosphere-accent), 0.25) 0 2.4px, transparent 3px);
+  background-position: 9px 18px, 30px 7px, 21px 34px;
+  background-size: 46px 57px, 71px 83px, 97px 109px;
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 88%, transparent);
+}
+
+:global(html[data-sidebar-atmosphere-style="particles"]) .sidebarRoot::after {
+  background-image: radial-gradient(ellipse at 50% 80%, rgba(var(--sidebar-atmosphere-accent), 0.11), transparent 62%);
+}
+
+:global(html[data-sidebar-atmosphere-motion="animated"]) .sidebarRoot::before {
+  animation: sidebarAtmosphereDrift 26s ease-in-out infinite alternate;
+}
+
+:global(html[data-sidebar-atmosphere-motion="animated"]) .sidebarRoot::after {
+  animation: sidebarAtmosphereFloat 32s ease-in-out infinite alternate;
+}
+
+:global(html[data-sidebar-atmosphere-motion="static"]) .sidebarRoot::before,
+:global(html[data-sidebar-atmosphere-motion="static"]) .sidebarRoot::after,
+:global(html[data-sidebar-atmosphere-motion="off"]) .sidebarRoot::before,
+:global(html[data-sidebar-atmosphere-motion="off"]) .sidebarRoot::after {
+  animation: none;
+}
+
+:global(html[data-sidebar-atmosphere-motion="off"]) .sidebarRoot::before,
+:global(html[data-sidebar-atmosphere-motion="off"]) .sidebarRoot::after,
+:global(html[data-sidebar-atmosphere-style="none"]) .sidebarRoot::before,
+:global(html[data-sidebar-atmosphere-style="none"]) .sidebarRoot::after {
+  opacity: 0;
+}
+
+@keyframes sidebarAtmosphereDrift {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 12px -18px, -10px 14px, 8px -9px, 0 0; }
+}
+
+@keyframes sidebarAtmosphereFloat {
+  0% { transform: translate3d(0, 8px, 0) scale(0.98); }
+  100% { transform: translate3d(0, -10px, 0) scale(1.02); }
+}
+
+@media (max-width: 900px) {
+  .sidebarRoot::before,
+  .sidebarRoot::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebarRoot::before,
+  .sidebarRoot::after {
+    animation: none !important;
+  }
+}

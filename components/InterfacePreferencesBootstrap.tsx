@@ -4,10 +4,17 @@ import { useLayoutEffect } from "react";
 import {
   normalizeAppearance,
   normalizeBackgroundMotion,
+  normalizeSidebarAtmosphereMode,
+  normalizeSidebarAtmosphereMotion,
+  normalizeSidebarAtmosphereStyle,
   normalizeWallpaperScene,
   resolveAppearance,
+  resolveSidebarAtmosphereStyle,
   type AppearancePreference,
   type BackgroundMotionPreference,
+  type SidebarAtmosphereMode,
+  type SidebarAtmosphereMotion,
+  type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
 import {
@@ -23,6 +30,9 @@ type Props = {
   layout?: string | null;
   backgroundMotion?: string | null;
   wallpaperScene?: string | null;
+  sidebarAtmosphereMode?: string | null;
+  sidebarAtmosphereStyle?: string | null;
+  sidebarAtmosphereMotion?: string | null;
 };
 
 function normalizeDensity(value: string | null | undefined): DensityPreference {
@@ -35,10 +45,20 @@ function applyPreferences(
   layout: InterfaceLayoutPreference,
   backgroundMotion: BackgroundMotionPreference,
   wallpaperScene: WallpaperScenePreference,
+  sidebarAtmosphereMode: SidebarAtmosphereMode,
+  sidebarAtmosphereStyle: SidebarAtmosphereStyle,
+  sidebarAtmosphereMotion: SidebarAtmosphereMotion,
 ) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const resolvedTheme = resolveAppearance(appearance, prefersDark);
+  const resolvedSidebarAtmosphere = resolveSidebarAtmosphereStyle(
+    appearance,
+    resolvedTheme,
+    wallpaperScene,
+    sidebarAtmosphereMode,
+    sidebarAtmosphereStyle,
+  );
 
   root.dataset.theme = appearance;
   root.dataset.resolvedTheme = resolvedTheme;
@@ -46,6 +66,9 @@ function applyPreferences(
   root.dataset.layout = layout;
   root.dataset.backgroundMotion = backgroundMotion;
   root.dataset.wallpaperScene = wallpaperScene;
+  root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
+  root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
+  root.dataset.sidebarAtmosphereMotion = sidebarAtmosphereMotion;
   root.style.colorScheme = resolvedTheme;
 
   try {
@@ -54,6 +77,18 @@ function applyPreferences(
     localStorage.setItem("ficonter-layout", layout);
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
+    localStorage.setItem(
+      "ficonter-sidebar-atmosphere-mode",
+      sidebarAtmosphereMode,
+    );
+    localStorage.setItem(
+      "ficonter-sidebar-atmosphere-style",
+      sidebarAtmosphereStyle,
+    );
+    localStorage.setItem(
+      "ficonter-sidebar-atmosphere-motion",
+      sidebarAtmosphereMotion,
+    );
   } catch {
     // Strict privacy modes can block storage. The active DOM state still applies.
   }
@@ -65,6 +100,9 @@ export function InterfacePreferencesBootstrap({
   layout,
   backgroundMotion,
   wallpaperScene,
+  sidebarAtmosphereMode,
+  sidebarAtmosphereStyle,
+  sidebarAtmosphereMotion,
 }: Props) {
   useLayoutEffect(() => {
     function readStorage(key: string) {
@@ -90,6 +128,16 @@ export function InterfacePreferencesBootstrap({
     let currentWallpaperScene = normalizeWallpaperScene(
       readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
     );
+    let currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+      readStorage("ficonter-sidebar-atmosphere-mode") ?? sidebarAtmosphereMode,
+    );
+    let currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+      readStorage("ficonter-sidebar-atmosphere-style") ?? sidebarAtmosphereStyle,
+    );
+    let currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+      readStorage("ficonter-sidebar-atmosphere-motion") ??
+        sidebarAtmosphereMotion,
+    );
 
     const applyCurrent = () =>
       applyPreferences(
@@ -98,6 +146,9 @@ export function InterfacePreferencesBootstrap({
         currentLayout,
         currentBackgroundMotion,
         currentWallpaperScene,
+        currentSidebarAtmosphereMode,
+        currentSidebarAtmosphereStyle,
+        currentSidebarAtmosphereMotion,
       );
 
     applyCurrent();
@@ -124,13 +175,31 @@ export function InterfacePreferencesBootstrap({
       if (event.key === "ficonter-wallpaper-scene") {
         currentWallpaperScene = normalizeWallpaperScene(event.newValue);
       }
+      if (event.key === "ficonter-sidebar-atmosphere-mode") {
+        currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+          event.newValue,
+        );
+      }
+      if (event.key === "ficonter-sidebar-atmosphere-style") {
+        currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+          event.newValue,
+        );
+      }
+      if (event.key === "ficonter-sidebar-atmosphere-motion") {
+        currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+          event.newValue,
+        );
+      }
 
       if (
         event.key === "ficonter-appearance" ||
         event.key === "ficonter-density" ||
         event.key === "ficonter-layout" ||
         event.key === "ficonter-background-motion" ||
-        event.key === "ficonter-wallpaper-scene"
+        event.key === "ficonter-wallpaper-scene" ||
+        event.key === "ficonter-sidebar-atmosphere-mode" ||
+        event.key === "ficonter-sidebar-atmosphere-style" ||
+        event.key === "ficonter-sidebar-atmosphere-motion"
       ) {
         applyCurrent();
       }
@@ -144,6 +213,9 @@ export function InterfacePreferencesBootstrap({
           layout?: string;
           backgroundMotion?: string;
           wallpaperScene?: string;
+          sidebarAtmosphereMode?: string;
+          sidebarAtmosphereStyle?: string;
+          sidebarAtmosphereMotion?: string;
         }>
       ).detail;
 
@@ -159,6 +231,15 @@ export function InterfacePreferencesBootstrap({
       );
       currentWallpaperScene = normalizeWallpaperScene(
         detail?.wallpaperScene ?? currentWallpaperScene,
+      );
+      currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+        detail?.sidebarAtmosphereMode ?? currentSidebarAtmosphereMode,
+      );
+      currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+        detail?.sidebarAtmosphereStyle ?? currentSidebarAtmosphereStyle,
+      );
+      currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+        detail?.sidebarAtmosphereMotion ?? currentSidebarAtmosphereMotion,
       );
       applyCurrent();
     };
@@ -178,7 +259,16 @@ export function InterfacePreferencesBootstrap({
         handlePreferencesUpdated,
       );
     };
-  }, [appearance, backgroundMotion, density, layout, wallpaperScene]);
+  }, [
+    appearance,
+    backgroundMotion,
+    density,
+    layout,
+    sidebarAtmosphereMode,
+    sidebarAtmosphereMotion,
+    sidebarAtmosphereStyle,
+    wallpaperScene,
+  ]);
 
   return null;
 }

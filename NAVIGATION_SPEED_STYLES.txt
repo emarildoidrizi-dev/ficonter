@@ -1,1 +1,0 @@
-Append the supplied CSS block to the end of app/globals.css. The upload package also contains a ready-to-upload app/globals.css fragment only for reference; do not replace your full globals.css with this text file.

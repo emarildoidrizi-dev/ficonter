@@ -417,7 +417,7 @@ export function DebtManager({
       const occurredAt = new Date(`${paidAt}T12:00:00`).toISOString();
 
       const { data: result, error } = await supabase.rpc(
-        "record_debt_payment_with_transaction",
+        "record_debt_payment_atomic",
         {
           p_debt_id: debt.id,
           p_amount: roundMoney(amount),
@@ -1012,6 +1012,8 @@ export function DebtManager({
             <div className={styles.modalActions}>
               <button onClick={() => setDeletingDebt(null)}>Keep debt</button>
               <button
+                type="button"
+                data-enter-confirm="true"
                 className={styles.modalDanger}
                 onClick={confirmDeleteDebt}
                 disabled={busy === `delete-debt-${deletingDebt.id}`}
@@ -1044,6 +1046,8 @@ export function DebtManager({
             <div className={styles.modalActions}>
               <button onClick={() => setDeletingPayment(null)}>Keep payment</button>
               <button
+                type="button"
+                data-enter-confirm="true"
                 className={styles.modalDanger}
                 onClick={confirmDeletePayment}
                 disabled={busy === `delete-payment-${deletingPayment.id}`}

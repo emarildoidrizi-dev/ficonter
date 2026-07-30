@@ -1,83 +1,74 @@
-# Ficonter
+# FICONTER
 
-**Your private financial command center.**
+**A private financial-management and decision platform.**
 
-This is the real GitHub/Vercel-ready Ficonter foundation.
+FICONTER helps customers record, understand, plan and improve their financial position. It does not hold, move, lend or invest customer money.
 
-## Included now
+## Release status
 
-- Premium public landing page
-- Real Supabase registration and login
-- Email confirmation callback
-- Protected private dashboard
-- Secure logout
-- Real user-specific transaction database
-- Row Level Security policies
-- Responsive design
-- Bills, Budget, Goals and Net Worth module shells
+This repository is **FICONTER Release Candidate 1**. It consolidates the latest complete project with the accepted performance, precision and Realtime TypeScript hardening work.
 
-## 1. Upload this project to GitHub
+## Main capabilities
 
-Upload **all files and folders inside this project** to the root of your `ficonter` repository.
+- Transactions with multicurrency EUR normalization
+- Bills with paid/unpaid synchronization
+- Monthly Planner and Recorded Activity views
+- Debt, Goals, Savings and Emergency Fund tracking
+- Net Worth and Financial Independence
+- Financial Health Score, Wealth Score and Smart Insights
+- Financial GPS and guided financial setup
+- Financial File Import
+- Customer support messaging and Document Vault
+- Privacy-safe administration
+- Premium themes, scene wallpapers and sidebar atmospheres
+- CSV, JSON and PDF account exports
 
-## 2. Configure Supabase
+## Technology
 
-In Supabase:
+- Next.js 16
+- React 19
+- TypeScript
+- Supabase Auth, PostgreSQL, Realtime and Storage
+- Vercel
 
-1. Open **SQL Editor**.
-2. Open `supabase/schema.sql` from this project.
-3. Copy the complete SQL into Supabase and click **Run**.
-4. Go to **Project Settings -> API**.
-5. Copy the Project URL and anon/publishable key.
-
-## 3. Configure authentication URLs
-
-In Supabase go to **Authentication -> URL Configuration**.
-
-For local testing:
-
-- Site URL: `http://localhost:3000`
-- Redirect URL: `http://localhost:3000/auth/callback`
-
-After Vercel deployment, also add:
-
-- `https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback`
-
-## 4. Environment variables
-
-Create `.env.local` locally from `.env.example`:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-On Vercel, add the same variables under **Project Settings -> Environment Variables**. Use your live Vercel URL for `NEXT_PUBLIC_SITE_URL`.
-
-## 5. Deploy with Vercel
-
-1. In Vercel click **Add New -> Project**.
-2. Import the GitHub repository `ficonter`.
-3. Vercel will detect Next.js automatically.
-4. Add the three environment variables.
-5. Click **Deploy**.
-
-## 6. Local testing (optional)
+## Local setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Required environment variables:
 
-## Security
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=server-only-service-role-key
+```
 
-- Never commit `.env.local`.
-- Never place the Supabase service-role key in browser code or Vercel public variables.
-- The included Row Level Security rules ensure authenticated users can access only their own transactions.
+Never expose `SUPABASE_SERVICE_ROLE_KEY` through a `NEXT_PUBLIC_` variable.
 
-## Current status
+## Verification
 
-Sprint 1 is functional. Transactions are live. Bills, Budget, Goals, Net Worth and payments are prepared for subsequent sprints.
+```bash
+npm run verify:release-candidate
+npm run lint
+npm run build
+```
+
+The repository contains 31 project-specific verification suites. Vercel's production build remains the authoritative dependency and framework compilation check.
+
+## Database
+
+No new SQL migration was created specifically for consolidation. The deployed Supabase project must already include the migrations in `supabase/`, especially:
+
+- `phase1_qa_finalization.sql`
+- `bill_paid_unpaid_reversal.sql`
+- `debt_transaction_bidirectional_sync.sql`
+- Phase 2 aggregate migrations
+- Support and Document Vault migrations
+
+## Deployment
+
+See `DEPLOYMENT_STEPS.md` and `CONSOLIDATION_REPORT.md`.

@@ -1,15 +1,4 @@
-UPLOAD OR REPLACE THESE FILES IN THE SAME GITHUB PATHS
+UPLOAD THE COMPLETE CONTENTS OF THIS REPOSITORY PACKAGE.
 
-app/api/financial-file/pdf-extract/route.ts
-components/StatementImportWorkspace.tsx
-components/StatementImportWorkspace.module.css
-lib/pdfFinancialImport.ts
-next.config.ts
-package.json
-
-OPTIONAL LOCAL VERIFICATION FILE
-scripts/verify-financial-file-import.mjs
-
-TEST FILES - DO NOT UPLOAD TO GITHUB
-sample/ficonter-financial-records-sample.csv
-sample/ficonter-financial-records-sample.pdf
+This is not a partial hotfix. All application, component, library, public asset,
+script and Supabase migration folders belong to the consolidated release.

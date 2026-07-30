@@ -1,16 +1,21 @@
-# Verification report
+# FICONTER Release Candidate 1 — QA Report
 
-Passed:
+## Result
 
-- Financial GPS deterministic verification: 32 checks
-- Guided Financial Setup verification: 27 checks
-- Smart Insights verification: 37 checks
-- Financial Health verification: 26 checks
-- Wealth Score verification: 32 checks
-- TypeScript semantic check for all Wealth Engine library files
-- TypeScript semantic check for the new Financial GPS client components using local dependency stubs
-- Syntax transpilation for every changed TypeScript and TSX file
+**Repository verification: PASS**
 
-A complete Next.js production build could not be run because the available package registry does not contain `@supabase/ssr`.
+- Verification suites: 31 passed
+- TypeScript/TSX syntax transpilation: 140 files passed
+- Phase 1 QA checks: 61 passed
+- Phase 1 security checks: 50 passed
+- Performance and accuracy checks: 20 passed
 
-The repository-wide `verify:all` command also stops on five pre-existing Phase 1 QA inventory/atomic-operation checks in the uploaded baseline. The new Financial GPS checks pass and did not introduce those failures.
+## Not claimed
+
+A complete Next.js production build was not completed in the packaging environment because dependency installation was blocked by the available npm registry. Vercel deployment must confirm the final framework build.
+
+## Command
+
+```bash
+npm run verify:release-candidate
+```

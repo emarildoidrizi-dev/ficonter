@@ -53,7 +53,7 @@ const accountDelete = read("app/api/account/delete/route.ts");
 const adminDelete = read("app/api/admin/users/[id]/route.ts");
 const settings = read("components/SettingsWorkspace.tsx");
 
-check("Sidebar exposes customer Inbox", sidebar.includes('["/dashboard/inbox", InboxIcon, "Inbox"]'));
+check("Customer Inbox route remains available without a duplicate main-sidebar link", sidebar.includes("/dashboard/inbox") && !sidebar.includes('["/dashboard/inbox", InboxIcon, "Inbox"]'));
 check("Sidebar exposes Document Vault", sidebar.includes('["/dashboard/documents", FileArchive, "Documents"]'));
 check("Sidebar renders message and notification icons", sidebar.includes("NotificationCenter"));
 check("Customer Inbox supports realtime updates", customerInbox.includes("postgres_changes") && customerInbox.includes("support_messages"));

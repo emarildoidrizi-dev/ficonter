@@ -214,7 +214,7 @@ export function CashFlowIntelligence({
           <ArrowDownRight aria-hidden="true" />
           <span>Current-month outflow</span>
           <strong>{formatCurrency(result.metrics.currentMonthOutflow, "EUR")}</strong>
-          <small>Expenses and recorded savings</small>
+          <small>Bills, expenses, debt payments and savings recorded this month</small>
         </article>
         <article>
           <WalletCards aria-hidden="true" />
@@ -249,9 +249,9 @@ export function CashFlowIntelligence({
               <h2>{result.label}</h2>
             </div>
             <div className={styles.confidence}>
-              <small>Forecast confidence</small>
+              <small>Forecast-data confidence</small>
               <strong>{result.confidence}</strong>
-              <span>{result.dataCoverage}% coverage</span>
+              <span>{result.dataCoverage}% forecast-data coverage</span>
             </div>
           </div>
           <p>{result.summary}</p>

@@ -23,7 +23,7 @@ begin
     raise exception 'Authentication is required.' using errcode = '42501';
   end if;
 
-  v_cash_flow := public.get_cash_flow_intelligence_inputs();
+  v_cash_flow := public.get_cash_flow_intelligence_inputs_v2();
 
   with month_range as (
     select generate_series(
@@ -39,20 +39,22 @@ begin
         else coalesce(nullif(trim(category), ''), 'General savings')
       end as saving_category,
       coalesce(amount_eur, 0)::numeric as amount,
+      transaction_date,
       coalesce(occurred_at, transaction_date::timestamptz, created_at) as occurred_at
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and coalesce(lower(trim(category)), '') <> 'emergency fund'
   ),
   monthly_contributions as (
     select
-      date_trunc('month', occurred_at)::date as month_start,
+      date_trunc('month', transaction_date)::date as month_start,
       count(*)::integer as contribution_count,
       coalesce(sum(amount), 0)::numeric as savings
     from saving_rows
-    where date_trunc('month', occurred_at) >=
-      date_trunc('month', current_date) - interval '11 months'
+    where transaction_date >=
+      (date_trunc('month', current_date) - interval '11 months')::date
     group by 1
   ),
   monthly_series as (
@@ -86,6 +88,7 @@ begin
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and coalesce(lower(trim(category)), '') <> 'emergency fund'
     order by coalesce(occurred_at, transaction_date::timestamptz, created_at) desc
     limit 10

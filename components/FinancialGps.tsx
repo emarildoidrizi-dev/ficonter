@@ -313,7 +313,7 @@ export function FinancialGps({
               <ShieldCheck size={15} /> {gps.confidenceLabel}
             </span>
             <span>{gps.setupCompletion}% profile complete</span>
-            <span>{gps.coverage}% data coverage</span>
+            <span>{gps.coverage}% guidance coverage</span>
           </div>
         </div>
         <div className={styles.milestoneCard}>

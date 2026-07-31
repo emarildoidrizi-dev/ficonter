@@ -58,7 +58,7 @@ function riskSummary(gps: FinancialGpsResult) {
   if (gps.notice) {
     return {
       label: "Confidence developing",
-      value: `${Math.round(gps.coverage)}% data coverage`,
+      value: `${Math.round(gps.coverage)}% guidance coverage`,
       tone: "neutral" as const,
     };
   }

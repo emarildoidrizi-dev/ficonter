@@ -23,24 +23,24 @@ begin
   v_wealth := public.get_wealth_score_inputs();
 
   with source_months as (
-    select date_trunc(
-      'month',
-      min(coalesce(occurred_at, transaction_date::timestamptz))
-    )::date as month_start
+    select date_trunc('month', min(transaction_date))::date as month_start
     from public.transactions
     where user_id = v_user_id
+      and transaction_date <= current_date
 
     union all
 
     select date_trunc('month', min(created_at))::date as month_start
     from public.debts
     where user_id = v_user_id
+      and created_at::date <= current_date
 
     union all
 
     select date_trunc('month', min(paid_at))::date as month_start
     from public.debt_payments
     where user_id = v_user_id
+      and paid_at::date <= current_date
   ),
   bounds as (
     select greatest(
@@ -65,7 +65,7 @@ begin
     from public.transactions
     cross join bounds
     where user_id = v_user_id
-      and coalesce(occurred_at, transaction_date::timestamptz) < bounds.first_month
+      and transaction_date < bounds.first_month
   ),
   opening_debt as (
     select coalesce(sum(
@@ -85,16 +85,15 @@ begin
       where dp.user_id = v_user_id
         and dp.debt_id = d.id
         and dp.paid_at >= bounds.first_month
+        and dp.paid_at::date <= current_date
     ) future_payments on true
     where d.user_id = v_user_id
       and d.created_at < bounds.first_month
+      and d.created_at::date <= current_date
   ),
   monthly_transactions as (
     select
-      date_trunc(
-        'month',
-        coalesce(occurred_at, transaction_date::timestamptz)
-      )::date as month_start,
+      date_trunc('month', transaction_date)::date as month_start,
       count(*)::integer as transaction_count,
       coalesce(sum(amount_eur) filter (where type = 'income'), 0)::numeric as income,
       coalesce(sum(amount_eur) filter (where type = 'expense'), 0)::numeric as expenses,
@@ -102,7 +101,8 @@ begin
     from public.transactions
     cross join bounds
     where user_id = v_user_id
-      and coalesce(occurred_at, transaction_date::timestamptz) >= bounds.first_month
+      and transaction_date >= bounds.first_month
+      and transaction_date <= current_date
     group by 1
   ),
   monthly_debt_payments as (
@@ -113,6 +113,7 @@ begin
     cross join bounds
     where user_id = v_user_id
       and paid_at >= bounds.first_month
+      and paid_at::date <= current_date
     group by 1
   ),
   monthly_base as (
@@ -182,9 +183,11 @@ begin
         where dp.user_id = v_user_id
           and dp.debt_id = d.id
           and dp.paid_at >= c.month_start + interval '1 month'
+          and dp.paid_at::date <= current_date
       ) future_payments on true
       where d.user_id = v_user_id
         and d.created_at < c.month_start + interval '1 month'
+        and d.created_at::date <= current_date
     ) debt_state on true
   ),
   final_series as (

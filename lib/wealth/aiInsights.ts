@@ -402,8 +402,8 @@ export function calculateAiInsightsContext(
     },
     cash_flow_margin: {
       key: "cash_flow_margin",
-      label: "Cash-flow margin",
-      value: health.metrics.cashFlowMargin,
+      label: "Recorded cash-flow margin",
+      value: health.metrics.cashFlowMargin * 100,
       format: "percent",
       domain: "Cash flow",
     },
@@ -416,7 +416,7 @@ export function calculateAiInsightsContext(
     },
     projected_30_day_net_flow: {
       key: "projected_30_day_net_flow",
-      label: "Projected 30-day net flow",
+      label: "Projected one-month net flow",
       value: cashFlow.forecastAvailable
         ? cashFlow.metrics.projectedNetCashFlow
         : null,
@@ -425,15 +425,15 @@ export function calculateAiInsightsContext(
     },
     known_commitments: {
       key: "known_commitments",
-      label: "Known 30-day commitments",
+      label: "Known one-month commitments",
       value: cashFlow.metrics.knownCommitments,
       format: "currency",
       domain: "Bills",
     },
     savings_rate: {
       key: "savings_rate",
-      label: "Savings rate",
-      value: savings.metrics.savingsRate,
+      label: "Non-emergency savings rate",
+      value: savings.metrics.savingsRate * 100,
       format: "percent",
       domain: "Savings",
     },
@@ -460,7 +460,7 @@ export function calculateAiInsightsContext(
     },
     emergency_months: {
       key: "emergency_months",
-      label: "Expenses covered",
+      label: "Protection months",
       value: emergency.metrics.coverageMonths,
       format: "months",
       domain: "Emergency fund",
@@ -482,7 +482,7 @@ export function calculateAiInsightsContext(
     debt_service_ratio: {
       key: "debt_service_ratio",
       label: "Debt payment-to-income ratio",
-      value: health.metrics.debtServiceRatio,
+      value: health.metrics.debtServiceRatio * 100,
       format: "percent",
       domain: "Debt",
     },
@@ -496,7 +496,7 @@ export function calculateAiInsightsContext(
     goal_progress: {
       key: "goal_progress",
       label: "Goal progress",
-      value: health.metrics.goalProgress,
+      value: health.metrics.goalProgress * 100,
       format: "percent",
       domain: "Goals",
     },
@@ -633,7 +633,7 @@ export function calculateAiInsightsContext(
     },
   };
 
-  const fingerprint = `smart-v1-${stableHash(JSON.stringify(promptPayload))}`;
+  const fingerprint = `smart-v2-${stableHash(JSON.stringify(promptPayload))}`;
 
   return {
     assessed,
@@ -783,7 +783,7 @@ export function normalizeAiInsightSnapshot(
 
 
 
-export const SMART_INSIGHTS_ENGINE_VERSION = "FICONTER Smart Engine v1";
+export const SMART_INSIGHTS_ENGINE_VERSION = "FICONTER Smart Engine v2";
 
 type RankedInsight = AiInsightItem & { rank: number };
 
@@ -1155,7 +1155,7 @@ export function generateSmartInsightReport(
         "Cash flow",
         "medium",
         "Forecast confidence is still developing",
-        "There is not yet enough completed history for a reliable 30-day cash-flow outlook.",
+        "There is not yet enough completed history for a reliable one-month cash-flow outlook.",
         "Keep income and outflow records current until the forecast activates.",
         ["projected_30_day_net_flow", "cash_flow_margin"],
       ),
@@ -1166,7 +1166,7 @@ export function generateSmartInsightReport(
         88,
         "Cash flow",
         "high",
-        "Prepare for a negative 30-day outlook",
+        "Prepare for a negative one-month outlook",
         "The verified short-term projection indicates that known outflows may exceed expected inflows.",
         "Review upcoming commitments and reduce avoidable outflow before the projected pressure arrives.",
         ["projected_30_day_net_flow", "known_commitments"],
@@ -1256,9 +1256,11 @@ export function generateSmartInsightReport(
   const headline = headlineFor(position);
   const lead = priorities[0];
   const opportunityLead = opportunities[0];
+  const sentenceAction = (value: string) =>
+    value ? `${value.charAt(0).toLowerCase()}${value.slice(1)}` : value;
   const summary = opportunityLead
-    ? `${lead.title} is the clearest current priority. ${opportunityLead.title} is the strongest verified opportunity to build on.`
-    : `${lead.title} is the clearest current priority. Continue building complete monthly records so FICONTER can strengthen the analysis.`;
+    ? `The clearest current priority is to ${sentenceAction(lead.title)}. The strongest verified opportunity is to ${sentenceAction(opportunityLead.title)}.`
+    : `The clearest current priority is to ${sentenceAction(lead.title)}. Continue building complete monthly records so FICONTER can strengthen the analysis.`;
 
   const actionSources = [
     ...priorities,
@@ -1324,7 +1326,7 @@ export function generateSmartInsightReport(
   }
   if (!cashFlow.forecastAvailable) {
     dataLimitations.push(
-      "The 30-day cash-flow forecast is unavailable until enough income and outflow history exists.",
+      "The one-month cash-flow forecast is unavailable until enough income and outflow history exists.",
     );
   }
   if (!growth.hasHistory) {
@@ -1339,7 +1341,7 @@ export function generateSmartInsightReport(
   }
   if (emergency.metrics.averageMonthlyExpenses <= 0) {
     dataLimitations.push(
-      "Emergency-fund coverage requires an established average monthly expense baseline.",
+      "Emergency-fund coverage requires an established monthly protection baseline.",
     );
   }
 

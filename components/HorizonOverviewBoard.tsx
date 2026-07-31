@@ -79,14 +79,14 @@ export function HorizonOverviewBoard({
     <section className={styles.board} data-stage={gps.stage.id} aria-label="Horizon financial overview">
       <article className={`${styles.card} ${styles.cashFlowCard}`}>
         <div className={styles.cardTopline}>
-          <span>Recorded cash flow</span>
+          <span>Recorded cash position</span>
           <span className={positive ? styles.positiveBadge : styles.negativeBadge}>
             {positive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
             {positive ? "Positive" : "Needs attention"}
           </span>
         </div>
         <strong className={styles.heroNumber}>{formatCurrency(cashFlow, "EUR")}</strong>
-        <p>Income minus recorded expenses and savings.</p>
+        <p>Income minus all completed outflows recorded to date.</p>
         <div className={styles.sparkline} aria-hidden="true">
           <svg viewBox="0 0 100 60" preserveAspectRatio="none">
             <defs>
@@ -104,8 +104,8 @@ export function HorizonOverviewBoard({
           </svg>
         </div>
         <div className={styles.miniStats}>
-          <span><small>Income</small><strong>{formatCurrency(income, "EUR")}</strong></span>
-          <span><small>Expenses</small><strong>{formatCurrency(expenses, "EUR")}</strong></span>
+          <span><small>Recorded income</small><strong>{formatCurrency(income, "EUR")}</strong></span>
+          <span><small>Recorded expenses</small><strong>{formatCurrency(expenses, "EUR")}</strong></span>
         </div>
       </article>
 
@@ -120,7 +120,7 @@ export function HorizonOverviewBoard({
             <i><span style={{ width: `${expenseShare}%` }} /></i>
           </div>
           <div>
-            <span><b>Savings</b><em>{savingsRate.toFixed(1)}%</em></span>
+            <span><b>Total savings</b><em>{savingsRate.toFixed(1)}%</em></span>
             <i><span style={{ width: `${savingsShare}%` }} /></i>
           </div>
           <div>

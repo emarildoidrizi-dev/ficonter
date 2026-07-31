@@ -61,7 +61,7 @@ check("component discloses shared source of truth", component.includes("Financia
 check("sidebar exposes Savings Intelligence route", sidebar.includes('["/dashboard/savings", PiggyBank, "Savings intelligence"]'));
 check("SQL is security invoker", sql.includes("security invoker"));
 check("SQL scopes transactions to authenticated user", (sql.match(/user_id = v_user_id/g) ?? []).length >= 2);
-check("SQL reuses Cash Flow source", sql.includes("v_cash_flow := public.get_cash_flow_intelligence_inputs()"));
+check("SQL reuses Cash Flow source", sql.includes("v_cash_flow := public.get_cash_flow_intelligence_inputs_v2()"));
 check("SQL adds filtered monthly allocation and recent history", sql.includes("monthly_series") && sql.includes("category_rows") && sql.includes("recent_savings"));
 check("SQL excludes Emergency Fund from Savings Intelligence", (sql.match(/<> 'emergency fund'/g) ?? []).length >= 2 && sql.includes("monthlySavings"));
 check("SQL preserves goal investment classification", sql.includes("Goal investments"));

@@ -13,6 +13,7 @@ export type FinancialHealthInputs = {
     debtPayments: number;
     activeMonths: number;
     incomeMonths: number;
+    expenseMonths: number;
     currentMonthOutflow: number;
   };
   bills: {
@@ -23,6 +24,7 @@ export type FinancialHealthInputs = {
     paidOnTimeCount: number;
     dueNext30DaysCount: number;
     pendingAmount: number;
+    oneMonthAmount: number;
   };
   debts: {
     count: number;
@@ -110,6 +112,7 @@ export type FinancialHealthResult = {
     savingsRate: number;
     averageMonthlyIncome: number;
     averageMonthlyExpenses: number;
+    monthlyProtectionBaseline: number;
     emergencyFundCoverageMonths: number;
     currentDebt: number;
     debtProgress: number;
@@ -133,6 +136,7 @@ const EMPTY_INPUTS: FinancialHealthInputs = {
     debtPayments: 0,
     activeMonths: 0,
     incomeMonths: 0,
+    expenseMonths: 0,
     currentMonthOutflow: 0,
   },
   bills: {
@@ -143,6 +147,7 @@ const EMPTY_INPUTS: FinancialHealthInputs = {
     paidOnTimeCount: 0,
     dueNext30DaysCount: 0,
     pendingAmount: 0,
+    oneMonthAmount: 0,
   },
   debts: {
     count: 0,
@@ -245,6 +250,7 @@ export function normalizeFinancialHealthInputs(value: unknown): FinancialHealthI
       debtPayments: finite(transactions.debtPayments),
       activeMonths: integer(transactions.activeMonths),
       incomeMonths: integer(transactions.incomeMonths),
+      expenseMonths: integer(transactions.expenseMonths),
       currentMonthOutflow: finite(transactions.currentMonthOutflow),
     },
     bills: {
@@ -255,6 +261,7 @@ export function normalizeFinancialHealthInputs(value: unknown): FinancialHealthI
       paidOnTimeCount: integer(bills.paidOnTimeCount),
       dueNext30DaysCount: integer(bills.dueNext30DaysCount),
       pendingAmount: finite(bills.pendingAmount),
+      oneMonthAmount: finite(bills.oneMonthAmount),
     },
     debts: {
       count: integer(debts.count),
@@ -322,9 +329,10 @@ export function calculateFinancialHealth(
   const hasSavingsBaseline = hasCashFlowBaseline;
 
   const incomeMonths = Math.max(tx.incomeMonths, 1);
-  const activeMonths = Math.max(tx.activeMonths, 1);
+  const expenseMonths = Math.max(tx.expenseMonths, tx.totalExpenses > 0 ? 1 : 0);
   const averageMonthlyIncome = tx.totalIncome / incomeMonths;
-  const averageMonthlyExpenses = tx.totalExpenses / activeMonths;
+  const averageMonthlyExpenses =
+    expenseMonths > 0 ? tx.totalExpenses / expenseMonths : 0;
   const netCashFlow = tx.totalIncome - tx.totalExpenses - tx.totalSavings;
   const cashFlowMargin = tx.totalIncome > 0 ? netCashFlow / tx.totalIncome : 0;
   const savingsRate = tx.totalIncome > 0 ? tx.totalSavings / tx.totalIncome : 0;
@@ -340,9 +348,17 @@ export function calculateFinancialHealth(
       : debts.minimumMonthlyPayment > 0
         ? 1
         : 0;
+  const knownOneMonthCommitments = Math.max(
+    0,
+    bills.oneMonthAmount + debts.minimumMonthlyPayment,
+  );
+  const monthlyProtectionBaseline = Math.max(
+    averageMonthlyExpenses,
+    knownOneMonthCommitments,
+  );
   const emergencyFundCoverageMonths =
-    averageMonthlyExpenses > 0
-      ? tx.emergencyFundSavings / averageMonthlyExpenses
+    monthlyProtectionBaseline > 0
+      ? tx.emergencyFundSavings / monthlyProtectionBaseline
       : tx.emergencyFundSavings > 0
         ? 3
         : 0;
@@ -649,6 +665,7 @@ export function calculateFinancialHealth(
       savingsRate,
       averageMonthlyIncome,
       averageMonthlyExpenses,
+      monthlyProtectionBaseline,
       emergencyFundCoverageMonths,
       currentDebt: debts.currentBalance,
       debtProgress,

@@ -54,32 +54,25 @@ begin
         ),
         0
       )::numeric as debt_payments,
-      count(
-        distinct to_char(
-          coalesce(occurred_at, transaction_date::timestamptz),
-          'YYYY-MM'
-        )
-      )::integer as active_months,
+      count(distinct to_char(transaction_date, 'YYYY-MM'))::integer as active_months,
       (
-        count(
-          distinct to_char(
-            coalesce(occurred_at, transaction_date::timestamptz),
-            'YYYY-MM'
-          )
-        ) filter (where type = 'income')
+        count(distinct to_char(transaction_date, 'YYYY-MM'))
+          filter (where type = 'income')
       )::integer as income_months,
+      (
+        count(distinct to_char(transaction_date, 'YYYY-MM'))
+          filter (where type = 'expense')
+      )::integer as expense_months,
       coalesce(
         sum(amount_eur) filter (
           where type in ('expense', 'saving')
-            and date_trunc(
-              'month',
-              coalesce(occurred_at, transaction_date::timestamptz)
-            ) = date_trunc('month', now())
+            and date_trunc('month', transaction_date) = date_trunc('month', current_date)
         ),
         0
       )::numeric as current_month_outflow
     from public.transactions
     where user_id = v_user_id
+      and transaction_date <= current_date
   ),
   bill_metrics as (
     select
@@ -103,7 +96,15 @@ begin
       coalesce(
         sum(amount_eur) filter (where status = 'pending'),
         0
-      )::numeric as pending_amount
+      )::numeric as pending_amount,
+      coalesce(
+        sum(amount_eur) filter (
+          where status = 'pending'
+            and due_date >= current_date
+            and due_date <= (current_date + interval '1 month')::date
+        ),
+        0
+      )::numeric as one_month_amount
     from public.bills
     where user_id = v_user_id
   ),
@@ -175,6 +176,7 @@ begin
       'debtPayments', transaction_metrics.debt_payments,
       'activeMonths', transaction_metrics.active_months,
       'incomeMonths', transaction_metrics.income_months,
+      'expenseMonths', transaction_metrics.expense_months,
       'currentMonthOutflow', transaction_metrics.current_month_outflow
     ),
     'bills', jsonb_build_object(
@@ -184,7 +186,8 @@ begin
       'paidCount', bill_metrics.paid_count,
       'paidOnTimeCount', bill_metrics.paid_on_time_count,
       'dueNext30DaysCount', bill_metrics.due_next_30_days_count,
-      'pendingAmount', bill_metrics.pending_amount
+      'pendingAmount', bill_metrics.pending_amount,
+      'oneMonthAmount', bill_metrics.one_month_amount
     ),
     'debts', jsonb_build_object(
       'count', debt_metrics.debt_count,

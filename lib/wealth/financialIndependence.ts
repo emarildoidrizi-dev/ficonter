@@ -171,6 +171,15 @@ function roundedCurrency(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function currencyText(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(roundedCurrency(value));
+}
+
 function nullableDate(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
 }
@@ -308,7 +317,7 @@ export function normalizeFinancialIndependenceInputs(
     emergencyFund: normalizeEmergencyFundInputs(root.emergencyFund),
     settings: {
       targetMonthlySpending:
-        Number.isFinite(targetMonthlySpending) && targetMonthlySpending >= 0
+        Number.isFinite(targetMonthlySpending) && targetMonthlySpending > 0
           ? targetMonthlySpending
           : null,
       withdrawalRate: clamp(finite(settings.withdrawalRate, 4), 2, 8),
@@ -338,7 +347,7 @@ export function calculateFinancialIndependence(
 
   const currentExpenseBaseline = Math.max(
     0,
-    health.metrics.averageMonthlyExpenses,
+    emergency.metrics.protectionBaseline,
   );
   const targetMonthlySpending = Math.max(
     0,
@@ -408,9 +417,9 @@ export function calculateFinancialIndependence(
     : "Not assessed";
 
   const hasNetWorthData =
-    data.netWorthGrowth.wealthScore.financialHealth.transactions.count > 0 ||
-    data.netWorthGrowth.wealthScore.financialHealth.debts.count > 0 ||
-    data.netWorthGrowth.wealthScore.liabilities.length > 0;
+    growth.metrics.currentDebt > 0 ||
+    growth.metrics.currentNetWorth !== 0 ||
+    data.netWorthGrowth.wealthScore.financialHealth.transactions.count > 0;
   const hasBillData =
     data.savingsIntelligence.cashFlow.financialHealth.bills.count > 0;
   const readiness: FinancialIndependenceReadinessItem[] = [
@@ -431,8 +440,8 @@ export function calculateFinancialIndependence(
         emergency.dataCoverage > 0 && emergency.metrics.coverageMonths >= 3,
       detail:
         emergency.dataCoverage > 0
-          ? `${round(emergency.metrics.coverageMonths, 1)} months of average expenses are currently protected.`
-          : "No expense baseline and emergency-reserve history are available yet.",
+          ? `${round(emergency.metrics.coverageMonths, 1)} months of the monthly protection baseline are currently protected.`
+          : "No protection baseline and emergency-reserve history are available yet.",
     },
     {
       id: "positive-flow",
@@ -452,7 +461,7 @@ export function calculateFinancialIndependence(
         savings.metrics.consistencyRate >= 0.5 &&
         monthlyWealthContribution > 0,
       detail: savings.hasSavingsData
-        ? `${round(savings.metrics.consistencyRate * 100)}% saving consistency with ${roundedCurrency(monthlyWealthContribution)} EUR average monthly wealth-building pace.`
+        ? `${round(savings.metrics.consistencyRate * 100)}% saving consistency with ${currencyText(monthlyWealthContribution)} average monthly wealth-building pace.`
         : "No non-emergency saving history is available yet.",
     },
     {
@@ -509,12 +518,14 @@ export function calculateFinancialIndependence(
     [0.75, "Three quarters"],
     [1, "Financially independent"],
   ] as const;
-  const milestones = milestoneDefinitions.map(([percentage, label]) => ({
-    percentage: percentage * 100,
-    label,
-    amount: financialIndependenceTarget * percentage,
-    reached: progress >= percentage,
-  }));
+  const milestones = financialIndependenceTarget > 0
+    ? milestoneDefinitions.map(([percentage, label]) => ({
+        percentage: percentage * 100,
+        label,
+        amount: financialIndependenceTarget * percentage,
+        reached: progress >= percentage,
+      }))
+    : [];
 
   const completedHistoryMonths = completeMonths(growth.fullMonthly).length;
   const dataCoverage = assessed
@@ -596,7 +607,7 @@ export function calculateFinancialIndependence(
       id: "target",
       tone: "info",
       title: "Your target is assumption-driven",
-      description: `${roundedCurrency(targetMonthlySpending)} EUR monthly lifestyle spending at a ${withdrawalRate.toFixed(1)}% withdrawal assumption creates a target of ${roundedCurrency(financialIndependenceTarget)} EUR.`,
+      description: `${currencyText(targetMonthlySpending)} of monthly lifestyle spending at a ${withdrawalRate.toFixed(1)}% withdrawal assumption creates a target of ${currencyText(financialIndependenceTarget)}.`,
       action:
         "Adjust the planning assumptions when your long-term lifestyle expectation changes.",
     },
@@ -607,7 +618,7 @@ export function calculateFinancialIndependence(
         currentNetWorth >= 0
           ? "Positive capital is working toward freedom"
           : "Liabilities currently lead the position",
-      description: `${roundedCurrency(protectedEmergencyReserve)} EUR is protected as emergency reserve and excluded from investable Financial Independence capital.`,
+      description: `${currencyText(protectedEmergencyReserve)} is protected as emergency reserve and excluded from investable Financial Independence capital.`,
       action:
         currentNetWorth >= 0
           ? "Preserve the emergency reserve while increasing long-term capital."
@@ -617,7 +628,7 @@ export function calculateFinancialIndependence(
       id: "pace",
       tone: monthlyWealthContribution > 0 ? "positive" : "critical",
       title: "Monthly wealth-building pace",
-      description: `${roundedCurrency(monthlySavingsPace)} EUR of non-emergency savings plus ${roundedCurrency(monthlyDebtReductionPace)} EUR of average debt reduction produces a ${roundedCurrency(monthlyWealthContribution)} EUR monthly pace.`,
+      description: `${currencyText(monthlySavingsPace)} of non-emergency savings plus ${currencyText(monthlyDebtReductionPace)} of average debt reduction produces a ${currencyText(monthlyWealthContribution)} monthly pace.`,
       action:
         monthlyWealthContribution > 0
           ? "Keep the pace repeatable before increasing it."

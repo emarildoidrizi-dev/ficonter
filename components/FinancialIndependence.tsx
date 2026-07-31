@@ -75,7 +75,7 @@ function parseAmount(value: string): number | null {
   const normalized = value.replace(",", ".").trim();
   if (!normalized) return null;
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 export function FinancialIndependence({
@@ -306,6 +306,12 @@ export function FinancialIndependence({
   }
 
   const stageSlug = result.stage.toLowerCase().replaceAll(" ", "-");
+  const nextActionDestination =
+    result.stage === "Debt-clearing"
+      ? { href: "/dashboard/debt", label: "Review debt" }
+      : result.sources.emergency.metrics.coverageMonths < 3
+        ? { href: "/dashboard/emergency-fund", label: "Review emergency fund" }
+        : { href: "/dashboard/savings", label: "Review savings intelligence" };
 
   return (
     <section className={styles.shell}>
@@ -395,9 +401,9 @@ export function FinancialIndependence({
               <h2>{result.stage}</h2>
             </div>
             <div className={styles.confidence}>
-              <small>Data confidence</small>
+              <small>Planning-data confidence</small>
               <strong>{result.confidence}</strong>
-              <span>{result.dataCoverage}% coverage</span>
+              <span>{result.dataCoverage}% planning-data coverage</span>
             </div>
           </div>
           <p>{result.summary}</p>
@@ -582,15 +588,21 @@ export function FinancialIndependence({
           </div>
           <Target size={24} aria-hidden="true" />
         </div>
-        <div className={styles.milestoneGrid}>
-          {result.milestones.map((milestone) => (
-            <div key={milestone.percentage} data-reached={milestone.reached}>
-              <span>{milestone.percentage}%</span>
-              <strong>{milestone.label}</strong>
-              <small>{formatCurrency(milestone.amount, "EUR")}</small>
-            </div>
-          ))}
-        </div>
+        {result.milestones.length ? (
+          <div className={styles.milestoneGrid}>
+            {result.milestones.map((milestone) => (
+              <div key={milestone.percentage} data-reached={milestone.reached}>
+                <span>{milestone.percentage}%</span>
+                <strong>{milestone.label}</strong>
+                <small>{formatCurrency(milestone.amount, "EUR")}</small>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className={styles.disclaimer}>
+            Enter a monthly lifestyle target or use the current protection baseline to activate capital milestones.
+          </p>
+        )}
       </article>
 
       <div className={styles.twoColumn}>
@@ -631,8 +643,8 @@ export function FinancialIndependence({
           <div>
             <span>Next best action</span>
             <h2>{result.nextBestAction}</h2>
-            <Link href="/dashboard/savings">
-              Review savings intelligence
+            <Link href={nextActionDestination.href}>
+              {nextActionDestination.label}
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </div>

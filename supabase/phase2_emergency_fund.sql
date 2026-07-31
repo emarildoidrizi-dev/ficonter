@@ -15,6 +15,7 @@ as $$
 declare
   v_user_id uuid := auth.uid();
   v_health jsonb;
+  v_cash_flow jsonb;
   v_result jsonb;
 begin
   if v_user_id is null then
@@ -22,17 +23,19 @@ begin
   end if;
 
   v_health := public.get_financial_health_inputs();
+  v_cash_flow := public.get_cash_flow_intelligence_inputs_v2();
 
   with contribution_bounds as (
     select min(
       date_trunc(
         'month',
-        coalesce(occurred_at, transaction_date::timestamptz, created_at)
+        transaction_date
       )::date
     ) as first_month
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and lower(trim(category)) = 'emergency fund'
   ),
   month_range as (
@@ -50,15 +53,13 @@ begin
   ),
   monthly_contributions as (
     select
-      date_trunc(
-        'month',
-        coalesce(occurred_at, transaction_date::timestamptz)
-      )::date as month_start,
+      date_trunc('month', transaction_date)::date as month_start,
       count(*)::integer as contribution_count,
       coalesce(sum(amount_eur), 0)::numeric as contribution
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and lower(trim(category)) = 'emergency fund'
     group by 1
   ),
@@ -80,6 +81,7 @@ begin
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and lower(trim(category)) = 'emergency fund'
     order by coalesce(occurred_at, transaction_date::timestamptz, created_at) desc
     limit 10
@@ -91,12 +93,14 @@ begin
     from public.transactions
     where user_id = v_user_id
       and type = 'saving'
+      and transaction_date <= current_date
       and lower(trim(category)) = 'emergency fund'
   )
   select jsonb_build_object(
     'schemaVersion', 2,
     'generatedAt', now(),
     'financialHealth', v_health,
+    'oneMonthCommitments', coalesce((v_cash_flow #>> '{commitments,total}')::numeric, 0),
     'monthly', (
       select coalesce(
         jsonb_agg(

@@ -118,7 +118,7 @@ begin
   end if;
 
   -- These two aggregate functions already compose every Phase 2 source of truth.
-  v_cash_flow := public.get_cash_flow_intelligence_inputs();
+  v_cash_flow := public.get_cash_flow_intelligence_inputs_v2();
   v_financial_independence := public.get_financial_independence_inputs();
 
   select jsonb_build_object(

@@ -447,7 +447,7 @@ export function calculateSavingsIntelligence(
       tone: "critical",
       title: "No saving contributions are recorded yet",
       detail:
-        "Savings Intelligence becomes meaningful once at least one General Saving transaction is recorded.",
+        "Savings Intelligence becomes meaningful once at least one non-emergency saving transaction is recorded.",
       action: "Record a first sustainable saving contribution in Transactions.",
     });
   } else if (recommendedMonthlyTarget > 0 && monthlyGap > 0) {

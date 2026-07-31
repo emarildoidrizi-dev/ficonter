@@ -20,7 +20,7 @@ expect(engine.includes("projectedTwelveMonthNetWorth"), "Directional 12-month ou
 expect(engine.includes("forecastAvailable"), "Forecast availability is explicit");
 expect(engine.includes("forecastHistoryMonths >= 3"), "Forecast requires three completed comparable changes");
 expect(engine.includes("completedMonthly.slice(1)"), "Opening baseline is excluded from forecasting");
-expect(engine.includes("selectedMonthly.slice(1)"), "Opening baseline is excluded from growth metrics");
+expect(engine.includes("selectedCompletedMonthly.slice(1)"), "Opening baseline is excluded from growth metrics");
 expect(engine.includes("netDebtReduction"), "Net liability movement is measured");
 expect(engine.includes("savingsAllocated"), "Savings allocation is visible without double counting");
 expect(engine.includes("groupAnnual"), "Annual growth summaries are generated");

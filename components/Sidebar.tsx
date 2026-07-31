@@ -1,40 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Activity,
-  BrainCircuit,
-  ArrowLeftRight,
-  ChartPie,
-  Compass,
-  ChevronDown,
-  ChevronUp,
-  CircleHelp,
-  CreditCard,
-  Flag,
-  FileArchive,
-  Landmark,
-  LayoutDashboard,
-  ListChecks,
-  MessageSquareText,
-  LogOut,
-  PiggyBank,
-  ReceiptText,
-  Settings,
-  ShieldCheck,
-  Target,
-  Umbrella,
-  UserRound,
-} from "lucide-react";
+import { Activity, ArrowLeftRight, ChartPie, ChevronDown, ChevronUp, CircleHelp, FileArchive, LayoutDashboard, ListChecks, MessageSquareText, LogOut, ReceiptText, Settings, ShieldCheck, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
 import { Brand } from "./Brand";
@@ -75,7 +45,6 @@ type NavigationGroup = {
 
 const primaryLinks = [
   ["/dashboard", LayoutDashboard, "Overview"],
-  ["/dashboard/gps", Compass, "Financial GPS"],
 ] as const satisfies readonly NavigationLink[];
 
 const standardGroups = [
@@ -87,23 +56,6 @@ const standardGroups = [
       ["/dashboard/cash-flow", Activity, "Cash flow"],
       ["/dashboard/budget", ChartPie, "Monthly planner"],
       ["/dashboard/bills", ReceiptText, "Bills"],
-    ],
-  },
-  {
-    key: "financial-progress",
-    label: "Financial progress",
-    links: [
-      ["/dashboard/emergency-fund", Umbrella, "Emergency fund"],
-      ["/dashboard/savings", PiggyBank, "Savings intelligence"],
-      ["/dashboard/debt", CreditCard, "Debt"],
-      ["/dashboard/goals", Target, "Goals"],
-      ["/dashboard/net-worth", Landmark, "Net worth"],
-      [
-        "/dashboard/financial-independence",
-        Flag,
-        "Financial independence",
-      ],
-      ["/dashboard/insights", BrainCircuit, "Smart insights"],
     ],
   },
   {
@@ -150,12 +102,10 @@ export function Sidebar({
       isRouteActive(pathname, "/dashboard/bills"),
     "financial-progress":
       isRouteActive(pathname, "/dashboard/emergency-fund") ||
-      isRouteActive(pathname, "/dashboard/savings") ||
       isRouteActive(pathname, "/dashboard/debt") ||
       isRouteActive(pathname, "/dashboard/goals") ||
       isRouteActive(pathname, "/dashboard/net-worth") ||
       isRouteActive(pathname, "/dashboard/financial-independence") ||
-      isRouteActive(pathname, "/dashboard/insights"),
     resources: isRouteActive(pathname, "/dashboard/documents"),
     administration:
       isRouteActive(pathname, "/dashboard/admin") ||

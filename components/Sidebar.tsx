@@ -105,7 +105,7 @@ export function Sidebar({
       isRouteActive(pathname, "/dashboard/debt") ||
       isRouteActive(pathname, "/dashboard/goals") ||
       isRouteActive(pathname, "/dashboard/net-worth") ||
-      isRouteActive(pathname, "/dashboard/financial-independence") ||
+      isRouteActive(pathname, "/dashboard/financial-independence") ,
     resources: isRouteActive(pathname, "/dashboard/documents"),
     administration:
       isRouteActive(pathname, "/dashboard/admin") ||

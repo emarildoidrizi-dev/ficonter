@@ -28,6 +28,14 @@ export type CashFlowCommitment = {
   category: string;
   dueDate: string | null;
   amount: number;
+  originalAmount?: number;
+  paidThisMonth?: number;
+};
+
+export type CashFlowDebtPaymentInput = {
+  debtId: string;
+  amountEur: number;
+  paidAt: string;
 };
 
 export type CashFlowIntelligenceInputs = {
@@ -101,6 +109,10 @@ export type CashFlowIntelligenceResult = {
     trendPercent: number | null;
     volatility: number;
     incomeConsistency: number;
+    availableNow: number;
+    stillToPay: number;
+    leftAfterPayments: number;
+    paidDebtMinimumsThisMonth: number;
   };
   monthly: CashFlowMonth[];
   categories: CashFlowCategory[];
@@ -154,9 +166,9 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function round(value: number, digits = 1): number {
+function round(value: number, digits = 2): number {
   const factor = 10 ** digits;
-  return Math.round(value * factor) / factor;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function average(values: number[]): number {
@@ -214,6 +226,19 @@ function normalizeCommitment(value: unknown): CashFlowCommitment | null {
   };
 }
 
+function normalizeDebtPayment(value: unknown): CashFlowDebtPaymentInput | null {
+  const row = object(value);
+  const debtId = string(row.debtId, string(row.debt_id));
+  const paidAt = string(row.paidAt, string(row.paid_at));
+  if (!debtId || !paidAt) return null;
+
+  return {
+    debtId,
+    amountEur: Math.max(0, finite(row.amountEur, finite(row.amount_eur))),
+    paidAt,
+  };
+}
+
 export function normalizeCashFlowIntelligenceInputs(
   value: unknown,
 ): CashFlowIntelligenceInputs {
@@ -245,15 +270,17 @@ export function normalizeCashFlowIntelligenceInputs(
   };
 }
 
-function outlookLabel(
-  projectedNetCashFlow: number,
-  projectedMargin: number,
-  commitmentRatio: number,
-): CashFlowOutlookLabel {
-  if (projectedNetCashFlow < 0) return "Negative";
-  if (projectedMargin < 0.08 || commitmentRatio > 0.7) return "Tight";
-  if (projectedMargin < 0.2 || commitmentRatio > 0.45) return "Positive";
-  return "Strong";
+export function normalizeCashFlowDebtPayments(
+  value: unknown,
+): CashFlowDebtPaymentInput[] {
+  return array(value)
+    .map(normalizeDebtPayment)
+    .filter((item): item is CashFlowDebtPaymentInput => Boolean(item));
+}
+
+function monthKey(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}` : "";
 }
 
 function confidenceFor(coverage: number): CashFlowIntelligenceResult["confidence"] {
@@ -263,51 +290,121 @@ function confidenceFor(coverage: number): CashFlowIntelligenceResult["confidence
   return "Developing";
 }
 
+function outlookLabel(
+  leftAfterPayments: number,
+  projectedMargin: number,
+  commitmentRatio: number,
+): CashFlowOutlookLabel {
+  if (leftAfterPayments < 0) return "Negative";
+  if (projectedMargin < 0.08 || commitmentRatio > 0.75) return "Tight";
+  if (projectedMargin < 0.2 || commitmentRatio > 0.5) return "Positive";
+  return "Strong";
+}
+
+function adjustCommitments(
+  commitments: CashFlowIntelligenceInputs["commitments"],
+  debtPayments: CashFlowDebtPaymentInput[],
+  currentMonth: string,
+): CashFlowIntelligenceInputs["commitments"] & {
+  paidDebtMinimumsThisMonth: number;
+} {
+  const paymentsByDebt = new Map<string, number>();
+
+  for (const payment of debtPayments) {
+    if (monthKey(payment.paidAt) !== currentMonth) continue;
+    paymentsByDebt.set(
+      payment.debtId,
+      round((paymentsByDebt.get(payment.debtId) ?? 0) + payment.amountEur),
+    );
+  }
+
+  let paidDebtMinimumsThisMonth = 0;
+  const items = commitments.items
+    .map((item) => {
+      if (item.kind !== "debt") {
+        return {
+          ...item,
+          originalAmount: item.amount,
+          paidThisMonth: 0,
+        };
+      }
+
+      const debtId = item.id.startsWith("debt:") ? item.id.slice(5) : item.id;
+      const totalPaid = paymentsByDebt.get(debtId) ?? 0;
+      const creditedPayment = Math.min(item.amount, totalPaid);
+      const remaining = Math.max(0, round(item.amount - creditedPayment));
+      paidDebtMinimumsThisMonth = round(
+        paidDebtMinimumsThisMonth + creditedPayment,
+      );
+
+      return {
+        ...item,
+        amount: remaining,
+        originalAmount: item.amount,
+        paidThisMonth: creditedPayment,
+      };
+    })
+    .filter((item) => item.amount > 0);
+
+  const billsTotal = round(
+    items
+      .filter((item) => item.kind === "bill")
+      .reduce((sum, item) => sum + item.amount, 0),
+  );
+  const debtMinimums = round(
+    items
+      .filter((item) => item.kind === "debt")
+      .reduce((sum, item) => sum + item.amount, 0),
+  );
+
+  return {
+    total: round(billsTotal + debtMinimums),
+    billsTotal,
+    debtMinimums,
+    items,
+    paidDebtMinimumsThisMonth,
+  };
+}
+
 export function calculateCashFlowIntelligence(
   input: CashFlowIntelligenceInputs = EMPTY_INPUTS,
+  debtPaymentInput: CashFlowDebtPaymentInput[] = [],
 ): CashFlowIntelligenceResult {
   const data = normalizeCashFlowIntelligenceInputs(input);
+  const debtPayments = normalizeCashFlowDebtPayments(debtPaymentInput);
   const health = calculateFinancialHealth(data.financialHealth);
   const months = data.monthly.slice(-12);
   const currentMonth = months.at(-1) ?? normalizeMonth(null);
   const recentMonths = months.slice(-3);
   const priorMonths = months.slice(-6, -3);
   const activeMonths = months.filter((month) => month.transactionCount > 0);
-  const plannerHasData =
-    data.planner.plannedIncome > 0 || data.planner.plannedOutflow > 0;
-  const commitmentsHaveData =
-    data.commitments.items.some((item) => item.amount > 0) ||
-    data.commitments.total > 0;
-  const forecastAvailable =
-    activeMonths.length > 0 || plannerHasData || commitmentsHaveData;
+  const currentMonthKey =
+    currentMonth.month || monthKey(data.generatedAt) || monthKey(new Date().toISOString());
+  const adjustedCommitments = adjustCommitments(
+    data.commitments,
+    debtPayments,
+    currentMonthKey,
+  );
 
   const averageMonthlyIncome = average(recentMonths.map((month) => month.income));
   const averageMonthlyOutflow = average(recentMonths.map((month) => month.outflow));
   const recentNetAverage = average(recentMonths.map((month) => month.netCashFlow));
   const priorNetAverage = average(priorMonths.map((month) => month.netCashFlow));
-  const trendChange = recentNetAverage - priorNetAverage;
+  const trendChange = round(recentNetAverage - priorNetAverage);
   const trendPercent =
     Math.abs(priorNetAverage) > 0.01
       ? (trendChange / Math.abs(priorNetAverage)) * 100
       : null;
 
-  const expectedIncome = Math.max(
-    currentMonth.income,
-    data.planner.plannedIncome,
-    averageMonthlyIncome,
-  );
-  const expectedOutflow = Math.max(
-    currentMonth.outflow,
-    data.planner.plannedOutflow,
-    averageMonthlyOutflow,
-    data.commitments.total,
-  );
-  const projectedNetCashFlow = expectedIncome - expectedOutflow;
-  const projectedMargin = expectedIncome > 0 ? projectedNetCashFlow / expectedIncome : 0;
+  const availableNow = round(currentMonth.netCashFlow);
+  const stillToPay = round(adjustedCommitments.total);
+  const leftAfterPayments = round(availableNow - stillToPay);
+  const projectedMargin =
+    Math.abs(availableNow) > 0.01 ? leftAfterPayments / Math.abs(availableNow) : 0;
   const commitmentRatio =
-    expectedIncome > 0
-      ? data.commitments.total / expectedIncome
-      : data.commitments.total > 0
+    availableNow > 0
+      ? stillToPay / availableNow
+      : stillToPay > 0
         ? 1
         : 0;
 
@@ -340,68 +437,67 @@ export function calculateCashFlowIntelligence(
     .sort((a, b) => b.recentAmount - a.recentAmount)
     .slice(0, 6);
 
+  const forecastAvailable =
+    currentMonth.transactionCount > 0 ||
+    Math.abs(availableNow) > 0.01 ||
+    stillToPay > 0;
   const label = forecastAvailable
-    ? outlookLabel(projectedNetCashFlow, projectedMargin, commitmentRatio)
+    ? outlookLabel(leftAfterPayments, projectedMargin, commitmentRatio)
     : "Not enough data";
-  const topCategory = categories[0];
-  const insights: CashFlowInsight[] = [];
 
+  const insights: CashFlowInsight[] = [];
   if (!forecastAvailable) {
     insights.push({
       id: "no-data",
-      title: "Cash-flow outlook is waiting for records",
-      detail: "No income, outflow, commitment or planner amount is available for forecasting yet.",
-      action: "Record the first income or outflow to activate Cash Flow Intelligence.",
+      title: "Cash flow is waiting for records",
+      detail: "No current balance or unpaid commitment is available yet.",
+      action: "Add income, expenses, bills or debt payments to activate this view.",
       tone: "info",
     });
-  } else if (projectedNetCashFlow < 0) {
+  } else if (leftAfterPayments < 0) {
     insights.push({
-      id: "negative-outlook",
-      title: "Projected outflow is above expected income",
-      detail: `The current estimate is short by ${Math.abs(projectedNetCashFlow).toLocaleString("en-US", {
-        style: "currency",
-        currency: "EUR",
-      })} over the next monthly cycle.`,
-      action: "Reduce flexible outflow or update expected income in Monthly Planner.",
+      id: "shortfall",
+      title: "Scheduled payments are above the amount available now",
+      detail: `The listed unpaid commitments create an expected shortfall of ${Math.abs(
+        leftAfterPayments,
+      ).toLocaleString("en-US", { style: "currency", currency: "EUR" })}.`,
+      action: "Review the unpaid breakdown and adjust payment dates or spending.",
       tone: "critical",
     });
-  } else if (projectedMargin >= 0.2) {
+  } else {
     insights.push({
-      id: "healthy-margin",
-      title: "Your expected cash-flow margin is strong",
-      detail: `${round(projectedMargin * 100)}% of expected income remains after the conservative outflow estimate.`,
-      action: "Protect this margin and direct it toward savings, debt reduction or goals.",
-      tone: "positive",
+      id: "covered",
+      title: "The listed scheduled payments are covered",
+      detail: `${leftAfterPayments.toLocaleString("en-US", {
+        style: "currency",
+        currency: "EUR",
+      })} is expected to remain after the unpaid commitments shown here.`,
+      action: "Keep transactions and payment statuses current so this amount stays accurate.",
+      tone: leftAfterPayments > availableNow * 0.2 ? "positive" : "warning",
     });
   }
 
-  if (commitmentRatio > 0.5) {
+  if (adjustedCommitments.paidDebtMinimumsThisMonth > 0) {
     insights.push({
-      id: "commitment-pressure",
-      title: "Known commitments use a large share of expected income",
-      detail: `${round(commitmentRatio * 100)}% of expected income is represented by upcoming bills and minimum debt payments.`,
-      action: "Review recurring obligations before adding new fixed commitments.",
-      tone: commitmentRatio > 0.75 ? "critical" : "warning",
+      id: "paid-minimums-excluded",
+      title: "Recorded debt payments are not counted twice",
+      detail: `${adjustedCommitments.paidDebtMinimumsThisMonth.toLocaleString("en-US", {
+        style: "currency",
+        currency: "EUR",
+      })} of this month's debt minimums has already been recorded and removed from Still to pay.`,
+      action: "No manual adjustment is needed for those recorded payments.",
+      tone: "info",
     });
   }
 
+  const topCategory = categories[0];
   if (topCategory && topCategory.share >= 0.3) {
     insights.push({
       id: "category-concentration",
-      title: `${topCategory.category} is the largest spending pressure`,
-      detail: `${round(topCategory.share * 100)}% of expense activity from the last 90 days is concentrated in this category.`,
-      action: "Review this category first when looking for meaningful cash-flow improvements.",
+      title: `${topCategory.category} is the largest recent spending category`,
+      detail: `${round(topCategory.share * 100, 1)}% of recent expense activity is concentrated in this category.`,
+      action: "Review this category first when looking for additional room.",
       tone: topCategory.share >= 0.45 ? "warning" : "info",
-    });
-  }
-
-  if (activeMonths.length >= 4 && volatility > 0.3) {
-    insights.push({
-      id: "volatile-flow",
-      title: "Monthly cash flow is fluctuating materially",
-      detail: `Cash-flow volatility is ${round(volatility * 100)}% relative to recent average income.`,
-      action: "Use a larger monthly buffer and plan around lower-income or higher-expense months.",
-      tone: "warning",
     });
   }
 
@@ -418,49 +514,24 @@ export function calculateCashFlowIntelligence(
     });
   }
 
-  if (forecastAvailable && !plannerHasData) {
-    insights.push({
-      id: "planner-gap",
-      title: "The forecast is relying mainly on recorded history",
-      detail: "No current-month plan is available to refine expected income and outflow.",
-      action: "Complete Monthly Planner to make the outlook more precise.",
-      tone: "info",
-    });
-  }
-
   if (!insights.length) {
     insights.push({
       id: "building-history",
-      title: "Cash-flow intelligence is building its history",
-      detail: "More recorded months will improve trend, volatility and forecast confidence.",
-      action: "Keep Transactions, Bills and Monthly Planner current.",
+      title: "Cash-flow history is still building",
+      detail: "More recorded months will improve the trend and consistency information.",
+      action: "Keep Transactions and Bills current.",
       tone: "info",
     });
   }
 
-  const prioritized = [...insights].sort((a, b) => {
-    const order: Record<CashFlowInsightTone, number> = {
-      critical: 0,
-      warning: 1,
-      info: 2,
-      positive: 3,
-    };
-    return order[a.tone] - order[b.tone];
-  });
-
-  const historyCoverage = clamp(activeMonths.length / 6, 0, 1) * 35;
-  const plannerCoverage = plannerHasData ? 20 : 0;
-  const categoryCoverage = categories.length ? 15 : 0;
-  const commitmentCoverage = data.commitments.items.length ? 15 : 0;
+  const historyCoverage = clamp(activeMonths.length / 6, 0, 1) * 45;
+  const categoryCoverage = categories.length ? 20 : 0;
+  const commitmentCoverage = adjustedCommitments.items.length ? 20 : 0;
   const healthCoverage = health.dataCoverage * 0.15;
   const dataCoverage = forecastAvailable
     ? Math.round(
         clamp(
-          historyCoverage +
-            plannerCoverage +
-            categoryCoverage +
-            commitmentCoverage +
-            healthCoverage,
+          historyCoverage + categoryCoverage + commitmentCoverage + healthCoverage,
           0,
           100,
         ),
@@ -469,14 +540,10 @@ export function calculateCashFlowIntelligence(
   const confidence = confidenceFor(dataCoverage);
 
   const summary = !forecastAvailable
-    ? "No cash-flow records are available yet. Add income, outflow, bills, debt minimums or planner amounts to begin forecasting."
-    : label === "Negative"
-        ? "Expected outflow is currently above expected income. Known commitments and spending pressure should be reviewed first."
-        : label === "Tight"
-          ? "Cash flow remains positive, but the forecast leaves limited room for unexpected costs."
-          : label === "Positive"
-            ? "Cash flow is positive with a usable margin, although selected commitments or spending categories still require attention."
-            : "Cash flow is strong, positive and supported by a healthy projected margin.";
+    ? "Add financial activity to calculate what is available and what will remain after scheduled payments."
+    : leftAfterPayments < 0
+      ? "The listed unpaid bills and debt minimums are higher than the amount currently available."
+      : "This amount starts from what is available now and subtracts only the bills and debt minimums that are still unpaid.";
 
   return {
     version: "1.0",
@@ -485,22 +552,22 @@ export function calculateCashFlowIntelligence(
     confidence,
     dataCoverage,
     forecastAvailable,
-    nextBestAction: prioritized[0]?.action ?? "Keep financial records current.",
+    nextBestAction: insights[0]?.action ?? "Keep financial records current.",
     health,
     metrics: {
       currentMonthIncome: currentMonth.income,
       currentMonthExpenses: currentMonth.expenses,
       currentMonthSavings: currentMonth.savings,
       currentMonthOutflow: currentMonth.outflow,
-      currentMonthNetCashFlow: currentMonth.netCashFlow,
+      currentMonthNetCashFlow: availableNow,
       averageMonthlyIncome,
       averageMonthlyOutflow,
       averageMonthlyNetCashFlow: recentNetAverage,
-      expectedIncome,
-      expectedOutflow,
-      projectedNetCashFlow,
+      expectedIncome: currentMonth.income,
+      expectedOutflow: stillToPay,
+      projectedNetCashFlow: leftAfterPayments,
       projectedMargin,
-      knownCommitments: data.commitments.total,
+      knownCommitments: stillToPay,
       commitmentRatio,
       recentNetAverage,
       priorNetAverage,
@@ -508,10 +575,20 @@ export function calculateCashFlowIntelligence(
       trendPercent,
       volatility,
       incomeConsistency,
+      availableNow,
+      stillToPay,
+      leftAfterPayments,
+      paidDebtMinimumsThisMonth:
+        adjustedCommitments.paidDebtMinimumsThisMonth,
     },
     monthly: months,
     categories,
-    commitments: data.commitments,
+    commitments: {
+      total: adjustedCommitments.total,
+      billsTotal: adjustedCommitments.billsTotal,
+      debtMinimums: adjustedCommitments.debtMinimums,
+      items: adjustedCommitments.items,
+    },
     insights: insights.slice(0, 5),
   };
 }

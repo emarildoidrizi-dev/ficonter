@@ -7,11 +7,9 @@ import {
   ArrowUpRight,
   CalendarClock,
   CircleAlert,
-  Gauge,
-  PiggyBank,
+  ListChecks,
   ReceiptText,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
@@ -19,15 +17,18 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/financialOptions";
 import {
   calculateCashFlowIntelligence,
+  normalizeCashFlowDebtPayments,
   normalizeCashFlowIntelligenceInputs,
-  type CashFlowIntelligenceInputs,
+  type CashFlowDebtPaymentInput,
   type CashFlowInsightTone,
+  type CashFlowIntelligenceInputs,
 } from "@/lib/wealth/cashFlowIntelligence";
 import styles from "./CashFlowIntelligence.module.css";
 
 type Props = {
   userId: string;
   initialInputs: CashFlowIntelligenceInputs;
+  initialDebtPayments?: CashFlowDebtPaymentInput[];
   initialError?: string;
 };
 
@@ -60,34 +61,53 @@ function percentage(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function currentMonthStartIso(): string {
+  const now = new Date();
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0),
+  ).toISOString();
+}
+
 export function CashFlowIntelligence({
   userId,
   initialInputs,
+  initialDebtPayments = [],
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const refreshTimerRef = useRef<number | null>(null);
+  const commitmentPanelRef = useRef<HTMLElement | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
+  const [debtPayments, setDebtPayments] = useState(initialDebtPayments);
   const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setInputs(initialInputs);
+    setDebtPayments(initialDebtPayments);
     setError(initialError);
-  }, [initialError, initialInputs]);
+  }, [initialDebtPayments, initialError, initialInputs]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    const { data, error: refreshError } = await supabase.rpc(
-      "get_cash_flow_intelligence_inputs_v2",
-    );
 
+    const [inputResponse, paymentResponse] = await Promise.all([
+      supabase.rpc("get_cash_flow_intelligence_inputs_v2"),
+      supabase
+        .from("debt_payments")
+        .select("debt_id, amount_eur, paid_at")
+        .gte("paid_at", currentMonthStartIso()),
+    ]);
+
+    const refreshError = inputResponse.error ?? paymentResponse.error;
     if (refreshError) {
       setError(refreshError.message);
     } else {
-      setInputs(normalizeCashFlowIntelligenceInputs(data));
+      setInputs(normalizeCashFlowIntelligenceInputs(inputResponse.data));
+      setDebtPayments(normalizeCashFlowDebtPayments(paymentResponse.data));
       setError("");
     }
+
     setRefreshing(false);
   }, [supabase]);
 
@@ -102,7 +122,7 @@ export function CashFlowIntelligence({
 
   useEffect(() => {
     const channel = supabase
-      .channel(`cash-flow-intelligence:${userId}`)
+      .channel(`cash-flow-balance:${userId}`)
       .on(
         "postgres_changes",
         {
@@ -129,6 +149,16 @@ export function CashFlowIntelligence({
           event: "*",
           schema: "public",
           table: "debts",
+          filter: `user_id=eq.${userId}`,
+        },
+        scheduleRefresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "debt_payments",
           filter: `user_id=eq.${userId}`,
         },
         scheduleRefresh,
@@ -171,23 +201,32 @@ export function CashFlowIntelligence({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
-  const result = useMemo(() => calculateCashFlowIntelligence(inputs), [inputs]);
+  const result = useMemo(
+    () => calculateCashFlowIntelligence(inputs, debtPayments),
+    [debtPayments, inputs],
+  );
   const maxChartValue = Math.max(
     1,
     ...result.monthly.flatMap((month) => [month.income, month.outflow]),
   );
-  const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
+  const leftIsPositive = result.metrics.leftAfterPayments >= 0;
+
+  function showCommitmentBreakdown() {
+    commitmentPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
 
   return (
     <section className={styles.shell}>
       <header className={styles.pageHeader}>
         <div>
-          <span className={styles.eyebrow}>Wealth Engine</span>
-          <h1>Cash flow intelligence</h1>
+          <span className={styles.eyebrow}>Money management</span>
+          <h1>Cash flow</h1>
           <p>
-            Understand monthly movement, known commitments and spending pressure
-            using the same Transactions, Bills and Planner data already powering
-            FICONTER.
+            See what is available now, what is still unpaid, and what will remain
+            after every listed bill and debt minimum is paid.
           </p>
         </div>
         <button
@@ -197,7 +236,7 @@ export function CashFlowIntelligence({
           onClick={() => void refresh()}
         >
           <Activity size={17} aria-hidden="true" />
-          {refreshing ? "Refreshing…" : "Refresh intelligence"}
+          {refreshing ? "Refreshing…" : "Refresh cash flow"}
         </button>
       </header>
 
@@ -206,81 +245,93 @@ export function CashFlowIntelligence({
       <div className={styles.metricGrid}>
         <article>
           <ArrowUpRight aria-hidden="true" />
-          <span>Current-month income</span>
+          <span>Income recorded this month</span>
           <strong>{formatCurrency(result.metrics.currentMonthIncome, "EUR")}</strong>
-          <small>Recorded income this month</small>
+          <small>Includes recorded income and any opening-balance adjustment.</small>
         </article>
         <article>
           <ArrowDownRight aria-hidden="true" />
-          <span>Current-month outflow</span>
+          <span>Outflow recorded this month</span>
           <strong>{formatCurrency(result.metrics.currentMonthOutflow, "EUR")}</strong>
-          <small>Bills, expenses, debt payments and savings recorded this month</small>
+          <small>Expenses, paid bills, debt payments and savings already recorded.</small>
         </article>
-        <article>
+        <article className={styles.availableCard}>
           <WalletCards aria-hidden="true" />
-          <span>Current-month net flow</span>
+          <span>Available now</span>
           <strong
             className={
-              result.metrics.currentMonthNetCashFlow >= 0
-                ? styles.positive
-                : styles.negative
+              result.metrics.availableNow >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatCurrency(result.metrics.currentMonthNetCashFlow, "EUR")}
+            {formatCurrency(result.metrics.availableNow, "EUR")}
           </strong>
-          <small>Income minus every outflow</small>
-        </article>
-        <article>
-          <CalendarClock aria-hidden="true" />
-          <span>Known one-month commitments</span>
-          <strong>{formatCurrency(result.metrics.knownCommitments, "EUR")}</strong>
-          <small>Upcoming bills and debt minimums</small>
+          <small>The current amount after all recorded activity.</small>
         </article>
       </div>
 
-      <article className={styles.outlook} data-status={statusSlug}>
-        <div className={styles.outlookIcon}>
-          <Gauge size={26} aria-hidden="true" />
+      <article
+        className={styles.balanceCard}
+        data-negative={leftIsPositive ? "false" : "true"}
+      >
+        <div className={styles.balanceHeader}>
+          <div>
+            <span>After scheduled payments</span>
+            <h2>
+              {leftIsPositive
+                ? "Left after everything is paid"
+                : "Expected shortfall after everything is paid"}
+            </h2>
+          </div>
+          <div className={styles.balanceIcon}>
+            <ListChecks size={26} aria-hidden="true" />
+          </div>
         </div>
-        <div className={styles.outlookCopy}>
-          <div className={styles.outlookTitle}>
-            <div>
-              <span>One-month outlook</span>
-              <h2>{result.label}</h2>
-            </div>
-            <div className={styles.confidence}>
-              <small>Forecast-data confidence</small>
-              <strong>{result.confidence}</strong>
-              <span>{result.dataCoverage}% forecast-data coverage</span>
-            </div>
-          </div>
-          <p>{result.summary}</p>
-          <div className={styles.outlookMetrics}>
-            <span>
-              <small>Expected income</small>
-              <strong>{formatCurrency(result.metrics.expectedIncome, "EUR")}</strong>
-            </span>
-            <span>
-              <small>Conservative outflow</small>
-              <strong>{formatCurrency(result.metrics.expectedOutflow, "EUR")}</strong>
-            </span>
-            <span>
-              <small>Projected net flow</small>
-              <strong
-                className={
-                  result.metrics.projectedNetCashFlow >= 0
-                    ? styles.positive
-                    : styles.negative
-                }
-              >
-                {formatCurrency(result.metrics.projectedNetCashFlow, "EUR")}
-              </strong>
-            </span>
-            <span>
-              <small>Projected margin</small>
-              <strong>{percentage(result.metrics.projectedMargin)}</strong>
-            </span>
-          </div>
+
+        <strong
+          className={`${styles.balanceAmount} ${
+            leftIsPositive ? styles.positive : styles.negative
+          }`}
+        >
+          {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+        </strong>
+        <p>{result.summary}</p>
+
+        <div className={styles.balanceEquation} aria-label="Balance calculation">
+          <span>
+            <small>Available now</small>
+            <strong>{formatCurrency(result.metrics.availableNow, "EUR")}</strong>
+          </span>
+          <b aria-hidden="true">−</b>
+          <span>
+            <small>Still to pay</small>
+            <strong>{formatCurrency(result.metrics.stillToPay, "EUR")}</strong>
+          </span>
+          <b aria-hidden="true">=</b>
+          <span className={styles.equationResult}>
+            <small>{leftIsPositive ? "Left" : "Shortfall"}</small>
+            <strong
+              className={leftIsPositive ? styles.positive : styles.negative}
+            >
+              {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+            </strong>
+          </span>
+        </div>
+
+        <div className={styles.balanceActions}>
+          <button type="button" onClick={showCommitmentBreakdown}>
+            <ListChecks size={17} aria-hidden="true" />
+            View unpaid breakdown
+          </button>
+          {result.metrics.paidDebtMinimumsThisMonth > 0 ? (
+            <small>
+              {formatCurrency(
+                result.metrics.paidDebtMinimumsThisMonth,
+                "EUR",
+              )}{" "}
+              of recorded debt payments was removed from Still to pay to prevent
+              double counting.
+            </small>
+          ) : null}
         </div>
       </article>
 
@@ -292,23 +343,34 @@ export function CashFlowIntelligence({
               <h2>Income and outflow trend</h2>
             </div>
             <div className={styles.legend} aria-label="Chart legend">
-              <span><i className={styles.incomeDot} />Income</span>
-              <span><i className={styles.outflowDot} />Outflow</span>
+              <span>
+                <i className={styles.incomeDot} />Income
+              </span>
+              <span>
+                <i className={styles.outflowDot} />Outflow
+              </span>
             </div>
           </header>
-
-          <div className={styles.chart} role="img" aria-label="Twelve-month income and outflow chart">
+          <div
+            className={styles.chart}
+            role="img"
+            aria-label="Twelve-month income and outflow chart"
+          >
             {result.monthly.map((month) => (
               <div className={styles.chartMonth} key={month.month}>
                 <div className={styles.barArea}>
                   <span
                     className={styles.incomeBar}
-                    style={{ height: `${Math.max(2, (month.income / maxChartValue) * 100)}%` }}
+                    style={{
+                      height: `${Math.max(2, (month.income / maxChartValue) * 100)}%`,
+                    }}
                     title={`Income ${formatCurrency(month.income, "EUR")}`}
                   />
                   <span
                     className={styles.outflowBar}
-                    style={{ height: `${Math.max(2, (month.outflow / maxChartValue) * 100)}%` }}
+                    style={{
+                      height: `${Math.max(2, (month.outflow / maxChartValue) * 100)}%`,
+                    }}
                     title={`Outflow ${formatCurrency(month.outflow, "EUR")}`}
                   />
                 </div>
@@ -316,7 +378,6 @@ export function CashFlowIntelligence({
               </div>
             ))}
           </div>
-
           <div className={styles.trendSummary}>
             <span>
               <small>Recent three-month net average</small>
@@ -325,7 +386,9 @@ export function CashFlowIntelligence({
             <span>
               <small>Change vs previous three months</small>
               <strong
-                className={result.metrics.trendChange >= 0 ? styles.positive : styles.negative}
+                className={
+                  result.metrics.trendChange >= 0 ? styles.positive : styles.negative
+                }
               >
                 {result.metrics.trendChange >= 0 ? "+" : ""}
                 {formatCurrency(result.metrics.trendChange, "EUR")}
@@ -338,43 +401,51 @@ export function CashFlowIntelligence({
           </div>
         </article>
 
-        <article className={styles.panel}>
+        <article className={styles.panel} ref={commitmentPanelRef}>
           <header className={styles.panelHeader}>
             <div>
-              <span>Fixed pressure</span>
-              <h2>Known commitments</h2>
+              <span>Unpaid breakdown</span>
+              <h2>Still to pay</h2>
             </div>
-            <strong className={styles.commitmentRatio}>
-              {percentage(result.metrics.commitmentRatio)} of expected income
+            <strong className={styles.commitmentTotal}>
+              {formatCurrency(result.metrics.stillToPay, "EUR")}
             </strong>
           </header>
-
           <div className={styles.commitmentSplit}>
             <span>
               <ReceiptText aria-hidden="true" />
-              <small>Upcoming bills</small>
+              <small>Unpaid bills</small>
               <strong>{formatCurrency(result.commitments.billsTotal, "EUR")}</strong>
             </span>
             <span>
               <ShieldCheck aria-hidden="true" />
-              <small>Debt minimums</small>
+              <small>Remaining debt minimums</small>
               <strong>{formatCurrency(result.commitments.debtMinimums, "EUR")}</strong>
             </span>
           </div>
-
           <div className={`${styles.commitmentList} ficonter-scroll-region`}>
             {result.commitments.items.length ? (
               result.commitments.items.map((item) => (
                 <div className={styles.commitmentRow} key={item.id}>
                   <div>
                     <strong>{item.name}</strong>
-                    <small>{item.category} · {dateLabel(item.dueDate)}</small>
+                    <small>
+                      {item.category} · {dateLabel(item.dueDate)}
+                    </small>
+                    {item.kind === "debt" && (item.paidThisMonth ?? 0) > 0 ? (
+                      <em>
+                        {formatCurrency(item.paidThisMonth ?? 0, "EUR")} already
+                        recorded this month
+                      </em>
+                    ) : null}
                   </div>
                   <b>{formatCurrency(item.amount, "EUR")}</b>
                 </div>
               ))
             ) : (
-              <p className={styles.empty}>No known commitments in the next calendar month.</p>
+              <p className={styles.empty}>
+                No unpaid bills or remaining debt minimums are currently listed.
+              </p>
             )}
           </div>
         </article>
@@ -388,7 +459,6 @@ export function CashFlowIntelligence({
               <h2>Spending pressure</h2>
             </div>
           </header>
-
           <div className={styles.categoryList}>
             {result.categories.length ? (
               result.categories.map((category) => (
@@ -402,24 +472,31 @@ export function CashFlowIntelligence({
                       <b>{formatCurrency(category.recentAmount, "EUR")}</b>
                       <small
                         className={
-                          category.changePercent !== null && category.changePercent > 0
+                          category.changePercent !== null &&
+                          category.changePercent > 0
                             ? styles.negative
                             : styles.positive
                         }
                       >
                         {category.changePercent === null
-                          ? "New pressure"
+                          ? "New activity"
                           : `${category.changePercent > 0 ? "+" : ""}${category.changePercent.toFixed(0)}% vs prior 90 days`}
                       </small>
                     </div>
                   </div>
                   <div className={styles.categoryTrack} aria-hidden="true">
-                    <span style={{ width: `${Math.min(100, category.share * 100)}%` }} />
+                    <span
+                      style={{
+                        width: `${Math.min(100, category.share * 100)}%`,
+                      }}
+                    />
                   </div>
                 </div>
               ))
             ) : (
-              <p className={styles.empty}>Expense categories will appear as activity is recorded.</p>
+              <p className={styles.empty}>
+                Expense categories will appear as activity is recorded.
+              </p>
             )}
           </div>
         </article>
@@ -427,16 +504,19 @@ export function CashFlowIntelligence({
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
             <div>
-              <span>Decision support</span>
-              <h2>Cash-flow insights</h2>
+              <span>Clear calculation</span>
+              <h2>What is included</h2>
             </div>
           </header>
-
           <div className={styles.insightList}>
             {result.insights.map((insight) => {
               const Icon = INSIGHT_ICONS[insight.tone];
               return (
-                <div className={styles.insight} data-tone={insight.tone} key={insight.id}>
+                <div
+                  className={styles.insight}
+                  data-tone={insight.tone}
+                  key={insight.id}
+                >
                   <div className={styles.insightIcon}>
                     <Icon size={18} aria-hidden="true" />
                   </div>
@@ -452,19 +532,11 @@ export function CashFlowIntelligence({
         </article>
       </div>
 
-      <article className={styles.nextAction}>
-        <Sparkles size={21} aria-hidden="true" />
-        <div>
-          <span>Next best cash-flow action</span>
-          <strong>{result.nextBestAction}</strong>
-        </div>
-      </article>
-
       <p className={styles.methodNote}>
-        Forecasts are estimates, not bank balances. FICONTER conservatively combines
-        current-month activity, recent monthly averages, Monthly Planner targets and
-        known commitments. Core income, expense, savings and health values continue
-        to come from the existing Financial Health source of truth.
+        Left after everything is paid equals Available now minus only the unpaid
+        bills and remaining debt minimums shown in the breakdown. A recorded bill
+        or debt payment reduces Available now and is removed from Still to pay, so
+        it is never deducted twice.
       </p>
     </section>
   );

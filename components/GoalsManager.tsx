@@ -204,7 +204,7 @@ export function GoalsManager({
       setOpen(false);
       setEditing(null);
       setNotice(editing ? "Goal updated." : "Goal created.");
-      notifyFiconterDataChange("goals");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The goal could not be saved.");
     } finally {
@@ -275,7 +275,7 @@ export function GoalsManager({
       ]);
       setInvestmentGoal(null);
       setNotice("Investment recorded and deducted from cash flow.");
-      notifyFiconterDataChange("goals");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -312,7 +312,7 @@ export function GoalsManager({
       );
       setReversing(null);
       setNotice("Investment reversed and cash flow restored.");
-      notifyFiconterDataChange("goals");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -344,7 +344,7 @@ export function GoalsManager({
       );
       setDeleting(null);
       setNotice("Goal and linked investments deleted.");
-      notifyFiconterDataChange("goals");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The goal could not be deleted.");
     } finally {

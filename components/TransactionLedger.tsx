@@ -496,7 +496,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       setSelectedIds((current) => new Set([...current].filter((id) => !deletedIdSet.has(id))));
       setDeleteTarget(null);
       setBulkDeleteOpen(false);
-      notifyFiconterDataChange("transactions");
+      notifyFiconterDataChange("all");
 
       if (mode === "bulk") {
         const linkedChanges: string[] = [];
@@ -602,7 +602,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
     else if (data) {
       setTransactions((current) => current.map((item) => (item.id === data.id ? data : item)));
       setEditTarget(null);
-      notifyFiconterDataChange("transactions");
+      notifyFiconterDataChange("all");
       setNotice("Transaction updated.");
       window.setTimeout(() => setNotice(""), 2600);
     }

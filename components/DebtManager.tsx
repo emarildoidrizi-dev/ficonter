@@ -360,7 +360,7 @@ export function DebtManager({
           current.map((item) => (item.id === editingId ? (data as Debt) : item)),
         );
         setNotice("Debt updated.");
-        notifyFiconterDataChange("debts");
+        notifyFiconterDataChange("all");
       } else {
         const { data, error } = await supabase
           .from("debts")
@@ -374,7 +374,7 @@ export function DebtManager({
             : [data as Debt, ...current],
         );
         setNotice("Debt added.");
-        notifyFiconterDataChange("debts");
+        notifyFiconterDataChange("all");
       }
 
       resetDebtForm();
@@ -451,7 +451,7 @@ export function DebtManager({
       setPaymentError("");
       setPaymentDebt(null);
       setNotice("Payment recorded and added to Transactions.");
-      notifyFiconterDataChange("debts");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setPaymentError(readableError(error, "Payment could not be recorded."));
     } finally {
@@ -482,7 +482,7 @@ export function DebtManager({
       setPayments((current) => current.filter((item) => item.id !== payment.id));
       setDeletingPayment(null);
       setNotice("Payment deleted, linked transaction removed and debt balance restored.");
-      notifyFiconterDataChange("debts");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Payment could not be deleted.",
@@ -529,7 +529,7 @@ export function DebtManager({
             } deleted.`
           : "Debt deleted.",
       );
-      notifyFiconterDataChange("debts");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(readableError(error, "Debt could not be deleted."));
     } finally {
@@ -541,7 +541,7 @@ export function DebtManager({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <h1>Debt</h1>
+          <h1>Debts</h1>
           <p>
             Track every liability, record repayments and keep FICONTER synchronized
             across Transactions, Monthly Planner and Net Worth.

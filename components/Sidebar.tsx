@@ -1,7 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowLeftRight, ChartPie, ChevronDown, ChevronUp, CircleHelp, FileArchive, LayoutDashboard, ListChecks, MessageSquareText, LogOut, ReceiptText, Settings, ShieldCheck, UserRound } from "lucide-react";
+import {
+  Activity,
+  ArrowLeftRight,
+  ChartPie,
+  ChevronDown,
+  ChevronUp,
+  CircleHelp,
+  CreditCard,
+  FileArchive,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  MessageSquareText,
+  PiggyBank,
+  ReceiptText,
+  Settings,
+  ShieldCheck,
+  Target,
+  UserRound,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -59,6 +78,15 @@ const standardGroups = [
     ],
   },
   {
+    key: "financial-progress",
+    label: "Financial progress",
+    links: [
+      ["/dashboard/savings", PiggyBank, "Savings"],
+      ["/dashboard/debt", CreditCard, "Debts"],
+      ["/dashboard/goals", Target, "Goals"],
+    ],
+  },
+  {
     key: "resources",
     label: "Account & support",
     links: [["/dashboard/documents", FileArchive, "Documents"]],
@@ -101,11 +129,9 @@ export function Sidebar({
       isRouteActive(pathname, "/dashboard/budget") ||
       isRouteActive(pathname, "/dashboard/bills"),
     "financial-progress":
-      isRouteActive(pathname, "/dashboard/emergency-fund") ||
+      isRouteActive(pathname, "/dashboard/savings") ||
       isRouteActive(pathname, "/dashboard/debt") ||
-      isRouteActive(pathname, "/dashboard/goals") ||
-      isRouteActive(pathname, "/dashboard/net-worth") ||
-      isRouteActive(pathname, "/dashboard/financial-independence") ||
+      isRouteActive(pathname, "/dashboard/goals"),
     resources: isRouteActive(pathname, "/dashboard/documents"),
     administration:
       isRouteActive(pathname, "/dashboard/admin") ||

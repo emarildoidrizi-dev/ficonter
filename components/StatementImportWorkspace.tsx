@@ -632,7 +632,7 @@ export function StatementImportWorkspace({ existingTransactions }: Props) {
       }
       setResult(completedResult);
       setStep(4);
-      notifyFiconterDataChange("transactions");
+      notifyFiconterDataChange("all");
     } catch (importFailure) {
       setError(
         importFailure instanceof Error

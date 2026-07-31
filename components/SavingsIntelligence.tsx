@@ -191,13 +191,12 @@ export function SavingsIntelligence({
     <section className={styles.shell}>
       <header className={styles.pageHeader}>
         <div>
-          <span className={styles.eyebrow}>Wealth Engine</span>
-          <h1>Savings intelligence</h1>
+          <span className={styles.eyebrow}>Savings</span>
+          <h1>Savings</h1>
           <p>
-            Understand non-emergency saving pace, consistency, allocation and
-            future momentum using the same transactions, cash-flow totals and
-            Financial Health inputs already used across FICONTER. Emergency Fund
-            contributions remain in their dedicated module.
+            See how much you have saved, your recent contributions and your
+            monthly progress. Every figure uses the same transactions and
+            cash-flow data as the rest of FICONTER.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -547,7 +546,7 @@ export function SavingsIntelligence({
       <article className={styles.panel}>
         <header className={styles.panelHeader}>
           <div>
-            <span>Intelligence</span>
+            <span>Summary</span>
             <h2>What your saving pattern is showing</h2>
           </div>
         </header>

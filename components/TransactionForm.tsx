@@ -400,7 +400,7 @@ export function TransactionForm({
       setShowAllCategories(false);
       transactionTimeWasEdited.current = false;
       setOccurredAt(localDateTimeValue());
-      notifyFiconterDataChange("transactions");
+      notifyFiconterDataChange("all");
       onSaved?.();
     } catch (submitError) {
       setError(

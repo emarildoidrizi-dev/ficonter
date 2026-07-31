@@ -374,7 +374,7 @@ export function BillsManager({
       }
 
       setMessage(editingId ? "Bill updated." : "Bill added.");
-      notifyFiconterDataChange("bills");
+      notifyFiconterDataChange("all");
       resetForm();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The bill could not be saved.");
@@ -428,7 +428,7 @@ export function BillsManager({
             ),
           );
           setMessage("Bill marked paid. Its existing transaction was preserved.");
-          notifyFiconterDataChange("bills");
+          notifyFiconterDataChange("all");
           return;
         }
       }
@@ -464,7 +464,7 @@ export function BillsManager({
           current.map((item) => (item.id === bill.id ? updatedBill! : item)),
         );
         setMessage("Bill marked paid and added to Transactions.");
-        notifyFiconterDataChange("bills");
+        notifyFiconterDataChange("all");
         return;
       }
 
@@ -521,7 +521,7 @@ export function BillsManager({
         current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
       setMessage("Bill marked paid and added to Transactions.");
-      notifyFiconterDataChange("bills");
+      notifyFiconterDataChange("all");
     } catch (error) {
       setMessage(errorMessage(error, "The bill could not be marked paid."));
     } finally {
@@ -556,7 +556,7 @@ export function BillsManager({
           current.map((item) => (item.id === bill.id ? updatedBill : item)),
         );
 
-        notifyFiconterDataChange("bills");
+        notifyFiconterDataChange("all");
         setMessage(
           Number(result?.deleted_transaction_count ?? 0) > 0
             ? "Bill marked unpaid and its linked transaction removed everywhere."
@@ -618,7 +618,7 @@ export function BillsManager({
       setBills((current) =>
         current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
       );
-      notifyFiconterDataChange("bills");
+      notifyFiconterDataChange("all");
       setMessage(
         bill.transaction_id
           ? "Bill marked unpaid and its linked transaction removed everywhere."
@@ -662,7 +662,7 @@ export function BillsManager({
 
       setBills((current) => current.filter((item) => item.id !== bill.id));
       setBillPendingDeletion(null);
-      notifyFiconterDataChange("bills");
+      notifyFiconterDataChange("all");
       setMessage(
         bill.transaction_id
           ? "Bill and linked transaction deleted."

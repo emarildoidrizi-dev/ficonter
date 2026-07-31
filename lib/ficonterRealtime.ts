@@ -5,6 +5,7 @@ export type FiconterDataScope =
   | "bills"
   | "debts"
   | "goals"
+  | "savings"
   | "planner"
   | "net-worth"
   | "settings"
@@ -26,6 +27,7 @@ const DATA_SCOPE_SET = new Set<FiconterDataScope>([
   "bills",
   "debts",
   "goals",
+  "savings",
   "planner",
   "net-worth",
   "profile",

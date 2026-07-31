@@ -21,6 +21,7 @@ function scopesForPath(pathname: string): Set<FiconterDataScope> {
       "bills",
       "debts",
       "goals",
+      "savings",
       "planner",
       "net-worth",
       "overview",
@@ -29,16 +30,16 @@ function scopesForPath(pathname: string): Set<FiconterDataScope> {
     ]);
   }
   if (pathname.startsWith("/dashboard/transactions")) {
-    return new Set(["transactions", "bills", "debts", "goals", "all"]);
+    return new Set(["transactions", "bills", "debts", "goals", "savings", "all"]);
   }
   if (pathname.startsWith("/dashboard/bills")) {
-    return new Set(["bills", "transactions", "all"]);
+    return new Set(["bills", "transactions", "savings", "all"]);
   }
   if (pathname.startsWith("/dashboard/debt")) {
-    return new Set(["debts", "transactions", "all"]);
+    return new Set(["debts", "transactions", "savings", "all"]);
   }
   if (pathname.startsWith("/dashboard/goals")) {
-    return new Set(["goals", "transactions", "all"]);
+    return new Set(["goals", "transactions", "savings", "all"]);
   }
   if (pathname.startsWith("/dashboard/budget")) {
     return new Set([
@@ -47,6 +48,7 @@ function scopesForPath(pathname: string): Set<FiconterDataScope> {
       "bills",
       "debts",
       "goals",
+      "savings",
       "all",
     ]);
   }
@@ -64,6 +66,7 @@ function scopesForPath(pathname: string): Set<FiconterDataScope> {
       "bills",
       "debts",
       "goals",
+      "savings",
       "planner",
       "net-worth",
       "overview",

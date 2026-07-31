@@ -12,7 +12,7 @@ export default async function CashFlowPage() {
   if (!user) redirect("/login");
 
   const { data, error } = await supabase.rpc(
-    "get_cash_flow_intelligence_inputs",
+    "get_cash_flow_intelligence_inputs_v2",
   );
 
   return (

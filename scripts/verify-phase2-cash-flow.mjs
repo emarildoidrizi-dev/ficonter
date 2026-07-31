@@ -17,8 +17,10 @@ const pagePath = "app/dashboard/cash-flow/page.tsx";
 const sqlPath = "supabase/phase2_cash_flow_intelligence.sql";
 const sidebarPath = "components/Sidebar.tsx";
 const packagePath = "package.json";
+const commitmentWindowPath = "lib/finance/commitmentWindow.ts";
+const migrationPath = "supabase/cash_flow_one_month_commitments_v2.sql";
 
-for (const file of [enginePath, componentPath, cssPath, pagePath, sqlPath]) {
+for (const file of [enginePath, componentPath, cssPath, pagePath, sqlPath, commitmentWindowPath, migrationPath]) {
   check(`exists: ${file}`, exists(file));
 }
 
@@ -28,16 +30,19 @@ const page = read(pagePath);
 const sql = read(sqlPath);
 const sidebar = read(sidebarPath);
 const packageJson = JSON.parse(read(packagePath));
+const bills = read("components/BillsManager.tsx");
+const commitmentWindow = read(commitmentWindowPath);
+const migration = read(migrationPath);
 
 check("engine exports normalizer", engine.includes("normalizeCashFlowIntelligenceInputs"));
 check("engine exports calculator", engine.includes("calculateCashFlowIntelligence"));
 check("engine reuses Financial Health calculator", engine.includes("calculateFinancialHealth"));
-check("engine provides 30-day forecast", engine.includes("projectedNetCashFlow"));
+check("engine provides one-month forecast", engine.includes("projectedNetCashFlow"));
 check("engine provides category pressure", engine.includes("CashFlowCategory"));
 check("engine provides known commitments", engine.includes("CashFlowCommitment"));
 check("engine provides insight priorities", engine.includes("nextBestAction"));
 check("server page requires authenticated user", page.includes('redirect("/login")'));
-check("server page calls one aggregate RPC", page.includes('rpc(\n    "get_cash_flow_intelligence_inputs"'));
+check("server page calls versioned one-month RPC", page.includes('rpc(\n    "get_cash_flow_intelligence_inputs_v2"'));
 check("component subscribes to transactions", component.includes('table: "transactions"'));
 check("component subscribes to bills", component.includes('table: "bills"'));
 check("component subscribes to debts", component.includes('table: "debts"'));
@@ -46,6 +51,12 @@ check("component has forecast methodology disclosure", component.includes("Forec
 check("component renders 12-month chart", component.includes("Income and outflow trend"));
 check("component renders spending pressure", component.includes("Spending pressure"));
 check("component renders commitments", component.includes("Known commitments"));
+check("Cash Flow labels use one-month terminology", component.includes("Known one-month commitments") && component.includes("One-month outlook"));
+check("Bills summary uses the shared one-month window", bills.includes("oneCalendarMonthEndKey") && bills.includes("One-month commitments"));
+check("shared date helper clamps month-end dates", commitmentWindow.includes("Math.min(date.getDate(), finalTargetDay)"));
+check("v1 SQL remains available for rollback", sql.includes("get_cash_flow_intelligence_inputs()") && sql.includes("current_date + 30"));
+check("v2 migration uses inclusive calendar-month boundary", migration.includes("get_cash_flow_intelligence_inputs_v2()") && migration.includes("due_date <= (current_date + interval '1 month')::date"));
+check("client refresh uses versioned one-month RPC", component.includes("get_cash_flow_intelligence_inputs_v2"));
 check("sidebar exposes Cash flow route", sidebar.includes('["/dashboard/cash-flow", Activity, "Cash flow"]'));
 check("SQL is security invoker", sql.includes("security invoker"));
 check("SQL scopes every source by authenticated user", (sql.match(/user_id = v_user_id/g) ?? []).length >= 5);

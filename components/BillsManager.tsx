@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
+import { localDateKey, oneCalendarMonthEndKey } from "@/lib/finance/commitmentWindow";
 import { formatCurrency } from "@/lib/financialOptions";
 import styles from "./BillsManager.module.css";
 
@@ -71,13 +72,6 @@ const PAYMENT_METHODS = [
   "Bank transfer","Direct debit","Debit card","Credit card","Cash","PayPal",
   "Apple Pay","Google Pay","Crypto","Other"
 ];
-
-function localDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 const EMPTY_FORM = {
   name: "",
@@ -280,11 +274,17 @@ export function BillsManager({
     const dueThisWeek = pending.filter(
       (bill) => bill.due_date <= nextSevenKey,
     );
-    const monthlyBills = active.filter(
-      (bill) => bill.recurrence === "monthly",
+    const oneMonthEndKey = oneCalendarMonthEndKey();
+    const oneMonthBills = pending.filter(
+      (bill) => bill.due_date >= todayKey && bill.due_date <= oneMonthEndKey,
     );
-    const monthly = sumMoney(monthlyBills.map((bill) => bill.amount_eur));
-    return { pending: pending.length, overdue: overdue.length, dueThisWeek: dueThisWeek.length, monthly };
+    const oneMonthTotal = sumMoney(oneMonthBills.map((bill) => bill.amount_eur));
+    return {
+      upcoming: oneMonthBills.length,
+      overdue: overdue.length,
+      dueThisWeek: dueThisWeek.length,
+      oneMonthTotal,
+    };
   }, [bills, todayKey]);
 
   function resetForm() {
@@ -682,10 +682,10 @@ export function BillsManager({
   return (
     <div className={styles.shell}>
       <div className={styles.summaryGrid}>
-        <article><Clock3 /><span>Upcoming</span><strong>{summary.pending}</strong></article>
+        <article><Clock3 /><span>Upcoming</span><strong>{summary.upcoming}</strong></article>
         <article><CalendarDays /><span>Due this week</span><strong>{summary.dueThisWeek}</strong></article>
         <article className={summary.overdue ? styles.warningCard : ""}><CircleAlert /><span>Overdue</span><strong>{summary.overdue}</strong></article>
-        <article><span className={styles.euro}>€</span><span>Monthly commitments</span><strong>{money(summary.monthly)}</strong></article>
+        <article><span className={styles.euro}>€</span><span>One-month commitments</span><strong>{money(summary.oneMonthTotal)}</strong></article>
       </div>
 
       <div className={styles.actionRow}>

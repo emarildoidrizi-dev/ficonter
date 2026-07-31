@@ -79,7 +79,7 @@ export function CashFlowIntelligence({
   const refresh = useCallback(async () => {
     setRefreshing(true);
     const { data, error: refreshError } = await supabase.rpc(
-      "get_cash_flow_intelligence_inputs",
+      "get_cash_flow_intelligence_inputs_v2",
     );
 
     if (refreshError) {
@@ -232,7 +232,7 @@ export function CashFlowIntelligence({
         </article>
         <article>
           <CalendarClock aria-hidden="true" />
-          <span>Known 30-day commitments</span>
+          <span>Known one-month commitments</span>
           <strong>{formatCurrency(result.metrics.knownCommitments, "EUR")}</strong>
           <small>Upcoming bills and debt minimums</small>
         </article>
@@ -245,7 +245,7 @@ export function CashFlowIntelligence({
         <div className={styles.outlookCopy}>
           <div className={styles.outlookTitle}>
             <div>
-              <span>30-day outlook</span>
+              <span>One-month outlook</span>
               <h2>{result.label}</h2>
             </div>
             <div className={styles.confidence}>
@@ -374,7 +374,7 @@ export function CashFlowIntelligence({
                 </div>
               ))
             ) : (
-              <p className={styles.empty}>No known commitments in the next 30 days.</p>
+              <p className={styles.empty}>No known commitments in the next calendar month.</p>
             )}
           </div>
         </article>

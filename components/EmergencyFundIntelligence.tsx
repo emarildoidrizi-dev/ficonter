@@ -241,9 +241,9 @@ export function EmergencyFundIntelligence({
         </article>
         <article>
           <ShieldCheck aria-hidden="true" />
-          <span>Expenses covered</span>
+          <span>Months protected</span>
           <strong>{result.metrics.coverageMonths.toFixed(1)} months</strong>
-          <small>Based on your established monthly expense average</small>
+          <small>Based on your monthly protection baseline</small>
         </article>
         <article>
           <Target aria-hidden="true" />
@@ -270,9 +270,9 @@ export function EmergencyFundIntelligence({
               <h2>{result.status}</h2>
             </div>
             <div className={styles.confidence}>
-              <small>Data confidence</small>
+              <small>Reserve-data confidence</small>
               <strong>{result.confidence}</strong>
-              <span>{result.dataCoverage}% coverage</span>
+              <span>{result.dataCoverage}% reserve-data coverage</span>
             </div>
           </div>
           <p>{result.summary}</p>
@@ -300,10 +300,13 @@ export function EmergencyFundIntelligence({
 
           <div className={styles.readinessMetrics}>
             <span>
-              <small>Average monthly expenses</small>
+              <small>Monthly protection baseline</small>
               <strong>
-                {formatCurrency(result.metrics.averageMonthlyExpenses, "EUR")}
+                {formatCurrency(result.metrics.protectionBaseline, "EUR")}
               </strong>
+              <span className={styles.periodMetricNote}>
+                Higher of recorded average expenses and known one-month commitments.
+              </span>
             </span>
             <span>
               <small>Income stability</small>
@@ -356,8 +359,8 @@ export function EmergencyFundIntelligence({
               <span>Protection milestones</span>
               <h2>Build the reserve in clear stages</h2>
               <p>
-                Every target reuses the same average monthly expense figure from
-                the Financial Health engine.
+                Every target uses one transparent protection baseline: the higher
+                of recorded average expenses and known one-month commitments.
               </p>
             </div>
           </header>

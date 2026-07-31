@@ -11,12 +11,23 @@ create table if not exists public.financial_independence_settings (
   annual_real_return_rate numeric(5, 2) not null default 4.00,
   updated_at timestamptz not null default now(),
   constraint financial_independence_target_spending_check
-    check (target_monthly_spending is null or target_monthly_spending >= 0),
+    check (target_monthly_spending is null or target_monthly_spending > 0),
   constraint financial_independence_withdrawal_rate_check
     check (withdrawal_rate between 2.00 and 8.00),
   constraint financial_independence_real_return_rate_check
     check (annual_real_return_rate between -2.00 and 12.00)
 );
+
+update public.financial_independence_settings
+set target_monthly_spending = null
+where target_monthly_spending is not null
+  and target_monthly_spending <= 0;
+
+alter table public.financial_independence_settings
+  drop constraint if exists financial_independence_target_spending_check;
+alter table public.financial_independence_settings
+  add constraint financial_independence_target_spending_check
+  check (target_monthly_spending is null or target_monthly_spending > 0);
 
 alter table public.financial_independence_settings enable row level security;
 

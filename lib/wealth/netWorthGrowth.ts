@@ -147,6 +147,16 @@ function round(value: number, digits = 1): number {
   return Math.round(value * factor) / factor;
 }
 
+function currencyText(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(round(value, 2));
+}
+
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -282,17 +292,33 @@ export function calculateNetWorthGrowth(
 ): NetWorthGrowthResult {
   const data = normalizeNetWorthGrowthInputs(input);
   const fullMonthly = data.growth.monthly;
+  const generatedMonth = /^\d{4}-\d{2}/.test(data.generatedAt)
+    ? data.generatedAt.slice(0, 7)
+    : new Date().toISOString().slice(0, 7);
+  const completedMonthly = fullMonthly.filter(
+    (month) => month.month < generatedMonth,
+  );
   const selectedMonthly =
     period === "all" ? fullMonthly : fullMonthly.slice(-period);
-  const first = selectedMonthly[0] ?? null;
-  const last = selectedMonthly.at(-1) ?? null;
-  const selectedGrowthMonths = selectedMonthly.slice(1);
-  const openingNetWorth = first?.netWorth ?? 0;
-  const openingDebt = first?.debtOutstanding ?? 0;
-  const currentNetWorth = last?.netWorth ?? 0;
-  const currentDebt = last?.debtOutstanding ?? 0;
+  const selectedCompletedMonthly =
+    period === "all" ? completedMonthly : completedMonthly.slice(-period);
+  const liveCurrent = fullMonthly.at(-1) ?? null;
+  const firstComparable = selectedCompletedMonthly[0] ?? null;
+  const lastComparable = selectedCompletedMonthly.at(-1) ?? null;
+  // Only completed calendar months may create a comparable growth change. The
+  // current open month remains visible as the live position, but is not treated
+  // as a completed month-end result.
+  const selectedGrowthMonths = selectedCompletedMonthly.slice(1);
+  const openingNetWorth =
+    firstComparable?.netWorth ?? liveCurrent?.netWorth ?? 0;
+  const openingDebt =
+    firstComparable?.debtOutstanding ?? liveCurrent?.debtOutstanding ?? 0;
+  const currentNetWorth = liveCurrent?.netWorth ?? 0;
+  const currentDebt = liveCurrent?.debtOutstanding ?? 0;
   const selectedPeriodChange =
-    first && last ? last.netWorth - first.netWorth : 0;
+    firstComparable && lastComparable && selectedGrowthMonths.length
+      ? lastComparable.netWorth - firstComparable.netWorth
+      : 0;
   const selectedMonths = selectedGrowthMonths.length;
   const averageMonthlyGrowth = selectedMonths
     ? selectedPeriodChange / selectedMonths
@@ -309,19 +335,16 @@ export function calculateNetWorthGrowth(
     (sum, month) => sum + month.debtPayments,
     0,
   );
-  const netDebtReduction = openingDebt - currentDebt;
+  const netDebtReduction =
+    selectedGrowthMonths.length && lastComparable
+      ? openingDebt - lastComparable.debtOutstanding
+      : 0;
   const selectedPeriodGrowthRate =
-    openingNetWorth > 0
+    openingNetWorth > 0 && selectedGrowthMonths.length
       ? (selectedPeriodChange / openingNetWorth) * 100
       : null;
 
-  const generatedMonth = /^\d{4}-\d{2}/.test(data.generatedAt)
-    ? data.generatedAt.slice(0, 7)
-    : new Date().toISOString().slice(0, 7);
-  const completedMonthly = fullMonthly.filter(
-    (month) => month.month < generatedMonth,
-  );
-  // The first recorded month establishes the opening baseline. It must never be
+  // The first completed month establishes the opening baseline. It must never be
   // treated as a recurring monthly gain or loss for forecasting.
   const completedGrowthMonths = completedMonthly.slice(1);
   const forecastSample = completedGrowthMonths.slice(-6);
@@ -334,7 +357,7 @@ export function calculateNetWorthGrowth(
     forecastAvailable && trailingSixMonthGrowth !== null
       ? currentNetWorth + trailingSixMonthGrowth * 12
       : null;
-  const comparableGrowthMonths = fullMonthly.slice(1);
+  const comparableGrowthMonths = completedGrowthMonths;
   const recentThree = comparableGrowthMonths.slice(-3);
   const priorThree = comparableGrowthMonths.slice(-6, -3);
   const recentThreeMonthAverage = average(
@@ -351,7 +374,7 @@ export function calculateNetWorthGrowth(
   const positiveGrowthMonths = selectedGrowthMonths.filter(
     (month) => month.netWorthChange > 0.01,
   ).length;
-  const comparableHistoryMonths = Math.max(0, fullMonthly.length - 1);
+  const comparableHistoryMonths = completedGrowthMonths.length;
   const hasMeaningfulWealthData =
     data.wealthScore.financialHealth.transactions.count > 0 ||
     data.wealthScore.financialHealth.debts.count > 0 ||
@@ -466,8 +489,8 @@ export function calculateNetWorthGrowth(
               : "Net wealth moved backward"
             : "Net-worth baseline established",
           detail: selectedGrowthMonths.length
-            ? `${periodLabel(period, selectedMonthly.length)} changed the recorded net-worth position by ${round(selectedPeriodChange, 2)} EUR.`
-            : `FICONTER has recorded the current net-worth position of ${round(currentNetWorth, 2)} EUR, but no comparable month-end change exists yet.`,
+            ? `${periodLabel(period, selectedMonthly.length)} changed the recorded net-worth position by ${currencyText(selectedPeriodChange)}.`
+            : `FICONTER has recorded the current net-worth position of ${currencyText(currentNetWorth)}, but no comparable month-end change exists yet.`,
           action: selectedGrowthMonths.length
             ? selectedPeriodChange >= 0
               ? "Protect the monthly activities producing positive growth."
@@ -481,29 +504,39 @@ export function calculateNetWorthGrowth(
         },
         {
           id: "debt-effect",
-          title:
-            netDebtReduction >= 0
+          title: !selectedGrowthMonths.length
+            ? "Liability movement awaiting comparison"
+            : netDebtReduction >= 0
               ? "Liabilities supported progress"
               : "Liabilities reduced progress",
-          detail:
-            netDebtReduction >= 0
-              ? `Outstanding debt fell by ${round(netDebtReduction, 2)} EUR during the selected period.`
-              : `Outstanding debt increased by ${round(Math.abs(netDebtReduction), 2)} EUR during the selected period.`,
-          action:
-            netDebtReduction >= 0
+          detail: !selectedGrowthMonths.length
+            ? "The current liability balance is recorded, but no earlier comparable month-end position exists yet."
+            : netDebtReduction >= 0
+              ? `Outstanding debt fell by ${currencyText(netDebtReduction)} during the selected period.`
+              : `Outstanding debt increased by ${currencyText(Math.abs(netDebtReduction))} during the selected period.`,
+          action: !selectedGrowthMonths.length
+            ? "Keep recording debt balances and payments until two month-end positions can be compared."
+            : netDebtReduction >= 0
               ? "Continue reducing principal consistently."
               : "Review new debt and minimum-payment pressure.",
-          tone: netDebtReduction >= 0 ? "positive" : "warning",
+          tone: !selectedGrowthMonths.length
+            ? "info"
+            : netDebtReduction >= 0
+              ? "positive"
+              : "warning",
         },
         {
           id: "savings-allocation",
           title: "Savings are tracked as an allocation",
-          detail: `${round(savingsAllocated, 2)} EUR of retained capital was allocated to recorded savings. It is shown separately but never added twice to net worth.`,
-          action:
-            savingsAllocated > 0
+          detail: !selectedGrowthMonths.length
+            ? "Recorded savings remain part of capital, but a comparable-period allocation cannot be calculated until another month-end position exists."
+            : `${currencyText(savingsAllocated)} of retained capital was allocated to recorded savings. It is shown separately but never added twice to net worth.`,
+          action: !selectedGrowthMonths.length
+            ? "Keep recording complete monthly activity until savings allocation can be compared across month ends."
+            : savingsAllocated > 0
               ? "Keep savings contributions aligned with available cash flow."
               : "Record intentional saving contributions when cash flow allows.",
-          tone: savingsAllocated > 0 ? "info" : "warning",
+          tone: selectedGrowthMonths.length && savingsAllocated <= 0 ? "warning" : "info",
         },
         {
           id: "forecast",
@@ -512,7 +545,7 @@ export function calculateNetWorthGrowth(
             : "Outlook needs more history",
           detail:
             forecastAvailable && projectedTwelveMonthNetWorth !== null
-              ? `At the trailing completed-month pace, recorded net worth would reach approximately ${round(projectedTwelveMonthNetWorth, 2)} EUR in twelve months.`
+              ? `At the trailing completed-month pace, recorded net worth would reach approximately ${currencyText(projectedTwelveMonthNetWorth)} in twelve months.`
               : `FICONTER has ${forecastHistoryMonths} of the 3 completed month-to-month changes required for a responsible outlook.`,
           action: forecastAvailable
             ? "Use the projection as a planning guide, not a guaranteed outcome."

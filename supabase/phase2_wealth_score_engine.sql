@@ -32,20 +32,15 @@ begin
   ),
   monthly_transactions as (
     select
-      date_trunc(
-        'month',
-        coalesce(occurred_at, transaction_date::timestamptz)
-      )::date as month_start,
+      date_trunc('month', transaction_date)::date as month_start,
       count(*)::integer as transaction_count,
       coalesce(sum(amount_eur) filter (where type = 'income'), 0)::numeric as income,
       coalesce(sum(amount_eur) filter (where type = 'expense'), 0)::numeric as expenses,
       coalesce(sum(amount_eur) filter (where type = 'saving'), 0)::numeric as savings
     from public.transactions
     where user_id = v_user_id
-      and date_trunc(
-        'month',
-        coalesce(occurred_at, transaction_date::timestamptz)
-      ) >= date_trunc('month', current_date) - interval '11 months'
+      and transaction_date >= (date_trunc('month', current_date) - interval '11 months')::date
+      and transaction_date <= current_date
     group by 1
   ),
   monthly_series as (

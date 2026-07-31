@@ -226,13 +226,13 @@ export function SavingsIntelligence({
       <div className={styles.metricGrid}>
         <article>
           <PiggyBank aria-hidden="true" />
-          <span>Total recorded savings</span>
+          <span>Non-emergency savings</span>
           <strong>{formatCurrency(result.metrics.totalSaved, "EUR")}</strong>
           <small>Emergency Fund contributions are tracked separately</small>
         </article>
         <article>
           <Target aria-hidden="true" />
-          <span>Savings rate</span>
+          <span>Non-emergency savings rate</span>
           <strong>{(result.metrics.savingsRate * 100).toFixed(1)}%</strong>
           <small>Non-emergency savings divided by recorded income</small>
         </article>
@@ -240,7 +240,7 @@ export function SavingsIntelligence({
           <div className={styles.periodHeader}>
             <div>
               <Activity aria-hidden="true" />
-              <span>Average monthly savings</span>
+              <span>Average monthly non-emergency savings</span>
             </div>
             <div
               className={styles.periodSelector}
@@ -288,9 +288,9 @@ export function SavingsIntelligence({
               <h2>{result.status}</h2>
             </div>
             <div className={styles.confidence}>
-              <small>Data confidence</small>
+              <small>Savings-history confidence</small>
               <strong>{result.confidence}</strong>
-              <span>{result.dataCoverage}% coverage</span>
+              <span>{result.dataCoverage}% savings-history coverage</span>
             </div>
           </div>
           <p>{result.summary}</p>

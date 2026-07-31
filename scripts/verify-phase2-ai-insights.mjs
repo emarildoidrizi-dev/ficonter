@@ -52,8 +52,8 @@ check("Smart engine composes existing Cash Flow source", engine.includes("calcul
 check("Smart engine composes existing Financial Independence source", engine.includes("calculateFinancialIndependence"));
 check("Smart engine reuses existing Wealth Score", engine.includes("calculateWealthScore"));
 check("Smart engine exports deterministic report generator", engine.includes("export function generateSmartInsightReport"));
-check("Smart engine fingerprints reports independently", engine.includes("smart-v1-"));
-check("Smart engine identifies itself", engine.includes("FICONTER Smart Engine v1"));
+check("Smart engine fingerprints reports independently", engine.includes("smart-v2-"));
+check("Smart engine identifies itself", engine.includes("FICONTER Smart Engine v2"));
 check("Smart engine creates verified evidence keys", engine.includes("AiEvidenceKey") && engine.includes("evidenceKeysOnly"));
 check("Empty accounts remain unassessed", component.includes("Smart insights are not assessed yet") && engine.includes("const assessed"));
 check("Generation is explicitly on demand", component.includes("Generate smart report") && component.includes("No external AI request"));
@@ -61,7 +61,7 @@ check("UI explains cost-free private analysis", component.includes("Cost-free pr
 check("Old AI consent requirement is removed", !component.includes("Enable AI insights") && !route.includes("consent_required"));
 check("Old API configuration error is removed", !component.includes("AI service configuration is required"));
 check("Snapshots remain protected by RLS", sql.includes("alter table public.ai_insight_snapshots enable row level security"));
-check("Aggregate function reuses existing Phase 2 RPCs", sql.includes("get_cash_flow_intelligence_inputs") && sql.includes("get_financial_independence_inputs"));
+check("Aggregate function reuses existing Phase 2 RPCs", sql.includes("get_cash_flow_intelligence_inputs_v2") && sql.includes("get_financial_independence_inputs"));
 check("Aggregate function is authenticated only", sql.includes("grant execute on function public.get_ai_insights_inputs() to authenticated"));
 check("Smart page is authenticated", page.includes('redirect("/login")'));
 check("Smart page only loads Smart Engine snapshots", page.includes("SMART_INSIGHTS_ENGINE_VERSION") && page.includes('.eq("model", SMART_INSIGHTS_ENGINE_VERSION)'));

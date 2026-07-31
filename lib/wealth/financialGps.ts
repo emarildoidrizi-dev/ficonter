@@ -391,7 +391,7 @@ export function calculateFinancialGps(
     for (const step of report.actionPlan) {
       const domainForStep = domainForEvidence(context, step.evidenceKeys);
       const href = DOMAIN_ROUTES[domainForStep];
-      if (seen.has(href) && actionPath.length > 1) continue;
+      if (seen.has(href)) continue;
       seen.add(href);
       actionPath.push({
         id: `path-${step.order}-${step.title}`,
@@ -430,11 +430,11 @@ export function calculateFinancialGps(
   const metrics: FinancialGpsMetric[] = [
     {
       id: "cash-flow",
-      label: "Current cash flow",
+      label: "Current-month net flow",
       value: cashFlowAvailable ? currentNetFlow : null,
       format: "currency",
       caption: cashFlowAvailable
-        ? "Income minus recorded expenses and savings"
+        ? "Income minus all recorded outflows in the current calendar month"
         : "Add income and an outflow to activate",
       tone: metricTone("cash-flow", cashFlowAvailable ? currentNetFlow : null),
     },
@@ -444,7 +444,7 @@ export function calculateFinancialGps(
       value: emergencyAvailable ? emergencyMonths : null,
       format: "months",
       caption: emergencyAvailable
-        ? "Months of recorded expenses covered"
+        ? "Months covered by the monthly protection baseline"
         : "Expense baseline required",
       tone: metricTone("emergency", emergencyAvailable ? emergencyMonths : null),
     },
@@ -462,11 +462,11 @@ export function calculateFinancialGps(
     },
     {
       id: "savings",
-      label: "Savings rate",
+      label: "Non-emergency savings rate",
       value: savingsAvailable ? savingsRate : null,
       format: "percent",
       caption: savingsAvailable
-        ? "Recorded savings as a share of income"
+        ? "Non-emergency savings as a share of recorded income"
         : "Outflow baseline required",
       tone: metricTone("savings", savingsAvailable ? savingsRate : null),
     },

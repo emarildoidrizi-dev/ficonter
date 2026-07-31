@@ -26,6 +26,7 @@ export type EmergencyFundInputs = {
   schemaVersion: number;
   generatedAt: string;
   financialHealth: FinancialHealthInputs;
+  oneMonthCommitments: number;
   monthly: EmergencyFundMonth[];
   recentContributions: EmergencyFundContribution[];
   stats: {
@@ -81,6 +82,9 @@ export type EmergencyFundResult = {
   metrics: {
     currentBalance: number;
     averageMonthlyExpenses: number;
+    recordedAverageMonthlyExpenses: number;
+    oneMonthCommitments: number;
+    protectionBaseline: number;
     averageMonthlyIncome: number;
     coverageMonths: number;
     foundationTarget: number;
@@ -111,6 +115,7 @@ const EMPTY_INPUTS: EmergencyFundInputs = {
   schemaVersion: 1,
   generatedAt: new Date(0).toISOString(),
   financialHealth: normalizeFinancialHealthInputs(null),
+  oneMonthCommitments: 0,
   monthly: [],
   recentContributions: [],
   stats: {
@@ -214,6 +219,7 @@ export function normalizeEmergencyFundInputs(value: unknown): EmergencyFundInput
         ? root.generatedAt
         : new Date().toISOString(),
     financialHealth: normalizeFinancialHealthInputs(root.financialHealth),
+    oneMonthCommitments: Math.max(0, finite(root.oneMonthCommitments)),
     monthly,
     recentContributions,
     stats: {
@@ -237,15 +243,19 @@ export function calculateEmergencyFund(
     0,
     healthInputs.transactions.emergencyFundSavings,
   );
-  const averageMonthlyExpenses = Math.max(
+  const recordedAverageMonthlyExpenses = Math.max(
     0,
     health.metrics.averageMonthlyExpenses,
   );
+  const oneMonthCommitments = Math.max(0, data.oneMonthCommitments);
+  const protectionBaseline = Math.max(
+    recordedAverageMonthlyExpenses,
+    oneMonthCommitments,
+  );
+  const averageMonthlyExpenses = protectionBaseline;
   const averageMonthlyIncome = Math.max(0, health.metrics.averageMonthlyIncome);
   const coverageMonths =
-    averageMonthlyExpenses > 0
-      ? currentBalance / averageMonthlyExpenses
-      : 0;
+    protectionBaseline > 0 ? currentBalance / protectionBaseline : 0;
 
   const activeMonths = Math.max(healthInputs.transactions.activeMonths, 1);
   const incomeMonths = healthInputs.transactions.incomeMonths;
@@ -363,32 +373,32 @@ export function calculateEmergencyFund(
   const status = statusFor(coverageMonths, averageMonthlyExpenses);
 
   let summary =
-    "Your emergency reserve is calculated from existing Emergency fund saving transactions and your established monthly expense baseline.";
+    "Your emergency reserve uses the higher of recorded average expenses and known one-month commitments, so the target does not understate fixed obligations.";
   if (status === "Set baseline") {
     summary =
-      "Record regular expenses before FICONTER can calculate a reliable emergency-fund target.";
+      "Record regular expenses or upcoming commitments before FICONTER can calculate a reliable emergency-fund target.";
   } else if (status === "Strong reserve") {
     summary =
-      "Your recorded reserve covers at least six average months of expenses, providing strong financial resilience.";
+      "Your recorded reserve covers at least six months of the current protection baseline, providing strong financial resilience.";
   } else if (status === "Foundation ready") {
     summary =
       "Your three-month foundation is in place. Continue toward the stronger six-month reserve when cash flow allows.";
   } else if (status === "Building") {
     summary =
-      "Your reserve covers at least one month of average expenses and is progressing toward the three-month foundation.";
+      "Your reserve covers at least one month of the current protection baseline and is progressing toward the three-month foundation.";
   } else if (status === "Starting") {
     summary =
-      "You have started the reserve, but it does not yet cover one full average month of expenses.";
+      "You have started the reserve, but it does not yet cover one full month of the current protection baseline.";
   } else if (status === "Not started") {
     summary =
-      "No Emergency fund saving transactions are recorded yet. Start with a sustainable first contribution.";
+      "No Emergency Fund saving transactions are recorded yet. Start with a sustainable first contribution.";
   }
 
   let nextBestAction =
-    "Maintain the reserve and review the target whenever your regular expenses materially change.";
+    "Maintain the reserve and review the target whenever your regular expenses or fixed commitments materially change.";
   if (averageMonthlyExpenses <= 0) {
     nextBestAction =
-      "Record your normal monthly expenses so FICONTER can establish a reliable reserve target.";
+      "Record your normal monthly expenses and fixed commitments so FICONTER can establish a reliable reserve target.";
   } else if (healthInputs.bills.overdueCount > 0) {
     nextBestAction =
       "Resolve overdue bills first, then continue funding the emergency reserve consistently.";
@@ -399,10 +409,10 @@ export function calculateEmergencyFund(
     nextBestAction = `Record approximately €${suggestedMonthlyContribution.toLocaleString(
       "en-US",
       { maximumFractionDigits: 0 },
-    )} per month as General Saving with the Emergency fund category.`;
+    )} per month as a saving in the Emergency Fund category.`;
   } else if (recommendedGap > 0) {
     nextBestAction =
-      "Create monthly surplus first, then direct part of it to the Emergency fund category.";
+      "Create monthly surplus first, then direct part of it to the Emergency Fund category.";
   }
 
   const insights: EmergencyFundInsight[] = [];
@@ -419,7 +429,7 @@ export function calculateEmergencyFund(
       id: "coverage",
       tone: "info",
       title: "Protection is building",
-      description: `You currently cover ${round(coverageMonths)} average months of expenses.`,
+      description: `You currently cover ${round(coverageMonths)} months of the protection baseline.`,
     });
   } else {
     insights.push({
@@ -428,8 +438,8 @@ export function calculateEmergencyFund(
       title: currentBalance > 0 ? "First month still open" : "Reserve not started",
       description:
         currentBalance > 0
-          ? "Continue until the reserve covers one complete average month of expenses."
-          : "Record the first Emergency fund saving transaction to begin building protection.",
+          ? "Continue until the reserve covers one complete month of the protection baseline."
+          : "Record the first Emergency Fund saving transaction to begin building protection.",
     });
   }
 
@@ -438,7 +448,7 @@ export function calculateEmergencyFund(
       id: "pace",
       tone: "positive",
       title: "Contribution pace",
-      description: `Your average Emergency fund contribution over the last six months is €${round(
+      description: `Your average Emergency Fund contribution over the last six months is €${round(
         averageContribution6Months,
         0,
       ).toLocaleString("en-US")}.`,
@@ -473,7 +483,10 @@ export function calculateEmergencyFund(
     recommendedTargetMonths,
     metrics: {
       currentBalance: round(currentBalance, 2),
-      averageMonthlyExpenses: round(averageMonthlyExpenses, 2),
+      averageMonthlyExpenses: round(protectionBaseline, 2),
+      recordedAverageMonthlyExpenses: round(recordedAverageMonthlyExpenses, 2),
+      oneMonthCommitments: round(oneMonthCommitments, 2),
+      protectionBaseline: round(protectionBaseline, 2),
       averageMonthlyIncome: round(averageMonthlyIncome, 2),
       coverageMonths: round(coverageMonths),
       foundationTarget: round(foundationTarget, 2),

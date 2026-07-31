@@ -140,6 +140,10 @@ export function NetWorthGrowth({ inputs }: Props) {
     chartMaximum,
   );
   const statusSlug = result.label.toLowerCase().replaceAll(" ", "-");
+  const comparableCurrency = (value: number) =>
+    result.hasHistory ? signedCurrency(value) : "Not available";
+  const comparableAmount = (value: number) =>
+    result.hasHistory ? formatCurrency(value, "EUR") : "Not available";
 
   return (
     <section className={styles.module}>
@@ -153,7 +157,7 @@ export function NetWorthGrowth({ inputs }: Props) {
           <div className={styles.confidence}>
             <small>Trend confidence</small>
             <strong>{result.confidence}</strong>
-            <span>{result.dataCoverage}% coverage</span>
+            <span>{result.dataCoverage}% comparable-history coverage</span>
           </div>
         </div>
 
@@ -187,7 +191,7 @@ export function NetWorthGrowth({ inputs }: Props) {
                   : styles.negative
               }
             >
-              {signedCurrency(result.metrics.selectedPeriodChange)}
+              {comparableCurrency(result.metrics.selectedPeriodChange)}
             </strong>
           </span>
           <span>
@@ -196,7 +200,7 @@ export function NetWorthGrowth({ inputs }: Props) {
           </span>
           <span>
             <small>Average monthly growth</small>
-            <strong>{signedCurrency(result.metrics.averageMonthlyGrowth)}</strong>
+            <strong>{comparableCurrency(result.metrics.averageMonthlyGrowth)}</strong>
           </span>
           <span>
             <small>Positive growth months</small>
@@ -231,8 +235,8 @@ export function NetWorthGrowth({ inputs }: Props) {
         <article>
           <TrendingUp aria-hidden="true" />
           <span>Capital added</span>
-          <strong>{signedCurrency(result.metrics.capitalAdded)}</strong>
-          <small>Income minus recorded expenses</small>
+          <strong>{comparableCurrency(result.metrics.capitalAdded)}</strong>
+          <small>{result.hasHistory ? "Income minus recorded expenses in comparable months" : "Requires two comparable month-end positions"}</small>
         </article>
         <article>
           <TrendingDown aria-hidden="true" />
@@ -244,9 +248,9 @@ export function NetWorthGrowth({ inputs }: Props) {
                 : styles.negative
             }
           >
-            {signedCurrency(result.metrics.netDebtReduction)}
+            {comparableCurrency(result.metrics.netDebtReduction)}
           </strong>
-          <small>Opening debt minus current debt</small>
+          <small>{result.hasHistory ? "Opening debt minus current debt for the selected period" : "Requires two comparable month-end positions"}</small>
         </article>
       </div>
 
@@ -329,9 +333,9 @@ export function NetWorthGrowth({ inputs }: Props) {
               <span className={styles.driverIcon}><CircleDollarSign /></span>
               <div>
                 <strong>Retained capital</strong>
-                <small>Income minus expenses</small>
+                <small>{result.hasHistory ? "Income minus expenses in comparable months" : "Comparable period not available yet"}</small>
               </div>
-              <b>{signedCurrency(result.metrics.capitalAdded)}</b>
+              <b>{comparableCurrency(result.metrics.capitalAdded)}</b>
             </div>
             <div>
               <span className={styles.driverIcon}><ShieldCheck /></span>
@@ -339,7 +343,7 @@ export function NetWorthGrowth({ inputs }: Props) {
                 <strong>Recorded debt payments</strong>
                 <small>Principal payments recorded in Debt</small>
               </div>
-              <b>{formatCurrency(result.metrics.recordedDebtPayments, "EUR")}</b>
+              <b>{comparableAmount(result.metrics.recordedDebtPayments)}</b>
             </div>
             <div>
               <span className={styles.driverIcon}><PiggyBank /></span>
@@ -347,7 +351,7 @@ export function NetWorthGrowth({ inputs }: Props) {
                 <strong>Savings allocation</strong>
                 <small>Part of retained capital, shown separately</small>
               </div>
-              <b>{formatCurrency(result.metrics.savingsAllocated, "EUR")}</b>
+              <b>{comparableAmount(result.metrics.savingsAllocated)}</b>
             </div>
             <div>
               <span className={styles.driverIcon}><Gauge /></span>
@@ -355,7 +359,7 @@ export function NetWorthGrowth({ inputs }: Props) {
                 <strong>Liability movement</strong>
                 <small>Net reduction after new or increased debt</small>
               </div>
-              <b>{signedCurrency(result.metrics.netDebtReduction)}</b>
+              <b>{comparableCurrency(result.metrics.netDebtReduction)}</b>
             </div>
           </div>
         </article>

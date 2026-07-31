@@ -451,7 +451,7 @@ export function AiInsights({
     setClearing(false);
   }
 
-  const report = snapshot?.report ?? null;
+  const report = stale ? null : snapshot?.report ?? null;
 
   return (
     <div className={styles.shell}>
@@ -488,9 +488,11 @@ export function AiInsights({
             <Sparkles size={17} aria-hidden="true" />
             {generating
               ? "Preparing…"
-              : snapshot
-                ? "Refresh insights"
-                : "Generate insights"}
+              : stale
+                ? "Update insights"
+                : snapshot
+                  ? "Refresh insights"
+                  : "Generate insights"}
           </button>
         </div>
       </header>
@@ -514,7 +516,7 @@ export function AiInsights({
           <DatabaseZap aria-hidden="true" />
           <span>Data readiness</span>
           <strong>{context.dataCoverage}%</strong>
-          <small>{context.confidence} aggregate coverage</small>
+          <small>{context.confidence} aggregate data readiness</small>
         </article>
         <article>
           <Gauge aria-hidden="true" />
@@ -533,7 +535,7 @@ export function AiInsights({
         <article>
           <Clock3 aria-hidden="true" />
           <span>Latest report</span>
-          <strong>{snapshot ? "Generated" : "Not generated"}</strong>
+          <strong>{stale ? "Update required" : snapshot ? "Generated" : "Not generated"}</strong>
           <small>
             {stale
               ? "Financial data has changed"
@@ -626,7 +628,7 @@ export function AiInsights({
                 <div className={styles.positionBadge}>
                   <small>Position</small>
                   <strong>{report.position}</strong>
-                  <span>{snapshot ? `${snapshot.dataCoverage}% coverage` : ""}</span>
+                  <span>{snapshot ? `${snapshot.dataCoverage}% report-data readiness` : ""}</span>
                 </div>
               </div>
               <p>{report.summary}</p>
@@ -707,7 +709,7 @@ export function AiInsights({
                 ) : (
                   <p>
                     No material limitation was identified beyond the displayed
-                    data coverage.
+                    report-data coverage.
                   </p>
                 )}
               </div>

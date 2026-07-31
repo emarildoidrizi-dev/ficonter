@@ -105,6 +105,19 @@ function newestFirst(a: Transaction, b: Transaction) {
   return bTime - aTime;
 }
 
+function greetingForHour(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function DashboardLiveOverview({
   userId,
   name,
@@ -133,6 +146,19 @@ export function DashboardLiveOverview({
   const [connectionState, setConnectionState] = useState<
     "connecting" | "live" | "offline"
   >("connecting");
+  const [greeting, setGreeting] = useState("Hello");
+  const [todayKey, setTodayKey] = useState("");
+
+  useEffect(() => {
+    const updateClockContext = () => {
+      const now = new Date();
+      setGreeting(greetingForHour(now.getHours()));
+      setTodayKey(localDateKey(now));
+    };
+    updateClockContext();
+    const timer = window.setInterval(updateClockContext, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setTransactions([...initialTransactions].sort(newestFirst));
@@ -363,25 +389,29 @@ export function DashboardLiveOverview({
     [healthInputs],
   );
   const recent = useMemo(() => transactions.slice(0, 120), [transactions]);
+  const recordedActivity = useMemo(
+    () => recent.filter((transaction) => !todayKey || transaction.transaction_date <= todayKey),
+    [recent, todayKey],
+  );
   const { metrics } = financialHealth;
   const financialGps = useMemo(
     () => calculateFinancialGps(gpsInputs, setupAcknowledgements),
     [gpsInputs, setupAcknowledgements],
   );
   const horizonActivity = useMemo(
-    () => recent.slice(0, 24).map((transaction) => ({
+    () => recordedActivity.slice(0, 24).map((transaction) => ({
       amount: euroValue(transaction),
       income: isIncome(transaction),
     })),
-    [recent],
+    [recordedActivity],
   );
 
   return (
     <>
       <header className="topbar">
         <div className="page-title">
-          <h1>Good morning, {name}.</h1>
-          <p>Your private financial overview, normalized in euros.</p>
+          <h1>{greeting}, {name}.</h1>
+          <p>Completed financial activity through today, normalized in euros. Scheduled entries remain visible but are excluded until their date.</p>
         </div>
         <div className={styles.headerActions}>
           <div
@@ -459,7 +489,7 @@ export function DashboardLiveOverview({
             <small className={styles.kpiNote}>Saving transfers are shown separately</small>
           </div>
           <div className="kpi">
-            <span>Cash flow</span>
+            <span>Recorded cash position</span>
             <strong
               className={
                 metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
@@ -467,12 +497,12 @@ export function DashboardLiveOverview({
             >
               {formatCurrency(metrics.netCashFlow, "EUR")}
             </strong>
-            <small className={styles.kpiNote}>Income minus expenses and savings</small>
+            <small className={styles.kpiNote}>Completed income minus completed outflows through today</small>
           </div>
           <div className="kpi">
-            <span>Savings rate</span>
+            <span>Total savings rate</span>
             <strong>{(metrics.savingsRate * 100).toFixed(1)}%</strong>
-            <small className={styles.kpiNote}>Recorded savings divided by income</small>
+            <small className={styles.kpiNote}>All recorded savings divided by income</small>
           </div>
         </section>
       </div>
@@ -484,7 +514,7 @@ export function DashboardLiveOverview({
           <div className="panel-head">
             <div>
               <h3>Live transaction table</h3>
-              <p className="muted">Updates instantly when data changes.</p>
+              <p className="muted">Completed and scheduled entries update instantly when data changes.</p>
             </div>
             <Link href="/dashboard/transactions">View all</Link>
           </div>
@@ -502,6 +532,9 @@ export function DashboardLiveOverview({
                   const converted = euroValue(transaction);
                   const income = isIncome(transaction);
                   const foreign = currency !== "EUR";
+                  const scheduled = Boolean(
+                    todayKey && transaction.transaction_date > todayKey,
+                  );
 
                   return (
                     <article className={styles.transactionRow} key={transaction.id}>
@@ -520,7 +553,8 @@ export function DashboardLiveOverview({
                         <strong>{transaction.description}</strong>
                         <span>{transaction.category}</span>
                         <small>
-                          <Clock3 size={13} /> {readableDateTime(transaction)}
+                          <Clock3 size={13} /> {scheduled ? "Scheduled · " : ""}
+                          {readableDateTime(transaction)}
                         </small>
                       </div>
                       <div className={styles.transactionAmount}>

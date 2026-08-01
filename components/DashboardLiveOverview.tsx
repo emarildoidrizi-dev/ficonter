@@ -394,9 +394,56 @@ export function DashboardLiveOverview({
     [recent, todayKey],
   );
   const { metrics } = financialHealth;
+  const synchronizedGpsInputs = useMemo<AiInsightsInputs>(() => {
+    const sourceMonths = gpsInputs.cashFlow.monthly;
+    const sourceCurrentMonth = sourceMonths.at(-1);
+    const hasRecordedPosition =
+      Math.abs(metrics.totalIncome) > 0.005 ||
+      Math.abs(metrics.totalExpenses) > 0.005 ||
+      Math.abs(metrics.totalSavings) > 0.005 ||
+      Math.abs(metrics.netCashFlow) > 0.005;
+    const synchronizedCurrentMonth = {
+      month:
+        sourceCurrentMonth?.month ||
+        gpsInputs.generatedAt.slice(0, 7) ||
+        new Date().toISOString().slice(0, 7),
+      transactionCount: Math.max(
+        sourceCurrentMonth?.transactionCount ?? 0,
+        hasRecordedPosition ? 1 : 0,
+      ),
+      income: metrics.totalIncome,
+      expenses: metrics.totalExpenses,
+      savings: metrics.totalSavings,
+      outflow: metrics.totalExpenses + metrics.totalSavings,
+      netCashFlow: metrics.netCashFlow,
+    };
+    const synchronizedMonths = sourceCurrentMonth
+      ? [...sourceMonths.slice(0, -1), synchronizedCurrentMonth]
+      : [synchronizedCurrentMonth];
+
+    return {
+      ...gpsInputs,
+      cashFlow: {
+        ...gpsInputs.cashFlow,
+        financialHealth: healthInputs,
+        monthly: synchronizedMonths,
+      },
+    };
+  }, [
+    gpsInputs,
+    healthInputs,
+    metrics.netCashFlow,
+    metrics.totalExpenses,
+    metrics.totalIncome,
+    metrics.totalSavings,
+  ]);
   const financialGps = useMemo(
-    () => calculateFinancialGps(gpsInputs, setupAcknowledgements),
-    [gpsInputs, setupAcknowledgements],
+    () =>
+      calculateFinancialGps(
+        synchronizedGpsInputs,
+        setupAcknowledgements,
+      ),
+    [setupAcknowledgements, synchronizedGpsInputs],
   );
   const horizonActivity = useMemo(
     () => recordedActivity.slice(0, 24).map((transaction) => ({

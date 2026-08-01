@@ -116,13 +116,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
   const actual=(s:Section)=>actualBySection[s];
   const totalIncome=actual("income");
+  const incomeCardTotal=addMoney(startBalance,totalIncome);
   const goalInvestments=sumMoney(monthTx.filter(isGoalInvestment).map(transaction=>transaction.amount_eur));
   const totalOut=sumMoney([actual("bills"),actual("expenses"),actual("savings"),actual("debt"),goalInvestments]);
   // Goal investments reduce available cash independently.
   // They never update the Monthly Planner Savings card.
-  const left=subtractMoney(addMoney(startBalance,totalIncome),totalOut);
+  const left=subtractMoney(incomeCardTotal,totalOut);
   const leftToBudget=left;
-  const availableCash=addMoney(startBalance,totalIncome);
+  const availableCash=incomeCardTotal;
   const breakdownCandidates: {
     key: BreakdownKey;
     label: string;
@@ -184,7 +185,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                   rows[transaction.description] =
                     addMoney(rows[transaction.description] || 0,transaction.amount_eur);
                   return rows;
-                }, {})
+                }, {"Start balance": startBalance})
             : {};
 
         const billRows =
@@ -262,6 +263,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                   : s.key === "debt"
                     ? Object.entries(debtRows)
                     : [];
+        const sectionActualTotal =
+          s.key === "income" ? incomeCardTotal : actual(s.key);
 
         return (
           <article
@@ -297,7 +300,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
 
                 <footer className={styles.compactFooter}>
                   <span>Total</span>
-                  <b>{eur(actual(s.key))}</b>
+                  <b>{eur(sectionActualTotal)}</b>
                 </footer>
               </>
             ) : (

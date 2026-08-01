@@ -77,6 +77,65 @@
   font-weight: 650;
 }
 
+.summaryStack {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--gold) 4%, transparent),
+      transparent 50%
+    ),
+    color-mix(in srgb, var(--surface-card) 82%, transparent);
+}
+
+.summaryGroup {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.summaryLabel {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.summaryStack .metricGrid article {
+  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
+}
+
+.allTimeNetCard {
+  border-color: color-mix(in srgb, var(--sage) 38%, var(--border-subtle)) !important;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--sage) 8%, transparent),
+      transparent 62%
+    ),
+    var(--surface-card) !important;
+}
+
+.allTimeNetCard[data-negative="true"] {
+  border-color: color-mix(
+    in srgb,
+    var(--burgundy) 45%,
+    var(--border-subtle)
+  ) !important;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--burgundy) 8%, transparent),
+      transparent 62%
+    ),
+    var(--surface-card) !important;
+}
+
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

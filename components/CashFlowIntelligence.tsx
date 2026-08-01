@@ -242,6 +242,16 @@ export function CashFlowIntelligence({
     ...result.monthly.flatMap((month) => [month.income, month.outflow]),
   );
   const leftIsPositive = result.metrics.leftAfterPayments >= 0;
+  const allTimeSummary = {
+    income: inputs.financialHealth.transactions.totalIncome,
+    outflow:
+      inputs.financialHealth.transactions.totalExpenses +
+      inputs.financialHealth.transactions.totalSavings,
+    netMovement:
+      inputs.financialHealth.transactions.totalIncome -
+      inputs.financialHealth.transactions.totalExpenses -
+      inputs.financialHealth.transactions.totalSavings,
+  };
 
   function showCommitmentBreakdown() {
     commitmentPanelRef.current?.scrollIntoView({
@@ -274,6 +284,70 @@ export function CashFlowIntelligence({
 
       {error ? <div className={styles.error}>{error}</div> : null}
 
+      <div className={styles.summaryStack}>
+        <section
+          className={styles.summaryGroup}
+          aria-labelledby="all-time-summary-title"
+        >
+          <span
+            className={styles.summaryLabel}
+            id="all-time-summary-title"
+          >
+            All-time summary
+          </span>
+          <div className={styles.metricGrid}>
+            <article>
+              <ArrowUpRight aria-hidden="true" />
+              <span>All-time income</span>
+              <strong className={styles.positive}>
+                {formatCurrency(allTimeSummary.income, "EUR")}
+              </strong>
+              <small>
+                Recorded income across the complete transaction history. Opening
+                balances are excluded to prevent double counting.
+              </small>
+            </article>
+            <article>
+              <ArrowDownRight aria-hidden="true" />
+              <span>All-time outflow</span>
+              <strong>{formatCurrency(allTimeSummary.outflow, "EUR")}</strong>
+              <small>
+                Every recorded expense and saving contribution, including paid
+                bills and debt payments recorded as expenses.
+              </small>
+            </article>
+            <article
+              className={styles.allTimeNetCard}
+              data-negative={allTimeSummary.netMovement < 0 ? "true" : "false"}
+            >
+              <WalletCards aria-hidden="true" />
+              <span>All-time net movement</span>
+              <strong
+                className={
+                  allTimeSummary.netMovement >= 0
+                    ? styles.positive
+                    : styles.negative
+                }
+              >
+                {formatCurrency(allTimeSummary.netMovement, "EUR")}
+              </strong>
+              <small>
+                All-time income minus all-time outflow. This is historical
+                movement, not the current bank balance.
+              </small>
+            </article>
+          </div>
+        </section>
+        <section
+          className={styles.summaryGroup}
+          aria-labelledby="this-month-summary-title"
+        >
+          <span
+            className={styles.summaryLabel}
+            id="this-month-summary-title"
+          >
+            This month
+          </span>
       <div className={styles.metricGrid}>
         <article>
           <ArrowUpRight aria-hidden="true" />
@@ -299,6 +373,8 @@ export function CashFlowIntelligence({
           </strong>
           <small>The current amount after all recorded activity.</small>
         </article>
+      </div>
+        </section>
       </div>
 
       <article

@@ -369,12 +369,17 @@ function adjustCommitments(
 export function calculateCashFlowIntelligence(
   input: CashFlowIntelligenceInputs = EMPTY_INPUTS,
   debtPaymentInput: CashFlowDebtPaymentInput[] = [],
+  openingBalanceInput = 0,
 ): CashFlowIntelligenceResult {
   const data = normalizeCashFlowIntelligenceInputs(input);
   const debtPayments = normalizeCashFlowDebtPayments(debtPaymentInput);
   const health = calculateFinancialHealth(data.financialHealth);
   const months = data.monthly.slice(-12);
   const currentMonth = months.at(-1) ?? normalizeMonth(null);
+  const openingBalance = round(finite(openingBalanceInput));
+  const incomeWithStartBalance = round(
+    currentMonth.income + openingBalance,
+  );
   const recentMonths = months.slice(-3);
   const priorMonths = months.slice(-6, -3);
   const activeMonths = months.filter((month) => month.transactionCount > 0);
@@ -396,7 +401,7 @@ export function calculateCashFlowIntelligence(
       ? (trendChange / Math.abs(priorNetAverage)) * 100
       : null;
 
-  const availableNow = round(currentMonth.netCashFlow);
+  const availableNow = round(currentMonth.netCashFlow + openingBalance);
   const stillToPay = round(adjustedCommitments.total);
   const leftAfterPayments = round(availableNow - stillToPay);
   const projectedMargin =
@@ -555,7 +560,7 @@ export function calculateCashFlowIntelligence(
     nextBestAction: insights[0]?.action ?? "Keep financial records current.",
     health,
     metrics: {
-      currentMonthIncome: currentMonth.income,
+      currentMonthIncome: incomeWithStartBalance,
       currentMonthExpenses: currentMonth.expenses,
       currentMonthSavings: currentMonth.savings,
       currentMonthOutflow: currentMonth.outflow,
@@ -563,7 +568,7 @@ export function calculateCashFlowIntelligence(
       averageMonthlyIncome,
       averageMonthlyOutflow,
       averageMonthlyNetCashFlow: recentNetAverage,
-      expectedIncome: currentMonth.income,
+      expectedIncome: incomeWithStartBalance,
       expectedOutflow: stillToPay,
       projectedNetCashFlow: leftAfterPayments,
       projectedMargin,

@@ -29,13 +29,30 @@ export default async function CashFlowPage() {
       .gte("paid_at", currentMonthStartIso()),
   ]);
 
+  const initialInputs = normalizeCashFlowIntelligenceInputs(inputResponse.data);
+  const activeMonth =
+    initialInputs.monthly.at(-1)?.month ||
+    initialInputs.generatedAt.slice(0, 7) ||
+    new Date().toISOString().slice(0, 7);
+
+  const planResponse = await supabase
+    .from("monthly_budget_plans")
+    .select("start_balance")
+    .eq("user_id", user.id)
+    .eq("month", activeMonth)
+    .maybeSingle();
+
   return (
     <CashFlowIntelligence
       userId={user.id}
-      initialInputs={normalizeCashFlowIntelligenceInputs(inputResponse.data)}
+      initialInputs={initialInputs}
       initialDebtPayments={normalizeCashFlowDebtPayments(paymentResponse.data)}
+      initialOpeningBalance={Number(planResponse.data?.start_balance ?? 0)}
       initialError={
-        inputResponse.error?.message ?? paymentResponse.error?.message ?? ""
+        inputResponse.error?.message ??
+        paymentResponse.error?.message ??
+        planResponse.error?.message ??
+        ""
       }
     />
   );

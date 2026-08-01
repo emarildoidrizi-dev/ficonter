@@ -29,6 +29,7 @@ type Props = {
   userId: string;
   initialInputs: CashFlowIntelligenceInputs;
   initialDebtPayments?: CashFlowDebtPaymentInput[];
+  initialOpeningBalance?: number;
   initialError?: string;
 };
 
@@ -72,6 +73,7 @@ export function CashFlowIntelligence({
   userId,
   initialInputs,
   initialDebtPayments = [],
+  initialOpeningBalance = 0,
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
@@ -79,14 +81,21 @@ export function CashFlowIntelligence({
   const commitmentPanelRef = useRef<HTMLElement | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [debtPayments, setDebtPayments] = useState(initialDebtPayments);
+  const [openingBalance, setOpeningBalance] = useState(initialOpeningBalance);
   const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setInputs(initialInputs);
     setDebtPayments(initialDebtPayments);
+    setOpeningBalance(initialOpeningBalance);
     setError(initialError);
-  }, [initialDebtPayments, initialError, initialInputs]);
+  }, [
+    initialDebtPayments,
+    initialError,
+    initialInputs,
+    initialOpeningBalance,
+  ]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -99,17 +108,35 @@ export function CashFlowIntelligence({
         .gte("paid_at", currentMonthStartIso()),
     ]);
 
-    const refreshError = inputResponse.error ?? paymentResponse.error;
+    const normalizedInputs = normalizeCashFlowIntelligenceInputs(
+      inputResponse.data,
+    );
+    const activeMonth =
+      normalizedInputs.monthly.at(-1)?.month ||
+      normalizedInputs.generatedAt.slice(0, 7) ||
+      new Date().toISOString().slice(0, 7);
+
+    const planResponse = await supabase
+      .from("monthly_budget_plans")
+      .select("start_balance")
+      .eq("user_id", userId)
+      .eq("month", activeMonth)
+      .maybeSingle();
+
+    const refreshError =
+      inputResponse.error ?? paymentResponse.error ?? planResponse.error;
+
     if (refreshError) {
       setError(refreshError.message);
     } else {
-      setInputs(normalizeCashFlowIntelligenceInputs(inputResponse.data));
+      setInputs(normalizedInputs);
       setDebtPayments(normalizeCashFlowDebtPayments(paymentResponse.data));
+      setOpeningBalance(Number(planResponse.data?.start_balance ?? 0));
       setError("");
     }
 
     setRefreshing(false);
-  }, [supabase]);
+  }, [supabase, userId]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -202,8 +229,13 @@ export function CashFlowIntelligence({
   }, [refresh]);
 
   const result = useMemo(
-    () => calculateCashFlowIntelligence(inputs, debtPayments),
-    [debtPayments, inputs],
+    () =>
+      calculateCashFlowIntelligence(
+        inputs,
+        debtPayments,
+        openingBalance,
+      ),
+    [debtPayments, inputs, openingBalance],
   );
   const maxChartValue = Math.max(
     1,
@@ -245,9 +277,9 @@ export function CashFlowIntelligence({
       <div className={styles.metricGrid}>
         <article>
           <ArrowUpRight aria-hidden="true" />
-          <span>Income recorded this month</span>
+          <span>Income + start balance</span>
           <strong>{formatCurrency(result.metrics.currentMonthIncome, "EUR")}</strong>
-          <small>Includes recorded income and any opening-balance adjustment.</small>
+          <small>Mirrors Monthly Planner start balance plus recorded income.</small>
         </article>
         <article>
           <ArrowDownRight aria-hidden="true" />

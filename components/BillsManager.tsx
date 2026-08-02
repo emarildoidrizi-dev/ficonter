@@ -108,6 +108,8 @@ function effectiveStatus(
 }
 
 function browserTimezone() {
+  if (typeof window === "undefined") return "UTC";
+
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   } catch {
@@ -217,6 +219,16 @@ export function BillsManager({
   }, [message]);
 
   useEffect(() => {
+    const timezone = browserTimezone();
+
+    setForm((current) =>
+      current.autopay_timezone === timezone
+        ? current
+        : { ...current, autopay_timezone: timezone },
+    );
+  }, []);
+
+  useEffect(() => {
     if (!billPendingDeletion) return;
 
     const previousOverflow = document.body.style.overflow;
@@ -269,6 +281,105 @@ export function BillsManager({
       supabase.removeChannel(channel);
     };
   }, [supabase, userId]);
+
+  useEffect(() => {
+    const timezone = browserTimezone();
+    const today = localDateKey();
+
+    const schedules = bills.filter((bill) => {
+      if (!bill.autopay || bill.status !== "pending") return false;
+
+      const localScheduled = new Date(
+        `${bill.due_date}T${
+          bill.autopay_record_time?.slice(0, 5) || "09:00"
+        }:00`,
+      );
+
+      if (Number.isNaN(localScheduled.getTime())) return false;
+
+      const existingEnabledAt = bill.autopay_enabled_at
+        ? new Date(bill.autopay_enabled_at)
+        : null;
+      const needsActivationRepair =
+        bill.due_date >= today &&
+        (
+          !existingEnabledAt ||
+          Number.isNaN(existingEnabledAt.getTime()) ||
+          existingEnabledAt.getTime() > localScheduled.getTime()
+        );
+
+      return bill.autopay_timezone !== timezone || needsActivationRepair;
+    });
+
+    if (!schedules.length) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const replacements = new Map<string, Bill>();
+
+      for (const bill of schedules) {
+        const localScheduled = new Date(
+          `${bill.due_date}T${
+            bill.autopay_record_time?.slice(0, 5) || "09:00"
+          }:00`,
+        );
+
+        if (Number.isNaN(localScheduled.getTime())) continue;
+
+        const existingEnabledAt = bill.autopay_enabled_at
+          ? new Date(bill.autopay_enabled_at)
+          : null;
+        const shouldRepairActivation =
+          bill.due_date >= today &&
+          (
+            !existingEnabledAt ||
+            Number.isNaN(existingEnabledAt.getTime()) ||
+            existingEnabledAt.getTime() > localScheduled.getTime()
+          );
+
+        const nextEnabledAt = shouldRepairActivation
+          ? localScheduled.toISOString()
+          : bill.autopay_enabled_at;
+
+        const { data, error } = await supabase
+          .from("bills")
+          .update({
+            autopay_timezone: timezone,
+            autopay_enabled_at: nextEnabledAt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bill.id)
+          .eq("user_id", userId)
+          .eq("autopay", true)
+          .eq("status", "pending")
+          .select()
+          .single();
+
+        if (error) throw error;
+        replacements.set(bill.id, data as Bill);
+      }
+
+      if (cancelled || replacements.size === 0) return;
+
+      setBills((current) =>
+        current.map((bill) => replacements.get(bill.id) ?? bill),
+      );
+      notifyFiconterDataChange("all");
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      setMessage(
+        errorMessage(
+          error,
+          "The automatic-payment timezone could not be synchronized.",
+        ),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bills, supabase, userId]);
 
   const todayKey = localDateKey();
 
@@ -339,7 +450,7 @@ export function BillsManager({
       payment_method: bill.payment_method ?? "Other",
       autopay: bill.autopay,
       autopay_record_time: bill.autopay_record_time?.slice(0, 5) || "09:00",
-      autopay_timezone: bill.autopay_timezone || browserTimezone(),
+      autopay_timezone: browserTimezone(),
       autopay_enabled_at: bill.autopay_enabled_at,
       reminder_days: String(bill.reminder_days),
       notes: bill.notes ?? "",
@@ -364,62 +475,42 @@ export function BillsManager({
         throw new Error("Enter a bill name and a valid amount.");
       }
 
-      const automationChanged =
+      const detectedTimezone = browserTimezone();
+      const scheduledDateTime = new Date(
+        `${form.due_date}T${form.autopay_record_time}:00`,
+      );
+      const scheduledAt = scheduledDateTime.getTime();
+      const existingEnabledAt = existingBill?.autopay_enabled_at
+        ? new Date(existingBill.autopay_enabled_at).getTime()
+        : Number.NaN;
 
-
+      const scheduleChanged =
         !existingBill ||
-
-
         !existingBill.autopay ||
-
-
+        !existingBill.autopay_enabled_at ||
         existingBill.due_date !== form.due_date ||
-
-
         existingBill.autopay_record_time?.slice(0, 5) !==
-
-
-          form.autopay_record_time ||
-
-
-        existingBill.autopay_timezone !== form.autopay_timezone;
-
+          form.autopay_record_time;
 
       if (
-
-
         form.autopay &&
-
-
-        automationChanged &&
-
-
-        !automaticScheduleIsFuture(
-
-
-          form.due_date,
-
-
-          form.autopay_record_time,
-
-
+        scheduleChanged &&
+        (
+          Number.isNaN(scheduledAt) ||
+          scheduledAt <= Date.now()
         )
-
-
       ) {
-
-
         throw new Error(
-
-
           "Choose a future due date and time before activating automatic recording.",
-
-
         );
-
-
       }
 
+      const automationEnabledAt = !form.autopay
+        ? null
+        : Number.isFinite(existingEnabledAt) &&
+            existingEnabledAt <= scheduledAt
+          ? existingBill?.autopay_enabled_at ?? scheduledDateTime.toISOString()
+          : scheduledDateTime.toISOString();
 
       const conversion = await convertToEur(amount, form.currency);
       const payload = {
@@ -436,10 +527,8 @@ export function BillsManager({
         payment_method: form.payment_method,
         autopay: form.autopay,
         autopay_record_time: form.autopay_record_time,
-        autopay_timezone: form.autopay_timezone || browserTimezone(),
-        autopay_enabled_at: form.autopay
-          ? existingBill?.autopay_enabled_at ?? new Date().toISOString()
-          : null,
+        autopay_timezone: detectedTimezone,
+        autopay_enabled_at: automationEnabledAt,
         recurrence_anchor_day: Number(form.due_date.slice(8, 10)),
         recurrence_anchor_month_end: isMonthEnd(form.due_date),
         reminder_days: Math.min(365, Math.max(0, Math.round(finiteNumber(form.reminder_days)))),
@@ -796,7 +885,7 @@ export function BillsManager({
                   setForm({
                     ...form,
                     autopay: e.target.checked,
-                    autopay_timezone: form.autopay_timezone || browserTimezone(),
+                    autopay_timezone: browserTimezone(),
                   })
                 }
               />
@@ -872,7 +961,7 @@ export function BillsManager({
                     ? bill.autopay_enabled_at
                       ? `Automatic recording at ${
                           bill.autopay_record_time?.slice(0, 5) || "09:00"
-                        }`
+                        } · ${bill.autopay_timezone}`
                       : "Automatic recording needs one save to activate"
                     : "Manual recording"}
                 </small>

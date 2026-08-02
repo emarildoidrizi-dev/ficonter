@@ -1,9 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import {
+  isFinancialDataScope,
+  notifyFiconterDataChange,
+  subscribeFiconterDataChanges,
+} from "@/lib/ficonterRealtime";
 import { addMoney, finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
 import {
   billActivityDate,
@@ -52,6 +56,9 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const [notice,setNotice]=useState("");
   const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
   const [breakdownView,setBreakdownView]=useState<BreakdownView>("ring");
+  const refreshTimerRef=useRef<number|null>(null);
+  const refreshInFlightRef=useRef<Promise<void>|null>(null);
+  const refreshQueuedRef=useRef(false);
 
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
   useEffect(()=>{
@@ -76,6 +83,64 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     window.addEventListener("ficonter:preferences-updated",handle);
     return()=>{active=false;window.removeEventListener("ficonter:preferences-updated",handle)};
   },[supabase]);
+  const refreshPlannerData=useCallback(async()=>{
+    if(refreshInFlightRef.current){
+      refreshQueuedRef.current=true;
+      return refreshInFlightRef.current;
+    }
+    const request=(async()=>{
+      do{
+        refreshQueuedRef.current=false;
+        const [transactionResult,billResult,planResult,itemResult,goalResult]=await Promise.all([
+          supabase.from("transactions").select("id,user_id,description,amount_eur,type,category,transaction_date,occurred_at").eq("user_id",userId).order("occurred_at",{ascending:false}),
+          supabase.from("bills").select("id,user_id,name,category,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
+          supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
+          supabase.from("monthly_budget_items").select("id,user_id,month,section,label,planned_amount,position,created_at,updated_at").eq("user_id",userId).order("position",{ascending:true}),
+          supabase.from("goals").select("id,user_id,name,target_amount,current_amount,target_date,status,created_at,updated_at").eq("user_id",userId).order("created_at",{ascending:true}),
+        ]);
+        const error=transactionResult.error??billResult.error??planResult.error??itemResult.error??goalResult.error;
+        if(error)setNotice(error.message);
+        else{
+          setTransactions((transactionResult.data??[]) as Tx[]);
+          setBills((billResult.data??[]) as Bill[]);
+          setPlans((planResult.data??[]) as Plan[]);
+          setItems((itemResult.data??[]) as Item[]);
+          setGoals((goalResult.data??[]) as Goal[]);
+        }
+      }while(refreshQueuedRef.current);
+    })();
+    refreshInFlightRef.current=request;
+    try{await request;}finally{refreshInFlightRef.current=null;}
+  },[supabase,userId]);
+  const schedulePlannerRefresh=useCallback(()=>{
+    if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current=window.setTimeout(()=>{
+      refreshTimerRef.current=null;
+      void refreshPlannerData();
+    },80);
+  },[refreshPlannerData]);
+  useEffect(()=>{
+    const unsubscribe=subscribeFiconterDataChanges(change=>{
+      if(isFinancialDataScope(change.scope))schedulePlannerRefresh();
+    });
+    const handleFocus=()=>schedulePlannerRefresh();
+    const handleVisible=()=>{if(document.visibilityState==="visible")schedulePlannerRefresh();};
+    const handleOnline=()=>schedulePlannerRefresh();
+    const safetyTimer=window.setInterval(()=>{
+      if(document.visibilityState==="visible")schedulePlannerRefresh();
+    },15_000);
+    window.addEventListener("focus",handleFocus);
+    window.addEventListener("online",handleOnline);
+    document.addEventListener("visibilitychange",handleVisible);
+    return()=>{
+      unsubscribe();
+      window.removeEventListener("focus",handleFocus);
+      window.removeEventListener("online",handleOnline);
+      document.removeEventListener("visibilitychange",handleVisible);
+      window.clearInterval(safetyTimer);
+      if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
+    };
+  },[schedulePlannerRefresh]);
   useEffect(()=>{
     const channel=supabase.channel(`planner-${userId}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},p=>setTransactions(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Tx,...c.filter(x=>x.id!==(p.new as any).id)]))

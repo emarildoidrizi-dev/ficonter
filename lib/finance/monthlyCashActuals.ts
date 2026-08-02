@@ -1,4 +1,6 @@
+import type { AiInsightsInputs } from "@/lib/wealth/aiInsights";
 import type { CashFlowIntelligenceInputs } from "@/lib/wealth/cashFlowIntelligence";
+import type { FinancialHealthInputs } from "@/lib/wealth/financialHealth";
 import {
   addMoney,
   finiteNumber,
@@ -6,15 +8,17 @@ import {
   subtractMoney,
 } from "@/lib/finance/money";
 
-export type MonthlyCashTransaction = {
+export type PlatformTransaction = {
   id: string;
   type: string;
-  amount_eur: number | string;
+  description?: string | null;
+  category?: string | null;
+  amount_eur: number | string | null;
   transaction_date: string | null;
   occurred_at?: string | null;
 };
 
-export type MonthlyCashBill = {
+export type PlatformBill = {
   id: string;
   status: string;
   amount_eur: number | string;
@@ -34,8 +38,98 @@ export type MonthlyCashActuals = {
   netCashFlow: number;
 };
 
+export type PlatformCashActuals = {
+  count: number;
+  totalIncome: number;
+  totalExpenses: number;
+  totalSavings: number;
+  netCashFlow: number;
+  activeMonths: number;
+  incomeMonths: number;
+  expenseMonths: number;
+  currentMonthOutflow: number;
+};
+
+const SAVING_WORDS = [
+  "saving",
+  "savings",
+  "emergency fund",
+  "retirement",
+  "stocks",
+  "etfs",
+  "bonds",
+  "crypto",
+  "investment",
+  "house deposit",
+  "education fund",
+];
+
+function localDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function monthKey(value: string): string {
+  return value.slice(0, 7);
+}
+
+function completedThroughForMonth(
+  month: string,
+  today = localDateKey(),
+): string {
+  const currentMonth = monthKey(today);
+  if (month < currentMonth) return `${month}-31`;
+  if (month === currentMonth) return today;
+  return `${month}-00`;
+}
+
+function asTransactions(input: unknown): PlatformTransaction[] {
+  return Array.isArray(input)
+    ? input.map((row) => {
+        const value = (row ?? {}) as Partial<PlatformTransaction>;
+        return {
+          id: String(value.id ?? ""),
+          type: String(value.type ?? ""),
+          description:
+            typeof value.description === "string" ? value.description : null,
+          category:
+            typeof value.category === "string" ? value.category : null,
+          amount_eur: value.amount_eur ?? 0,
+          transaction_date:
+            typeof value.transaction_date === "string"
+              ? value.transaction_date
+              : null,
+          occurred_at:
+            typeof value.occurred_at === "string" ? value.occurred_at : null,
+        };
+      })
+    : [];
+}
+
+function asBills(input: unknown): PlatformBill[] {
+  return Array.isArray(input)
+    ? input.map((row) => {
+        const value = (row ?? {}) as Partial<PlatformBill>;
+        return {
+          id: String(value.id ?? ""),
+          status: String(value.status ?? ""),
+          amount_eur: value.amount_eur ?? 0,
+          due_date: String(value.due_date ?? ""),
+          paid_at:
+            typeof value.paid_at === "string" ? value.paid_at : null,
+          transaction_id:
+            typeof value.transaction_id === "string"
+              ? value.transaction_id
+              : null,
+        };
+      })
+    : [];
+}
+
 export function transactionActivityDate(
-  transaction: MonthlyCashTransaction,
+  transaction: PlatformTransaction,
 ): string {
   return (
     transaction.transaction_date ||
@@ -44,7 +138,7 @@ export function transactionActivityDate(
   );
 }
 
-export function billActivityDate(bill: MonthlyCashBill): string {
+export function billActivityDate(bill: PlatformBill): string {
   if (bill.status === "paid") {
     return bill.paid_at?.slice(0, 10) ?? bill.due_date;
   }
@@ -59,35 +153,56 @@ export function inFinancialMonth(
   return Boolean(value?.startsWith(month));
 }
 
-function asTransactions(input: unknown): MonthlyCashTransaction[] {
-  return Array.isArray(input)
-    ? input.map((row) => {
-        const value = (row ?? {}) as Partial<MonthlyCashTransaction>;
-        return {
-          id: String(value.id ?? ""),
-          type: String(value.type ?? ""),
-          amount_eur: value.amount_eur ?? 0,
-          transaction_date: value.transaction_date ?? null,
-          occurred_at: value.occurred_at ?? null,
-        };
-      })
-    : [];
+function isIncome(transaction: PlatformTransaction): boolean {
+  return transaction.type === "income";
 }
 
-function asBills(input: unknown): MonthlyCashBill[] {
-  return Array.isArray(input)
-    ? input.map((row) => {
-        const value = (row ?? {}) as Partial<MonthlyCashBill>;
-        return {
-          id: String(value.id ?? ""),
-          status: String(value.status ?? ""),
-          amount_eur: value.amount_eur ?? 0,
-          due_date: String(value.due_date ?? ""),
-          paid_at: value.paid_at ?? null,
-          transaction_id: value.transaction_id ?? null,
-        };
-      })
-    : [];
+function isSaving(transaction: PlatformTransaction): boolean {
+  if (transaction.type === "saving" || transaction.type === "savings") {
+    return true;
+  }
+
+  const category = (transaction.category ?? "").toLowerCase();
+  return SAVING_WORDS.some((word) => category.includes(word));
+}
+
+function linkedBillTransactionIds(
+  bills: PlatformBill[],
+): Set<string> {
+  return new Set(
+    bills
+      .map((bill) => bill.transaction_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+}
+
+function paidBillsThrough(
+  bills: PlatformBill[],
+  throughDate: string,
+): PlatformBill[] {
+  return bills.filter(
+    (bill) =>
+      bill.status === "paid" &&
+      Boolean(billActivityDate(bill)) &&
+      billActivityDate(bill) <= throughDate,
+  );
+}
+
+function includedTransactionsThrough(
+  transactions: PlatformTransaction[],
+  bills: PlatformBill[],
+  throughDate: string,
+): PlatformTransaction[] {
+  const linkedIds = linkedBillTransactionIds(bills);
+
+  return transactions.filter((transaction) => {
+    const date = transactionActivityDate(transaction);
+    return (
+      Boolean(date) &&
+      date <= throughDate &&
+      !linkedIds.has(transaction.id)
+    );
+  });
 }
 
 export function calculateMonthlyCashActuals(
@@ -97,22 +212,16 @@ export function calculateMonthlyCashActuals(
 ): MonthlyCashActuals {
   const transactions = asTransactions(transactionInput);
   const bills = asBills(billInput);
-  const linkedBillTransactionIds = new Set(
-    bills
-      .map((bill) => bill.transaction_id)
-      .filter((transactionId): transactionId is string => Boolean(transactionId)),
-  );
-
-  const monthTransactions = transactions.filter((transaction) =>
+  const throughDate = completedThroughForMonth(month);
+  const includedTransactions = includedTransactionsThrough(
+    transactions,
+    bills,
+    throughDate,
+  ).filter((transaction) =>
     inFinancialMonth(transactionActivityDate(transaction), month),
   );
-  const includedTransactions = monthTransactions.filter(
-    (transaction) => !linkedBillTransactionIds.has(transaction.id),
-  );
-  const paidBills = bills.filter(
-    (bill) =>
-      bill.status === "paid" &&
-      inFinancialMonth(billActivityDate(bill), month),
+  const paidBills = paidBillsThrough(bills, throughDate).filter((bill) =>
+    inFinancialMonth(billActivityDate(bill), month),
   );
 
   let income = 0;
@@ -121,18 +230,13 @@ export function calculateMonthlyCashActuals(
 
   includedTransactions.forEach((transaction) => {
     const amount = finiteNumber(transaction.amount_eur);
-
-    if (transaction.type === "income") {
+    if (isIncome(transaction)) {
       income = addMoney(income, amount);
-      return;
-    }
-
-    if (transaction.type === "saving") {
+    } else if (isSaving(transaction)) {
       savings = addMoney(savings, amount);
-      return;
+    } else {
+      expenses = addMoney(expenses, amount);
     }
-
-    expenses = addMoney(expenses, amount);
   });
 
   const paidBillsTotal = paidBills.reduce(
@@ -154,26 +258,100 @@ export function calculateMonthlyCashActuals(
   };
 }
 
-function nextMonth(month: string): string {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const value = new Date(Date.UTC(year, monthNumber, 1));
-  return value.toISOString().slice(0, 7);
-}
+export function calculatePlatformCashActuals(
+  transactionInput: unknown,
+  billInput: unknown,
+  throughDate = localDateKey(),
+): PlatformCashActuals {
+  const transactions = asTransactions(transactionInput);
+  const bills = asBills(billInput);
+  const includedTransactions = includedTransactionsThrough(
+    transactions,
+    bills,
+    throughDate,
+  );
+  const paidBills = paidBillsThrough(bills, throughDate);
 
-export function cashFlowHistoryBounds(
-  input: CashFlowIntelligenceInputs,
-): {
-  start: string;
-  endExclusive: string;
-} {
-  const firstMonth =
-    input.monthly.at(0)?.month || new Date().toISOString().slice(0, 7);
-  const lastMonth =
-    input.monthly.at(-1)?.month || new Date().toISOString().slice(0, 7);
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  let totalSavings = 0;
+  const activeMonths = new Set<string>();
+  const incomeMonths = new Set<string>();
+  const expenseMonths = new Set<string>();
+
+  includedTransactions.forEach((transaction) => {
+    const date = transactionActivityDate(transaction);
+    const month = monthKey(date);
+    const amount = finiteNumber(transaction.amount_eur);
+    activeMonths.add(month);
+
+    if (isIncome(transaction)) {
+      totalIncome = addMoney(totalIncome, amount);
+      incomeMonths.add(month);
+    } else if (isSaving(transaction)) {
+      totalSavings = addMoney(totalSavings, amount);
+      expenseMonths.add(month);
+    } else {
+      totalExpenses = addMoney(totalExpenses, amount);
+      expenseMonths.add(month);
+    }
+  });
+
+  paidBills.forEach((bill) => {
+    const month = monthKey(billActivityDate(bill));
+    totalExpenses = addMoney(totalExpenses, bill.amount_eur);
+    activeMonths.add(month);
+    expenseMonths.add(month);
+  });
+
+  const currentMonth = monthKey(throughDate);
+  const currentMonthActuals = calculateMonthlyCashActuals(
+    currentMonth,
+    transactions,
+    bills,
+  );
 
   return {
-    start: `${firstMonth}-01`,
-    endExclusive: `${nextMonth(lastMonth)}-01`,
+    count: includedTransactions.length + paidBills.length,
+    totalIncome: roundMoney(totalIncome),
+    totalExpenses: roundMoney(totalExpenses),
+    totalSavings: roundMoney(totalSavings),
+    netCashFlow: subtractMoney(
+      totalIncome,
+      totalExpenses,
+      totalSavings,
+    ),
+    activeMonths: activeMonths.size,
+    incomeMonths: incomeMonths.size,
+    expenseMonths: expenseMonths.size,
+    currentMonthOutflow: currentMonthActuals.outflow,
+  };
+}
+
+export function reconcileFinancialHealthInputs(
+  input: FinancialHealthInputs,
+  transactionInput: unknown,
+  billInput: unknown,
+): FinancialHealthInputs {
+  const actuals = calculatePlatformCashActuals(
+    transactionInput,
+    billInput,
+  );
+
+  return {
+    ...input,
+    generatedAt: new Date().toISOString(),
+    transactions: {
+      ...input.transactions,
+      count: actuals.count,
+      totalIncome: actuals.totalIncome,
+      totalExpenses: actuals.totalExpenses,
+      totalSavings: actuals.totalSavings,
+      activeMonths: actuals.activeMonths,
+      incomeMonths: actuals.incomeMonths,
+      expenseMonths: actuals.expenseMonths,
+      currentMonthOutflow: actuals.currentMonthOutflow,
+    },
   };
 }
 
@@ -184,6 +362,12 @@ export function reconcileCashFlowMonthlyInputs(
 ): CashFlowIntelligenceInputs {
   return {
     ...input,
+    generatedAt: new Date().toISOString(),
+    financialHealth: reconcileFinancialHealthInputs(
+      input.financialHealth,
+      transactionInput,
+      billInput,
+    ),
     monthly: input.monthly.map((month) => {
       const actuals = calculateMonthlyCashActuals(
         month.month,
@@ -201,5 +385,21 @@ export function reconcileCashFlowMonthlyInputs(
         netCashFlow: actuals.netCashFlow,
       };
     }),
+  };
+}
+
+export function reconcileAiInsightsInputs(
+  input: AiInsightsInputs,
+  transactionInput: unknown,
+  billInput: unknown,
+): AiInsightsInputs {
+  return {
+    ...input,
+    generatedAt: new Date().toISOString(),
+    cashFlow: reconcileCashFlowMonthlyInputs(
+      input.cashFlow,
+      transactionInput,
+      billInput,
+    ),
   };
 }

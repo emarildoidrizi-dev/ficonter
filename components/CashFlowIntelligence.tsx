@@ -14,11 +14,12 @@ import {
   WalletCards,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
 import {
-  cashFlowHistoryBounds,
-  reconcileCashFlowMonthlyInputs,
-} from "@/lib/finance/monthlyCashActuals";
+  isFinancialDataScope,
+  subscribeFiconterDataChanges,
+} from "@/lib/ficonterRealtime";
+import { formatCurrency } from "@/lib/financialOptions";
+import { reconcileCashFlowMonthlyInputs } from "@/lib/finance/monthlyCashActuals";
 import {
   calculateCashFlowIntelligence,
   normalizeCashFlowDebtPayments,
@@ -104,59 +105,61 @@ export function CashFlowIntelligence({
   const refresh = useCallback(async () => {
     setRefreshing(true);
 
-    const [inputResponse, paymentResponse] = await Promise.all([
+    const [
+      inputResponse,
+      paymentResponse,
+      transactionResponse,
+      billResponse,
+    ] = await Promise.all([
       supabase.rpc("get_cash_flow_intelligence_inputs_v2"),
       supabase
         .from("debt_payments")
         .select("debt_id, amount_eur, paid_at")
         .gte("paid_at", currentMonthStartIso()),
+      supabase
+        .from("transactions")
+        .select(
+          "id,type,description,category,amount_eur,transaction_date,occurred_at",
+        )
+        .eq("user_id", userId)
+        .order("transaction_date", { ascending: true }),
+      supabase
+        .from("bills")
+        .select("id,status,amount_eur,due_date,paid_at,transaction_id")
+        .eq("user_id", userId),
     ]);
 
     const normalizedInputs = normalizeCashFlowIntelligenceInputs(
       inputResponse.data,
     );
+    const synchronizedInputs = reconcileCashFlowMonthlyInputs(
+      normalizedInputs,
+      transactionResponse.data,
+      billResponse.data,
+    );
     const activeMonth =
-      normalizedInputs.monthly.at(-1)?.month ||
-      normalizedInputs.generatedAt.slice(0, 7) ||
+      synchronizedInputs.monthly.at(-1)?.month ||
+      synchronizedInputs.generatedAt.slice(0, 7) ||
       new Date().toISOString().slice(0, 7);
-    const historyBounds = cashFlowHistoryBounds(normalizedInputs);
 
-    const [planResponse, transactionResponse, billResponse] = await Promise.all([
-      supabase
-        .from("monthly_budget_plans")
-        .select("start_balance")
-        .eq("user_id", userId)
-        .eq("month", activeMonth)
-        .maybeSingle(),
-      supabase
-        .from("transactions")
-        .select("id, type, amount_eur, transaction_date, occurred_at")
-        .eq("user_id", userId)
-        .gte("transaction_date", historyBounds.start)
-        .lt("transaction_date", historyBounds.endExclusive),
-      supabase
-        .from("bills")
-        .select("id, status, amount_eur, due_date, paid_at, transaction_id")
-        .eq("user_id", userId),
-    ]);
+    const planResponse = await supabase
+      .from("monthly_budget_plans")
+      .select("start_balance")
+      .eq("user_id", userId)
+      .eq("month", activeMonth)
+      .maybeSingle();
 
     const refreshError =
       inputResponse.error ??
       paymentResponse.error ??
-      planResponse.error ??
       transactionResponse.error ??
-      billResponse.error;
+      billResponse.error ??
+      planResponse.error;
 
     if (refreshError) {
       setError(refreshError.message);
     } else {
-      setInputs(
-        reconcileCashFlowMonthlyInputs(
-          normalizedInputs,
-          transactionResponse.data,
-          billResponse.data,
-        ),
-      );
+      setInputs(synchronizedInputs);
       setDebtPayments(normalizeCashFlowDebtPayments(paymentResponse.data));
       setOpeningBalance(Number(planResponse.data?.start_balance ?? 0));
       setError("");
@@ -248,12 +251,30 @@ export function CashFlowIntelligence({
   }, [scheduleRefresh, supabase, userId]);
 
   useEffect(() => {
-    function handleVisible() {
-      if (document.visibilityState === "visible") void refresh();
-    }
+    const unsubscribe = subscribeFiconterDataChanges((change) => {
+      if (isFinancialDataScope(change.scope)) scheduleRefresh();
+    });
+    const handleFocus = () => scheduleRefresh();
+    const handleOnline = () => scheduleRefresh();
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") scheduleRefresh();
+    };
+    const safetyTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") scheduleRefresh();
+    }, 15_000);
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisible);
-    return () => document.removeEventListener("visibilitychange", handleVisible);
-  }, [refresh]);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.clearInterval(safetyTimer);
+    };
+  }, [scheduleRefresh]);
 
   const result = useMemo(
     () =>

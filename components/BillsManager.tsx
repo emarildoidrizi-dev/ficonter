@@ -320,6 +320,9 @@ export function BillsManager({
     if (busy) return;
     setBusy("save");
     setMessage("");
+    const existingBill = editingId
+      ? bills.find((bill) => bill.id === editingId) ?? null
+      : null;
 
     try {
       const amount = roundMoney(form.amount);
@@ -343,11 +346,63 @@ export function BillsManager({
         autopay: form.autopay,
         reminder_days: Math.min(365, Math.max(0, Math.round(finiteNumber(form.reminder_days)))),
         notes: form.notes.trim() || null,
-        status: "pending" as BillStatus,
+        status: existingBill?.status ?? ("pending" as BillStatus),
         updated_at: new Date().toISOString(),
       };
 
       if (editingId) {
+        if (!existingBill) {
+          throw new Error("The bill being edited could not be found.");
+        }
+
+        let linkedTransactionBefore: {
+          description: string;
+          amount: number | string;
+          currency: string;
+          amount_eur: number | string;
+          exchange_rate_to_eur: number | string;
+          exchange_rate_date: string | null;
+          exchange_rate_source: string | null;
+          type: string;
+          category: string;
+          transaction_date: string;
+          occurred_at: string | null;
+        } | null = null;
+
+        if (existingBill.status === "paid" && existingBill.transaction_id) {
+          const { data: linkedTransaction, error: linkedReadError } =
+            await supabase
+              .from("transactions")
+              .select(
+                "description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at",
+              )
+              .eq("id", existingBill.transaction_id)
+              .eq("user_id", userId)
+              .maybeSingle();
+          if (linkedReadError) throw linkedReadError;
+
+          if (linkedTransaction) {
+            linkedTransactionBefore = linkedTransaction;
+            const { error: linkedUpdateError } = await supabase
+              .from("transactions")
+              .update({
+                description: form.company.trim()
+                  ? `${form.name.trim()} · ${form.company.trim()}`
+                  : form.name.trim(),
+                amount,
+                currency: form.currency,
+                amount_eur: roundMoney(conversion.eur),
+                exchange_rate_to_eur: roundRate(conversion.rate),
+                exchange_rate_source: "Bill conversion",
+                type: "expense",
+                category: form.category,
+              })
+              .eq("id", existingBill.transaction_id)
+              .eq("user_id", userId);
+            if (linkedUpdateError) throw linkedUpdateError;
+          }
+        }
+
         const { data, error } = await supabase
           .from("bills")
           .update(payload)
@@ -355,7 +410,18 @@ export function BillsManager({
           .eq("user_id", userId)
           .select()
           .single();
-        if (error) throw error;
+
+        if (error) {
+          if (linkedTransactionBefore && existingBill.transaction_id) {
+            await supabase
+              .from("transactions")
+              .update(linkedTransactionBefore)
+              .eq("id", existingBill.transaction_id)
+              .eq("user_id", userId);
+          }
+          throw error;
+        }
+
         setBills((current) =>
           current.map((bill) => (bill.id === editingId ? (data as Bill) : bill)),
         );

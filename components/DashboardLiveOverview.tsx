@@ -12,7 +12,15 @@ import {
 } from "lucide-react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { parseFiconterDataChange } from "@/lib/ficonterRealtime";
+import {
+  isFinancialDataScope,
+  parseFiconterDataChange,
+  subscribeFiconterDataChanges,
+} from "@/lib/ficonterRealtime";
+import {
+  reconcileAiInsightsInputs,
+  reconcileFinancialHealthInputs,
+} from "@/lib/finance/monthlyCashActuals";
 import { formatCurrency } from "@/lib/financialOptions";
 import { finiteNumber } from "@/lib/finance/money";
 import {
@@ -49,11 +57,20 @@ type Transaction = {
   occurred_at: string | null;
   created_at?: string | null;
 };
+type Bill = {
+  id: string;
+  status: string;
+  amount_eur: number | string;
+  due_date: string;
+  paid_at: string | null;
+  transaction_id: string | null;
+};
 
 type Props = {
   userId: string;
   name: string;
   initialTransactions: Transaction[];
+  initialBills: Bill[];
   initialHealthInputs: FinancialHealthInputs;
   initialSetupAcknowledgements: SetupAcknowledgements;
   initialGpsInputs: AiInsightsInputs;
@@ -122,6 +139,7 @@ export function DashboardLiveOverview({
   userId,
   name,
   initialTransactions,
+  initialBills,
   initialHealthInputs,
   initialSetupAcknowledgements,
   initialGpsInputs,
@@ -136,6 +154,7 @@ export function DashboardLiveOverview({
   const [transactions, setTransactions] = useState(
     [...initialTransactions].sort(newestFirst),
   );
+  const [bills, setBills] = useState(initialBills);
   const [healthInputs, setHealthInputs] = useState(initialHealthInputs);
   const [healthError, setHealthError] = useState(initialHealthError);
   const [gpsInputs, setGpsInputs] = useState(initialGpsInputs);
@@ -163,6 +182,9 @@ export function DashboardLiveOverview({
   useEffect(() => {
     setTransactions([...initialTransactions].sort(newestFirst));
   }, [initialTransactions]);
+  useEffect(() => {
+    setBills(initialBills);
+  }, [initialBills]);
 
   useEffect(() => {
     setHealthInputs(initialHealthInputs);
@@ -187,20 +209,61 @@ export function DashboardLiveOverview({
     const request = (async () => {
       do {
         refreshQueuedRef.current = false;
-        const [healthResult, gpsResult] = await Promise.all([
+        const [
+          transactionResult,
+          billResult,
+          healthResult,
+          gpsResult,
+        ] = await Promise.all([
+          supabase
+            .from("transactions")
+            .select(
+              "id,user_id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,type,category,transaction_date,occurred_at,created_at",
+            )
+            .eq("user_id", userId)
+            .order("occurred_at", { ascending: false }),
+          supabase
+            .from("bills")
+            .select("id,status,amount_eur,due_date,paid_at,transaction_id")
+            .eq("user_id", userId),
           supabase.rpc("get_financial_health_inputs"),
           supabase.rpc("get_ai_insights_inputs"),
         ]);
 
-        if (healthResult.error) setHealthError(healthResult.error.message);
-        else {
-          setHealthInputs(normalizeFinancialHealthInputs(healthResult.data));
+        const nextTransactions = (transactionResult.data ?? []) as Transaction[];
+        const nextBills = (billResult.data ?? []) as Bill[];
+        const dataError = transactionResult.error ?? billResult.error;
+
+        if (dataError) {
+          setHealthError(dataError.message);
+        } else {
+          setTransactions([...nextTransactions].sort(newestFirst));
+          setBills(nextBills);
+        }
+
+        if (healthResult.error) {
+          setHealthError(healthResult.error.message);
+        } else if (!dataError) {
+          setHealthInputs(
+            reconcileFinancialHealthInputs(
+              normalizeFinancialHealthInputs(healthResult.data),
+              nextTransactions,
+              nextBills,
+            ),
+          );
           setHealthError("");
         }
 
-        if (gpsResult.error) setGpsError(gpsResult.error.message);
-        else {
-          setGpsInputs(normalizeAiInsightsInputs(gpsResult.data));
+        if (gpsResult.error) {
+          setGpsError(gpsResult.error.message);
+        } else if (!dataError) {
+          setGpsInputs(
+            reconcileAiInsightsInputs(
+              normalizeAiInsightsInputs(gpsResult.data),
+              nextTransactions,
+              nextBills,
+            ),
+          );
           setGpsError("");
         }
       } while (refreshQueuedRef.current);
@@ -212,7 +275,7 @@ export function DashboardLiveOverview({
     } finally {
       refreshInFlightRef.current = null;
     }
-  }, [supabase]);
+  }, [supabase, userId]);
 
   const scheduleHealthRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -374,6 +437,32 @@ export function DashboardLiveOverview({
       void supabase.removeChannel(channel);
     };
   }, [scheduleHealthRefresh, supabase, userId]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeFiconterDataChanges((change) => {
+      if (isFinancialDataScope(change.scope)) scheduleHealthRefresh();
+    });
+    const handleFocus = () => scheduleHealthRefresh();
+    const handleOnline = () => scheduleHealthRefresh();
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") scheduleHealthRefresh();
+    };
+    const safetyTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") scheduleHealthRefresh();
+    }, 15_000);
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.clearInterval(safetyTimer);
+    };
+  }, [scheduleHealthRefresh]);
 
   useEffect(
     () => () => {

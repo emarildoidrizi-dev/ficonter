@@ -28,6 +28,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
+import { switchActiveBusinessAction } from "@/app/business/actions";
 import { Brand } from "./Brand";
 import styles from "./BusinessSidebar.module.css";
 
@@ -69,6 +70,7 @@ export function BusinessSidebar({
   const [selectedBusinessId, setSelectedBusinessId] = useState(
     business?.id ?? "",
   );
+  const [pendingBusinessId, setPendingBusinessId] = useState("");
   const [switchTransitionPending, startSwitchTransition] =
     useTransition();
   const displayName =
@@ -85,7 +87,26 @@ export function BusinessSidebar({
 
   useEffect(() => {
     setSelectedBusinessId(business?.id ?? "");
-  }, [business?.id]);
+
+    if (pendingBusinessId && business?.id === pendingBusinessId) {
+      setPendingBusinessId("");
+    }
+  }, [business?.id, pendingBusinessId]);
+
+  useEffect(() => {
+    if (
+      !pendingBusinessId ||
+      business?.id === pendingBusinessId
+    ) {
+      return;
+    }
+
+    const fallbackId = window.setTimeout(() => {
+      window.location.replace(window.location.href);
+    }, 1800);
+
+    return () => window.clearTimeout(fallbackId);
+  }, [business?.id, pendingBusinessId]);
 
   async function switchBusiness(event: ChangeEvent<HTMLSelectElement>) {
     const nextBusinessId = event.target.value;
@@ -105,21 +126,20 @@ export function BusinessSidebar({
     setSwitching(true);
     setSwitchError("");
 
-    const { error } = await supabase.rpc(
-      "set_active_business_workspace",
-      {
-        p_business_id: nextBusinessId,
-      },
+    const result = await switchActiveBusinessAction(
+      nextBusinessId,
     );
 
-    if (error) {
+    if (!result.ok) {
       setSelectedBusinessId(previousBusinessId);
-      setSwitchError(error.message);
+      setSwitchError(result.error);
       setSwitching(false);
       return;
     }
 
+    setPendingBusinessId(nextBusinessId);
     setSwitching(false);
+
     startSwitchTransition(() => {
       router.refresh();
     });
@@ -178,6 +198,9 @@ export function BusinessSidebar({
             <small>
               {business.business_type} · {business.base_currency}
             </small>
+            {pendingBusinessId ? (
+              <small>Updating all business data…</small>
+            ) : null}
             {switchError ? (
               <small className={styles.switchError}>{switchError}</small>
             ) : null}

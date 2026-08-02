@@ -21,6 +21,8 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -127,6 +129,16 @@ export function BusinessManager({
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!notice) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setNotice("");
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
 
   useEffect(() => {
     return () => {
@@ -422,7 +434,12 @@ export function BusinessManager({
   }
 
   async function openBusiness(businessId: string) {
-    if (busy || businessId === currentBusinessId) return;
+    if (busy) return;
+
+    if (businessId === currentBusinessId) {
+      router.replace("/business/overview");
+      return;
+    }
 
     setBusy(`switch-${businessId}`);
     clearMessages();
@@ -441,6 +458,48 @@ export function BusinessManager({
     setCurrentBusinessId(businessId);
     router.replace("/business/overview");
     router.refresh();
+  }
+
+  function cardClickIsOnControl(target: EventTarget | null) {
+    return (
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          "button, a, input, select, textarea, label, [role='button']",
+        ),
+      )
+    );
+  }
+
+  function handleBusinessCardClick(
+    event: MouseEvent<HTMLElement>,
+    business: Business,
+  ) {
+    if (
+      business.status === "archived" ||
+      cardClickIsOnControl(event.target)
+    ) {
+      return;
+    }
+
+    void openBusiness(business.id);
+  }
+
+  function handleBusinessCardKeyDown(
+    event: KeyboardEvent<HTMLElement>,
+    business: Business,
+  ) {
+    if (
+      business.status === "archived" ||
+      event.target !== event.currentTarget
+    ) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      void openBusiness(business.id);
+    }
   }
 
   async function confirmArchiveBusiness() {
@@ -791,6 +850,19 @@ export function BusinessManager({
                   isActiveWorkspace ? styles.activeCard : ""
                 } ${isArchived ? styles.archivedCard : ""}`}
                 key={business.id}
+                role={isArchived ? undefined : "button"}
+                tabIndex={isArchived ? undefined : 0}
+                aria-label={
+                  isArchived
+                    ? undefined
+                    : `Open ${business.name} business`
+                }
+                onClick={(event) =>
+                  handleBusinessCardClick(event, business)
+                }
+                onKeyDown={(event) =>
+                  handleBusinessCardKeyDown(event, business)
+                }
               >
                 <div className={styles.cardMedia}>
                   {coverUrl ? (

@@ -766,3 +766,31 @@
     height: 128px;
   }
 }
+
+
+.businessCard[role="button"] {
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.businessCard[role="button"]:hover {
+  transform: translateY(-2px);
+  border-color: rgba(217, 187, 114, .46);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .2);
+}
+
+.businessCard[role="button"]:focus-visible {
+  outline: 2px solid #d9bb72;
+  outline-offset: 3px;
+}
+
+.businessCard[role="button"] button,
+.businessCard[role="button"] a,
+.businessCard[role="button"] label,
+.businessCard[role="button"] input,
+.businessCard[role="button"] select {
+  cursor: pointer;
+}

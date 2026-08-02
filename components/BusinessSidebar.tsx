@@ -39,7 +39,6 @@ const links = [
   ["/business/reports", FileText, "Reports", false, false],
   ["/business/administration", ShieldCheck, "Administration", true, false],
   ["/business/admin", Users, "Business Admin", false, true],
-  ["/business/manage", Settings2, "Businesses", false, false],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {
@@ -214,16 +213,6 @@ export function BusinessSidebar({
             ))
           : (
               <>
-                <Link
-                  href="/business/manage"
-                  className={`side-link ${
-                    activeRoute(pathname, "/business/manage") ? "active" : ""
-                  }`}
-                  prefetch={false}
-                >
-                  <Settings2 size={18} aria-hidden="true" />
-                  <span>Businesses</span>
-                </Link>
                 <Link
                   href="/business/setup"
                   className={`side-link ${

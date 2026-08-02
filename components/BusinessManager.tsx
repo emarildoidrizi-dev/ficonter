@@ -298,6 +298,7 @@ export function BusinessManager({
     setBusy(`edit-${editingBusiness.id}`);
     clearMessages();
 
+    const form = new FormData(event.currentTarget);
     let uploadedLogoPath: string | null = null;
     let uploadedCoverPath: string | null = null;
 
@@ -325,7 +326,6 @@ export function BusinessManager({
         ? null
         : uploadedCoverPath ?? editingBusiness.cover_image_path;
 
-      const form = new FormData(event.currentTarget);
       const { data, error: updateError } = await supabase.rpc(
         "update_business_workspace",
         {

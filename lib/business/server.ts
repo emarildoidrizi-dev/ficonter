@@ -17,20 +17,43 @@ export const getBusinessContext = cache(async () => {
     };
   }
 
-  const { data, error } = await supabase
-    .from("businesses")
-    .select(
-      "id,owner_id,name,legal_name,business_type,country_code,base_currency,fiscal_year_start_month,created_at,updated_at",
-    )
-    .order("created_at", { ascending: true });
+  const [
+    { data: businessData, error: businessError },
+    { data: preferenceData, error: preferenceError },
+  ] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select(
+        "id,owner_id,name,legal_name,business_type,country_code,base_currency,fiscal_year_start_month,created_at,updated_at",
+      )
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("business_user_preferences")
+      .select("active_business_id")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
 
-  const businesses = (data ?? []) as Business[];
+  const businesses = (businessData ?? []) as Business[];
+  const preferredBusinessId =
+    typeof preferenceData?.active_business_id === "string"
+      ? preferenceData.active_business_id
+      : null;
+
+  const business =
+    businesses.find((item) => item.id === preferredBusinessId) ??
+    businesses[0] ??
+    null;
 
   return {
     supabase,
     user,
     businesses,
-    business: businesses[0] ?? null,
-    error: error?.message ?? authError?.message ?? "",
+    business,
+    error:
+      businessError?.message ??
+      preferenceError?.message ??
+      authError?.message ??
+      "",
   };
 });

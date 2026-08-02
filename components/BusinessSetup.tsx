@@ -68,11 +68,11 @@ export function BusinessSetup() {
   return (
     <section className={styles.shell}>
       <div className={styles.intro}>
-        <span className={styles.eyebrow}>FICONTER BUSINESS · B1</span>
+        <span className={styles.eyebrow}>FICONTER BUSINESS</span>
         <h1>Create your business workspace</h1>
         <p>
-          Business records remain isolated from your personal finances. The
-          workspace is ready for Cost Control and Inventory in the next phases.
+          Business records remain isolated from your personal finances and
+          from every other business workspace you create.
         </p>
         <div className={styles.assurance}>
           <ShieldCheck size={18} />

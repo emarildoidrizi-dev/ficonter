@@ -213,3 +213,18 @@
   color: #c2cad5 !important;
   font-size: 10px !important;
 }
+
+
+.workspaceLabel {
+  min-height: 26px;
+}
+
+.sidebarBusinessLogo {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(216, 189, 134, .35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+  object-fit: contain;
+}

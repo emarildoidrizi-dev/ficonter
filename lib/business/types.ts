@@ -20,6 +20,8 @@ export type Business = {
   address_line2: string | null;
   city: string | null;
   postal_code: string | null;
+  logo_path: string | null;
+  cover_image_path: string | null;
   created_at: string;
   updated_at: string;
 };

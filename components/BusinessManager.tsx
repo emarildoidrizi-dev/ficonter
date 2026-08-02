@@ -7,13 +7,21 @@ import {
   CirclePlus,
   Crown,
   Edit3,
+  ImageIcon,
+  ImagePlus,
   Plus,
   RotateCcw,
   ShieldAlert,
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -35,6 +43,15 @@ const BUSINESS_TYPES = [
   "Online business",
   "Other",
 ];
+
+const BUSINESS_ASSET_BUCKET = "business-assets";
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
+const LOGO_MAX_BYTES = 3 * 1024 * 1024;
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
 
 const MONTHS = [
   "January",
@@ -64,6 +81,16 @@ function cleanText(value: FormDataEntryValue | null) {
   return text || null;
 }
 
+function imageExtension(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension === "png" || extension === "jpg" || extension === "jpeg" || extension === "webp") {
+    return extension === "jpeg" ? "jpg" : extension;
+  }
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  return "jpg";
+}
+
 export function BusinessManager({
   userId,
   initialBusinesses,
@@ -91,9 +118,122 @@ export function BusinessManager({
   const [deletingBusiness, setDeletingBusiness] =
     useState<Business | null>(null);
   const [confirmationName, setConfirmationName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [coverPreview, setCoverPreview] = useState("");
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const [removeCover, setRemoveCover] = useState(false);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview.startsWith("blob:")) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
+  function publicAssetUrl(path: string | null) {
+    if (!path) return "";
+    return supabase.storage
+      .from(BUSINESS_ASSET_BUCKET)
+      .getPublicUrl(path).data.publicUrl;
+  }
+
+  function closeEditBusiness() {
+    setEditingBusiness(null);
+    setLogoFile(null);
+    setCoverFile(null);
+    setLogoPreview("");
+    setCoverPreview("");
+    setRemoveLogo(false);
+    setRemoveCover(false);
+    clearMessages();
+  }
+
+  function beginEditBusiness(business: Business) {
+    setEditingBusiness(business);
+    setLogoFile(null);
+    setCoverFile(null);
+    setLogoPreview(publicAssetUrl(business.logo_path));
+    setCoverPreview(publicAssetUrl(business.cover_image_path));
+    setRemoveLogo(false);
+    setRemoveCover(false);
+    clearMessages();
+  }
+
+  function selectImage(
+    event: ChangeEvent<HTMLInputElement>,
+    kind: "logo" | "cover",
+  ) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+
+    const maxBytes = kind === "logo" ? LOGO_MAX_BYTES : COVER_MAX_BYTES;
+    const maxLabel = kind === "logo" ? "3 MB" : "5 MB";
+
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setError("Use a PNG, JPG or WEBP image.");
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      setError(`The ${kind} image must be ${maxLabel} or smaller.`);
+      return;
+    }
+
+    clearMessages();
+    const preview = URL.createObjectURL(file);
+
+    if (kind === "logo") {
+      setLogoFile(file);
+      setLogoPreview(preview);
+      setRemoveLogo(false);
+    } else {
+      setCoverFile(file);
+      setCoverPreview(preview);
+      setRemoveCover(false);
+    }
+  }
+
+  function removeSelectedImage(kind: "logo" | "cover") {
+    clearMessages();
+    if (kind === "logo") {
+      setLogoFile(null);
+      setLogoPreview("");
+      setRemoveLogo(true);
+    } else {
+      setCoverFile(null);
+      setCoverPreview("");
+      setRemoveCover(true);
+    }
+  }
+
+  async function uploadBusinessAsset(
+    businessId: string,
+    kind: "logo" | "cover",
+    file: File,
+  ) {
+    const path = `${userId}/${businessId}/${kind}/${Date.now()}-${crypto.randomUUID()}.${imageExtension(file)}`;
+    const { error: uploadError } = await supabase.storage
+      .from(BUSINESS_ASSET_BUCKET)
+      .upload(path, file, {
+        cacheControl: "3600",
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+    return path;
+  }
 
   const activeCount = businesses.filter(
     (business) => business.status !== "archived",
@@ -158,58 +298,127 @@ export function BusinessManager({
     setBusy(`edit-${editingBusiness.id}`);
     clearMessages();
 
-    const form = new FormData(event.currentTarget);
-    const { data, error: updateError } = await supabase.rpc(
-      "update_business_workspace",
-      {
-        p_business_id: editingBusiness.id,
-        p_name: String(form.get("name") ?? "").trim(),
-        p_legal_name: cleanText(form.get("legal_name")),
-        p_business_type: String(
-          form.get("business_type") ?? editingBusiness.business_type,
-        ),
-        p_country_code: String(
-          form.get("country_code") ?? editingBusiness.country_code,
-        ).toUpperCase(),
-        p_base_currency: String(
-          form.get("base_currency") ?? editingBusiness.base_currency,
-        ),
-        p_fiscal_year_start_month: Number(
-          form.get("fiscal_year_start_month") ??
-            editingBusiness.fiscal_year_start_month,
-        ),
-        p_timezone: String(
-          form.get("timezone") ?? editingBusiness.timezone,
-        ),
-        p_tax_id: cleanText(form.get("tax_id")),
-        p_contact_email: cleanText(form.get("contact_email")),
-        p_contact_phone: cleanText(form.get("contact_phone")),
-        p_website: cleanText(form.get("website")),
-        p_address_line1: cleanText(form.get("address_line1")),
-        p_address_line2: cleanText(form.get("address_line2")),
-        p_city: cleanText(form.get("city")),
-        p_postal_code: cleanText(form.get("postal_code")),
-      },
-    );
+    let uploadedLogoPath: string | null = null;
+    let uploadedCoverPath: string | null = null;
 
-    if (updateError || !data) {
-      setError(
-        updateError?.message ?? "The business profile could not be updated.",
+    try {
+      if (logoFile) {
+        uploadedLogoPath = await uploadBusinessAsset(
+          editingBusiness.id,
+          "logo",
+          logoFile,
+        );
+      }
+
+      if (coverFile) {
+        uploadedCoverPath = await uploadBusinessAsset(
+          editingBusiness.id,
+          "cover",
+          coverFile,
+        );
+      }
+
+      const nextLogoPath = removeLogo
+        ? null
+        : uploadedLogoPath ?? editingBusiness.logo_path;
+      const nextCoverPath = removeCover
+        ? null
+        : uploadedCoverPath ?? editingBusiness.cover_image_path;
+
+      const form = new FormData(event.currentTarget);
+      const { data, error: updateError } = await supabase.rpc(
+        "update_business_workspace",
+        {
+          p_business_id: editingBusiness.id,
+          p_name: String(form.get("name") ?? "").trim(),
+          p_legal_name: cleanText(form.get("legal_name")),
+          p_business_type: String(
+            form.get("business_type") ?? editingBusiness.business_type,
+          ),
+          p_country_code: String(
+            form.get("country_code") ?? editingBusiness.country_code,
+          ).toUpperCase(),
+          p_base_currency: String(
+            form.get("base_currency") ?? editingBusiness.base_currency,
+          ),
+          p_fiscal_year_start_month: Number(
+            form.get("fiscal_year_start_month") ??
+              editingBusiness.fiscal_year_start_month,
+          ),
+          p_timezone: String(
+            form.get("timezone") ?? editingBusiness.timezone,
+          ),
+          p_tax_id: cleanText(form.get("tax_id")),
+          p_contact_email: cleanText(form.get("contact_email")),
+          p_contact_phone: cleanText(form.get("contact_phone")),
+          p_website: cleanText(form.get("website")),
+          p_address_line1: cleanText(form.get("address_line1")),
+          p_address_line2: cleanText(form.get("address_line2")),
+          p_city: cleanText(form.get("city")),
+          p_postal_code: cleanText(form.get("postal_code")),
+          p_logo_path: nextLogoPath,
+          p_cover_image_path: nextCoverPath,
+        },
       );
-      setBusy("");
-      return;
-    }
 
-    const updated = data as Business;
-    setBusinesses((current) =>
-      current.map((business) =>
-        business.id === updated.id ? updated : business,
-      ),
-    );
-    setEditingBusiness(null);
-    setBusy("");
-    setNotice("Business profile updated.");
-    router.refresh();
+      if (updateError || !data) {
+        throw updateError ?? new Error(
+          "The business profile could not be updated.",
+        );
+      }
+
+      const updated = data as Business;
+      const oldPathsToRemove = [
+        editingBusiness.logo_path &&
+        editingBusiness.logo_path !== updated.logo_path
+          ? editingBusiness.logo_path
+          : null,
+        editingBusiness.cover_image_path &&
+        editingBusiness.cover_image_path !== updated.cover_image_path
+          ? editingBusiness.cover_image_path
+          : null,
+      ].filter((path): path is string => Boolean(path));
+
+      let cleanupWarning = false;
+      if (oldPathsToRemove.length) {
+        const { error: cleanupError } = await supabase.storage
+          .from(BUSINESS_ASSET_BUCKET)
+          .remove(oldPathsToRemove);
+        cleanupWarning = Boolean(cleanupError);
+      }
+
+      setBusinesses((current) =>
+        current.map((business) =>
+          business.id === updated.id ? updated : business,
+        ),
+      );
+      closeEditBusiness();
+      setNotice(
+        cleanupWarning
+          ? "Business profile updated. The previous image could not be cleaned up automatically."
+          : "Business profile and identity updated.",
+      );
+      router.refresh();
+    } catch (saveError) {
+      const uploadedPaths = [
+        uploadedLogoPath,
+        uploadedCoverPath,
+      ].filter((path): path is string => Boolean(path));
+
+      if (uploadedPaths.length) {
+        await supabase.storage
+          .from(BUSINESS_ASSET_BUCKET)
+          .remove(uploadedPaths);
+      }
+
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "The business profile could not be updated.",
+      );
+    } finally {
+      setBusy("");
+    }
   }
 
   async function openBusiness(businessId: string) {
@@ -367,6 +576,19 @@ export function BusinessManager({
         ? result.active_business_id
         : null;
 
+    const deletedAssetPaths = [
+      deletingBusiness.logo_path,
+      deletingBusiness.cover_image_path,
+    ].filter((path): path is string => Boolean(path));
+    let assetCleanupWarning = false;
+
+    if (deletedAssetPaths.length) {
+      const { error: assetCleanupError } = await supabase.storage
+        .from(BUSINESS_ASSET_BUCKET)
+        .remove(deletedAssetPaths);
+      assetCleanupWarning = Boolean(assetCleanupError);
+    }
+
     setBusinesses((current) =>
       current.filter((item) => item.id !== deletedId),
     );
@@ -376,9 +598,18 @@ export function BusinessManager({
     setBusy("");
 
     if (nextActiveId) {
-      setNotice("Business removed. Another business is now active.");
+      setNotice(
+        assetCleanupWarning
+          ? "Business removed. One stored image may require later cleanup."
+          : "Business removed. Another business is now active.",
+      );
       router.replace("/business/overview");
     } else {
+      if (assetCleanupWarning) {
+        setNotice(
+          "Business removed. One stored image may require later cleanup.",
+        );
+      }
       router.replace("/business/manage");
     }
     router.refresh();
@@ -551,6 +782,8 @@ export function BusinessManager({
             const isActiveWorkspace = business.id === currentBusinessId;
             const isArchived = business.status === "archived";
             const isOwner = business.owner_id === userId;
+            const logoUrl = publicAssetUrl(business.logo_path);
+            const coverUrl = publicAssetUrl(business.cover_image_path);
 
             return (
               <article
@@ -559,9 +792,33 @@ export function BusinessManager({
                 } ${isArchived ? styles.archivedCard : ""}`}
                 key={business.id}
               >
+                <div className={styles.cardMedia}>
+                  {coverUrl ? (
+                    <img
+                      className={styles.cardCover}
+                      src={coverUrl}
+                      alt={`${business.name} cover`}
+                    />
+                  ) : (
+                    <div className={styles.cardCoverFallback}>
+                      <ImageIcon size={27} />
+                    </div>
+                  )}
+                </div>
+
                 <div className={styles.cardHeader}>
                   <div className={styles.businessIcon}>
-                    {isArchived ? <Archive size={22} /> : <Building2 size={22} />}
+                    {logoUrl ? (
+                      <img
+                        className={styles.cardLogo}
+                        src={logoUrl}
+                        alt={`${business.name} logo`}
+                      />
+                    ) : isArchived ? (
+                      <Archive size={22} />
+                    ) : (
+                      <Building2 size={22} />
+                    )}
                   </div>
                   <div>
                     <div className={styles.nameRow}>
@@ -654,10 +911,7 @@ export function BusinessManager({
                     <>
                       <button
                         className={styles.editButton}
-                        onClick={() => {
-                          setEditingBusiness(business);
-                          clearMessages();
-                        }}
+                        onClick={() => beginEditBusiness(business)}
                       >
                         <Edit3 size={16} />
                         Edit
@@ -704,10 +958,7 @@ export function BusinessManager({
             <button
               type="button"
               className={styles.modalClose}
-              onClick={() => {
-                setEditingBusiness(null);
-                clearMessages();
-              }}
+              onClick={closeEditBusiness}
               aria-label="Close edit business"
             >
               <X size={19} />
@@ -716,6 +967,75 @@ export function BusinessManager({
             <Edit3 className={styles.modalIcon} />
             <span>EDIT BUSINESS</span>
             <h2>{editingBusiness.name}</h2>
+
+            <section className={styles.identityEditor}>
+              <div className={styles.coverEditor}>
+                <div className={styles.coverPreview}>
+                  {coverPreview ? (
+                    <img src={coverPreview} alt="Business cover preview" />
+                  ) : (
+                    <div>
+                      <ImageIcon size={30} />
+                      <span>No cover image</span>
+                    </div>
+                  )}
+                </div>
+                <div className={styles.assetActions}>
+                  <label className={styles.assetUpload}>
+                    <ImagePlus size={16} />
+                    {coverPreview ? "Replace cover" : "Upload cover"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => selectImage(event, "cover")}
+                    />
+                  </label>
+                  {coverPreview ? (
+                    <button
+                      type="button"
+                      className={styles.assetRemove}
+                      onClick={() => removeSelectedImage("cover")}
+                    >
+                      <Trash2 size={15} />
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+                <small>Wide image · PNG, JPG or WEBP · maximum 5 MB</small>
+              </div>
+
+              <div className={styles.logoEditor}>
+                <div className={styles.logoPreview}>
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Business logo preview" />
+                  ) : (
+                    <Building2 size={31} />
+                  )}
+                </div>
+                <div className={styles.assetActions}>
+                  <label className={styles.assetUpload}>
+                    <ImagePlus size={16} />
+                    {logoPreview ? "Replace logo" : "Upload logo"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => selectImage(event, "logo")}
+                    />
+                  </label>
+                  {logoPreview ? (
+                    <button
+                      type="button"
+                      className={styles.assetRemove}
+                      onClick={() => removeSelectedImage("logo")}
+                    >
+                      <Trash2 size={15} />
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+                <small>Square image · transparent PNG preferred · maximum 3 MB</small>
+              </div>
+            </section>
 
             <div className={styles.formGrid}>
               <label>

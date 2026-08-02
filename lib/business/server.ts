@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import type { Business } from "@/lib/business/types";
 
 const BUSINESS_SELECT =
-  "id,owner_id,name,legal_name,business_type,country_code,base_currency,fiscal_year_start_month,status,archived_at,timezone,tax_id,contact_email,contact_phone,website,address_line1,address_line2,city,postal_code,created_at,updated_at";
+  "id,owner_id,name,legal_name,business_type,country_code,base_currency,fiscal_year_start_month,status,archived_at,timezone,tax_id,contact_email,contact_phone,website,address_line1,address_line2,city,postal_code,logo_path,cover_image_path,created_at,updated_at";
 
 export const getBusinessContext = cache(async () => {
   const { supabase, user, error: authError } = await getCurrentUser();

@@ -59,6 +59,11 @@ export function BusinessSidebar({
   const [switchError, setSwitchError] = useState("");
   const displayName =
     user.displayName.trim() || user.email.split("@")[0] || "Member";
+  const businessLogoUrl = business?.logo_path
+    ? supabase.storage
+        .from("business-assets")
+        .getPublicUrl(business.logo_path).data.publicUrl
+    : "";
   const activeBusinesses = businesses.filter(
     (item) => item.status !== "archived",
   );
@@ -111,8 +116,17 @@ export function BusinessSidebar({
       <Brand href="/business" />
 
       <section className={styles.businessIdentity}>
-        <span>
-          <Building2 size={15} /> Business workspace
+        <span className={styles.workspaceLabel}>
+          {businessLogoUrl ? (
+            <img
+              className={styles.sidebarBusinessLogo}
+              src={businessLogoUrl}
+              alt=""
+            />
+          ) : (
+            <Building2 size={15} />
+          )}
+          Business workspace
         </span>
 
         {business ? (

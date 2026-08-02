@@ -16,6 +16,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/financialOptions";
 import {
+  cashFlowHistoryBounds,
+  reconcileCashFlowMonthlyInputs,
+} from "@/lib/finance/monthlyCashActuals";
+import {
   calculateCashFlowIntelligence,
   normalizeCashFlowDebtPayments,
   normalizeCashFlowIntelligenceInputs,
@@ -115,21 +119,44 @@ export function CashFlowIntelligence({
       normalizedInputs.monthly.at(-1)?.month ||
       normalizedInputs.generatedAt.slice(0, 7) ||
       new Date().toISOString().slice(0, 7);
+    const historyBounds = cashFlowHistoryBounds(normalizedInputs);
 
-    const planResponse = await supabase
-      .from("monthly_budget_plans")
-      .select("start_balance")
-      .eq("user_id", userId)
-      .eq("month", activeMonth)
-      .maybeSingle();
+    const [planResponse, transactionResponse, billResponse] = await Promise.all([
+      supabase
+        .from("monthly_budget_plans")
+        .select("start_balance")
+        .eq("user_id", userId)
+        .eq("month", activeMonth)
+        .maybeSingle(),
+      supabase
+        .from("transactions")
+        .select("id, type, amount_eur, transaction_date, occurred_at")
+        .eq("user_id", userId)
+        .gte("transaction_date", historyBounds.start)
+        .lt("transaction_date", historyBounds.endExclusive),
+      supabase
+        .from("bills")
+        .select("id, status, amount_eur, due_date, paid_at, transaction_id")
+        .eq("user_id", userId),
+    ]);
 
     const refreshError =
-      inputResponse.error ?? paymentResponse.error ?? planResponse.error;
+      inputResponse.error ??
+      paymentResponse.error ??
+      planResponse.error ??
+      transactionResponse.error ??
+      billResponse.error;
 
     if (refreshError) {
       setError(refreshError.message);
     } else {
-      setInputs(normalizedInputs);
+      setInputs(
+        reconcileCashFlowMonthlyInputs(
+          normalizedInputs,
+          transactionResponse.data,
+          billResponse.data,
+        ),
+      );
       setDebtPayments(normalizeCashFlowDebtPayments(paymentResponse.data));
       setOpeningBalance(Number(planResponse.data?.start_balance ?? 0));
       setError("");

@@ -5,6 +5,11 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { addMoney, finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
+import {
+  billActivityDate,
+  calculateMonthlyCashActuals,
+  transactionActivityDate,
+} from "@/lib/finance/monthlyCashActuals";
 import { formatCurrency } from "@/lib/financialOptions";
 import styles from "./MonthlyPlanner.module.css";
 
@@ -27,8 +32,6 @@ const eur=(v:number)=>formatCurrency(finiteNumber(v),"EUR");
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
-const transactionActivityDate=(tx:Tx)=>tx.transaction_date||tx.occurred_at?.slice(0,10)||"";
-const billActivityDate=(bill:Bill)=>bill.status==="paid"?(bill.paid_at?.slice(0,10)??bill.due_date):bill.due_date;
 const isGoalInvestment=(tx:Tx)=>tx.description.startsWith("Goal investment ·");
 const classify=(tx:Tx):Section=>{
   if(tx.type==="income") return "income";
@@ -115,10 +118,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const monthItems=items.filter(i=>i.month===month);
   const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
   const actual=(s:Section)=>actualBySection[s];
-  const totalIncome=actual("income");
+  const synchronizedCashActuals=useMemo(
+    ()=>calculateMonthlyCashActuals(month,transactions,bills),
+    [month,transactions,bills],
+  );
+  const totalIncome=synchronizedCashActuals.income;
   const incomeCardTotal=addMoney(startBalance,totalIncome);
   const goalInvestments=sumMoney(monthTx.filter(isGoalInvestment).map(transaction=>transaction.amount_eur));
-  const totalOut=sumMoney([actual("bills"),actual("expenses"),actual("savings"),actual("debt"),goalInvestments]);
+  const totalOut=synchronizedCashActuals.outflow;
   // Goal investments reduce available cash independently.
   // They never update the Monthly Planner Savings card.
   const left=subtractMoney(incomeCardTotal,totalOut);

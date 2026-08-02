@@ -2,12 +2,10 @@
 
 import {
   CalendarDays,
-  Check,
   CircleAlert,
   Clock3,
   Edit3,
   Plus,
-  RotateCcw,
   Search,
   Trash2,
   X,
@@ -31,6 +29,8 @@ type Recurrence =
   | "quarterly"
   | "semiannual"
   | "yearly";
+
+type RecurringSchedule = Exclude<Recurrence, "none">;
 
 type Bill = {
   id: string;
@@ -85,9 +85,9 @@ const EMPTY_FORM = {
   amount: "",
   currency: "EUR",
   due_date: localDateKey(),
-  recurrence: "monthly" as Recurrence,
+  recurrence: "monthly" as RecurringSchedule,
   payment_method: "Direct debit",
-  autopay: false,
+  autopay: true,
   autopay_record_time: "09:00",
   autopay_timezone: "UTC",
   autopay_enabled_at: null as string | null,
@@ -108,8 +108,6 @@ function effectiveStatus(
 }
 
 function browserTimezone() {
-  if (typeof window === "undefined") return "UTC";
-
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   } catch {
@@ -138,43 +136,6 @@ function errorMessage(error: unknown, fallback: string) {
 
   return fallback;
 }
-
-function isMissingMarkPaidRpc(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-
-  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
-  const message =
-    "message" in error
-      ? String((error as { message?: unknown }).message ?? "").toLowerCase()
-      : "";
-
-  return (
-    code === "PGRST202" ||
-    code === "42883" ||
-    message.includes("mark_bill_paid") ||
-    message.includes("schema cache") ||
-    message.includes("could not find the function")
-  );
-}
-
-function isMissingMarkUnpaidRpc(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-
-  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
-  const message =
-    "message" in error
-      ? String((error as { message?: unknown }).message ?? "").toLowerCase()
-      : "";
-
-  return (
-    code === "PGRST202" ||
-    code === "42883" ||
-    message.includes("mark_bill_unpaid") ||
-    message.includes("schema cache") ||
-    message.includes("could not find the function")
-  );
-}
-
 
 async function convertToEur(amount: number, currency: string) {
   const result = await convertWithCachedRate(amount, currency, "EUR");
@@ -209,6 +170,15 @@ export function BillsManager({
   const [billPendingDeletion, setBillPendingDeletion] = useState<Bill | null>(null);
 
   useEffect(() => {
+    const timezone = browserTimezone();
+    setForm((current) =>
+      current.autopay_timezone === timezone
+        ? current
+        : { ...current, autopay_timezone: timezone },
+    );
+  }, []);
+
+  useEffect(() => {
     if (!message) return;
 
     const timer = window.setTimeout(() => {
@@ -217,16 +187,6 @@ export function BillsManager({
 
     return () => window.clearTimeout(timer);
   }, [message]);
-
-  useEffect(() => {
-    const timezone = browserTimezone();
-
-    setForm((current) =>
-      current.autopay_timezone === timezone
-        ? current
-        : { ...current, autopay_timezone: timezone },
-    );
-  }, []);
 
   useEffect(() => {
     if (!billPendingDeletion) return;
@@ -273,6 +233,8 @@ export function BillsManager({
             const record = payload.old as Bill;
             setBills((current) => current.filter((bill) => bill.id !== record.id));
           }
+
+          notifyFiconterDataChange("all");
         },
       )
       .subscribe();
@@ -285,69 +247,55 @@ export function BillsManager({
   useEffect(() => {
     const timezone = browserTimezone();
     const today = localDateKey();
-
-    const schedules = bills.filter((bill) => {
-      if (!bill.autopay || bill.status !== "pending") return false;
-
-      const localScheduled = new Date(
-        `${bill.due_date}T${
-          bill.autopay_record_time?.slice(0, 5) || "09:00"
-        }:00`,
-      );
-
-      if (Number.isNaN(localScheduled.getTime())) return false;
-
-      const existingEnabledAt = bill.autopay_enabled_at
-        ? new Date(bill.autopay_enabled_at)
-        : null;
-      const needsActivationRepair =
+    const candidates = bills.filter(
+      (bill) =>
+        bill.autopay &&
+        bill.status === "pending" &&
         bill.due_date >= today &&
         (
-          !existingEnabledAt ||
-          Number.isNaN(existingEnabledAt.getTime()) ||
-          existingEnabledAt.getTime() > localScheduled.getTime()
-        );
+          bill.autopay_timezone !== timezone ||
+          !bill.autopay_enabled_at
+        ),
+    );
 
-      return bill.autopay_timezone !== timezone || needsActivationRepair;
-    });
-
-    if (!schedules.length) return;
+    if (!candidates.length) return;
 
     let cancelled = false;
 
     void (async () => {
       const replacements = new Map<string, Bill>();
 
-      for (const bill of schedules) {
+      for (const bill of candidates) {
         const localScheduled = new Date(
           `${bill.due_date}T${
             bill.autopay_record_time?.slice(0, 5) || "09:00"
           }:00`,
         );
 
-        if (Number.isNaN(localScheduled.getTime())) continue;
+        if (
+          Number.isNaN(localScheduled.getTime()) ||
+          localScheduled.getTime() <= Date.now()
+        ) {
+          continue;
+        }
 
+        const updatedAt = new Date().toISOString();
         const existingEnabledAt = bill.autopay_enabled_at
           ? new Date(bill.autopay_enabled_at)
           : null;
-        const shouldRepairActivation =
-          bill.due_date >= today &&
-          (
-            !existingEnabledAt ||
-            Number.isNaN(existingEnabledAt.getTime()) ||
-            existingEnabledAt.getTime() > localScheduled.getTime()
-          );
-
-        const nextEnabledAt = shouldRepairActivation
-          ? localScheduled.toISOString()
-          : bill.autopay_enabled_at;
+        const validEnabledAt =
+          existingEnabledAt &&
+          !Number.isNaN(existingEnabledAt.getTime()) &&
+          existingEnabledAt.getTime() <= localScheduled.getTime();
 
         const { data, error } = await supabase
           .from("bills")
           .update({
             autopay_timezone: timezone,
-            autopay_enabled_at: nextEnabledAt,
-            updated_at: new Date().toISOString(),
+            autopay_enabled_at: validEnabledAt
+              ? bill.autopay_enabled_at
+              : updatedAt,
+            updated_at: updatedAt,
           })
           .eq("id", bill.id)
           .eq("user_id", userId)
@@ -365,13 +313,12 @@ export function BillsManager({
       setBills((current) =>
         current.map((bill) => replacements.get(bill.id) ?? bill),
       );
-      notifyFiconterDataChange("all");
     })().catch((error: unknown) => {
       if (cancelled) return;
       setMessage(
         errorMessage(
           error,
-          "The automatic-payment timezone could not be synchronized.",
+          "The recurring bill schedule could not be synchronized.",
         ),
       );
     });
@@ -446,9 +393,9 @@ export function BillsManager({
       amount: String(bill.amount),
       currency: bill.currency,
       due_date: bill.due_date,
-      recurrence: bill.recurrence,
+      recurrence: bill.recurrence === "none" ? "monthly" : bill.recurrence,
       payment_method: bill.payment_method ?? "Other",
-      autopay: bill.autopay,
+      autopay: true,
       autopay_record_time: bill.autopay_record_time?.slice(0, 5) || "09:00",
       autopay_timezone: browserTimezone(),
       autopay_enabled_at: bill.autopay_enabled_at,
@@ -475,25 +422,27 @@ export function BillsManager({
         throw new Error("Enter a bill name and a valid amount.");
       }
 
+      if ((form.recurrence as string) === "none") {
+        throw new Error("Bills must use a recurring schedule.");
+      }
+
       const detectedTimezone = browserTimezone();
       const scheduledDateTime = new Date(
         `${form.due_date}T${form.autopay_record_time}:00`,
       );
       const scheduledAt = scheduledDateTime.getTime();
-      const existingEnabledAt = existingBill?.autopay_enabled_at
-        ? new Date(existingBill.autopay_enabled_at).getTime()
-        : Number.NaN;
 
       const scheduleChanged =
         !existingBill ||
         !existingBill.autopay ||
         !existingBill.autopay_enabled_at ||
         existingBill.due_date !== form.due_date ||
+        existingBill.recurrence !== form.recurrence ||
         existingBill.autopay_record_time?.slice(0, 5) !==
-          form.autopay_record_time;
+          form.autopay_record_time ||
+        existingBill.autopay_timezone !== detectedTimezone;
 
       if (
-        form.autopay &&
         scheduleChanged &&
         (
           Number.isNaN(scheduledAt) ||
@@ -501,16 +450,14 @@ export function BillsManager({
         )
       ) {
         throw new Error(
-          "Choose a future due date and time before activating automatic recording.",
+          "Choose a future first recording date and time.",
         );
       }
 
-      const automationEnabledAt = !form.autopay
-        ? null
-        : Number.isFinite(existingEnabledAt) &&
-            existingEnabledAt <= scheduledAt
-          ? existingBill?.autopay_enabled_at ?? scheduledDateTime.toISOString()
-          : scheduledDateTime.toISOString();
+      const automationEnabledAt =
+        existingBill?.autopay_enabled_at && !scheduleChanged
+          ? existingBill.autopay_enabled_at
+          : new Date().toISOString();
 
       const conversion = await convertToEur(amount, form.currency);
       const payload = {
@@ -525,7 +472,7 @@ export function BillsManager({
         due_date: form.due_date,
         recurrence: form.recurrence,
         payment_method: form.payment_method,
-        autopay: form.autopay,
+        autopay: true,
         autopay_record_time: form.autopay_record_time,
         autopay_timezone: detectedTimezone,
         autopay_enabled_at: automationEnabledAt,
@@ -636,164 +583,6 @@ export function BillsManager({
     }
   }
 
-  async function markPaid(bill: Bill) {
-    if (busy || bill.status === "paid") return;
-
-    setBusy(bill.id);
-    setMessage("");
-    try {
-      const paidAt = new Date().toISOString();
-      const { data, error } = await supabase.rpc(
-        "record_bill_payment_and_advance",
-        {
-          p_bill_id: bill.id,
-          p_paid_at: paidAt,
-        },
-      );
-      if (error) throw error;
-
-      const result = data as {
-        bill?: Bill;
-        recurring?: boolean;
-        next_due_date?: string | null;
-        already_recorded?: boolean;
-      } | null;
-      const updatedBill = result?.bill;
-
-      if (!updatedBill?.id) {
-        throw new Error("The recorded bill was not returned by the database.");
-      }
-
-      setBills((current) =>
-        current.map((item) => (item.id === updatedBill.id ? updatedBill : item)),
-      );
-      notifyFiconterDataChange("all");
-
-      if (result?.already_recorded) {
-        setMessage("This scheduled payment was already recorded.");
-      } else if (result?.recurring && result.next_due_date) {
-        setMessage(
-          `Payment recorded. Next due: ${new Date(
-            `${result.next_due_date}T12:00:00`,
-          ).toLocaleDateString("en-GB")}.`,
-        );
-      } else {
-        setMessage("Bill marked paid and added to Transactions.");
-      }
-    } catch (error) {
-      setMessage(errorMessage(error, "The bill could not be recorded."));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function markUnpaid(bill: Bill) {
-    if (busy || bill.status !== "paid") return;
-
-    const busyKey = `unpaid-${bill.id}`;
-    setBusy(busyKey);
-    setMessage("");
-
-    try {
-      const { data, error: rpcError } = await supabase.rpc("mark_bill_unpaid", {
-        p_bill_id: bill.id,
-      });
-
-      if (!rpcError) {
-        const result = data as {
-          bill?: Bill;
-          deleted_transaction_count?: number;
-        } | null;
-        const updatedBill = result?.bill;
-
-        if (!updatedBill?.id) {
-          throw new Error("The bill was updated, but its new state could not be loaded.");
-        }
-
-        setBills((current) =>
-          current.map((item) => (item.id === bill.id ? updatedBill : item)),
-        );
-
-        notifyFiconterDataChange("all");
-        setMessage(
-          Number(result?.deleted_transaction_count ?? 0) > 0
-            ? "Bill marked unpaid and its linked transaction removed everywhere."
-            : "Bill marked unpaid everywhere.",
-        );
-        return;
-      }
-
-      // Some deployments may not have the paid-to-unpaid RPC installed yet.
-      // Fall back to the customer's existing RLS-protected update/delete rights
-      // so the button still works, then preserve the RPC as the preferred atomic path.
-      if (!isMissingMarkUnpaidRpc(rpcError)) {
-        console.warn("mark_bill_unpaid RPC failed; using protected fallback", rpcError);
-      }
-
-      const now = new Date().toISOString();
-      const { data: updated, error: updateError } = await supabase
-        .from("bills")
-        .update({
-          status: "pending",
-          paid_at: null,
-          transaction_id: null,
-          updated_at: now,
-        })
-        .eq("id", bill.id)
-        .eq("user_id", userId)
-        .eq("status", "paid")
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-      if (!updated?.id) throw new Error("The paid bill could not be reopened.");
-
-      if (bill.transaction_id) {
-        const { error: transactionError } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", bill.transaction_id)
-          .eq("user_id", userId);
-
-        if (transactionError) {
-          // Restore the original paid state if the linked transaction cannot be
-          // removed, preventing Bills and Transactions from disagreeing.
-          await supabase
-            .from("bills")
-            .update({
-              status: "paid",
-              paid_at: bill.paid_at,
-              transaction_id: bill.transaction_id,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", bill.id)
-            .eq("user_id", userId);
-
-          throw transactionError;
-        }
-      }
-
-      setBills((current) =>
-        current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
-      );
-      notifyFiconterDataChange("all");
-      setMessage(
-        bill.transaction_id
-          ? "Bill marked unpaid and its linked transaction removed everywhere."
-          : "Bill marked unpaid everywhere.",
-      );
-    } catch (error) {
-      const details = errorMessage(error, "The bill could not be marked unpaid.");
-      setMessage(
-        details.toLowerCase().includes("row-level security")
-          ? "The bill could not be changed because your session is no longer authorized. Please sign in again."
-          : details,
-      );
-    } finally {
-      setBusy(null);
-    }
-  }
-
   function requestBillDeletion(bill: Bill) {
     if (busy) return;
     setBillPendingDeletion(bill);
@@ -849,11 +638,11 @@ export function BillsManager({
       <div className={styles.actionRow}>
         <div>
           <h2>All bills</h2>
-          <p>Paid and unpaid status changes stay synchronized with Transactions and all live financial totals.</p>
+          <p>Recurring bills are recorded automatically in Transactions and reflected in all live financial totals.</p>
         </div>
         <button className={styles.primaryButton} onClick={() => setShowForm((value) => !value)}>
           {showForm ? <X size={18} /> : <Plus size={18} />}
-          {showForm ? "Close form" : "Add bill"}
+          {showForm ? "Close form" : "Add recurring bill"}
         </button>
       </div>
 
@@ -862,7 +651,7 @@ export function BillsManager({
           <div className={styles.formHeading}>
             <div>
               <span>{editingId ? "EDIT BILL" : "NEW BILL"}</span>
-              <h3>{editingId ? "Update obligation" : "Add an obligation"}</h3>
+              <h3>{editingId ? "Update recurring obligation" : "Add a recurring obligation"}</h3>
             </div>
             {editingId && <button type="button" className={styles.textButton} onClick={resetForm}>Cancel edit</button>}
           </div>
@@ -873,54 +662,44 @@ export function BillsManager({
             <label>Category<select value={form.category} onChange={(e) => setForm({...form, category:e.target.value})}>{CATEGORIES.map((item)=><option key={item}>{item}</option>)}</select></label>
             <label>Amount<div className={styles.amountField}><input type="number" min="0.01" step="0.01" value={form.amount} onChange={(e)=>setForm({...form, amount:e.target.value})} required /><select value={form.currency} onChange={(e)=>setForm({...form, currency:e.target.value})}>{CURRENCIES.map((item)=><option key={item}>{item}</option>)}</select></div></label>
             <label>Due date<input type="date" value={form.due_date} onChange={(e)=>setForm({...form, due_date:e.target.value})} required /></label>
-            <label>Repeats<select value={form.recurrence} onChange={(e)=>setForm({...form, recurrence:e.target.value as Recurrence})}><option value="none">One time</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="yearly">Yearly</option></select></label>
+            <label>Repeats<select value={form.recurrence} onChange={(e)=>setForm({...form, recurrence:e.target.value as RecurringSchedule})}><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="yearly">Yearly</option></select></label>
             <label>Payment method<select value={form.payment_method} onChange={(e)=>setForm({...form, payment_method:e.target.value})}>{PAYMENT_METHODS.map((item)=><option key={item}>{item}</option>)}</select></label>
             <label>Reminder<select value={form.reminder_days} onChange={(e)=>setForm({...form, reminder_days:e.target.value})}><option value="0">On due date</option><option value="1">1 day before</option><option value="3">3 days before</option><option value="7">1 week before</option><option value="14">2 weeks before</option><option value="30">1 month before</option></select></label>
             <label className={styles.fullWidth}>Notes<textarea value={form.notes} onChange={(e)=>setForm({...form, notes:e.target.value})} rows={3} placeholder="Optional details" /></label>
-            <label className={`${styles.checkLabel} ${styles.fullWidth}`}>
-              <input
-                type="checkbox"
-                checked={form.autopay}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    autopay: e.target.checked,
-                    autopay_timezone: browserTimezone(),
-                  })
-                }
-              />
-              Automatically record this payment on its due date
-            </label>
-            {form.autopay ? (
-              <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
-                <div className={styles.automationGrid}>
-                  <label>
-                    Automatic record time
-                    <input
-                      type="time"
-                      step="60"
-                      value={form.autopay_record_time}
-                      onChange={(e) =>
-                        setForm({ ...form, autopay_record_time: e.target.value })
-                      }
-                      required
-                    />
-                  </label>
-                  <div className={styles.automationTimezone}>
-                    <span>Time zone</span>
-                    <strong>{form.autopay_timezone}</strong>
-                  </div>
+            <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
+              <div className={styles.automationGrid}>
+                <label>
+                  Automatic record time
+                  <input
+                    type="time"
+                    step="60"
+                    value={form.autopay_record_time}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        autopay_record_time: e.target.value,
+                        autopay_timezone: browserTimezone(),
+                      })
+                    }
+                    required
+                  />
+                </label>
+                <div className={styles.automationTimezone}>
+                  <span>Time zone</span>
+                  <strong>{form.autopay_timezone}</strong>
                 </div>
-                <p>
-                  FICONTER creates the expected transaction automatically. It
-                  does not send money or contact your bank.
-                </p>
               </div>
-            ) : null}
+              <p>
+                This recurring bill is recorded automatically at the selected
+                date and time. FICONTER adds the expense to Transactions and
+                advances the bill to its next occurrence. It does not send
+                money or contact your bank.
+              </p>
+            </div>
           </div>
 
           <button className={styles.saveButton} disabled={busy === "save"}>
-            {busy === "save" ? "Saving…" : editingId ? "Save changes" : "Save bill"}
+            {busy === "save" ? "Saving…" : editingId ? "Save changes" : "Save recurring bill"}
           </button>
         </form>
       )}
@@ -938,7 +717,7 @@ export function BillsManager({
           <div className={styles.emptyState}>
             <CalendarDays size={32}/>
             <h3>No bills found</h3>
-            <p>Add your first bill or reset the current filters.</p>
+            <p>Add your first recurring bill or reset the current filters.</p>
           </div>
         ) : filteredBills.map((bill) => {
           const status = effectiveStatus(bill, todayKey);
@@ -955,15 +734,15 @@ export function BillsManager({
                 </div>
                 <p>{bill.company || "No company"} · {bill.category}</p>
                 <small>
-                  {bill.recurrence === "none" ? "One-time bill" : bill.recurrence}
+                  {bill.recurrence === "none"
+                    ? "Legacy bill"
+                    : bill.recurrence}
                   {" · "}
-                  {bill.autopay
-                    ? bill.autopay_enabled_at
-                      ? `Automatic recording at ${
-                          bill.autopay_record_time?.slice(0, 5) || "09:00"
-                        } · ${bill.autopay_timezone}`
-                      : "Automatic recording needs one save to activate"
-                    : "Manual recording"}
+                  {bill.autopay && bill.autopay_enabled_at
+                    ? `Automatic at ${
+                        bill.autopay_record_time?.slice(0, 5) || "09:00"
+                      } · ${bill.autopay_timezone || browserTimezone()}`
+                    : "Needs activation — edit and save once"}
                 </small>
               </div>
               <div className={styles.amount}>
@@ -971,30 +750,6 @@ export function BillsManager({
                 {bill.currency !== "EUR" && <span>{money(bill.amount, bill.currency)}</span>}
               </div>
               <div className={styles.cardActions}>
-                {status !== "paid" && status !== "cancelled" && (
-                  <button
-                    type="button"
-                    className={styles.paidButton}
-                    onClick={() => void markPaid(bill)}
-                    disabled={Boolean(busy)}
-                    aria-busy={busy === bill.id}
-                  >
-                    <Check size={16} />
-                    {busy === bill.id ? "Updating…" : "Mark paid"}
-                  </button>
-                )}
-                {status === "paid" && (
-                  <button
-                    type="button"
-                    className={`${styles.paidButton} ${styles.unpaidButton}`}
-                    onClick={() => void markUnpaid(bill)}
-                    disabled={Boolean(busy)}
-                    aria-busy={busy === `unpaid-${bill.id}`}
-                  >
-                    <RotateCcw size={16} />
-                    {busy === `unpaid-${bill.id}` ? "Updating…" : "Mark unpaid"}
-                  </button>
-                )}
                 <button type="button" className={styles.iconButton} onClick={()=>editBill(bill)} aria-label="Edit bill"><Edit3 size={17}/></button>
                 <button type="button" className={`${styles.iconButton} ${styles.deleteButton}`} onClick={()=>requestBillDeletion(bill)} aria-label="Delete bill"><Trash2 size={17}/></button>
               </div>

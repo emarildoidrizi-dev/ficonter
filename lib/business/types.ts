@@ -14,6 +14,72 @@ export type Business = {
 export type BusinessTransactionType = "income" | "expense";
 export type BusinessCostNature = "fixed" | "variable" | null;
 
+export type BusinessCostCategory = {
+  id: string;
+  business_id: string;
+  name: string;
+  description: string | null;
+  default_nature: Exclude<BusinessCostNature, null>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessCostCentre = {
+  id: string;
+  business_id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessCostBudget = {
+  id: string;
+  business_id: string;
+  category_id: string;
+  budget_month: string;
+  amount_base: number | string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessRecurringCostStatus = "active" | "paused" | "ended";
+
+export type BusinessRecurringCost = {
+  id: string;
+  business_id: string;
+  created_by: string;
+  name: string;
+  supplier: string | null;
+  category_id: string | null;
+  category_name: string;
+  cost_centre_id: string | null;
+  cost_nature: Exclude<BusinessCostNature, null>;
+  amount: number | string;
+  currency: string;
+  amount_base: number | string;
+  exchange_rate_to_base: number | string;
+  exchange_rate_date: string | null;
+  exchange_rate_source: string | null;
+  due_day: number;
+  record_time: string;
+  timezone: string;
+  start_date: string;
+  end_date: string | null;
+  next_run_at: string | null;
+  last_recorded_at: string | null;
+  last_error: string | null;
+  payment_method: string | null;
+  reference: string | null;
+  notes: string | null;
+  status: BusinessRecurringCostStatus;
+  created_at: string;
+  updated_at: string;
+};
+
 export type BusinessTransaction = {
   id: string;
   business_id: string;
@@ -23,6 +89,10 @@ export type BusinessTransaction = {
   type: BusinessTransactionType;
   category: string;
   cost_nature: BusinessCostNature;
+  cost_category_id: string | null;
+  cost_centre_id: string | null;
+  source_recurring_cost_id: string | null;
+  recurrence_key: string | null;
   amount: number | string;
   currency: string;
   amount_base: number | string;

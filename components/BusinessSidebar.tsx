@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
+  BarChart3,
   Building2,
   LayoutDashboard,
   LogOut,
@@ -18,6 +19,7 @@ import styles from "./BusinessSidebar.module.css";
 const links = [
   ["/business/overview", LayoutDashboard, "Overview"],
   ["/business/transactions", ArrowLeftRight, "Transactions"],
+  ["/business/cost-control", BarChart3, "Cost Control"],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {

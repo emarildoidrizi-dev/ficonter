@@ -30,6 +30,7 @@ export default async function BusinessSalesPage() {
 
   return (
     <BusinessSales
+      key={business.id}
       business={business}
       initialSales={(sales ?? []) as BusinessSale[]}
       initialInventory={(inventory ?? []) as BusinessInventoryItemSnapshot[]}

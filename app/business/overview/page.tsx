@@ -62,6 +62,7 @@ export default async function BusinessOverviewPage() {
 
   return (
     <BusinessOverview
+      key={business.id}
       business={business}
       initialTransactions={(transactions ?? []) as BusinessTransaction[]}
       initialBudgets={(budgets ?? []) as BusinessCostBudget[]}

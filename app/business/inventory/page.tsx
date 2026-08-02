@@ -68,6 +68,7 @@ export default async function BusinessInventoryPage() {
 
   return (
     <BusinessInventory
+      key={business.id}
       business={business}
       initialItems={(items ?? []) as BusinessInventoryItemSnapshot[]}
       initialMovements={(movements ?? []) as BusinessInventoryMovement[]}

@@ -98,6 +98,7 @@ export default async function BusinessAdministrationPage() {
 
   return (
     <BusinessAdministration
+      key={business.id}
       userId={user.id}
       role={membership?.role ?? "viewer"}
       initialBusiness={business}

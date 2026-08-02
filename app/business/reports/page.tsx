@@ -33,6 +33,7 @@ export default async function BusinessReportsPage() {
 
   return (
     <BusinessReports
+      key={business.id}
       business={business}
       initialStartDate={startDate}
       initialEndDate={endDate}

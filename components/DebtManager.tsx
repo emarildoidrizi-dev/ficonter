@@ -2,7 +2,6 @@
 
 import {
   Banknote,
-  CalendarDays,
   CheckCircle2,
   CreditCard,
   Edit3,
@@ -106,11 +105,6 @@ function localDateKey(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-function localTimeKey(date = new Date()) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
 function browserTimezone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -118,14 +112,6 @@ function browserTimezone() {
     return "UTC";
   }
 }
-function paymentTimestamp(dateValue: string, timeValue: string) {
-  const timestamp = new Date(`${dateValue}T${timeValue}:00`);
-  if (Number.isNaN(timestamp.getTime())) {
-    throw new Error("Enter a valid payment date and time.");
-  }
-  return timestamp.toISOString();
-}
-
 const EMPTY_DEBT = {
   name: "",
   lender: "",
@@ -137,7 +123,7 @@ const EMPTY_DEBT = {
   annual_interest_rate: "0",
   minimum_payment: "",
   payment_due_day: "",
-  autopay: false,
+  autopay: true,
   autopay_record_time: "09:00",
   autopay_timezone: "UTC",
   autopay_enabled_at: null as string | null,
@@ -203,7 +189,6 @@ export function DebtManager({
   }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [paymentDebt, setPaymentDebt] = useState<Debt | null>(null);
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null);
   const [deletingPayment, setDeletingPayment] = useState<DebtPayment | null>(null);
   const [search, setSearch] = useState("");
@@ -211,13 +196,21 @@ export function DebtManager({
   const [statusFilter, setStatusFilter] = useState("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState(initialError);
-  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), 4000);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    const timezone = browserTimezone();
+    setForm((current) =>
+      current.autopay_timezone === timezone
+        ? current
+        : { ...current, autopay_timezone: timezone },
+    );
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -239,6 +232,7 @@ export function DebtManager({
             const next = payload.new as Debt;
             return [next, ...current.filter((item) => item.id !== next.id)];
           });
+          notifyFiconterDataChange("all");
         },
       )
       .on(
@@ -261,6 +255,7 @@ export function DebtManager({
                 new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime(),
             );
           });
+          notifyFiconterDataChange("all");
         },
       )
       .subscribe();
@@ -269,6 +264,69 @@ export function DebtManager({
       void supabase.removeChannel(channel);
     };
   }, [supabase, userId]);
+
+  useEffect(() => {
+    const timezone = browserTimezone();
+    const candidates = debts.filter(
+      (debt) =>
+        debt.status === "active" &&
+        finiteNumber(debt.current_balance) > 0 &&
+        finiteNumber(debt.minimum_payment) > 0 &&
+        Boolean(debt.payment_due_day) &&
+        (
+          !debt.autopay ||
+          !debt.autopay_enabled_at ||
+          debt.autopay_timezone !== timezone
+        ),
+    );
+
+    if (!candidates.length) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const replacements = new Map<string, Debt>();
+
+      for (const debt of candidates) {
+        const { data, error } = await supabase
+          .from("debts")
+          .update({
+            autopay: true,
+            autopay_timezone: timezone,
+            autopay_enabled_at:
+              debt.autopay_enabled_at ?? new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", debt.id)
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .select()
+          .single();
+
+        if (error) throw error;
+        replacements.set(debt.id, data as Debt);
+      }
+
+      if (cancelled || replacements.size === 0) return;
+
+      setDebts((current) =>
+        current.map((debt) => replacements.get(debt.id) ?? debt),
+      );
+      notifyFiconterDataChange("all");
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      setNotice(
+        readableError(
+          error,
+          "Automatic debt recording could not be activated.",
+        ),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debts, supabase, userId]);
 
   const activeDebts = debts.filter((debt) => debt.status !== "paid_off");
   const totals = useMemo(() => {
@@ -324,9 +382,9 @@ export function DebtManager({
       annual_interest_rate: String(debt.annual_interest_rate),
       minimum_payment: String(debt.minimum_payment),
       payment_due_day: debt.payment_due_day ? String(debt.payment_due_day) : "",
-      autopay: debt.autopay,
+      autopay: true,
       autopay_record_time: debt.autopay_record_time?.slice(0, 5) || "09:00",
-      autopay_timezone: debt.autopay_timezone || browserTimezone(),
+      autopay_timezone: browserTimezone(),
       autopay_enabled_at: debt.autopay_enabled_at,
       start_date: debt.start_date ?? "",
       maturity_date: debt.maturity_date ?? "",
@@ -355,19 +413,28 @@ export function DebtManager({
       if (!form.name.trim() || originalBalance <= 0 || currentBalance < 0) {
         throw new Error("Enter a debt name and valid balance.");
       }
+      const automaticRecordingActive =
+        form.status === "active" && currentBalance > 0;
+      const dueDay = Number(form.payment_due_day);
+
       if (
-        form.autopay &&
+        automaticRecordingActive &&
         (
           minimumPayment <= 0 ||
-          !form.payment_due_day ||
-          form.status !== "active" ||
-          currentBalance <= 0
+          !Number.isInteger(dueDay) ||
+          dueDay < 1 ||
+          dueDay > 31
         )
       ) {
         throw new Error(
-          "Automatic debt recording requires an active debt, a minimum payment and a due day.",
+          "An active debt requires a minimum payment and a due day from 1 to 31.",
         );
       }
+
+      const detectedTimezone = browserTimezone();
+      const automationEnabledAt = automaticRecordingActive
+        ? existingDebt?.autopay_enabled_at ?? new Date().toISOString()
+        : null;
 
       const [originalConversion, currentConversion, minimumConversion] =
         await Promise.all([
@@ -391,15 +458,11 @@ export function DebtManager({
         annual_interest_rate: annualInterest,
         minimum_payment: roundMoney(minimumPayment),
         minimum_payment_eur: roundMoney(minimumConversion.eur),
-        payment_due_day: form.payment_due_day
-          ? Number(form.payment_due_day)
-          : null,
-        autopay: form.autopay,
+        payment_due_day: automaticRecordingActive ? dueDay : null,
+        autopay: automaticRecordingActive,
         autopay_record_time: form.autopay_record_time,
-        autopay_timezone: form.autopay_timezone || browserTimezone(),
-        autopay_enabled_at: form.autopay
-          ? existingDebt?.autopay_enabled_at ?? new Date().toISOString()
-          : null,
+        autopay_timezone: detectedTimezone,
+        autopay_enabled_at: automationEnabledAt,
         start_date: form.start_date || null,
         maturity_date: form.maturity_date || null,
         status:
@@ -440,83 +503,6 @@ export function DebtManager({
       resetDebtForm();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Debt could not be saved.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function addPayment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const debt = paymentDebt;
-    if (!debt || busy) return;
-
-    const data = new FormData(event.currentTarget);
-    const amount = roundMoney(data.get("amount"));
-    const paidAt = String(
-      data.get("paid_at") || localDateKey(),
-    );
-    const paidTime = String(
-      data.get("paid_time") || localTimeKey(),
-    );
-    const notes = String(data.get("notes") || "").trim();
-
-    setPaymentError("");
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setPaymentError("Enter a valid payment amount.");
-      return;
-    }
-
-    if (amount > finiteNumber(debt.current_balance)) {
-      setPaymentError("Payment cannot exceed the outstanding balance.");
-      return;
-    }
-
-    setBusy(`payment-${debt.id}`);
-    setNotice("");
-
-    try {
-      const conversion = await convertToEur(amount, debt.currency);
-      const occurredAt = paymentTimestamp(paidAt, paidTime);
-
-      const { data: result, error } = await supabase.rpc(
-        "record_debt_payment_atomic",
-        {
-          p_debt_id: debt.id,
-          p_amount: roundMoney(amount),
-          p_amount_eur: roundMoney(conversion.eur),
-          p_exchange_rate: roundRate(conversion.rate),
-          p_paid_at: occurredAt,
-          p_exchange_rate_date: paidAt,
-          p_notes: notes || null,
-        },
-      );
-
-      if (error) throw error;
-
-      const updatedDebt = (result as { debt?: Debt } | null)?.debt;
-      const newPayment = (result as { payment?: DebtPayment } | null)?.payment;
-
-      if (!updatedDebt || !newPayment) {
-        throw new Error("The payment was not returned by the database.");
-      }
-
-      setDebts((current) =>
-        current.map((item) =>
-          item.id === updatedDebt.id ? updatedDebt : item,
-        ),
-      );
-      setPayments((current) => [
-        newPayment,
-        ...current.filter((item) => item.id !== newPayment.id),
-      ]);
-
-      setPaymentError("");
-      setPaymentDebt(null);
-      setNotice("Payment recorded and added to Transactions.");
-      notifyFiconterDataChange("all");
-    } catch (error) {
-      setPaymentError(readableError(error, "Payment could not be recorded."));
     } finally {
       setBusy(null);
     }
@@ -606,8 +592,8 @@ export function DebtManager({
         <div>
           <h1>Debts</h1>
           <p>
-            Track every liability, record repayments and keep FICONTER synchronized
-            across Transactions, Monthly Planner and Net Worth.
+            Track every liability and automatically record scheduled minimum
+            repayments across Transactions, Monthly Planner and Net Worth.
           </p>
         </div>
         <button
@@ -757,12 +743,13 @@ export function DebtManager({
               Minimum payment
               <input
                 type="number"
-                min="0"
+                min="0.01"
                 step="0.01"
                 value={form.minimum_payment}
                 onChange={(event) =>
                   setForm({ ...form, minimum_payment: event.target.value })
                 }
+                required
               />
             </label>
             <label>
@@ -776,52 +763,38 @@ export function DebtManager({
                   setForm({ ...form, payment_due_day: event.target.value })
                 }
                 placeholder="1–31"
+                required
               />
             </label>
-            <label className={`${styles.checkLabel} ${styles.fullWidth}`}>
-              <input
-                type="checkbox"
-                checked={form.autopay}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    autopay: event.target.checked,
-                    autopay_timezone:
-                      form.autopay_timezone || browserTimezone(),
-                  })
-                }
-              />
-              Automatically record the minimum payment each month
-            </label>
-            {form.autopay ? (
-              <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
-                <div className={styles.automationGrid}>
-                  <label>
-                    Automatic record time
-                    <input
-                      type="time"
-                      step="60"
-                      value={form.autopay_record_time}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          autopay_record_time: event.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </label>
-                  <div className={styles.automationTimezone}>
-                    <span>Time zone</span>
-                    <strong>{form.autopay_timezone}</strong>
-                  </div>
+            <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
+              <div className={styles.automationGrid}>
+                <label>
+                  Automatic monthly record time
+                  <input
+                    type="time"
+                    step="60"
+                    value={form.autopay_record_time}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        autopay_record_time: event.target.value,
+                        autopay_timezone: browserTimezone(),
+                      })
+                    }
+                    required
+                  />
+                </label>
+                <div className={styles.automationTimezone}>
+                  <span>Time zone</span>
+                  <strong>{form.autopay_timezone}</strong>
                 </div>
-                <p>
-                  FICONTER records the scheduled minimum. It does not send money
-                  or contact your lender.
-                </p>
               </div>
-            ) : null}
+              <p>
+                For active debts, FICONTER automatically records the minimum
+                payment every month on the selected due day and time. It does
+                not send money or contact your lender.
+              </p>
+            </div>
             <label>
               Start date
               <input
@@ -873,7 +846,7 @@ export function DebtManager({
               ? "Saving…"
               : editingId
                 ? "Save changes"
-                : "Save debt"}
+                : "Save automatic debt"}
           </button>
         </form>
       )}
@@ -937,13 +910,17 @@ export function DebtManager({
                       {debt.lender || "No lender"} · {debt.category}
                     </p>
                     <small className={styles.automationStatus}>
-                      {debt.autopay
-                        ? debt.autopay_enabled_at
-                          ? `Automatic monthly recording at ${
-                              debt.autopay_record_time?.slice(0, 5) || "09:00"
-                            }`
-                          : "Automatic recording needs one save to activate"
-                        : "Manual payment recording"}
+                      {debt.status === "paid_off"
+                        ? "Debt paid off"
+                        : debt.status === "paused"
+                          ? "Automatic recording paused"
+                          : debt.autopay && debt.autopay_enabled_at
+                            ? `Automatic monthly recording on day ${
+                                debt.payment_due_day ?? "—"
+                              } at ${
+                                debt.autopay_record_time?.slice(0, 5) || "09:00"
+                              } · ${debt.autopay_timezone}`
+                            : "Needs activation — edit and save once"}
                     </small>
                   </div>
                   <div className={styles.cardActions}>
@@ -1000,20 +977,8 @@ export function DebtManager({
                   <span style={{ width: `${repaidPercentage}%` }} />
                 </div>
 
-                <button
-                  className={styles.paymentButton}
-                  onClick={() => {
-                    setPaymentError("");
-                    setPaymentDebt(debt);
-                  }}
-                  disabled={debt.status === "paid_off" || finiteNumber(debt.current_balance) <= 0}
-                >
-                  <Plus size={17} />
-                  Record payment
-                </button>
-
                 <div className={styles.history}>
-                  <h4>Recent payments</h4>
+                  <h4>Automatic payment history</h4>
                   {debtPayments.length ? (
                     debtPayments.map((payment) => (
                       <div className={styles.paymentRow} key={payment.id}>
@@ -1036,7 +1001,7 @@ export function DebtManager({
                       </div>
                     ))
                   ) : (
-                    <p className={styles.emptyHistory}>No payments recorded yet.</p>
+                    <p className={styles.emptyHistory}>No automatic payments recorded yet.</p>
                   )}
                 </div>
               </article>
@@ -1050,77 +1015,6 @@ export function DebtManager({
           </div>
         )}
       </div>
-
-      {paymentDebt ? (
-        <div className={styles.modalBackdrop}>
-          <form className={styles.modal} onSubmit={addPayment}>
-            <button
-              className={styles.modalClose}
-              type="button"
-              onClick={() => {
-                setPaymentError("");
-                setPaymentDebt(null);
-              }}
-            >
-              <X size={19} />
-            </button>
-            <Banknote className={styles.modalIcon} />
-            <span>RECORD PAYMENT</span>
-            <h2>{paymentDebt.name}</h2>
-            <p>
-              Outstanding: {money(paymentDebt.current_balance_eur, "EUR")}
-            </p>
-            <label>
-              Payment amount ({paymentDebt.currency})
-              <input
-                name="amount"
-                type="number"
-                min="0.01"
-                max={finiteNumber(paymentDebt.current_balance)}
-                step="0.01"
-                defaultValue={Number(paymentDebt.minimum_payment) || ""}
-                required
-              />
-            </label>
-            <label>
-              Payment date
-              <input
-                name="paid_at"
-                type="date"
-                defaultValue={localDateKey()}
-                required
-              />
-            </label>
-            <label>
-              Payment time
-              <input
-                name="paid_time"
-                type="time"
-                step="60"
-                defaultValue={localTimeKey()}
-                required
-              />
-            </label>
-            <label>
-              Notes
-              <textarea name="notes" rows={3} placeholder="Optional" />
-            </label>
-            {paymentError ? (
-              <div className={styles.notice} role="alert">
-                {paymentError}
-              </div>
-            ) : null}
-            <button
-              className={styles.modalPrimary}
-              disabled={busy === `payment-${paymentDebt.id}`}
-            >
-              {busy === `payment-${paymentDebt.id}`
-                ? "Recording…"
-                : "Record payment"}
-            </button>
-          </form>
-        </div>
-      ) : null}
 
       {deletingDebt ? (
         <div className={styles.modalBackdrop}>

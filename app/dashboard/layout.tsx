@@ -5,7 +5,7 @@ import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferences
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
-import { UsageHeartbeat } from "@/components/UsageHeartbeat";
+import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
@@ -21,18 +21,44 @@ type StoredPreferences = {
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
   if (!metadata || typeof metadata !== "object") return {};
-  const preferences = (metadata as Record<string, unknown>).ficonter_preferences;
+  const preferences = (
+    metadata as Record<string, unknown>
+  ).ficonter_preferences;
   if (!preferences || typeof preferences !== "object") return {};
   const value = preferences as Record<string, unknown>;
   return {
-    appearance: typeof value.appearance === "string" ? value.appearance : undefined,
-    density: typeof value.density === "string" ? value.density : undefined,
-    layout: typeof value.layout === "string" ? value.layout : undefined,
-    backgroundMotion: typeof value.backgroundMotion === "string" ? value.backgroundMotion : undefined,
-    wallpaperScene: typeof value.wallpaperScene === "string" ? value.wallpaperScene : undefined,
-    sidebarAtmosphereMode: typeof value.sidebarAtmosphereMode === "string" ? value.sidebarAtmosphereMode : undefined,
-    sidebarAtmosphereStyle: typeof value.sidebarAtmosphereStyle === "string" ? value.sidebarAtmosphereStyle : undefined,
-    sidebarAtmosphereMotion: typeof value.sidebarAtmosphereMotion === "string" ? value.sidebarAtmosphereMotion : undefined,
+    appearance:
+      typeof value.appearance === "string"
+        ? value.appearance
+        : undefined,
+    density:
+      typeof value.density === "string"
+        ? value.density
+        : undefined,
+    layout:
+      typeof value.layout === "string"
+        ? value.layout
+        : undefined,
+    backgroundMotion:
+      typeof value.backgroundMotion === "string"
+        ? value.backgroundMotion
+        : undefined,
+    wallpaperScene:
+      typeof value.wallpaperScene === "string"
+        ? value.wallpaperScene
+        : undefined,
+    sidebarAtmosphereMode:
+      typeof value.sidebarAtmosphereMode === "string"
+        ? value.sidebarAtmosphereMode
+        : undefined,
+    sidebarAtmosphereStyle:
+      typeof value.sidebarAtmosphereStyle === "string"
+        ? value.sidebarAtmosphereStyle
+        : undefined,
+    sidebarAtmosphereMotion:
+      typeof value.sidebarAtmosphereMotion === "string"
+        ? value.sidebarAtmosphereMotion
+        : undefined,
   };
 }
 
@@ -44,14 +70,19 @@ export default async function DashboardLayout({
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
 
-  const interfacePreferences = readInterfacePreferences(user.user_metadata);
+  const interfacePreferences = readInterfacePreferences(
+    user.user_metadata,
+  );
 
   return (
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
-      <UsageHeartbeat workspace="personal" />
+      <NavigationSpeedBoost
+        workspace="personal"
+        cacheKey={user.id}
+      />
       <CommandPalette />
       <Sidebar
         isAdmin={Boolean(admin)}
@@ -63,7 +94,9 @@ export default async function DashboardLayout({
               "",
           ),
           email: user.email ?? "",
-          avatarPath: String(user.user_metadata?.avatar_path ?? ""),
+          avatarPath: String(
+            user.user_metadata?.avatar_path ?? "",
+          ),
         }}
       />
       <main className="app-main">

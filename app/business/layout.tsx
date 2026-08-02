@@ -6,6 +6,7 @@ import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferences
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
+import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
 import { requireAdmin } from "@/lib/admin/access";
 
@@ -22,11 +23,15 @@ type StoredPreferences = {
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
   if (!metadata || typeof metadata !== "object") return {};
-  const preferences = (metadata as Record<string, unknown>).ficonter_preferences;
+  const preferences = (
+    metadata as Record<string, unknown>
+  ).ficonter_preferences;
   if (!preferences || typeof preferences !== "object") return {};
   const value = preferences as Record<string, unknown>;
   const get = (key: string) =>
-    typeof value[key] === "string" ? (value[key] as string) : undefined;
+    typeof value[key] === "string"
+      ? (value[key] as string)
+      : undefined;
 
   return {
     appearance: get("appearance"),
@@ -52,6 +57,7 @@ export default async function BusinessLayout({
     getBusinessContext(),
     requireAdmin(),
   ]);
+
   if (!user) redirect("/login");
 
   const preferences = readInterfacePreferences(user.user_metadata);
@@ -62,11 +68,18 @@ export default async function BusinessLayout({
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <UsageHeartbeat workspace="business" />
+      <NavigationSpeedBoost
+        workspace="business"
+        cacheKey={business?.id ?? "none"}
+      />
       <CommandPalette />
       <BusinessSidebar
         businesses={businesses}
         business={business}
-        canManage={membership?.role === "owner" || membership?.role === "admin"}
+        canManage={
+          membership?.role === "owner" ||
+          membership?.role === "admin"
+        }
         isPlatformAdmin={Boolean(admin)}
         user={{
           displayName: String(

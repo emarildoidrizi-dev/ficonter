@@ -456,8 +456,8 @@ export function BusinessManager({
     }
 
     setCurrentBusinessId(businessId);
+    router.prefetch("/business/overview");
     router.replace("/business/overview");
-    router.refresh();
   }
 
   function cardClickIsOnControl(target: EventTarget | null) {

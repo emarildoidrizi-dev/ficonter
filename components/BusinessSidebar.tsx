@@ -19,8 +19,10 @@ import {
   WalletCards,
 } from "lucide-react";
 import {
+  useEffect,
   useMemo,
   useState,
+  useTransition,
   type ChangeEvent,
   type MouseEvent,
 } from "react";
@@ -64,6 +66,11 @@ export function BusinessSidebar({
   const [signingOut, setSigningOut] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState("");
+  const [selectedBusinessId, setSelectedBusinessId] = useState(
+    business?.id ?? "",
+  );
+  const [switchTransitionPending, startSwitchTransition] =
+    useTransition();
   const displayName =
     user.displayName.trim() || user.email.split("@")[0] || "Member";
   const businessLogoUrl = business?.logo_path
@@ -76,31 +83,46 @@ export function BusinessSidebar({
   );
   const archivedCount = businesses.length - activeBusinesses.length;
 
+  useEffect(() => {
+    setSelectedBusinessId(business?.id ?? "");
+  }, [business?.id]);
+
   async function switchBusiness(event: ChangeEvent<HTMLSelectElement>) {
     const nextBusinessId = event.target.value;
     if (
       !nextBusinessId ||
       nextBusinessId === business?.id ||
-      switching
+      switching ||
+      switchTransitionPending
     ) {
       return;
     }
 
+    const previousBusinessId =
+      selectedBusinessId || business?.id || "";
+
+    setSelectedBusinessId(nextBusinessId);
     setSwitching(true);
     setSwitchError("");
 
-    const { error } = await supabase.rpc("set_active_business_workspace", {
-      p_business_id: nextBusinessId,
-    });
+    const { error } = await supabase.rpc(
+      "set_active_business_workspace",
+      {
+        p_business_id: nextBusinessId,
+      },
+    );
 
     if (error) {
+      setSelectedBusinessId(previousBusinessId);
       setSwitchError(error.message);
       setSwitching(false);
       return;
     }
 
-    router.refresh();
     setSwitching(false);
+    startSwitchTransition(() => {
+      router.refresh();
+    });
   }
 
   async function signOut(event: MouseEvent<HTMLButtonElement>) {
@@ -141,9 +163,9 @@ export function BusinessSidebar({
             <label className={styles.businessSelector}>
               <span>Active business</span>
               <select
-                value={business.id}
+                value={selectedBusinessId || business.id}
                 onChange={switchBusiness}
-                disabled={switching}
+                disabled={switching || switchTransitionPending}
                 aria-label="Select active business"
               >
                 {activeBusinesses.map((item) => (
@@ -176,7 +198,10 @@ export function BusinessSidebar({
           </small>
         ) : null}
 
-        <Link href="/business/manage" className={styles.manageBusinesses}>
+        <Link
+          href="/business/manage"
+          className={styles.manageBusinesses}
+        >
           <Settings2 size={15} />
           Manage businesses
         </Link>
@@ -196,27 +221,29 @@ export function BusinessSidebar({
                   (!platformAdminOnly || isPlatformAdmin),
               )
               .map(([href, Icon, label]) => (
-              <Link
-                href={href}
-                key={href}
-                className={`side-link ${
-                  activeRoute(pathname, href) ? "active" : ""
-                }`}
-                aria-current={
-                  activeRoute(pathname, href) ? "page" : undefined
-                }
-                prefetch={false}
-              >
-                <Icon size={18} aria-hidden="true" />
-                <span>{label}</span>
-              </Link>
-            ))
+                <Link
+                  href={href}
+                  key={href}
+                  className={`side-link ${
+                    activeRoute(pathname, href) ? "active" : ""
+                  }`}
+                  aria-current={
+                    activeRoute(pathname, href) ? "page" : undefined
+                  }
+                  prefetch={false}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{label}</span>
+                </Link>
+              ))
           : (
               <>
                 <Link
                   href="/business/setup"
                   className={`side-link ${
-                    activeRoute(pathname, "/business/setup") ? "active" : ""
+                    activeRoute(pathname, "/business/setup")
+                      ? "active"
+                      : ""
                   }`}
                   prefetch={false}
                 >
@@ -227,7 +254,9 @@ export function BusinessSidebar({
                   <Link
                     href="/business/admin"
                     className={`side-link ${
-                      activeRoute(pathname, "/business/admin") ? "active" : ""
+                      activeRoute(pathname, "/business/admin")
+                        ? "active"
+                        : ""
                     }`}
                     prefetch={false}
                   >
@@ -250,7 +279,11 @@ export function BusinessSidebar({
             <strong>{displayName}</strong>
             <small>{user.email}</small>
           </div>
-          <button onClick={signOut} disabled={signingOut} aria-label="Log out">
+          <button
+            onClick={signOut}
+            disabled={signingOut}
+            aria-label="Log out"
+          >
             <LogOut size={17} />
           </button>
         </div>

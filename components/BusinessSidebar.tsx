@@ -8,6 +8,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  FileText,
   PackageOpen,
   ShoppingCart,
   Truck,
@@ -26,6 +27,7 @@ const links = [
   ["/business/suppliers", Truck, "Suppliers"],
   ["/business/inventory", PackageOpen, "Inventory"],
   ["/business/sales", ShoppingCart, "Sales"],
+  ["/business/reports", FileText, "Reports"],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {

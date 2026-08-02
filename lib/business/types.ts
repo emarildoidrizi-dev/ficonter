@@ -325,3 +325,114 @@ export type BusinessSaleLine = {
   inventory_movement_id: string | null;
   created_at: string;
 };
+
+
+export type BusinessReportSummary = {
+  cashInflow: number | string;
+  cashOutflow: number | string;
+  cashMovement: number | string;
+  netSales: number | string;
+  salesTax: number | string;
+  discounts: number | string;
+  otherIncome: number | string;
+  operatingIncome: number | string;
+  cogs: number | string;
+  grossProfit: number | string;
+  operatingExpenses: number | string;
+  inventoryPurchases: number | string;
+  fixedCosts: number | string;
+  variableCosts: number | string;
+  operatingProfit: number | string;
+  grossMargin: number | string;
+  operatingMargin: number | string;
+  salesCount: number;
+  unitsSold: number | string;
+  averageNetSale: number | string;
+};
+
+export type BusinessReportTrendRow = {
+  month: string;
+  netSales: number | string;
+  otherIncome: number | string;
+  cogs: number | string;
+  grossProfit: number | string;
+  operatingExpenses: number | string;
+  inventoryPurchases: number | string;
+  operatingProfit: number | string;
+  cashMovement: number | string;
+};
+
+export type BusinessReportBreakdownRow = {
+  id?: string | null;
+  name: string;
+  amount: number | string;
+  percentage: number | string;
+  transactionCount?: number;
+};
+
+export type BusinessReportSupplierRow = {
+  id: string;
+  name: string;
+  operatingSpend: number | string;
+  inventoryPurchases: number | string;
+  totalSpend: number | string;
+  transactionCount: number;
+};
+
+export type BusinessReportProductRow = {
+  id: string;
+  name: string;
+  sku: string | null;
+  quantity: number | string;
+  netSales: number | string;
+  cogs: number | string;
+  grossProfit: number | string;
+  grossMargin: number | string;
+  saleCount: number;
+};
+
+export type BusinessReportCustomerRow = {
+  name: string;
+  netSales: number | string;
+  grossProfit: number | string;
+  salesCount: number;
+};
+
+export type BusinessProfitabilityReport = {
+  generatedAt: string;
+  range: {
+    startDate: string;
+    endDate: string;
+    priorStartDate: string;
+    priorEndDate: string;
+    dayCount: number;
+  };
+  summary: BusinessReportSummary;
+  priorSummary: BusinessReportSummary;
+  budget: {
+    plannedOperatingCosts: number | string;
+    actualOperatingCosts: number | string;
+    remaining: number | string;
+    usagePercentage: number | string;
+    hasBudget: boolean;
+  };
+  trend: BusinessReportTrendRow[];
+  costCategories: BusinessReportBreakdownRow[];
+  costCentres: BusinessReportBreakdownRow[];
+  suppliers: BusinessReportSupplierRow[];
+  products: BusinessReportProductRow[];
+  customers: BusinessReportCustomerRow[];
+  inventory: {
+    activeItems: number;
+    totalQuantity: number | string;
+    inventoryValue: number | string;
+    potentialSalesValue: number | string;
+    lowStockItems: number;
+  };
+  supplierInvoices: {
+    openCount: number;
+    openAmount: number | string;
+    overdueCount: number;
+    overdueAmount: number | string;
+  };
+};

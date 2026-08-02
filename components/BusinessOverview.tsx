@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BarChart3,
   BriefcaseBusiness,
+  FileText,
   PackageOpen,
   ReceiptText,
   ShoppingCart,
@@ -161,6 +162,7 @@ export function BusinessOverview({
       <header className={styles.hero}>
         <div><span>FICONTER BUSINESS · OVERVIEW</span><h1>{business.name}</h1><p>{business.business_type} · Base currency {business.base_currency}</p></div>
         <div className={styles.heroActions}>
+          <Link href="/business/reports"><FileText size={18} /> Reports <ArrowRight size={17} /></Link>
           <Link href="/business/sales"><ShoppingCart size={18} /> Sales <ArrowRight size={17} /></Link>
           <Link href="/business/inventory"><PackageOpen size={18} /> Inventory <ArrowRight size={17} /></Link>
           <Link href="/business/cost-control"><BarChart3 size={18} /> Cost Control <ArrowRight size={17} /></Link>

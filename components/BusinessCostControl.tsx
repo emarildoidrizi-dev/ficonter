@@ -485,7 +485,7 @@ export function BusinessCostControl({
       const payload = {
         business_id: business.id,
         name: recurringForm.name.trim(),
-        supplier: selectedSupplier?.name ?? recurringForm.supplier.trim() || null,
+        supplier: selectedSupplier?.name ?? (recurringForm.supplier.trim() || null),
         supplier_id: selectedSupplier?.id ?? null,
         category_id: category.id,
         category_name: category.name,

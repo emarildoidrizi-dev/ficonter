@@ -1,5 +1,6 @@
 "use client";
 
+import { PasswordInput } from "./PasswordInput";
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import {
@@ -165,7 +166,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           ) : null}
         </div>
 
-        <input
+        <PasswordInput
           id="ficonter-password"
           className="input"
           name="password"
@@ -179,7 +180,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       {mode === "register" && (
         <div className="field">
           <label htmlFor="confirm-password">Confirm password</label>
-          <input
+          <PasswordInput
             id="confirm-password"
             className="input"
             name="confirmPassword"

@@ -102,6 +102,18 @@ function localDateKey(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+function localTimeKey(date = new Date()) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+function paymentTimestamp(dateValue: string, timeValue: string) {
+  const timestamp = new Date(`${dateValue}T${timeValue}:00`);
+  if (Number.isNaN(timestamp.getTime())) {
+    throw new Error("Enter a valid payment date and time.");
+  }
+  return timestamp.toISOString();
+}
 
 const EMPTY_DEBT = {
   name: "",
@@ -395,6 +407,9 @@ export function DebtManager({
     const paidAt = String(
       data.get("paid_at") || localDateKey(),
     );
+    const paidTime = String(
+      data.get("paid_time") || localTimeKey(),
+    );
     const notes = String(data.get("notes") || "").trim();
 
     setPaymentError("");
@@ -414,7 +429,7 @@ export function DebtManager({
 
     try {
       const conversion = await convertToEur(amount, debt.currency);
-      const occurredAt = new Date(`${paidAt}T12:00:00`).toISOString();
+      const occurredAt = paymentTimestamp(paidAt, paidTime);
 
       const { data: result, error } = await supabase.rpc(
         "record_debt_payment_atomic",
@@ -904,7 +919,10 @@ export function DebtManager({
                         <div>
                           <strong>{money(payment.amount_eur, "EUR")}</strong>
                           <span>
-                            {new Date(payment.paid_at).toLocaleDateString("en-GB")}
+                            {new Date(payment.paid_at).toLocaleString("en-GB", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
                           </span>
                         </div>
                         <p>{payment.notes || "Debt repayment"}</p>
@@ -968,7 +986,17 @@ export function DebtManager({
               <input
                 name="paid_at"
                 type="date"
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={localDateKey()}
+                required
+              />
+            </label>
+            <label>
+              Payment time
+              <input
+                name="paid_time"
+                type="time"
+                step="60"
+                defaultValue={localTimeKey()}
                 required
               />
             </label>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { AdminWorkspaceNavigation } from "@/components/AdminWorkspaceNavigation";
 import { requireAdmin } from "@/lib/admin/access";
 import { loadPlatformHealth } from "@/lib/admin/health";
 import {
@@ -18,7 +19,6 @@ export default async function AdminPage() {
   if (!admin) redirect("/dashboard");
 
   const { supabase } = await getCurrentUser();
-
   const [snapshot, logsResult, health] = await Promise.all([
     loadAdminDirectorySnapshot(supabase),
     supabase
@@ -30,13 +30,16 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <AdminDashboard
-      currentAdminId={user.id}
-      currentRole={admin.role}
-      initialUsers={snapshot.users}
-      initialLogs={(logsResult.data ?? []) as AdminAuditRow[]}
-      initialCounts={snapshot.counts}
-      initialHealth={health}
-    />
+    <>
+      <AdminWorkspaceNavigation />
+      <AdminDashboard
+        currentAdminId={user.id}
+        currentRole={admin.role}
+        initialUsers={snapshot.users}
+        initialLogs={(logsResult.data ?? []) as AdminAuditRow[]}
+        initialCounts={snapshot.counts}
+        initialHealth={health}
+      />
+    </>
   );
 }

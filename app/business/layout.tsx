@@ -5,7 +5,9 @@ import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
+import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { getBusinessContext } from "@/lib/business/server";
+import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
   appearance?: string;
@@ -43,7 +45,13 @@ export default async function BusinessLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, businesses, business, membership } = await getBusinessContext();
+  const [
+    { user, businesses, business, membership },
+    { admin },
+  ] = await Promise.all([
+    getBusinessContext(),
+    requireAdmin(),
+  ]);
   if (!user) redirect("/login");
 
   const preferences = readInterfacePreferences(user.user_metadata);
@@ -53,11 +61,13 @@ export default async function BusinessLayout({
       <InterfacePreferencesBootstrap {...preferences} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
+      <UsageHeartbeat workspace="business" />
       <CommandPalette />
       <BusinessSidebar
         businesses={businesses}
         business={business}
         canManage={membership?.role === "owner" || membership?.role === "admin"}
+        isPlatformAdmin={Boolean(admin)}
         user={{
           displayName: String(
             user.user_metadata?.display_name ??

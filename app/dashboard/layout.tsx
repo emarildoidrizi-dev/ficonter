@@ -5,6 +5,7 @@ import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferences
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
@@ -35,9 +36,14 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   };
 }
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
+
   const interfacePreferences = readInterfacePreferences(user.user_metadata);
 
   return (
@@ -45,11 +51,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <InterfacePreferencesBootstrap {...interfacePreferences} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
+      <UsageHeartbeat workspace="personal" />
       <CommandPalette />
       <Sidebar
         isAdmin={Boolean(admin)}
         user={{
-          displayName: String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? ""),
+          displayName: String(
+            user.user_metadata?.display_name ??
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              "",
+          ),
           email: user.email ?? "",
           avatarPath: String(user.user_metadata?.avatar_path ?? ""),
         }}

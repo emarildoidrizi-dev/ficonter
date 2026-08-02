@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Truck,
+  Users,
   WalletCards,
 } from "lucide-react";
 import {
@@ -29,15 +30,16 @@ import { Brand } from "./Brand";
 import styles from "./BusinessSidebar.module.css";
 
 const links = [
-  ["/business/overview", LayoutDashboard, "Overview", false],
-  ["/business/transactions", ArrowLeftRight, "Transactions", false],
-  ["/business/cost-control", BarChart3, "Cost Control", false],
-  ["/business/suppliers", Truck, "Suppliers", false],
-  ["/business/inventory", PackageOpen, "Inventory", false],
-  ["/business/sales", ShoppingCart, "Sales", false],
-  ["/business/reports", FileText, "Reports", false],
-  ["/business/administration", ShieldCheck, "Administration", true],
-  ["/business/manage", Settings2, "Businesses", false],
+  ["/business/overview", LayoutDashboard, "Overview", false, false],
+  ["/business/transactions", ArrowLeftRight, "Transactions", false, false],
+  ["/business/cost-control", BarChart3, "Cost Control", false, false],
+  ["/business/suppliers", Truck, "Suppliers", false, false],
+  ["/business/inventory", PackageOpen, "Inventory", false, false],
+  ["/business/sales", ShoppingCart, "Sales", false, false],
+  ["/business/reports", FileText, "Reports", false, false],
+  ["/business/administration", ShieldCheck, "Administration", true, false],
+  ["/business/admin", Users, "Business Admin", false, true],
+  ["/business/manage", Settings2, "Businesses", false, false],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {
@@ -48,11 +50,13 @@ export function BusinessSidebar({
   businesses,
   business,
   canManage,
+  isPlatformAdmin,
   user,
 }: {
   businesses: Business[];
   business: Business | null;
   canManage: boolean;
+  isPlatformAdmin: boolean;
   user: { displayName: string; email: string };
 }) {
   const pathname = usePathname();
@@ -187,7 +191,11 @@ export function BusinessSidebar({
 
         {business
           ? links
-              .filter(([, , , adminOnly]) => !adminOnly || canManage)
+              .filter(
+                ([, , , businessAdminOnly, platformAdminOnly]) =>
+                  (!businessAdminOnly || canManage) &&
+                  (!platformAdminOnly || isPlatformAdmin),
+              )
               .map(([href, Icon, label]) => (
               <Link
                 href={href}
@@ -226,6 +234,18 @@ export function BusinessSidebar({
                   <Building2 size={18} aria-hidden="true" />
                   <span>Create business</span>
                 </Link>
+                {isPlatformAdmin ? (
+                  <Link
+                    href="/business/admin"
+                    className={`side-link ${
+                      activeRoute(pathname, "/business/admin") ? "active" : ""
+                    }`}
+                    prefetch={false}
+                  >
+                    <Users size={18} aria-hidden="true" />
+                    <span>Business Admin</span>
+                  </Link>
+                ) : null}
               </>
             )}
       </nav>

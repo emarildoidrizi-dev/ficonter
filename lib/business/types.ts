@@ -268,7 +268,7 @@ export type BusinessInventoryMovement = {
 };
 
 
-export type BusinessSaleStatus = "completed" | "refunded";
+export type BusinessSaleStatus = "completed" | "refunded" | "deleted";
 
 export type BusinessSale = {
   id: string;
@@ -303,6 +303,7 @@ export type BusinessSale = {
   transaction_id: string | null;
   completed_at: string;
   refunded_at: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };

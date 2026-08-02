@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   CircleDollarSign,
+  Edit3,
   PackageCheck,
   Plus,
   ReceiptText,
@@ -28,6 +29,7 @@ import type {
   Business,
   BusinessInventoryItemSnapshot,
   BusinessSale,
+  BusinessSaleLine,
 } from "@/lib/business/types";
 import styles from "./BusinessSales.module.css";
 
@@ -126,7 +128,11 @@ export function BusinessSales({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState(monthKey());
+  const [editingSale, setEditingSale] = useState<BusinessSale | null>(null);
+  const [originalEditLines, setOriginalEditLines] = useState<BusinessSaleLine[]>([]);
   const [refundSale, setRefundSale] = useState<BusinessSale | null>(null);
+  const [deleteSale, setDeleteSale] = useState<BusinessSale | null>(null);
+  const [restoreSale, setRestoreSale] = useState<BusinessSale | null>(null);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -217,6 +223,8 @@ export function BusinessSales({
     setReference("");
     setNotes("");
     setLines([newLine()]);
+    setEditingSale(null);
+    setOriginalEditLines([]);
     setShowForm(false);
     setError("");
   }
@@ -235,6 +243,74 @@ export function BusinessSales({
           ? String(finiteNumber(item.selling_price_base) || "")
           : "",
     });
+  }
+
+  function availableQuantityForItem(itemId: string) {
+    const current = inventory.find((record) => record.id === itemId);
+    const restoredFromEdit = originalEditLines
+      .filter((line) => line.inventory_item_id === itemId)
+      .reduce((sum, line) => sum + finiteNumber(line.quantity), 0);
+    return finiteNumber(current?.quantity_on_hand) + restoredFromEdit;
+  }
+
+  async function beginEdit(sale: BusinessSale) {
+    if (busy || sale.status !== "completed") return;
+    setBusy(`load-${sale.id}`);
+    setError("");
+
+    try {
+      const { data, error: lineError } = await supabase
+        .from("business_sale_lines")
+        .select(
+          "id,sale_id,business_id,inventory_item_id,item_name,item_sku,quantity,unit_price,line_subtotal,line_subtotal_base,unit_cost_base,cogs_base,gross_profit_base,inventory_movement_id,created_at",
+        )
+        .eq("sale_id", sale.id)
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: true });
+
+      if (lineError) throw lineError;
+
+      const saleLines = (data ?? []) as BusinessSaleLine[];
+      if (!saleLines.length) throw new Error("This sale has no editable lines.");
+
+      const occurredAt = new Date(sale.occurred_at);
+      setEditingSale(sale);
+      setOriginalEditLines(saleLines);
+      setSaleNumber(sale.sale_number);
+      setCustomerName(sale.customer_name ?? "");
+      setCustomerEmail(sale.customer_email ?? "");
+      setCurrency(sale.currency);
+      setSaleDate(sale.sale_date);
+      setSaleTime(
+        `${String(occurredAt.getHours()).padStart(2, "0")}:${String(
+          occurredAt.getMinutes(),
+        ).padStart(2, "0")}`,
+      );
+      setPaymentMethod(sale.payment_method ?? "Card");
+      setDiscount(String(sale.discount));
+      setTax(String(sale.tax));
+      setReference(sale.reference ?? "");
+      setNotes(sale.notes ?? "");
+      setLines(
+        saleLines.map((line) => ({
+          key: line.id,
+          inventory_item_id: line.inventory_item_id ?? "",
+          item_name: line.item_name,
+          quantity: String(line.quantity),
+          unit_price: String(line.unit_price),
+        })),
+      );
+      setShowForm(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Sale details could not be loaded.",
+      );
+    } finally {
+      setBusy("");
+    }
   }
 
   async function saveSale(event: FormEvent<HTMLFormElement>) {
@@ -259,8 +335,11 @@ export function BusinessSales({
         if (line.inventory_item_id) {
           const item = inventory.find((record) => record.id === line.inventory_item_id);
           if (!item) throw new Error("One selected inventory item no longer exists.");
-          if (line.quantity > finiteNumber(item.quantity_on_hand)) {
-            throw new Error(`${item.name} has only ${finiteNumber(item.quantity_on_hand)} ${item.unit} available.`);
+          const available = availableQuantityForItem(item.id);
+          if (line.quantity > available) {
+            throw new Error(
+              `${item.name} has only ${available} ${item.unit} available after restoring the current sale.`,
+            );
           }
         }
       }
@@ -269,8 +348,13 @@ export function BusinessSales({
       if (Number.isNaN(occurredAt.getTime())) throw new Error("Choose a valid sale date and time.");
       const rate = await getExchangeRate(currency, business.base_currency);
 
-      const { data, error: rpcError } = await supabase.rpc("record_business_sale", {
-        p_business_id: business.id,
+      const rpcName = editingSale
+        ? "update_business_sale"
+        : "record_business_sale";
+      const rpcPayload = {
+        ...(editingSale
+          ? { p_sale_id: editingSale.id }
+          : { p_business_id: business.id }),
         p_sale_number: saleNumber.trim(),
         p_customer_name: customerName.trim() || null,
         p_customer_email: customerEmail.trim() || null,
@@ -286,17 +370,29 @@ export function BusinessSales({
         p_reference: reference.trim() || null,
         p_notes: notes.trim() || null,
         p_lines: validLines,
-      });
+      };
+
+      const { data, error: rpcError } = await supabase.rpc(rpcName, rpcPayload);
       if (rpcError) throw rpcError;
 
       const result = data as { sale?: BusinessSale } | null;
       if (!result?.sale) throw new Error("The completed sale was not returned.");
       setSales((current) => [result.sale!, ...current.filter((sale) => sale.id !== result.sale!.id)]);
       await refreshInventory();
-      setNotice("Sale completed. Revenue, inventory and COGS were synchronized.");
+      setNotice(
+        editingSale
+          ? "Sale updated. The previous stock and revenue entries were reversed before the corrected sale was applied."
+          : "Sale completed. Revenue, inventory and COGS were synchronized.",
+      );
       resetForm();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Sale could not be completed.");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : editingSale
+            ? "Sale could not be updated."
+            : "Sale could not be completed.",
+      );
     } finally {
       setBusy("");
     }
@@ -324,17 +420,88 @@ export function BusinessSales({
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteSale || busy) return;
+    setBusy("delete");
+    setError("");
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc("delete_business_sale", {
+        p_sale_id: deleteSale.id,
+      });
+      if (rpcError) throw rpcError;
+
+      const result = data as { sale?: BusinessSale } | null;
+      if (!result?.sale) throw new Error("The deleted sale was not returned.");
+
+      setSales((current) =>
+        current.map((sale) =>
+          sale.id === result.sale!.id ? result.sale! : sale,
+        ),
+      );
+      await refreshInventory();
+      setDeleteSale(null);
+      setNotice(
+        "Sale moved to Deleted. Stock was restored and its linked revenue transaction was removed.",
+      );
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Sale could not be deleted.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function confirmRestore() {
+    if (!restoreSale || busy) return;
+    setBusy("restore");
+    setError("");
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc(
+        "restore_business_sale",
+        { p_sale_id: restoreSale.id },
+      );
+      if (rpcError) throw rpcError;
+
+      const result = data as { sale?: BusinessSale } | null;
+      if (!result?.sale) throw new Error("The restored sale was not returned.");
+
+      setSales((current) =>
+        current.map((sale) =>
+          sale.id === result.sale!.id ? result.sale! : sale,
+        ),
+      );
+      await refreshInventory();
+      setRestoreSale(null);
+      setNotice(
+        "Sale restored. Inventory, revenue, COGS and gross profit were recreated.",
+      );
+    } catch (restoreError) {
+      setError(
+        restoreError instanceof Error
+          ? restoreError.message
+          : "Sale could not be restored.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B6</span>
+          <span>FICONTER BUSINESS · B6.1</span>
           <h1>Sales &amp; COGS</h1>
           <p>Record sales, reduce inventory and calculate product cost and gross profit from one atomic workflow.</p>
         </div>
         <button onClick={() => (showForm ? resetForm() : setShowForm(true))}>
           {showForm ? <X size={18} /> : <Plus size={18} />}
-          {showForm ? "Close sale" : "New sale"}
+          {showForm ? (editingSale ? "Close edit" : "Close sale") : "New sale"}
         </button>
       </header>
 
@@ -344,8 +511,19 @@ export function BusinessSales({
       {showForm ? (
         <form className={styles.formCard} onSubmit={saveSale}>
           <div className={styles.formHead}>
-            <div><span>COMPLETE SALE</span><h2>Create revenue and stock movements</h2></div>
-            <small>Inventory quantities and weighted-average COGS are validated by Supabase.</small>
+            <div>
+              <span>{editingSale ? "EDIT SALE" : "COMPLETE SALE"}</span>
+              <h2>
+                {editingSale
+                  ? `Correct ${editingSale.sale_number}`
+                  : "Create revenue and stock movements"}
+              </h2>
+            </div>
+            <small>
+              {editingSale
+                ? "FICONTER reverses the current sale first, then applies the corrected version atomically."
+                : "Inventory quantities and weighted-average COGS are validated by Supabase."}
+            </small>
           </div>
           <div className={styles.formGrid}>
             <label>Sale number<input value={saleNumber} onChange={(event) => setSaleNumber(event.target.value)} required /></label>
@@ -371,11 +549,89 @@ export function BusinessSales({
               return (
                 <article className={styles.saleLine} key={line.key}>
                   <div className={styles.lineNumber}>{index + 1}</div>
-                  <label>Inventory item<select value={line.inventory_item_id} onChange={(event) => selectInventory(line, event.target.value)}><option value="">Custom product or service</option>{inventory.filter((record) => record.status === "active" && finiteNumber(record.quantity_on_hand) > 0).map((record) => <option value={record.id} key={record.id}>{record.sku} · {record.name} · {finiteNumber(record.quantity_on_hand)} {record.unit}</option>)}</select></label>
-                  <label>Item / service name<input value={line.item_name} onChange={(event) => updateLine(line.key, { item_name: event.target.value, inventory_item_id: line.inventory_item_id })} required /></label>
-                  <label>Quantity<input type="number" min="0.001" max={item ? finiteNumber(item.quantity_on_hand) : undefined} step="0.001" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} required /></label>
-                  <label>Unit price ({currency})<input type="number" min="0" step="0.01" value={line.unit_price} onChange={(event) => updateLine(line.key, { unit_price: event.target.value })} required /></label>
-                  <div className={styles.lineTotal}><span>Line total</span><strong>{saleMoney(finiteNumber(line.quantity) * finiteNumber(line.unit_price))}</strong>{item ? <small>{finiteNumber(item.quantity_on_hand)} {item.unit} available</small> : <small>No stock movement</small>}</div>
+                  <label>
+                    Inventory item
+                    <select
+                      value={line.inventory_item_id}
+                      onChange={(event) => selectInventory(line, event.target.value)}
+                    >
+                      <option value="">Custom product or service</option>
+                      {inventory
+                        .filter(
+                          (record) =>
+                            record.status === "active" &&
+                            (availableQuantityForItem(record.id) > 0 ||
+                              record.id === line.inventory_item_id),
+                        )
+                        .map((record) => (
+                          <option value={record.id} key={record.id}>
+                            {record.sku} · {record.name} ·{" "}
+                            {availableQuantityForItem(record.id)} {record.unit}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    Item / service name
+                    <input
+                      value={line.item_name}
+                      onChange={(event) =>
+                        updateLine(line.key, {
+                          item_name: event.target.value,
+                          inventory_item_id: line.inventory_item_id,
+                        })
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Quantity
+                    <input
+                      type="number"
+                      min="0.001"
+                      max={
+                        item
+                          ? availableQuantityForItem(item.id)
+                          : undefined
+                      }
+                      step="0.001"
+                      value={line.quantity}
+                      onChange={(event) =>
+                        updateLine(line.key, { quantity: event.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Unit price ({currency})
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.unit_price}
+                      onChange={(event) =>
+                        updateLine(line.key, { unit_price: event.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                  <div className={styles.lineTotal}>
+                    <span>Line total</span>
+                    <strong>
+                      {saleMoney(
+                        finiteNumber(line.quantity) *
+                          finiteNumber(line.unit_price),
+                      )}
+                    </strong>
+                    {item ? (
+                      <small>
+                        {availableQuantityForItem(item.id)} {item.unit} available
+                        {editingSale ? " after restoring this sale" : ""}
+                      </small>
+                    ) : (
+                      <small>No stock movement</small>
+                    )}
+                  </div>
                   <button type="button" className={styles.removeLine} onClick={() => setLines((current) => current.length === 1 ? current : current.filter((record) => record.key !== line.key))} disabled={lines.length === 1} aria-label="Remove line"><Trash2 size={16} /></button>
                 </article>
               );
@@ -390,7 +646,15 @@ export function BusinessSales({
           </div>
           {currency !== business.base_currency ? <p className={styles.exchangeNote}>Sale prices are entered in {currency}. FICONTER converts the completed sale to {business.base_currency}; inventory COGS remains valued in {business.base_currency}.</p> : null}
           {error ? <div className={styles.error}>{error}</div> : null}
-          <button className={styles.primaryButton} disabled={busy === "save"}>{busy === "save" ? "Completing…" : "Complete sale"}</button>
+          <button className={styles.primaryButton} disabled={busy === "save"}>
+            {busy === "save"
+              ? editingSale
+                ? "Saving changes…"
+                : "Completing…"
+              : editingSale
+                ? "Save sale changes"
+                : "Complete sale"}
+          </button>
         </form>
       ) : null}
 
@@ -407,7 +671,12 @@ export function BusinessSales({
 
       <div className={styles.filters}>
         <label><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sale, customer or reference" /></label>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="completed">Completed</option><option value="refunded">Refunded</option></select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option value="all">All statuses</option>
+          <option value="completed">Completed</option>
+          <option value="refunded">Refunded</option>
+          <option value="deleted">Deleted</option>
+        </select>
         <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}><option value="all">All months</option>{[monthKey(), ...months.filter((month) => month !== monthKey())].map((month) => <option key={month} value={month}>{month}</option>)}</select>
       </div>
 
@@ -419,7 +688,70 @@ export function BusinessSales({
               <div className={styles.saleIcon}><ShoppingCart size={20} /></div>
               <div className={styles.saleIdentity}><div><strong>{sale.sale_number}</strong><span className={`${styles.status} ${styles[sale.status]}`}>{sale.status}</span></div><span>{sale.customer_name || "Walk-in customer"} · {new Date(sale.occurred_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</span><small>{sale.line_count} line{sale.line_count === 1 ? "" : "s"} · {finiteNumber(sale.units_sold)} units · {sale.payment_method || "Payment method not set"}</small></div>
               <div className={styles.saleMetrics}><div><span>Total</span><strong>{money(sale.total_base)}</strong></div><div><span>COGS</span><strong>{money(sale.cogs_base)}</strong></div><div><span>Gross profit</span><strong>{money(sale.gross_profit_base)}</strong><small>{margin.toFixed(1)}% margin</small></div></div>
-              <div className={styles.saleActions}>{sale.status === "completed" ? <button onClick={() => setRefundSale(sale)} title="Refund sale"><RotateCcw size={17} /> Refund</button> : <span>Stock restored</span>}</div>
+              <div className={styles.saleActions}>
+                {sale.status === "completed" ? (
+                  <>
+                    <button
+                      className={styles.editAction}
+                      onClick={() => void beginEdit(sale)}
+                      disabled={busy === `load-${sale.id}`}
+                      title="Edit sale"
+                    >
+                      <Edit3 size={16} />
+                      {busy === `load-${sale.id}` ? "Loading…" : "Edit"}
+                    </button>
+                    <button
+                      className={styles.deleteAction}
+                      onClick={() => {
+                        setError("");
+                        setDeleteSale(sale);
+                      }}
+                      title="Delete sale"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                    <button
+                      className={styles.refundAction}
+                      onClick={() => {
+                        setError("");
+                        setRefundSale(sale);
+                      }}
+                      title="Refund sale"
+                    >
+                      <RotateCcw size={16} />
+                      Refund
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className={styles.restoreAction}
+                      onClick={() => {
+                        setError("");
+                        setRestoreSale(sale);
+                      }}
+                      title="Restore sale"
+                    >
+                      <RotateCcw size={16} />
+                      Restore
+                    </button>
+                    {sale.status === "refunded" ? (
+                      <button
+                        className={styles.deleteAction}
+                        onClick={() => {
+                          setError("");
+                          setDeleteSale(sale);
+                        }}
+                        title="Move refunded sale to Deleted"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </article>
           );
         }) : <div className={styles.empty}><ShoppingCart size={35} /><h2>No matching sales</h2><p>Complete the first sale or change the current filters.</p></div>}
@@ -428,12 +760,126 @@ export function BusinessSales({
       {refundSale ? (
         <div className={styles.backdrop}>
           <section className={styles.modal}>
-            <button className={styles.modalClose} onClick={() => setRefundSale(null)}><X size={18} /></button>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                setRefundSale(null);
+                setError("");
+              }}
+            >
+              <X size={18} />
+            </button>
             <RotateCcw className={styles.modalIcon} />
             <span>REFUND SALE</span>
             <h2>Refund {refundSale.sale_number}?</h2>
-            <p>The linked revenue transaction will be removed and every inventory item from this sale will be restored at its original weighted-average cost.</p>
-            <div className={styles.modalActions}><button onClick={() => setRefundSale(null)}>Keep sale</button><button className={styles.dangerButton} disabled={busy === "refund"} onClick={confirmRefund}>{busy === "refund" ? "Refunding…" : "Refund sale"}</button></div>
+            <p>
+              The linked revenue transaction will be removed and every
+              inventory item from this sale will be restored at its original
+              weighted-average cost. The sale remains in history as Refunded.
+            </p>
+            {error ? <div className={styles.error}>{error}</div> : null}
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setRefundSale(null);
+                  setError("");
+                }}
+              >
+                Keep sale
+              </button>
+              <button
+                className={styles.dangerButton}
+                disabled={busy === "refund"}
+                onClick={confirmRefund}
+              >
+                {busy === "refund" ? "Refunding…" : "Refund sale"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {deleteSale ? (
+        <div className={styles.backdrop}>
+          <section className={styles.modal}>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                setDeleteSale(null);
+                setError("");
+              }}
+            >
+              <X size={18} />
+            </button>
+            <Trash2 className={styles.modalIcon} />
+            <span>DELETE SALE</span>
+            <h2>Delete {deleteSale.sale_number}?</h2>
+            <p>
+              This is a safe deletion. FICONTER restores any active stock,
+              removes the linked revenue transaction and keeps the sale under
+              Deleted so it can be restored later.
+            </p>
+            {error ? <div className={styles.error}>{error}</div> : null}
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setDeleteSale(null);
+                  setError("");
+                }}
+              >
+                Keep sale
+              </button>
+              <button
+                className={styles.dangerButton}
+                disabled={busy === "delete"}
+                onClick={confirmDelete}
+              >
+                {busy === "delete" ? "Deleting…" : "Delete sale"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {restoreSale ? (
+        <div className={styles.backdrop}>
+          <section className={styles.modal}>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                setRestoreSale(null);
+                setError("");
+              }}
+            >
+              <X size={18} />
+            </button>
+            <RotateCcw className={styles.modalIcon} />
+            <span>RESTORE SALE</span>
+            <h2>Restore {restoreSale.sale_number}?</h2>
+            <p>
+              FICONTER will reduce the inventory again, recreate the linked
+              revenue transaction and recalculate COGS and gross profit using
+              the inventory value available now. Restoration is blocked when
+              stock is insufficient.
+            </p>
+            {error ? <div className={styles.error}>{error}</div> : null}
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setRestoreSale(null);
+                  setError("");
+                }}
+              >
+                Keep inactive
+              </button>
+              <button
+                className={styles.restoreConfirm}
+                disabled={busy === "restore"}
+                onClick={confirmRestore}
+              >
+                {busy === "restore" ? "Restoring…" : "Restore sale"}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

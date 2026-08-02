@@ -17,7 +17,7 @@ export default async function BusinessSalesPage() {
   const [{ data: sales }, { data: inventory }] = await Promise.all([
     supabase
       .from("business_sales")
-      .select("id,business_id,created_by,sale_number,customer_name,customer_email,status,currency,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,subtotal,discount,tax,total,subtotal_base,discount_base,tax_base,total_base,net_sales_base,cogs_base,gross_profit_base,line_count,units_sold,sale_date,occurred_at,payment_method,reference,notes,transaction_id,completed_at,refunded_at,created_at,updated_at")
+      .select("id,business_id,created_by,sale_number,customer_name,customer_email,status,currency,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,subtotal,discount,tax,total,subtotal_base,discount_base,tax_base,total_base,net_sales_base,cogs_base,gross_profit_base,line_count,units_sold,sale_date,occurred_at,payment_method,reference,notes,transaction_id,completed_at,refunded_at,deleted_at,created_at,updated_at")
       .eq("business_id", business.id)
       .order("occurred_at", { ascending: false })
       .limit(2500),

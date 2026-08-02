@@ -8,6 +8,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  PackageOpen,
   Truck,
   WalletCards,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const links = [
   ["/business/transactions", ArrowLeftRight, "Transactions"],
   ["/business/cost-control", BarChart3, "Cost Control"],
   ["/business/suppliers", Truck, "Suppliers"],
+  ["/business/inventory", PackageOpen, "Inventory"],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {

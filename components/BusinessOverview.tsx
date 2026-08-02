@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BarChart3,
   BriefcaseBusiness,
+  PackageOpen,
   ReceiptText,
   TrendingDown,
   TrendingUp,
@@ -23,6 +24,7 @@ import type {
   BusinessCostBudget,
   BusinessCostCategory,
   BusinessCostCentre,
+  BusinessInventoryItemSnapshot,
   BusinessTransaction,
 } from "@/lib/business/types";
 import styles from "./BusinessOverview.module.css";
@@ -45,17 +47,29 @@ export function BusinessOverview({
   initialBudgets,
   initialCategories,
   initialCentres,
+  initialInventory,
 }: {
   business: Business;
   initialTransactions: BusinessTransaction[];
   initialBudgets: BusinessCostBudget[];
   initialCategories: BusinessCostCategory[];
   initialCentres: BusinessCostCentre[];
+  initialInventory: BusinessInventoryItemSnapshot[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [budgets, setBudgets] = useState(initialBudgets);
+  const [inventory, setInventory] = useState(initialInventory);
   const month = businessMonthKey();
+
+  async function refreshInventory() {
+    const { data } = await supabase
+      .from("business_inventory_item_balances")
+      .select("*")
+      .eq("business_id", business.id)
+      .order("name", { ascending: true });
+    if (data) setInventory(data as BusinessInventoryItemSnapshot[]);
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -77,6 +91,16 @@ export function BusinessOverview({
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           setBudgets((current) => mergeRealtime<BusinessCostBudget>(current, payload));
         },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "business_inventory_items", filter: `business_id=eq.${business.id}` },
+        () => { void refreshInventory(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "business_inventory_movements", filter: `business_id=eq.${business.id}` },
+        () => { void refreshInventory(); },
       )
       .subscribe();
     return () => {
@@ -101,6 +125,12 @@ export function BusinessOverview({
     centres: initialCentres,
     monthKey: month,
   });
+  const activeInventory = inventory.filter((item) => item.status === "active");
+  const inventoryValue = sumMoney(activeInventory.map((item) => item.inventory_value_base));
+  const potentialSales = sumMoney(activeInventory.map((item) => item.potential_sales_value_base));
+  const lowStock = activeInventory.filter(
+    (item) => finiteNumber(item.quantity_on_hand) <= finiteNumber(item.low_stock_threshold),
+  ).length;
   const money = (value: number) => formatCurrency(value, business.base_currency);
 
   return (
@@ -108,6 +138,7 @@ export function BusinessOverview({
       <header className={styles.hero}>
         <div><span>FICONTER BUSINESS · OVERVIEW</span><h1>{business.name}</h1><p>{business.business_type} · Base currency {business.base_currency}</p></div>
         <div className={styles.heroActions}>
+          <Link href="/business/inventory"><PackageOpen size={18} /> Inventory <ArrowRight size={17} /></Link>
           <Link href="/business/cost-control"><BarChart3 size={18} /> Cost Control <ArrowRight size={17} /></Link>
           <Link href="/business/transactions"><ReceiptText size={18} /> Transactions <ArrowRight size={17} /></Link>
         </div>
@@ -130,6 +161,19 @@ export function BusinessOverview({
           <div><span>Cost budget</span><strong>{money(costMetrics.budgetTotal)}</strong><small>{costMetrics.budgetUsage.toFixed(1)}% used</small></div>
           <div className={!costMetrics.hasBudget ? "" : costMetrics.budgetRemaining >= 0 ? styles.positive : styles.negative}><span>{!costMetrics.hasBudget ? "Budget status" : costMetrics.budgetRemaining >= 0 ? "Budget remaining" : "Over budget"}</span><strong>{costMetrics.hasBudget ? money(Math.abs(costMetrics.budgetRemaining)) : "Not set"}</strong><small>{costMetrics.hasBudget ? "Actual versus planned" : "Set budgets in Cost Control"}</small></div>
           <div><span>Break-even revenue</span><strong>{costMetrics.breakEvenRevenue === null ? "Not available" : money(costMetrics.breakEvenRevenue)}</strong><small>{costMetrics.revenue > 0 ? `${(costMetrics.contributionMarginRatio * 100).toFixed(1)}% contribution margin` : "Add revenue to calculate"}</small></div>
+        </div>
+      </article>
+
+      <article className={styles.costPanel}>
+        <div className={styles.panelHead}>
+          <div><span>B5 INVENTORY</span><h2>Stock position</h2></div>
+          <Link href="/business/inventory">Open Inventory</Link>
+        </div>
+        <div className={styles.costSnapshot}>
+          <div><span>Inventory value</span><strong>{money(inventoryValue)}</strong><small>Weighted stock value</small></div>
+          <div><span>Active items</span><strong>{activeInventory.length}</strong><small>Tracked products and materials</small></div>
+          <div className={lowStock ? styles.negative : styles.positive}><span>Low stock alerts</span><strong>{lowStock}</strong><small>{lowStock ? "Items need attention" : "Stock levels healthy"}</small></div>
+          <div><span>Potential sales value</span><strong>{money(potentialSales)}</strong><small>At current selling prices</small></div>
         </div>
       </article>
 

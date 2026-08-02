@@ -96,6 +96,7 @@ export type BusinessTransaction = {
   source_recurring_cost_id: string | null;
   source_supplier_invoice_id: string | null;
   source_inventory_movement_id?: string | null;
+  source_sale_id?: string | null;
   recurrence_key: string | null;
   amount: number | string;
   currency: string;
@@ -263,5 +264,63 @@ export type BusinessInventoryMovement = {
   occurred_at: string;
   reference: string | null;
   notes: string | null;
+  created_at: string;
+};
+
+
+export type BusinessSaleStatus = "completed" | "refunded";
+
+export type BusinessSale = {
+  id: string;
+  business_id: string;
+  created_by: string;
+  sale_number: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  status: BusinessSaleStatus;
+  currency: string;
+  exchange_rate_to_base: number | string;
+  exchange_rate_date: string | null;
+  exchange_rate_source: string | null;
+  subtotal: number | string;
+  discount: number | string;
+  tax: number | string;
+  total: number | string;
+  subtotal_base: number | string;
+  discount_base: number | string;
+  tax_base: number | string;
+  total_base: number | string;
+  net_sales_base: number | string;
+  cogs_base: number | string;
+  gross_profit_base: number | string;
+  line_count: number;
+  units_sold: number | string;
+  sale_date: string;
+  occurred_at: string;
+  payment_method: string | null;
+  reference: string | null;
+  notes: string | null;
+  transaction_id: string | null;
+  completed_at: string;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessSaleLine = {
+  id: string;
+  sale_id: string;
+  business_id: string;
+  inventory_item_id: string | null;
+  item_name: string;
+  item_sku: string | null;
+  quantity: number | string;
+  unit_price: number | string;
+  line_subtotal: number | string;
+  line_subtotal_base: number | string;
+  unit_cost_base: number | string;
+  cogs_base: number | string;
+  gross_profit_base: number | string;
+  inventory_movement_id: string | null;
   created_at: string;
 };

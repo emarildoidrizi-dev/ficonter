@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   PackageOpen,
   ReceiptText,
+  ShoppingCart,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import type {
   BusinessCostCategory,
   BusinessCostCentre,
   BusinessInventoryItemSnapshot,
+  BusinessSale,
   BusinessTransaction,
 } from "@/lib/business/types";
 import styles from "./BusinessOverview.module.css";
@@ -48,6 +50,7 @@ export function BusinessOverview({
   initialCategories,
   initialCentres,
   initialInventory,
+  initialSales,
 }: {
   business: Business;
   initialTransactions: BusinessTransaction[];
@@ -55,11 +58,13 @@ export function BusinessOverview({
   initialCategories: BusinessCostCategory[];
   initialCentres: BusinessCostCentre[];
   initialInventory: BusinessInventoryItemSnapshot[];
+  initialSales: BusinessSale[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [budgets, setBudgets] = useState(initialBudgets);
   const [inventory, setInventory] = useState(initialInventory);
+  const [sales, setSales] = useState(initialSales);
   const month = businessMonthKey();
 
   async function refreshInventory() {
@@ -102,6 +107,17 @@ export function BusinessOverview({
         { event: "*", schema: "public", table: "business_inventory_movements", filter: `business_id=eq.${business.id}` },
         () => { void refreshInventory(); },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "business_sales", filter: `business_id=eq.${business.id}` },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          setSales((current) =>
+            mergeRealtime<BusinessSale>(current, payload).sort((a, b) =>
+              b.occurred_at.localeCompare(a.occurred_at),
+            ),
+          );
+        },
+      )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
@@ -131,6 +147,13 @@ export function BusinessOverview({
   const lowStock = activeInventory.filter(
     (item) => finiteNumber(item.quantity_on_hand) <= finiteNumber(item.low_stock_threshold),
   ).length;
+  const monthlySales = sales.filter(
+    (sale) => sale.status === "completed" && sale.sale_date.startsWith(month),
+  );
+  const salesNet = sumMoney(monthlySales.map((sale) => sale.net_sales_base));
+  const salesCogs = sumMoney(monthlySales.map((sale) => sale.cogs_base));
+  const salesGrossProfit = sumMoney(monthlySales.map((sale) => sale.gross_profit_base));
+  const salesMargin = salesNet > 0 ? (salesGrossProfit / salesNet) * 100 : 0;
   const money = (value: number) => formatCurrency(value, business.base_currency);
 
   return (
@@ -138,6 +161,7 @@ export function BusinessOverview({
       <header className={styles.hero}>
         <div><span>FICONTER BUSINESS · OVERVIEW</span><h1>{business.name}</h1><p>{business.business_type} · Base currency {business.base_currency}</p></div>
         <div className={styles.heroActions}>
+          <Link href="/business/sales"><ShoppingCart size={18} /> Sales <ArrowRight size={17} /></Link>
           <Link href="/business/inventory"><PackageOpen size={18} /> Inventory <ArrowRight size={17} /></Link>
           <Link href="/business/cost-control"><BarChart3 size={18} /> Cost Control <ArrowRight size={17} /></Link>
           <Link href="/business/transactions"><ReceiptText size={18} /> Transactions <ArrowRight size={17} /></Link>
@@ -177,11 +201,24 @@ export function BusinessOverview({
         </div>
       </article>
 
+      <article className={styles.costPanel}>
+        <div className={styles.panelHead}>
+          <div><span>B6 SALES &amp; COGS</span><h2>Monthly gross-profit position</h2></div>
+          <Link href="/business/sales">Open Sales</Link>
+        </div>
+        <div className={styles.costSnapshot}>
+          <div><span>Net sales</span><strong>{money(salesNet)}</strong><small>{monthlySales.length} completed sales</small></div>
+          <div><span>Cost of goods sold</span><strong>{money(salesCogs)}</strong><small>Weighted-average inventory cost</small></div>
+          <div className={salesGrossProfit >= 0 ? styles.positive : styles.negative}><span>Gross profit</span><strong>{money(salesGrossProfit)}</strong><small>Net sales less COGS</small></div>
+          <div><span>Gross margin</span><strong>{salesMargin.toFixed(1)}%</strong><small>Before operating costs</small></div>
+        </div>
+      </article>
+
       <article className={styles.panel}>
         <div className={styles.panelHead}><div><span>LIVE BUSINESS LEDGER</span><h2>Recent activity</h2></div><Link href="/business/transactions">View all</Link></div>
         {recent.length ? <div className={styles.rows}>{recent.map((item) => <div className={styles.row} key={item.id}>
           <i className={item.type === "income" ? styles.income : styles.expense} />
-          <div><strong>{item.description}</strong><span>{item.counterparty || item.category} · {new Date(item.occurred_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}{item.source_recurring_cost_id ? " · automatic recurring" : ""}</span></div>
+          <div><strong>{item.description}</strong><span>{item.counterparty || item.category} · {new Date(item.occurred_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}{item.source_recurring_cost_id ? " · automatic recurring" : ""}{item.source_sale_id ? " · completed sale" : ""}</span></div>
           <b className={item.type === "income" ? styles.incomeAmount : styles.expenseAmount}>{item.type === "income" ? "+" : "−"}{money(finiteNumber(item.amount_base))}</b>
         </div>)}</div> : <div className={styles.empty}>No business transactions yet. Add the first record in Business Transactions.</div>}
       </article>

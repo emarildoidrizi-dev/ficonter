@@ -196,6 +196,10 @@ export function BusinessTransactionLedger({
   }
 
   function openEdit(item: BusinessTransaction) {
+    if (item.source_sale_id) {
+      setNotice("Sales-generated transactions are managed from Business → Sales.");
+      return;
+    }
     const managedCategory = item.cost_category_id
       ? categories.find((category) => category.id === item.cost_category_id)
       : null;
@@ -303,6 +307,11 @@ export function BusinessTransactionLedger({
 
   async function confirmDelete() {
     if (!deleting || busy) return;
+    if (deleting.source_sale_id) {
+      setDeleting(null);
+      setError("Sales-generated transactions must be refunded from Business → Sales.");
+      return;
+    }
     setBusy(true);
     setError("");
     const { error: deleteError } = await supabase
@@ -390,7 +399,7 @@ export function BusinessTransactionLedger({
       <div className={`${styles.list} ficonter-scroll-region`} tabIndex={visible.length > 8 ? 0 : undefined}>
         {visible.length ? visible.map((item) => {
           const centre = item.cost_centre_id ? costCentres.find((record) => record.id === item.cost_centre_id) : null;
-          return <article className={styles.row} key={item.id}><i className={item.type === "income" ? styles.income : styles.expense} /><div className={styles.identity}><strong>{item.description}</strong><span>{item.counterparty || item.category} · {item.category}{centre ? ` · ${centre.name}` : ""}</span><small><CalendarRange size={13} />{new Date(item.occurred_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}{item.cost_nature ? ` · ${item.cost_nature} cost` : ""}{item.source_recurring_cost_id ? " · automatic recurring" : ""}</small></div><div className={styles.amount}><strong className={item.type === "income" ? styles.incomeText : styles.expenseText}>{item.type === "income" ? "+" : "−"}{money(item.amount_base)}</strong>{item.currency !== business.base_currency ? <span>{formatCurrency(finiteNumber(item.amount), item.currency)}</span> : null}</div><div className={styles.actions}><button onClick={() => openEdit(item)} aria-label="Edit transaction"><Edit3 size={16} /></button><button onClick={() => setDeleting(item)} aria-label="Delete transaction"><Trash2 size={16} /></button></div></article>;
+          return <article className={styles.row} key={item.id}><i className={item.type === "income" ? styles.income : styles.expense} /><div className={styles.identity}><strong>{item.description}</strong><span>{item.counterparty || item.category} · {item.category}{centre ? ` · ${centre.name}` : ""}</span><small><CalendarRange size={13} />{new Date(item.occurred_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}{item.cost_nature ? ` · ${item.cost_nature} cost` : ""}{item.source_recurring_cost_id ? " · automatic recurring" : ""}{item.source_sale_id ? " · managed sale" : ""}</small></div><div className={styles.amount}><strong className={item.type === "income" ? styles.incomeText : styles.expenseText}>{item.type === "income" ? "+" : "−"}{money(item.amount_base)}</strong>{item.currency !== business.base_currency ? <span>{formatCurrency(finiteNumber(item.amount), item.currency)}</span> : null}</div><div className={styles.actions}><button onClick={() => openEdit(item)} aria-label="Edit transaction" disabled={Boolean(item.source_sale_id)} title={item.source_sale_id ? "Manage this transaction from Sales" : "Edit transaction"}><Edit3 size={16} /></button><button onClick={() => setDeleting(item)} aria-label="Delete transaction" disabled={Boolean(item.source_sale_id)} title={item.source_sale_id ? "Refund this sale from Sales" : "Delete transaction"}><Trash2 size={16} /></button></div></article>;
         }) : <div className={styles.empty}>No matching business transactions.</div>}
       </div>
 

@@ -6,6 +6,7 @@ import type {
   BusinessCostCategory,
   BusinessCostCentre,
   BusinessRecurringCost,
+  BusinessSupplier,
   BusinessTransaction,
 } from "@/lib/business/types";
 
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const TRANSACTION_SELECT =
-  "id,business_id,created_by,description,counterparty,type,category,cost_nature,cost_category_id,cost_centre_id,source_recurring_cost_id,recurrence_key,amount,currency,amount_base,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,transaction_date,occurred_at,payment_method,reference,notes,created_at,updated_at";
+  "id,business_id,created_by,description,counterparty,supplier_id,type,category,cost_nature,cost_category_id,cost_centre_id,source_recurring_cost_id,source_supplier_invoice_id,recurrence_key,amount,currency,amount_base,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,transaction_date,occurred_at,payment_method,reference,notes,created_at,updated_at";
 
 export default async function BusinessCostControlPage() {
   const { supabase, user, business } = await getBusinessContext();
@@ -26,6 +27,7 @@ export default async function BusinessCostControlPage() {
     { data: centres },
     { data: budgets },
     { data: recurringCosts },
+    { data: suppliers },
   ] = await Promise.all([
     supabase
       .from("business_transactions")
@@ -50,9 +52,14 @@ export default async function BusinessCostControlPage() {
       .order("budget_month", { ascending: false }),
     supabase
       .from("business_recurring_costs")
-      .select("id,business_id,created_by,name,supplier,category_id,category_name,cost_centre_id,cost_nature,amount,currency,amount_base,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,due_day,record_time,timezone,start_date,end_date,next_run_at,last_recorded_at,last_error,payment_method,reference,notes,status,created_at,updated_at")
+      .select("id,business_id,created_by,name,supplier,supplier_id,category_id,category_name,cost_centre_id,cost_nature,amount,currency,amount_base,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,due_day,record_time,timezone,start_date,end_date,next_run_at,last_recorded_at,last_error,payment_method,reference,notes,status,created_at,updated_at")
       .eq("business_id", business.id)
       .order("next_run_at", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("business_suppliers")
+      .select("id,business_id,created_by,name,legal_name,supplier_code,category,contact_name,email,phone,website,tax_id,payment_terms_days,default_currency,status,address_line1,address_line2,city,postal_code,country_code,notes,created_at,updated_at")
+      .eq("business_id", business.id)
+      .order("name", { ascending: true }),
   ]);
 
   return (
@@ -63,6 +70,7 @@ export default async function BusinessCostControlPage() {
       initialCentres={(centres ?? []) as BusinessCostCentre[]}
       initialBudgets={(budgets ?? []) as BusinessCostBudget[]}
       initialRecurringCosts={(recurringCosts ?? []) as BusinessRecurringCost[]}
+      initialSuppliers={(suppliers ?? []) as BusinessSupplier[]}
     />
   );
 }

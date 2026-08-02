@@ -54,6 +54,7 @@ export type BusinessRecurringCost = {
   created_by: string;
   name: string;
   supplier: string | null;
+  supplier_id: string | null;
   category_id: string | null;
   category_name: string;
   cost_centre_id: string | null;
@@ -86,12 +87,14 @@ export type BusinessTransaction = {
   created_by: string;
   description: string;
   counterparty: string | null;
+  supplier_id: string | null;
   type: BusinessTransactionType;
   category: string;
   cost_nature: BusinessCostNature;
   cost_category_id: string | null;
   cost_centre_id: string | null;
   source_recurring_cost_id: string | null;
+  source_supplier_invoice_id: string | null;
   recurrence_key: string | null;
   amount: number | string;
   currency: string;
@@ -103,6 +106,65 @@ export type BusinessTransaction = {
   occurred_at: string;
   payment_method: string | null;
   reference: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+
+export type BusinessSupplierStatus = "active" | "inactive";
+
+export type BusinessSupplier = {
+  id: string;
+  business_id: string;
+  created_by: string;
+  name: string;
+  legal_name: string | null;
+  supplier_code: string | null;
+  category: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  tax_id: string | null;
+  payment_terms_days: number;
+  default_currency: string;
+  status: BusinessSupplierStatus;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country_code: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessSupplierInvoiceStatus = "open" | "paid" | "cancelled";
+
+export type BusinessSupplierInvoice = {
+  id: string;
+  business_id: string;
+  supplier_id: string;
+  created_by: string;
+  invoice_number: string;
+  description: string;
+  category_id: string | null;
+  category_name: string;
+  cost_centre_id: string | null;
+  cost_nature: Exclude<BusinessCostNature, null>;
+  amount: number | string;
+  currency: string;
+  amount_base: number | string;
+  exchange_rate_to_base: number | string;
+  exchange_rate_date: string | null;
+  exchange_rate_source: string | null;
+  issue_date: string;
+  due_date: string;
+  status: BusinessSupplierInvoiceStatus;
+  paid_at: string | null;
+  payment_method: string | null;
+  transaction_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

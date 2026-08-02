@@ -40,6 +40,7 @@ import type {
   BusinessCostCentre,
   BusinessRecurringCost,
   BusinessRecurringCostStatus,
+  BusinessSupplier,
   BusinessTransaction,
 } from "@/lib/business/types";
 import styles from "./BusinessCostControl.module.css";
@@ -99,6 +100,7 @@ const PAYMENT_METHODS = [
 const EMPTY_RECURRING = {
   name: "",
   supplier: "",
+  supplier_id: "",
   category_id: "",
   cost_centre_id: "",
   cost_nature: "fixed" as "fixed" | "variable",
@@ -122,6 +124,7 @@ export function BusinessCostControl({
   initialCentres,
   initialBudgets,
   initialRecurringCosts,
+  initialSuppliers,
 }: {
   business: Business;
   initialTransactions: BusinessTransaction[];
@@ -129,6 +132,7 @@ export function BusinessCostControl({
   initialCentres: BusinessCostCentre[];
   initialBudgets: BusinessCostBudget[];
   initialRecurringCosts: BusinessRecurringCost[];
+  initialSuppliers: BusinessSupplier[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -136,6 +140,7 @@ export function BusinessCostControl({
   const [centres, setCentres] = useState(initialCentres);
   const [budgets, setBudgets] = useState(initialBudgets);
   const [recurringCosts, setRecurringCosts] = useState(initialRecurringCosts);
+  const [suppliers, setSuppliers] = useState(initialSuppliers);
   const [selectedMonth, setSelectedMonth] = useState(businessMonthKey());
   const [view, setView] = useState<View>("overview");
   const [notice, setNotice] = useState("");
@@ -221,6 +226,15 @@ export function BusinessCostControl({
             mergeRealtime<BusinessRecurringCost>(current, payload).sort((a, b) =>
               (a.next_run_at ?? "9999").localeCompare(b.next_run_at ?? "9999"),
             ),
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "business_suppliers", filter: `business_id=eq.${business.id}` },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          setSuppliers((current) =>
+            mergeRealtime<BusinessSupplier>(current, payload).sort((a, b) => a.name.localeCompare(b.name)),
           );
         },
       )
@@ -413,6 +427,7 @@ export function BusinessCostControl({
     const firstCategory = categories.find((item) => item.is_active) ?? categories[0];
     setRecurringForm({
       ...EMPTY_RECURRING,
+      supplier_id: "",
       currency: business.base_currency,
       timezone: browserTimezone(),
       category_id: firstCategory?.id ?? "",
@@ -429,6 +444,7 @@ export function BusinessCostControl({
     setRecurringForm({
       name: item.name,
       supplier: item.supplier ?? "",
+      supplier_id: item.supplier_id ?? "",
       category_id: item.category_id ?? "",
       cost_centre_id: item.cost_centre_id ?? "",
       cost_nature: item.cost_nature,
@@ -456,6 +472,7 @@ export function BusinessCostControl({
     setError("");
     try {
       const category = categories.find((item) => item.id === recurringForm.category_id);
+      const selectedSupplier = suppliers.find((item) => item.id === recurringForm.supplier_id);
       const amount = roundMoney(recurringForm.amount);
       const dueDay = Number(recurringForm.due_day);
       if (!recurringForm.name.trim()) throw new Error("Enter a recurring cost name.");
@@ -468,7 +485,8 @@ export function BusinessCostControl({
       const payload = {
         business_id: business.id,
         name: recurringForm.name.trim(),
-        supplier: recurringForm.supplier.trim() || null,
+        supplier: selectedSupplier?.name ?? recurringForm.supplier.trim() || null,
+        supplier_id: selectedSupplier?.id ?? null,
         category_id: category.id,
         category_name: category.name,
         cost_centre_id: recurringForm.cost_centre_id || null,
@@ -755,7 +773,27 @@ export function BusinessCostControl({
               </div>
               <div className={styles.formGrid}>
                 <label>Cost name<input value={recurringForm.name} onChange={(event) => setRecurringForm({ ...recurringForm, name: event.target.value })} required placeholder="e.g. Office rent" /></label>
-                <label>Supplier<input value={recurringForm.supplier} onChange={(event) => setRecurringForm({ ...recurringForm, supplier: event.target.value })} placeholder="Optional supplier" /></label>
+                <label>
+                  Registered supplier
+                  <select
+                    value={recurringForm.supplier_id}
+                    onChange={(event) => {
+                      const supplier = suppliers.find((item) => item.id === event.target.value);
+                      setRecurringForm({
+                        ...recurringForm,
+                        supplier_id: event.target.value,
+                        supplier: supplier?.name ?? recurringForm.supplier,
+                        currency: supplier?.default_currency ?? recurringForm.currency,
+                      });
+                    }}
+                  >
+                    <option value="">No registered supplier</option>
+                    {suppliers.filter((supplier) => supplier.status === "active").map((supplier) => (
+                      <option value={supplier.id} key={supplier.id}>{supplier.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>Supplier / counterparty<input value={recurringForm.supplier} onChange={(event) => setRecurringForm({ ...recurringForm, supplier: event.target.value, supplier_id: "" })} placeholder="Optional supplier" /></label>
                 <label>Category<select value={recurringForm.category_id} onChange={(event) => { const category = categories.find((item) => item.id === event.target.value); setRecurringForm({ ...recurringForm, category_id: event.target.value, cost_nature: category?.default_nature ?? recurringForm.cost_nature }); }}>{categories.filter((item) => item.is_active).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
                 <label>Cost centre<select value={recurringForm.cost_centre_id} onChange={(event) => setRecurringForm({ ...recurringForm, cost_centre_id: event.target.value })}><option value="">No cost centre</option>{centres.filter((item) => item.is_active).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
                 <label>Cost type<select value={recurringForm.cost_nature} onChange={(event) => setRecurringForm({ ...recurringForm, cost_nature: event.target.value as "fixed" | "variable" })}><option value="fixed">Fixed cost</option><option value="variable">Variable cost</option></select></label>

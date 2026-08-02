@@ -12,6 +12,7 @@ import type {
   BusinessCostCategory,
   BusinessCostCentre,
   BusinessCostNature,
+  BusinessSupplier,
   BusinessTransaction,
   BusinessTransactionType,
 } from "@/lib/business/types";
@@ -40,6 +41,7 @@ function toLocalInput(value: string) {
 const EMPTY = {
   description: "",
   counterparty: "",
+  supplier_id: "",
   type: "expense" as BusinessTransactionType,
   category_id: "",
   income_category: INCOME_CATEGORIES[0],
@@ -71,16 +73,19 @@ export function BusinessTransactionLedger({
   initialTransactions,
   initialCategories,
   initialCostCentres,
+  initialSuppliers,
 }: {
   business: Business;
   initialTransactions: BusinessTransaction[];
   initialCategories: BusinessCostCategory[];
   initialCostCentres: BusinessCostCentre[];
+  initialSuppliers: BusinessSupplier[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [categories, setCategories] = useState(initialCategories);
   const [costCentres, setCostCentres] = useState(initialCostCentres);
+  const [suppliers, setSuppliers] = useState(initialSuppliers);
   const firstCategory = initialCategories.find((item) => item.is_active) ?? initialCategories[0];
   const firstCentre = initialCostCentres.find((item) => item.is_active) ?? initialCostCentres[0];
   const [form, setForm] = useState(() => ({
@@ -138,6 +143,15 @@ export function BusinessTransactionLedger({
           );
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "business_suppliers", filter: `business_id=eq.${business.id}` },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          setSuppliers((current) =>
+            mergeRealtime<BusinessSupplier>(current, payload).sort((a, b) => a.name.localeCompare(b.name)),
+          );
+        },
+      )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
@@ -172,6 +186,7 @@ export function BusinessTransactionLedger({
       currency: business.base_currency,
       occurred_at: localDateTimeInput(),
       category_id: nextCategory?.id ?? "",
+      supplier_id: "",
       cost_centre_id: nextCentre?.id ?? "",
       cost_nature: nextCategory?.default_nature ?? "variable",
     });
@@ -188,6 +203,7 @@ export function BusinessTransactionLedger({
     setForm({
       description: item.description,
       counterparty: item.counterparty ?? "",
+      supplier_id: item.supplier_id ?? "",
       type: item.type,
       category_id: managedCategory?.id ?? "custom",
       income_category: knownIncome ? item.category : "Other / custom",
@@ -217,6 +233,7 @@ export function BusinessTransactionLedger({
       const description = form.description.trim();
       const occurred = new Date(form.occurred_at);
       const selectedCategory = categories.find((item) => item.id === form.category_id);
+      const selectedSupplier = suppliers.find((item) => item.id === form.supplier_id);
       const finalCategory =
         form.type === "income"
           ? form.income_category === "Other / custom"
@@ -231,7 +248,12 @@ export function BusinessTransactionLedger({
       const payload = {
         business_id: business.id,
         description,
-        counterparty: form.counterparty.trim() || null,
+        counterparty:
+          form.type === "expense" && selectedSupplier
+            ? selectedSupplier.name
+            : form.counterparty.trim() || null,
+        supplier_id:
+          form.type === "expense" && selectedSupplier ? selectedSupplier.id : null,
         type: form.type,
         category: finalCategory,
         cost_nature: form.type === "expense" ? form.cost_nature : null,
@@ -310,9 +332,38 @@ export function BusinessTransactionLedger({
         <form className={styles.form} onSubmit={save}>
           <div className={styles.formHead}><div><span>{editing ? "EDIT RECORD" : "NEW RECORD"}</span><h2>{editing ? "Update transaction" : "Record business activity"}</h2></div>{editing ? <button type="button" onClick={resetForm}>Cancel edit</button> : null}</div>
           <div className={styles.formGrid}>
-            <label>Type<select value={form.type} onChange={(event) => { const type = event.target.value as BusinessTransactionType; const category = categories.find((item) => item.is_active) ?? categories[0]; setForm({ ...form, type, category_id: category?.id ?? "", income_category: INCOME_CATEGORIES[0], customCategory: "", cost_nature: category?.default_nature ?? "variable" }); }}><option value="income">Income</option><option value="expense">Expense</option></select></label>
+            <label>Type<select value={form.type} onChange={(event) => { const type = event.target.value as BusinessTransactionType; const category = categories.find((item) => item.is_active) ?? categories[0]; setForm({ ...form, type, supplier_id: "", category_id: category?.id ?? "", income_category: INCOME_CATEGORIES[0], customCategory: "", cost_nature: category?.default_nature ?? "variable" }); }}><option value="income">Income</option><option value="expense">Expense</option></select></label>
             <label>Description<input value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} required placeholder="What was this transaction?" /></label>
-            <label>Customer / supplier<input value={form.counterparty} onChange={(event) => setForm({ ...form, counterparty: event.target.value })} placeholder="Optional counterparty" /></label>
+            {form.type === "expense" ? (
+              <label>
+                Registered supplier
+                <select
+                  value={form.supplier_id}
+                  onChange={(event) => {
+                    const supplier = suppliers.find((item) => item.id === event.target.value);
+                    setForm({
+                      ...form,
+                      supplier_id: event.target.value,
+                      counterparty: supplier?.name ?? form.counterparty,
+                      currency: supplier?.default_currency ?? form.currency,
+                    });
+                  }}
+                >
+                  <option value="">No registered supplier</option>
+                  {suppliers.filter((supplier) => supplier.status === "active").map((supplier) => (
+                    <option value={supplier.id} key={supplier.id}>{supplier.name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label>
+              {form.type === "income" ? "Customer / counterparty" : "Supplier / other counterparty"}
+              <input
+                value={form.counterparty}
+                onChange={(event) => setForm({ ...form, counterparty: event.target.value, supplier_id: "" })}
+                placeholder="Optional counterparty"
+              />
+            </label>
             {form.type === "income" ? (
               <label>Category<select value={form.income_category} onChange={(event) => setForm({ ...form, income_category: event.target.value })}>{INCOME_CATEGORIES.map((category) => <option key={category}>{category}</option>)}<option>Other / custom</option></select></label>
             ) : (

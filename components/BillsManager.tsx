@@ -46,6 +46,11 @@ type Bill = {
   recurrence: Recurrence;
   payment_method: string | null;
   autopay: boolean;
+  autopay_record_time: string;
+  autopay_timezone: string;
+  autopay_enabled_at: string | null;
+  recurrence_anchor_day: number | null;
+  recurrence_anchor_month_end: boolean;
   reminder_days: number;
   status: BillStatus;
   notes: string | null;
@@ -83,6 +88,9 @@ const EMPTY_FORM = {
   recurrence: "monthly" as Recurrence,
   payment_method: "Direct debit",
   autopay: false,
+  autopay_record_time: "09:00",
+  autopay_timezone: "UTC",
+  autopay_enabled_at: null as string | null,
   reminder_days: "3",
   notes: "",
 };
@@ -97,6 +105,25 @@ function effectiveStatus(
 ): "pending" | "paid" | "cancelled" | "overdue" {
   if (bill.status === "paid" || bill.status === "cancelled") return bill.status;
   return bill.due_date < today ? "overdue" : "pending";
+}
+
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+function isMonthEnd(dateValue: string) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  return next.getMonth() !== date.getMonth();
+}
+function automaticScheduleIsFuture(dateValue: string, timeValue: string) {
+  const timestamp = new Date(`${dateValue}T${timeValue}:00`);
+  return Number.isFinite(timestamp.getTime()) && timestamp.getTime() > Date.now();
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -166,7 +193,10 @@ export function BillsManager({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [bills, setBills] = useState<Bill[]>(initialBills);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    autopay_timezone: browserTimezone(),
+  }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
@@ -291,6 +321,7 @@ export function BillsManager({
     setForm({
       ...EMPTY_FORM,
       due_date: localDateKey(),
+      autopay_timezone: browserTimezone(),
     });
     setEditingId(null);
     setShowForm(false);
@@ -307,6 +338,9 @@ export function BillsManager({
       recurrence: bill.recurrence,
       payment_method: bill.payment_method ?? "Other",
       autopay: bill.autopay,
+      autopay_record_time: bill.autopay_record_time?.slice(0, 5) || "09:00",
+      autopay_timezone: bill.autopay_timezone || browserTimezone(),
+      autopay_enabled_at: bill.autopay_enabled_at,
       reminder_days: String(bill.reminder_days),
       notes: bill.notes ?? "",
     });
@@ -330,6 +364,63 @@ export function BillsManager({
         throw new Error("Enter a bill name and a valid amount.");
       }
 
+      const automationChanged =
+
+
+        !existingBill ||
+
+
+        !existingBill.autopay ||
+
+
+        existingBill.due_date !== form.due_date ||
+
+
+        existingBill.autopay_record_time?.slice(0, 5) !==
+
+
+          form.autopay_record_time ||
+
+
+        existingBill.autopay_timezone !== form.autopay_timezone;
+
+
+      if (
+
+
+        form.autopay &&
+
+
+        automationChanged &&
+
+
+        !automaticScheduleIsFuture(
+
+
+          form.due_date,
+
+
+          form.autopay_record_time,
+
+
+        )
+
+
+      ) {
+
+
+        throw new Error(
+
+
+          "Choose a future due date and time before activating automatic recording.",
+
+
+        );
+
+
+      }
+
+
       const conversion = await convertToEur(amount, form.currency);
       const payload = {
         user_id: userId,
@@ -344,6 +435,13 @@ export function BillsManager({
         recurrence: form.recurrence,
         payment_method: form.payment_method,
         autopay: form.autopay,
+        autopay_record_time: form.autopay_record_time,
+        autopay_timezone: form.autopay_timezone || browserTimezone(),
+        autopay_enabled_at: form.autopay
+          ? existingBill?.autopay_enabled_at ?? new Date().toISOString()
+          : null,
+        recurrence_anchor_day: Number(form.due_date.slice(8, 10)),
+        recurrence_anchor_month_end: isMonthEnd(form.due_date),
         reminder_days: Math.min(365, Math.max(0, Math.round(finiteNumber(form.reminder_days)))),
         notes: form.notes.trim() || null,
         status: existingBill?.status ?? ("pending" as BillStatus),
@@ -454,142 +552,47 @@ export function BillsManager({
 
     setBusy(bill.id);
     setMessage("");
-
     try {
       const paidAt = new Date().toISOString();
-      const transactionDate = paidAt.slice(0, 10);
-
-      // Recover safely when an earlier interrupted action left a linked
-      // transaction on a bill whose status is still pending. Reuse the
-      // existing transaction instead of creating a duplicate expense.
-      if (bill.transaction_id) {
-        const { data: linkedTransaction, error: linkedTransactionError } =
-          await supabase
-            .from("transactions")
-            .select("id")
-            .eq("id", bill.transaction_id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-        if (linkedTransactionError) throw linkedTransactionError;
-
-        if (linkedTransaction?.id) {
-          const { data: recoveredBill, error: recoveryError } = await supabase
-            .from("bills")
-            .update({
-              status: "paid",
-              paid_at: paidAt,
-              updated_at: paidAt,
-            })
-            .eq("id", bill.id)
-            .eq("user_id", userId)
-            .select()
-            .single();
-
-          if (recoveryError) throw recoveryError;
-
-          setBills((current) =>
-            current.map((item) =>
-              item.id === bill.id ? (recoveredBill as Bill) : item,
-            ),
-          );
-          setMessage("Bill marked paid. Its existing transaction was preserved.");
-          notifyFiconterDataChange("all");
-          return;
-        }
-      }
-
-      // Use the atomic database function when it is installed. It creates the
-      // transaction and updates the bill as one operation, preventing partial
-      // updates and duplicate clicks.
-      const { data: rpcData, error: rpcError } = await supabase.rpc(
-        "mark_bill_paid",
+      const { data, error } = await supabase.rpc(
+        "record_bill_payment_and_advance",
         {
           p_bill_id: bill.id,
           p_paid_at: paidAt,
-          p_transaction_date: transactionDate,
         },
       );
+      if (error) throw error;
 
-      if (!rpcError) {
-        const payload = rpcData as { bill?: Bill } | null;
-        let updatedBill = payload?.bill ?? null;
+      const result = data as {
+        bill?: Bill;
+        recurring?: boolean;
+        next_due_date?: string | null;
+        already_recorded?: boolean;
+      } | null;
+      const updatedBill = result?.bill;
 
-        if (!updatedBill) {
-          const { data, error } = await supabase
-            .from("bills")
-            .select("*")
-            .eq("id", bill.id)
-            .eq("user_id", userId)
-            .single();
-          if (error) throw error;
-          updatedBill = data as Bill;
-        }
-
-        setBills((current) =>
-          current.map((item) => (item.id === bill.id ? updatedBill! : item)),
-        );
-        setMessage("Bill marked paid and added to Transactions.");
-        notifyFiconterDataChange("all");
-        return;
-      }
-
-      if (!isMissingMarkPaidRpc(rpcError)) throw rpcError;
-
-      // Compatibility fallback for deployments that do not yet contain the
-      // atomic function. Roll back the transaction if updating the bill fails.
-      const { data: transaction, error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: userId,
-          description: bill.company
-            ? `${bill.name} · ${bill.company}`
-            : bill.name,
-          amount: roundMoney(bill.amount),
-          currency: bill.currency,
-          amount_eur: roundMoney(bill.amount_eur),
-          exchange_rate_to_eur: roundRate(bill.exchange_rate_to_eur),
-          exchange_rate_date: transactionDate,
-          exchange_rate_source: "Bill conversion",
-          type: "expense",
-          category: bill.category,
-          transaction_date: transactionDate,
-          occurred_at: paidAt,
-        })
-        .select("id")
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      const { data: updated, error: billUpdateError } = await supabase
-        .from("bills")
-        .update({
-          status: "paid",
-          paid_at: paidAt,
-          transaction_id: transaction.id,
-          updated_at: paidAt,
-        })
-        .eq("id", bill.id)
-        .eq("user_id", userId)
-        .select()
-        .single();
-
-      if (billUpdateError) {
-        await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", transaction.id)
-          .eq("user_id", userId);
-        throw billUpdateError;
+      if (!updatedBill?.id) {
+        throw new Error("The recorded bill was not returned by the database.");
       }
 
       setBills((current) =>
-        current.map((item) => (item.id === bill.id ? (updated as Bill) : item)),
+        current.map((item) => (item.id === updatedBill.id ? updatedBill : item)),
       );
-      setMessage("Bill marked paid and added to Transactions.");
       notifyFiconterDataChange("all");
+
+      if (result?.already_recorded) {
+        setMessage("This scheduled payment was already recorded.");
+      } else if (result?.recurring && result.next_due_date) {
+        setMessage(
+          `Payment recorded. Next due: ${new Date(
+            `${result.next_due_date}T12:00:00`,
+          ).toLocaleDateString("en-GB")}.`,
+        );
+      } else {
+        setMessage("Bill marked paid and added to Transactions.");
+      }
     } catch (error) {
-      setMessage(errorMessage(error, "The bill could not be marked paid."));
+      setMessage(errorMessage(error, "The bill could not be recorded."));
     } finally {
       setBusy(null);
     }
@@ -785,7 +788,46 @@ export function BillsManager({
             <label>Payment method<select value={form.payment_method} onChange={(e)=>setForm({...form, payment_method:e.target.value})}>{PAYMENT_METHODS.map((item)=><option key={item}>{item}</option>)}</select></label>
             <label>Reminder<select value={form.reminder_days} onChange={(e)=>setForm({...form, reminder_days:e.target.value})}><option value="0">On due date</option><option value="1">1 day before</option><option value="3">3 days before</option><option value="7">1 week before</option><option value="14">2 weeks before</option><option value="30">1 month before</option></select></label>
             <label className={styles.fullWidth}>Notes<textarea value={form.notes} onChange={(e)=>setForm({...form, notes:e.target.value})} rows={3} placeholder="Optional details" /></label>
-            <label className={styles.checkLabel}><input type="checkbox" checked={form.autopay} onChange={(e)=>setForm({...form, autopay:e.target.checked})} />Automatic payment enabled</label>
+            <label className={`${styles.checkLabel} ${styles.fullWidth}`}>
+              <input
+                type="checkbox"
+                checked={form.autopay}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    autopay: e.target.checked,
+                    autopay_timezone: form.autopay_timezone || browserTimezone(),
+                  })
+                }
+              />
+              Automatically record this payment on its due date
+            </label>
+            {form.autopay ? (
+              <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
+                <div className={styles.automationGrid}>
+                  <label>
+                    Automatic record time
+                    <input
+                      type="time"
+                      step="60"
+                      value={form.autopay_record_time}
+                      onChange={(e) =>
+                        setForm({ ...form, autopay_record_time: e.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                  <div className={styles.automationTimezone}>
+                    <span>Time zone</span>
+                    <strong>{form.autopay_timezone}</strong>
+                  </div>
+                </div>
+                <p>
+                  FICONTER creates the expected transaction automatically. It
+                  does not send money or contact your bank.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <button className={styles.saveButton} disabled={busy === "save"}>
@@ -823,7 +865,17 @@ export function BillsManager({
                   <span className={`${styles.status} ${styles[status]}`}>{status}</span>
                 </div>
                 <p>{bill.company || "No company"} · {bill.category}</p>
-                <small>{bill.recurrence === "none" ? "One-time bill" : bill.recurrence} · {bill.autopay ? "Auto pay" : "Manual payment"}</small>
+                <small>
+                  {bill.recurrence === "none" ? "One-time bill" : bill.recurrence}
+                  {" · "}
+                  {bill.autopay
+                    ? bill.autopay_enabled_at
+                      ? `Automatic recording at ${
+                          bill.autopay_record_time?.slice(0, 5) || "09:00"
+                        }`
+                      : "Automatic recording needs one save to activate"
+                    : "Manual recording"}
+                </small>
               </div>
               <div className={styles.amount}>
                 <strong>{money(bill.amount_eur, "EUR")}</strong>

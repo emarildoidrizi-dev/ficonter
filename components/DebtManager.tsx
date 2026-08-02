@@ -60,6 +60,10 @@ type Debt = {
   minimum_payment: number | string;
   minimum_payment_eur: number | string;
   payment_due_day: number | null;
+  autopay: boolean;
+  autopay_record_time: string;
+  autopay_timezone: string;
+  autopay_enabled_at: string | null;
   start_date: string | null;
   maturity_date: string | null;
   status: DebtStatus;
@@ -107,6 +111,13 @@ function localTimeKey(date = new Date()) {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
 function paymentTimestamp(dateValue: string, timeValue: string) {
   const timestamp = new Date(`${dateValue}T${timeValue}:00`);
   if (Number.isNaN(timestamp.getTime())) {
@@ -126,6 +137,10 @@ const EMPTY_DEBT = {
   annual_interest_rate: "0",
   minimum_payment: "",
   payment_due_day: "",
+  autopay: false,
+  autopay_record_time: "09:00",
+  autopay_timezone: "UTC",
+  autopay_enabled_at: null as string | null,
   start_date: localDateKey(),
   maturity_date: "",
   status: "active" as DebtStatus,
@@ -182,7 +197,10 @@ export function DebtManager({
   const supabase = useMemo(() => createClient(), []);
   const [debts, setDebts] = useState<Debt[]>(initialDebts);
   const [payments, setPayments] = useState<DebtPayment[]>(initialPayments);
-  const [form, setForm] = useState(EMPTY_DEBT);
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_DEBT,
+    autopay_timezone: browserTimezone(),
+  }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [paymentDebt, setPaymentDebt] = useState<Debt | null>(null);
@@ -285,7 +303,11 @@ export function DebtManager({
   }, [debts, search, categoryFilter, statusFilter]);
 
   function resetDebtForm() {
-    setForm(EMPTY_DEBT);
+    setForm({
+      ...EMPTY_DEBT,
+      start_date: localDateKey(),
+      autopay_timezone: browserTimezone(),
+    });
     setEditingId(null);
     setShowForm(false);
   }
@@ -302,6 +324,10 @@ export function DebtManager({
       annual_interest_rate: String(debt.annual_interest_rate),
       minimum_payment: String(debt.minimum_payment),
       payment_due_day: debt.payment_due_day ? String(debt.payment_due_day) : "",
+      autopay: debt.autopay,
+      autopay_record_time: debt.autopay_record_time?.slice(0, 5) || "09:00",
+      autopay_timezone: debt.autopay_timezone || browserTimezone(),
+      autopay_enabled_at: debt.autopay_enabled_at,
       start_date: debt.start_date ?? "",
       maturity_date: debt.maturity_date ?? "",
       status: debt.status,
@@ -316,6 +342,9 @@ export function DebtManager({
     if (busy) return;
     setBusy("save-debt");
     setNotice("");
+    const existingDebt = editingId
+      ? debts.find((debt) => debt.id === editingId) ?? null
+      : null;
 
     try {
       const originalBalance = roundMoney(form.original_balance);
@@ -325,6 +354,19 @@ export function DebtManager({
 
       if (!form.name.trim() || originalBalance <= 0 || currentBalance < 0) {
         throw new Error("Enter a debt name and valid balance.");
+      }
+      if (
+        form.autopay &&
+        (
+          minimumPayment <= 0 ||
+          !form.payment_due_day ||
+          form.status !== "active" ||
+          currentBalance <= 0
+        )
+      ) {
+        throw new Error(
+          "Automatic debt recording requires an active debt, a minimum payment and a due day.",
+        );
       }
 
       const [originalConversion, currentConversion, minimumConversion] =
@@ -351,6 +393,12 @@ export function DebtManager({
         minimum_payment_eur: roundMoney(minimumConversion.eur),
         payment_due_day: form.payment_due_day
           ? Number(form.payment_due_day)
+          : null,
+        autopay: form.autopay,
+        autopay_record_time: form.autopay_record_time,
+        autopay_timezone: form.autopay_timezone || browserTimezone(),
+        autopay_enabled_at: form.autopay
+          ? existingDebt?.autopay_enabled_at ?? new Date().toISOString()
           : null,
         start_date: form.start_date || null,
         maturity_date: form.maturity_date || null,
@@ -730,6 +778,50 @@ export function DebtManager({
                 placeholder="1–31"
               />
             </label>
+            <label className={`${styles.checkLabel} ${styles.fullWidth}`}>
+              <input
+                type="checkbox"
+                checked={form.autopay}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    autopay: event.target.checked,
+                    autopay_timezone:
+                      form.autopay_timezone || browserTimezone(),
+                  })
+                }
+              />
+              Automatically record the minimum payment each month
+            </label>
+            {form.autopay ? (
+              <div className={`${styles.automationPanel} ${styles.fullWidth}`}>
+                <div className={styles.automationGrid}>
+                  <label>
+                    Automatic record time
+                    <input
+                      type="time"
+                      step="60"
+                      value={form.autopay_record_time}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          autopay_record_time: event.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </label>
+                  <div className={styles.automationTimezone}>
+                    <span>Time zone</span>
+                    <strong>{form.autopay_timezone}</strong>
+                  </div>
+                </div>
+                <p>
+                  FICONTER records the scheduled minimum. It does not send money
+                  or contact your lender.
+                </p>
+              </div>
+            ) : null}
             <label>
               Start date
               <input
@@ -844,6 +936,15 @@ export function DebtManager({
                     <p>
                       {debt.lender || "No lender"} · {debt.category}
                     </p>
+                    <small className={styles.automationStatus}>
+                      {debt.autopay
+                        ? debt.autopay_enabled_at
+                          ? `Automatic monthly recording at ${
+                              debt.autopay_record_time?.slice(0, 5) || "09:00"
+                            }`
+                          : "Automatic recording needs one save to activate"
+                        : "Manual payment recording"}
+                    </small>
                   </div>
                   <div className={styles.cardActions}>
                     <button onClick={() => editDebt(debt)} aria-label="Edit debt">

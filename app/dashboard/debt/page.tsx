@@ -14,7 +14,7 @@ export default async function DebtPage() {
     await Promise.all([
       supabase
         .from("debts")
-        .select("id,user_id,name,lender,description,category,original_balance,current_balance,currency,original_balance_eur,current_balance_eur,exchange_rate_to_eur,annual_interest_rate,minimum_payment,minimum_payment_eur,payment_due_day,start_date,maturity_date,status,created_at,updated_at")
+        .select("id,user_id,name,lender,description,category,original_balance,current_balance,currency,original_balance_eur,current_balance_eur,exchange_rate_to_eur,annual_interest_rate,minimum_payment,minimum_payment_eur,payment_due_day,autopay,autopay_record_time,autopay_timezone,autopay_enabled_at,start_date,maturity_date,status,created_at,updated_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
       supabase

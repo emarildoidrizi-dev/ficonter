@@ -32,3 +32,71 @@
 
 /* High-volume debt directory. */
 .debtGrid{max-height:min(75vh,900px);overflow-y:auto;padding-right:6px;align-content:start}
+
+.automationPanel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--border-subtle));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-card) 90%, transparent);
+}
+
+.automationGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.automationTimezone {
+  display: grid;
+  gap: 7px;
+  min-height: 50px;
+  align-content: center;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-input);
+}
+
+.automationTimezone span,
+.automationPanel p,
+.automationStatus {
+  color: var(--text-muted);
+}
+
+.automationTimezone strong {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.automationPanel p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.automationStatus {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.78rem;
+}
+
+.checkLabel {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.checkLabel input {
+  width: 18px !important;
+  height: 18px;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .automationGrid {
+    grid-template-columns: 1fr;
+  }
+}

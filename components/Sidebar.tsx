@@ -7,6 +7,7 @@ import {
   ChartPie,
   ChevronDown,
   ChevronUp,
+  Compass,
   CircleHelp,
   CreditCard,
   FileArchive,
@@ -16,8 +17,10 @@ import {
   MessageSquareText,
   PiggyBank,
   ReceiptText,
+  Route,
   Settings,
   ShieldCheck,
+  Sparkles,
   Target,
   UserRound,
 } from "lucide-react";
@@ -52,6 +55,7 @@ type NavigationLink = readonly [
 
 type NavigationGroupKey =
   | "money-management"
+  | "wealth-engine"
   | "financial-progress"
   | "resources"
   | "administration";
@@ -78,10 +82,24 @@ const standardGroups = [
     ],
   },
   {
+    key: "wealth-engine",
+    label: "Wealth Engine",
+    links: [
+      ["/dashboard/gps", Compass, "Financial GPS"],
+      ["/dashboard/emergency-fund", ShieldCheck, "Emergency Fund"],
+      ["/dashboard/savings", PiggyBank, "Savings Intelligence"],
+      [
+        "/dashboard/financial-independence",
+        Route,
+        "Financial Independence",
+      ],
+      ["/dashboard/insights", Sparkles, "Smart Insights"],
+    ],
+  },
+  {
     key: "financial-progress",
     label: "Financial progress",
     links: [
-      ["/dashboard/savings", PiggyBank, "Savings"],
       ["/dashboard/debt", CreditCard, "Debts"],
       ["/dashboard/goals", Target, "Goals"],
     ],
@@ -128,8 +146,13 @@ export function Sidebar({
       isRouteActive(pathname, "/dashboard/cash-flow") ||
       isRouteActive(pathname, "/dashboard/budget") ||
       isRouteActive(pathname, "/dashboard/bills"),
-    "financial-progress":
+    "wealth-engine":
+      isRouteActive(pathname, "/dashboard/gps") ||
+      isRouteActive(pathname, "/dashboard/emergency-fund") ||
       isRouteActive(pathname, "/dashboard/savings") ||
+      isRouteActive(pathname, "/dashboard/financial-independence") ||
+      isRouteActive(pathname, "/dashboard/insights"),
+    "financial-progress":
       isRouteActive(pathname, "/dashboard/debt") ||
       isRouteActive(pathname, "/dashboard/goals"),
     resources: isRouteActive(pathname, "/dashboard/documents"),

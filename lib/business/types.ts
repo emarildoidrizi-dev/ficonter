@@ -1,3 +1,5 @@
+export type BusinessStatus = "active" | "archived";
+
 export type Business = {
   id: string;
   owner_id: string;
@@ -7,6 +9,17 @@ export type Business = {
   country_code: string;
   base_currency: string;
   fiscal_year_start_month: number;
+  status: BusinessStatus;
+  archived_at: string | null;
+  timezone: string;
+  tax_id: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  website: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  postal_code: string | null;
   created_at: string;
   updated_at: string;
 };

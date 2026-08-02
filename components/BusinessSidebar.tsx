@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Archive,
   ArrowLeftRight,
   BarChart3,
   Building2,
@@ -15,7 +16,12 @@ import {
   Truck,
   WalletCards,
 } from "lucide-react";
-import { useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
+import {
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type MouseEvent,
+} from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
 import { Brand } from "./Brand";
@@ -53,6 +59,10 @@ export function BusinessSidebar({
   const [switchError, setSwitchError] = useState("");
   const displayName =
     user.displayName.trim() || user.email.split("@")[0] || "Member";
+  const activeBusinesses = businesses.filter(
+    (item) => item.status !== "archived",
+  );
+  const archivedCount = businesses.length - activeBusinesses.length;
 
   async function switchBusiness(event: ChangeEvent<HTMLSelectElement>) {
     const nextBusinessId = event.target.value;
@@ -115,7 +125,7 @@ export function BusinessSidebar({
                 disabled={switching}
                 aria-label="Select active business"
               >
-                {businesses.map((item) => (
+                {activeBusinesses.map((item) => (
                   <option value={item.id} key={item.id}>
                     {item.name}
                   </option>
@@ -128,17 +138,27 @@ export function BusinessSidebar({
             {switchError ? (
               <small className={styles.switchError}>{switchError}</small>
             ) : null}
-            <Link href="/business/manage" className={styles.manageBusinesses}>
-              <Settings2 size={15} />
-              Add or remove businesses
-            </Link>
           </>
         ) : (
           <>
-            <strong>Business setup</strong>
-            <small>Create your isolated business workspace.</small>
+            <strong>No active business</strong>
+            <small>
+              Restore an archived workspace or create another business.
+            </small>
           </>
         )}
+
+        {archivedCount ? (
+          <small className={styles.archiveNotice}>
+            <Archive size={13} />
+            {archivedCount} archived
+          </small>
+        ) : null}
+
+        <Link href="/business/manage" className={styles.manageBusinesses}>
+          <Settings2 size={15} />
+          Manage businesses
+        </Link>
       </section>
 
       <nav
@@ -146,33 +166,48 @@ export function BusinessSidebar({
         aria-label="Business navigation"
       >
         <span className={styles.sectionLabel}>Business</span>
-        {business ? (
-          links.map(([href, Icon, label]) => (
-            <Link
-              href={href}
-              key={href}
-              className={`side-link ${
-                activeRoute(pathname, href) ? "active" : ""
-              }`}
-              aria-current={activeRoute(pathname, href) ? "page" : undefined}
-              prefetch={false}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <span>{label}</span>
-            </Link>
-          ))
-        ) : (
-          <Link
-            href="/business/setup"
-            className={`side-link ${
-              activeRoute(pathname, "/business/setup") ? "active" : ""
-            }`}
-            prefetch={false}
-          >
-            <Building2 size={18} aria-hidden="true" />
-            <span>Create business</span>
-          </Link>
-        )}
+
+        {business
+          ? links.map(([href, Icon, label]) => (
+              <Link
+                href={href}
+                key={href}
+                className={`side-link ${
+                  activeRoute(pathname, href) ? "active" : ""
+                }`}
+                aria-current={
+                  activeRoute(pathname, href) ? "page" : undefined
+                }
+                prefetch={false}
+              >
+                <Icon size={18} aria-hidden="true" />
+                <span>{label}</span>
+              </Link>
+            ))
+          : (
+              <>
+                <Link
+                  href="/business/manage"
+                  className={`side-link ${
+                    activeRoute(pathname, "/business/manage") ? "active" : ""
+                  }`}
+                  prefetch={false}
+                >
+                  <Settings2 size={18} aria-hidden="true" />
+                  <span>Businesses</span>
+                </Link>
+                <Link
+                  href="/business/setup"
+                  className={`side-link ${
+                    activeRoute(pathname, "/business/setup") ? "active" : ""
+                  }`}
+                  prefetch={false}
+                >
+                  <Building2 size={18} aria-hidden="true" />
+                  <span>Create business</span>
+                </Link>
+              </>
+            )}
       </nav>
 
       <div className={styles.bottomDock}>

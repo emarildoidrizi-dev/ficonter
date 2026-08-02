@@ -1,11 +1,14 @@
 "use client";
 
 import {
+  Archive,
   Building2,
   Check,
   CirclePlus,
   Crown,
+  Edit3,
   Plus,
+  RotateCcw,
   ShieldAlert,
   Trash2,
   X,
@@ -56,6 +59,11 @@ function browserTimezone() {
   }
 }
 
+function cleanText(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
 export function BusinessManager({
   userId,
   initialBusinesses,
@@ -68,29 +76,52 @@ export function BusinessManager({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [businesses, setBusinesses] = useState(initialBusinesses);
-  const [currentBusinessId, setCurrentBusinessId] = useState(activeBusinessId);
-  const [showCreateForm, setShowCreateForm] = useState(initialBusinesses.length === 0);
-  const [deletingBusiness, setDeletingBusiness] = useState<Business | null>(null);
+  const [currentBusinessId, setCurrentBusinessId] =
+    useState(activeBusinessId);
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "archived"
+  >("all");
+  const [showCreateForm, setShowCreateForm] = useState(
+    initialBusinesses.length === 0,
+  );
+  const [editingBusiness, setEditingBusiness] =
+    useState<Business | null>(null);
+  const [archivingBusiness, setArchivingBusiness] =
+    useState<Business | null>(null);
+  const [deletingBusiness, setDeletingBusiness] =
+    useState<Business | null>(null);
   const [confirmationName, setConfirmationName] = useState("");
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  const activeCount = businesses.filter(
+    (business) => business.status !== "archived",
+  ).length;
+  const archivedCount = businesses.length - activeCount;
+  const visibleBusinesses = businesses.filter(
+    (business) =>
+      statusFilter === "all" || business.status === statusFilter,
+  );
+
+  function clearMessages() {
+    setNotice("");
+    setError("");
+  }
 
   async function createBusiness(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
 
     setBusy("create");
-    setError("");
-    setNotice("");
+    clearMessages();
 
     const form = new FormData(event.currentTarget);
     const { data, error: createError } = await supabase.rpc(
       "create_business_workspace",
       {
         p_name: String(form.get("name") ?? "").trim(),
-        p_legal_name:
-          String(form.get("legal_name") ?? "").trim() || null,
+        p_legal_name: cleanText(form.get("legal_name")),
         p_business_type: String(
           form.get("business_type") ?? "Sole trader",
         ),
@@ -120,12 +151,72 @@ export function BusinessManager({
     router.refresh();
   }
 
+  async function saveBusiness(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingBusiness || busy) return;
+
+    setBusy(`edit-${editingBusiness.id}`);
+    clearMessages();
+
+    const form = new FormData(event.currentTarget);
+    const { data, error: updateError } = await supabase.rpc(
+      "update_business_workspace",
+      {
+        p_business_id: editingBusiness.id,
+        p_name: String(form.get("name") ?? "").trim(),
+        p_legal_name: cleanText(form.get("legal_name")),
+        p_business_type: String(
+          form.get("business_type") ?? editingBusiness.business_type,
+        ),
+        p_country_code: String(
+          form.get("country_code") ?? editingBusiness.country_code,
+        ).toUpperCase(),
+        p_base_currency: String(
+          form.get("base_currency") ?? editingBusiness.base_currency,
+        ),
+        p_fiscal_year_start_month: Number(
+          form.get("fiscal_year_start_month") ??
+            editingBusiness.fiscal_year_start_month,
+        ),
+        p_timezone: String(
+          form.get("timezone") ?? editingBusiness.timezone,
+        ),
+        p_tax_id: cleanText(form.get("tax_id")),
+        p_contact_email: cleanText(form.get("contact_email")),
+        p_contact_phone: cleanText(form.get("contact_phone")),
+        p_website: cleanText(form.get("website")),
+        p_address_line1: cleanText(form.get("address_line1")),
+        p_address_line2: cleanText(form.get("address_line2")),
+        p_city: cleanText(form.get("city")),
+        p_postal_code: cleanText(form.get("postal_code")),
+      },
+    );
+
+    if (updateError || !data) {
+      setError(
+        updateError?.message ?? "The business profile could not be updated.",
+      );
+      setBusy("");
+      return;
+    }
+
+    const updated = data as Business;
+    setBusinesses((current) =>
+      current.map((business) =>
+        business.id === updated.id ? updated : business,
+      ),
+    );
+    setEditingBusiness(null);
+    setBusy("");
+    setNotice("Business profile updated.");
+    router.refresh();
+  }
+
   async function openBusiness(businessId: string) {
     if (busy || businessId === currentBusinessId) return;
 
     setBusy(`switch-${businessId}`);
-    setError("");
-    setNotice("");
+    clearMessages();
 
     const { error: switchError } = await supabase.rpc(
       "set_active_business_workspace",
@@ -143,11 +234,100 @@ export function BusinessManager({
     router.refresh();
   }
 
+  async function confirmArchiveBusiness() {
+    if (!archivingBusiness || busy) return;
+
+    setBusy(`archive-${archivingBusiness.id}`);
+    clearMessages();
+
+    const { data, error: archiveError } = await supabase.rpc(
+      "archive_business_workspace",
+      { p_business_id: archivingBusiness.id },
+    );
+
+    if (archiveError) {
+      setError(archiveError.message);
+      setBusy("");
+      return;
+    }
+
+    const result = data as {
+      business?: Business;
+      active_business_id?: string | null;
+    } | null;
+
+    if (!result?.business) {
+      setError("The archived business was not returned.");
+      setBusy("");
+      return;
+    }
+
+    setBusinesses((current) =>
+      current.map((business) =>
+        business.id === result.business!.id
+          ? result.business!
+          : business,
+      ),
+    );
+    setCurrentBusinessId(result.active_business_id ?? null);
+    setArchivingBusiness(null);
+    setBusy("");
+    setNotice(
+      "Business archived. Its records remain stored and can be restored.",
+    );
+
+    if (result.active_business_id) {
+      router.replace("/business/overview");
+    } else {
+      router.replace("/business/manage");
+    }
+    router.refresh();
+  }
+
+  async function restoreBusiness(business: Business) {
+    if (busy) return;
+
+    setBusy(`restore-${business.id}`);
+    clearMessages();
+
+    const { data, error: restoreError } = await supabase.rpc(
+      "restore_business_workspace",
+      { p_business_id: business.id },
+    );
+
+    if (restoreError) {
+      setError(restoreError.message);
+      setBusy("");
+      return;
+    }
+
+    const result = data as {
+      business?: Business;
+      active_business_id?: string | null;
+    } | null;
+
+    if (!result?.business) {
+      setError("The restored business was not returned.");
+      setBusy("");
+      return;
+    }
+
+    setBusinesses((current) =>
+      current.map((item) =>
+        item.id === result.business!.id ? result.business! : item,
+      ),
+    );
+    setCurrentBusinessId(result.active_business_id ?? business.id);
+    setBusy("");
+    setNotice("Business restored and opened.");
+    router.replace("/business/overview");
+    router.refresh();
+  }
+
   function beginDelete(business: Business) {
     setDeletingBusiness(business);
     setConfirmationName("");
-    setError("");
-    setNotice("");
+    clearMessages();
   }
 
   async function confirmDeleteBusiness() {
@@ -159,8 +339,7 @@ export function BusinessManager({
     }
 
     setBusy(`delete-${deletingBusiness.id}`);
-    setError("");
-    setNotice("");
+    clearMessages();
 
     const { data, error: deleteError } = await supabase.rpc(
       "delete_business_workspace",
@@ -200,7 +379,7 @@ export function BusinessManager({
       setNotice("Business removed. Another business is now active.");
       router.replace("/business/overview");
     } else {
-      router.replace("/business/setup");
+      router.replace("/business/manage");
     }
     router.refresh();
   }
@@ -212,16 +391,14 @@ export function BusinessManager({
           <span>FICONTER BUSINESS</span>
           <h1>Businesses</h1>
           <p>
-            Create separate business workspaces and switch between them
-            without mixing Transactions, Costs, Suppliers, Inventory, Sales
-            or Reports.
+            Create, edit, archive, restore and safely remove separate business
+            workspaces without mixing their financial records.
           </p>
         </div>
         <button
           onClick={() => {
             setShowCreateForm((current) => !current);
-            setError("");
-            setNotice("");
+            clearMessages();
           }}
         >
           {showCreateForm ? <X size={18} /> : <Plus size={18} />}
@@ -230,7 +407,10 @@ export function BusinessManager({
       </header>
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
-      {error && !deletingBusiness ? (
+      {error &&
+      !editingBusiness &&
+      !archivingBusiness &&
+      !deletingBusiness ? (
         <div className={styles.error}>{error}</div>
       ) : null}
 
@@ -242,11 +422,13 @@ export function BusinessManager({
         </article>
         <article>
           <Check />
-          <span>Active workspace</span>
-          <strong>
-            {businesses.find((item) => item.id === currentBusinessId)?.name ??
-              "None"}
-          </strong>
+          <span>Active businesses</span>
+          <strong>{activeCount}</strong>
+        </article>
+        <article>
+          <Archive />
+          <span>Archived businesses</span>
+          <strong>{archivedCount}</strong>
         </article>
       </div>
 
@@ -342,29 +524,56 @@ export function BusinessManager({
         </form>
       ) : null}
 
+      <div className={styles.filters}>
+        <button
+          className={statusFilter === "all" ? styles.activeFilter : ""}
+          onClick={() => setStatusFilter("all")}
+        >
+          All
+        </button>
+        <button
+          className={statusFilter === "active" ? styles.activeFilter : ""}
+          onClick={() => setStatusFilter("active")}
+        >
+          Active
+        </button>
+        <button
+          className={statusFilter === "archived" ? styles.activeFilter : ""}
+          onClick={() => setStatusFilter("archived")}
+        >
+          Archived
+        </button>
+      </div>
+
       <div className={styles.businessGrid}>
-        {businesses.length ? (
-          businesses.map((business) => {
-            const isActive = business.id === currentBusinessId;
+        {visibleBusinesses.length ? (
+          visibleBusinesses.map((business) => {
+            const isActiveWorkspace = business.id === currentBusinessId;
+            const isArchived = business.status === "archived";
             const isOwner = business.owner_id === userId;
 
             return (
               <article
                 className={`${styles.businessCard} ${
-                  isActive ? styles.activeCard : ""
-                }`}
+                  isActiveWorkspace ? styles.activeCard : ""
+                } ${isArchived ? styles.archivedCard : ""}`}
                 key={business.id}
               >
                 <div className={styles.cardHeader}>
                   <div className={styles.businessIcon}>
-                    <Building2 size={22} />
+                    {isArchived ? <Archive size={22} /> : <Building2 size={22} />}
                   </div>
                   <div>
                     <div className={styles.nameRow}>
                       <h2>{business.name}</h2>
-                      {isActive ? (
+                      {isActiveWorkspace ? (
                         <span className={styles.activeBadge}>
-                          <Check size={13} /> Active
+                          <Check size={13} /> Active workspace
+                        </span>
+                      ) : null}
+                      {isArchived ? (
+                        <span className={styles.archivedBadge}>
+                          <Archive size={13} /> Archived
                         </span>
                       ) : null}
                     </div>
@@ -391,6 +600,18 @@ export function BusinessManager({
                       {MONTHS[business.fiscal_year_start_month - 1]}
                     </strong>
                   </div>
+                  <div>
+                    <span>Timezone</span>
+                    <strong>{business.timezone || "UTC"}</strong>
+                  </div>
+                  <div>
+                    <span>Contact</span>
+                    <strong>
+                      {business.contact_email ||
+                        business.contact_phone ||
+                        "Not added"}
+                    </strong>
+                  </div>
                 </div>
 
                 <div className={styles.role}>
@@ -401,27 +622,68 @@ export function BusinessManager({
                 </div>
 
                 <div className={styles.cardActions}>
-                  <button
-                    className={styles.openButton}
-                    onClick={() => openBusiness(business.id)}
-                    disabled={
-                      isActive || busy === `switch-${business.id}`
-                    }
-                  >
-                    {isActive
-                      ? "Currently active"
-                      : busy === `switch-${business.id}`
-                        ? "Opening…"
-                        : "Open business"}
-                  </button>
-                  {isOwner ? (
+                  {!isArchived ? (
                     <button
-                      className={styles.deleteButton}
-                      onClick={() => beginDelete(business)}
+                      className={styles.openButton}
+                      onClick={() => openBusiness(business.id)}
+                      disabled={
+                        isActiveWorkspace ||
+                        busy === `switch-${business.id}`
+                      }
                     >
-                      <Trash2 size={16} />
-                      Remove
+                      {isActiveWorkspace
+                        ? "Currently active"
+                        : busy === `switch-${business.id}`
+                          ? "Opening…"
+                          : "Open"}
                     </button>
+                  ) : (
+                    <button
+                      className={styles.restoreButton}
+                      onClick={() => restoreBusiness(business)}
+                      disabled={busy === `restore-${business.id}`}
+                    >
+                      <RotateCcw size={16} />
+                      {busy === `restore-${business.id}`
+                        ? "Restoring…"
+                        : "Restore"}
+                    </button>
+                  )}
+
+                  {isOwner ? (
+                    <>
+                      <button
+                        className={styles.editButton}
+                        onClick={() => {
+                          setEditingBusiness(business);
+                          clearMessages();
+                        }}
+                      >
+                        <Edit3 size={16} />
+                        Edit
+                      </button>
+
+                      {!isArchived ? (
+                        <button
+                          className={styles.archiveButton}
+                          onClick={() => {
+                            setArchivingBusiness(business);
+                            clearMessages();
+                          }}
+                        >
+                          <Archive size={16} />
+                          Archive
+                        </button>
+                      ) : null}
+
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => beginDelete(business)}
+                      >
+                        <Trash2 size={16} />
+                        Remove
+                      </button>
+                    </>
                   ) : null}
                 </div>
               </article>
@@ -430,11 +692,233 @@ export function BusinessManager({
         ) : (
           <div className={styles.emptyState}>
             <Building2 size={38} />
-            <h2>No business workspace</h2>
-            <p>Create your first business to begin.</p>
+            <h2>No businesses in this view</h2>
+            <p>Change the filter or create another workspace.</p>
           </div>
         )}
       </div>
+
+      {editingBusiness ? (
+        <div className={styles.backdrop}>
+          <form className={styles.modalWide} onSubmit={saveBusiness}>
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => {
+                setEditingBusiness(null);
+                clearMessages();
+              }}
+              aria-label="Close edit business"
+            >
+              <X size={19} />
+            </button>
+
+            <Edit3 className={styles.modalIcon} />
+            <span>EDIT BUSINESS</span>
+            <h2>{editingBusiness.name}</h2>
+
+            <div className={styles.formGrid}>
+              <label>
+                Business name
+                <input
+                  name="name"
+                  defaultValue={editingBusiness.name}
+                  required
+                  minLength={2}
+                />
+              </label>
+              <label>
+                Legal name
+                <input
+                  name="legal_name"
+                  defaultValue={editingBusiness.legal_name ?? ""}
+                />
+              </label>
+              <label>
+                Business type
+                <select
+                  name="business_type"
+                  defaultValue={editingBusiness.business_type}
+                >
+                  {BUSINESS_TYPES.map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Country code
+                <input
+                  name="country_code"
+                  defaultValue={editingBusiness.country_code}
+                  maxLength={2}
+                  required
+                />
+              </label>
+              <label>
+                Base currency
+                <select
+                  name="base_currency"
+                  defaultValue={editingBusiness.base_currency}
+                >
+                  {CURRENCY_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {currencySymbol(code)} {code} — {currencyName(code)}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  Locked after financial activity begins.
+                </small>
+              </label>
+              <label>
+                Financial year begins
+                <select
+                  name="fiscal_year_start_month"
+                  defaultValue={String(
+                    editingBusiness.fiscal_year_start_month,
+                  )}
+                >
+                  {MONTHS.map((month, index) => (
+                    <option key={month} value={index + 1}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Timezone
+                <input
+                  name="timezone"
+                  defaultValue={
+                    editingBusiness.timezone || browserTimezone()
+                  }
+                  required
+                />
+              </label>
+              <label>
+                Tax / VAT ID
+                <input
+                  name="tax_id"
+                  defaultValue={editingBusiness.tax_id ?? ""}
+                />
+              </label>
+              <label>
+                Contact email
+                <input
+                  type="email"
+                  name="contact_email"
+                  defaultValue={editingBusiness.contact_email ?? ""}
+                />
+              </label>
+              <label>
+                Contact phone
+                <input
+                  name="contact_phone"
+                  defaultValue={editingBusiness.contact_phone ?? ""}
+                />
+              </label>
+              <label>
+                Website
+                <input
+                  name="website"
+                  defaultValue={editingBusiness.website ?? ""}
+                  placeholder="https://"
+                />
+              </label>
+              <label>
+                Address line 1
+                <input
+                  name="address_line1"
+                  defaultValue={editingBusiness.address_line1 ?? ""}
+                />
+              </label>
+              <label>
+                Address line 2
+                <input
+                  name="address_line2"
+                  defaultValue={editingBusiness.address_line2 ?? ""}
+                />
+              </label>
+              <label>
+                City
+                <input
+                  name="city"
+                  defaultValue={editingBusiness.city ?? ""}
+                />
+              </label>
+              <label>
+                Postal code
+                <input
+                  name="postal_code"
+                  defaultValue={editingBusiness.postal_code ?? ""}
+                />
+              </label>
+            </div>
+
+            {error ? <div className={styles.error}>{error}</div> : null}
+
+            <button
+              className={styles.primaryButton}
+              disabled={busy === `edit-${editingBusiness.id}`}
+            >
+              {busy === `edit-${editingBusiness.id}`
+                ? "Saving changes…"
+                : "Save changes"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {archivingBusiness ? (
+        <div className={styles.backdrop}>
+          <section className={styles.modal}>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                setArchivingBusiness(null);
+                clearMessages();
+              }}
+              aria-label="Close archive confirmation"
+            >
+              <X size={19} />
+            </button>
+
+            <Archive className={styles.modalIcon} />
+            <span>ARCHIVE BUSINESS</span>
+            <h2>Archive {archivingBusiness.name}?</h2>
+            <p>
+              The business will disappear from the active workspace selector.
+              Its Transactions, Costs, Suppliers, Inventory, Sales and Reports
+              remain stored. Automatic recurring costs are suspended while the
+              business is archived.
+            </p>
+
+            {error ? <div className={styles.error}>{error}</div> : null}
+
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setArchivingBusiness(null);
+                  clearMessages();
+                }}
+              >
+                Keep active
+              </button>
+              <button
+                className={styles.archiveConfirm}
+                onClick={confirmArchiveBusiness}
+                disabled={
+                  busy === `archive-${archivingBusiness.id}`
+                }
+              >
+                {busy === `archive-${archivingBusiness.id}`
+                  ? "Archiving…"
+                  : "Archive business"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {deletingBusiness ? (
         <div className={styles.backdrop}>
@@ -444,7 +928,7 @@ export function BusinessManager({
               onClick={() => {
                 setDeletingBusiness(null);
                 setConfirmationName("");
-                setError("");
+                clearMessages();
               }}
               aria-label="Close deletion confirmation"
             >
@@ -478,7 +962,7 @@ export function BusinessManager({
                 onClick={() => {
                   setDeletingBusiness(null);
                   setConfirmationName("");
-                  setError("");
+                  clearMessages();
                 }}
               >
                 Keep business

@@ -204,3 +204,12 @@
     margin-top: 18px;
   }
 }
+
+
+.archiveNotice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c2cad5 !important;
+  font-size: 10px !important;
+}

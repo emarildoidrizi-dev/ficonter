@@ -12,6 +12,7 @@ import {
   LogOut,
   PackageOpen,
   Settings2,
+  ShieldCheck,
   ShoppingCart,
   Truck,
   WalletCards,
@@ -28,14 +29,15 @@ import { Brand } from "./Brand";
 import styles from "./BusinessSidebar.module.css";
 
 const links = [
-  ["/business/overview", LayoutDashboard, "Overview"],
-  ["/business/transactions", ArrowLeftRight, "Transactions"],
-  ["/business/cost-control", BarChart3, "Cost Control"],
-  ["/business/suppliers", Truck, "Suppliers"],
-  ["/business/inventory", PackageOpen, "Inventory"],
-  ["/business/sales", ShoppingCart, "Sales"],
-  ["/business/reports", FileText, "Reports"],
-  ["/business/manage", Settings2, "Businesses"],
+  ["/business/overview", LayoutDashboard, "Overview", false],
+  ["/business/transactions", ArrowLeftRight, "Transactions", false],
+  ["/business/cost-control", BarChart3, "Cost Control", false],
+  ["/business/suppliers", Truck, "Suppliers", false],
+  ["/business/inventory", PackageOpen, "Inventory", false],
+  ["/business/sales", ShoppingCart, "Sales", false],
+  ["/business/reports", FileText, "Reports", false],
+  ["/business/administration", ShieldCheck, "Administration", true],
+  ["/business/manage", Settings2, "Businesses", false],
 ] as const;
 
 function activeRoute(pathname: string, href: string) {
@@ -45,10 +47,12 @@ function activeRoute(pathname: string, href: string) {
 export function BusinessSidebar({
   businesses,
   business,
+  canManage,
   user,
 }: {
   businesses: Business[];
   business: Business | null;
+  canManage: boolean;
   user: { displayName: string; email: string };
 }) {
   const pathname = usePathname();
@@ -182,7 +186,9 @@ export function BusinessSidebar({
         <span className={styles.sectionLabel}>Business</span>
 
         {business
-          ? links.map(([href, Icon, label]) => (
+          ? links
+              .filter(([, , , adminOnly]) => !adminOnly || canManage)
+              .map(([href, Icon, label]) => (
               <Link
                 href={href}
                 key={href}

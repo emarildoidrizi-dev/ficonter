@@ -43,7 +43,7 @@ export default async function BusinessLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, businesses, business } = await getBusinessContext();
+  const { user, businesses, business, membership } = await getBusinessContext();
   if (!user) redirect("/login");
 
   const preferences = readInterfacePreferences(user.user_metadata);
@@ -57,6 +57,7 @@ export default async function BusinessLayout({
       <BusinessSidebar
         businesses={businesses}
         business={business}
+        canManage={membership?.role === "owner" || membership?.role === "admin"}
         user={{
           displayName: String(
             user.user_metadata?.display_name ??

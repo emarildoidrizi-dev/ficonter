@@ -495,7 +495,7 @@ export function BusinessSales({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B6.1</span>
+          <span>FICONTER BUSINESS</span>
           <h1>Sales &amp; COGS</h1>
           <p>Record sales, reduce inventory and calculate product cost and gross profit from one atomic workflow.</p>
         </div>

@@ -331,7 +331,7 @@ export function BusinessTransactionLedger({
   return (
     <section className={styles.shell}>
       <header className={styles.hero}>
-        <div><span>FICONTER BUSINESS · B2</span><h1>Business Transactions</h1><p>{business.name} · Expenses feed Cost Control automatically.</p></div>
+        <div><span>FICONTER BUSINESS</span><h1>Business Transactions</h1><p>{business.name} · Expenses feed Cost Control automatically.</p></div>
         <button onClick={() => (showForm ? resetForm() : setShowForm(true))}>{showForm ? <X size={18} /> : <Plus size={18} />} {showForm ? "Close form" : "Add transaction"}</button>
       </header>
       {notice ? <div className={styles.notice}>{notice}</div> : null}

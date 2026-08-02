@@ -598,7 +598,7 @@ export function BusinessCostControl({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B3</span>
+          <span>FICONTER BUSINESS</span>
           <h1>Cost Control</h1>
           <p>
             Control budgets, recurring operating costs, suppliers and break-even performance for {business.name}.

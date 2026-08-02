@@ -303,7 +303,7 @@ export function BusinessReports({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B7</span>
+          <span>FICONTER BUSINESS</span>
           <h1>Profitability &amp; Reports</h1>
           <p>
             Convert sales, COGS, operating costs, inventory purchases and cash

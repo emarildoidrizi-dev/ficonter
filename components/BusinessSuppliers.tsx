@@ -549,7 +549,7 @@ export function BusinessSuppliers({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B4</span>
+          <span>FICONTER BUSINESS</span>
           <h1>Suppliers</h1>
           <p>
             Manage supplier relationships, invoices, payment obligations and

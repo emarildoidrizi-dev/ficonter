@@ -157,7 +157,7 @@ export function BusinessInventory({
   const [movements, setMovements] = useState(initialMovements);
   const [categories, setCategories] = useState(initialCategories);
   const [locations, setLocations] = useState(initialLocations);
-  const [suppliers] = useState(initialSuppliers);
+  const [suppliers, setSuppliers] = useState(initialSuppliers);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<BusinessInventoryItemSnapshot | null>(null);
   const [itemForm, setItemForm] = useState(() => ({
@@ -544,7 +544,7 @@ export function BusinessInventory({
     <section className={styles.shell}>
       <header className={styles.hero}>
         <div>
-          <span>FICONTER BUSINESS · B5</span>
+          <span>FICONTER BUSINESS</span>
           <h1>Inventory</h1>
           <p>
             Control stock quantities, weighted inventory value, suppliers,

@@ -126,6 +126,12 @@ function automaticScheduleIsFuture(dateValue: string, timeValue: string) {
   return Number.isFinite(timestamp.getTime()) && timestamp.getTime() > Date.now();
 }
 
+function scheduleDateLabel(dateValue: string) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return date.toLocaleDateString("en-GB");
+}
+
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message;
 
@@ -721,6 +727,12 @@ export function BillsManager({
           </div>
         ) : filteredBills.map((bill) => {
           const status = effectiveStatus(bill, todayKey);
+          const hasRecordedCycle = Boolean(bill.paid_at);
+          const dueLabel = hasRecordedCycle ? "Next due" : "First due";
+          const statusLabel =
+            status === "pending" && hasRecordedCycle ? "next due" : status;
+          const recordTime =
+            bill.autopay_record_time?.slice(0, 5) || "09:00";
           return (
             <article className={styles.billCard} key={bill.id}>
               <div className={styles.dateBox}>
@@ -730,7 +742,9 @@ export function BillsManager({
               <div className={styles.billIdentity}>
                 <div className={styles.titleLine}>
                   <h3>{bill.name}</h3>
-                  <span className={`${styles.status} ${styles[status]}`}>{status}</span>
+                  <span className={`${styles.status} ${styles[status]}`}>
+                    {statusLabel}
+                  </span>
                 </div>
                 <p>{bill.company || "No company"} · {bill.category}</p>
                 <small>
@@ -739,11 +753,47 @@ export function BillsManager({
                     : bill.recurrence}
                   {" · "}
                   {bill.autopay && bill.autopay_enabled_at
-                    ? `Automatic at ${
-                        bill.autopay_record_time?.slice(0, 5) || "09:00"
-                      } · ${bill.autopay_timezone || browserTimezone()}`
+                    ? `Automatic at ${recordTime} · ${
+                        bill.autopay_timezone || browserTimezone()
+                      }`
                     : "Needs activation — edit and save once"}
                 </small>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    flexWrap: "wrap",
+                    gap: "6px",
+                    marginTop: "9px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      letterSpacing: ".08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {dueLabel}
+                  </span>
+                  <strong style={{ fontSize: "15px" }}>
+                    {scheduleDateLabel(bill.due_date)}
+                  </strong>
+                  <span style={{ fontSize: "13px" }}>at {recordTime}</span>
+                </div>
+                {hasRecordedCycle && status === "pending" ? (
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "4px",
+                      textTransform: "none",
+                    }}
+                  >
+                    Current cycle recorded. This pending status is for the next
+                    scheduled payment.
+                  </small>
+                ) : null}
               </div>
               <div className={styles.amount}>
                 <strong>{money(bill.amount_eur, "EUR")}</strong>

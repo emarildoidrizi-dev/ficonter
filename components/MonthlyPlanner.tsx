@@ -20,7 +20,7 @@ import styles from "./MonthlyPlanner.module.css";
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
 type BreakdownView = "ring" | "bars" | "tiles";
 type BreakdownKey = Section | "goals";
-type Tx = { id:string; user_id:string; description:string; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null };
+type Tx = { id:string; user_id:string; description:string; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null; exchange_rate_source:string|null };
 type Bill = { id:string; user_id:string; name:string; category:string; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
 type Plan = { id:string; user_id:string; month:string; start_balance:number|string; created_at:string; updated_at:string };
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
@@ -37,8 +37,13 @@ const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padS
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
 const isGoalInvestment=(tx:Tx)=>tx.description.startsWith("Goal investment ·");
+const isBillTransaction=(tx:Tx)=>{
+  const source=(tx.exchange_rate_source??"").trim().toLowerCase();
+  return source==="automatic bill schedule"||source==="bill conversion";
+};
 const classify=(tx:Tx):Section=>{
   if(tx.type==="income") return "income";
+  if(isBillTransaction(tx)) return "bills";
   const c=tx.category.toLowerCase();
   if(debtWords.some(w=>c.includes(w))) return "debt";
   if(savingWords.some(w=>c.includes(w))) return "savings";
@@ -92,7 +97,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       do{
         refreshQueuedRef.current=false;
         const [transactionResult,billResult,planResult,itemResult,goalResult]=await Promise.all([
-          supabase.from("transactions").select("id,user_id,description,amount_eur,type,category,transaction_date,occurred_at").eq("user_id",userId).order("occurred_at",{ascending:false}),
+          supabase.from("transactions").select("id,user_id,description,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id",userId).order("occurred_at",{ascending:false}),
           supabase.from("bills").select("id,user_id,name,category,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
           supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
           supabase.from("monthly_budget_items").select("id,user_id,month,section,label,planned_amount,position,created_at,updated_at").eq("user_id",userId).order("position",{ascending:true}),
@@ -170,7 +175,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const startBalance=roundMoney(plan?.start_balance??derivedStartBalance);
   const paidBillTxIds=useMemo(()=>new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[bills]);
   const monthTx=useMemo(()=>transactions.filter(t=>inMonth(transactionActivityDate(t),month)),[transactions,month]);
-  const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t))].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
+  const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
   const actualBySection=useMemo(()=>{
     const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
     monthTx.forEach(t=>{
@@ -214,7 +219,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const gradient=breakdownParts.length
     ?`conic-gradient(${breakdownParts.map(part=>{const start=cursor;cursor+=part.value/Math.max(breakdownTotal,1)*100;return `${part.color} ${start}% ${cursor}%`}).join(",")})`
     :"conic-gradient(var(--breakdown-track) 0 100%)";
-  const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)).reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
+  const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses").reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
   async function saveStartBalance(v:string){const value=roundMoney(v); const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.");notifyFiconterDataChange("all")}}
@@ -262,16 +267,28 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
 
         const billRows =
           s.key === "bills"
-            ? bills
+            ? monthTx
                 .filter(
-                  (bill) =>
-                    bill.status === "paid" &&
-                    inMonth(billActivityDate(bill), month),
+                  (transaction) =>
+                    transaction.type !== "income" &&
+                    isBillTransaction(transaction) &&
+                    !paidBillTxIds.has(transaction.id),
                 )
-                .reduce<Record<string, number>>((rows, bill) => {
-                  rows[bill.name] = addMoney(rows[bill.name] || 0,bill.amount_eur);
+                .reduce<Record<string, number>>((rows, transaction) => {
+                  rows[transaction.description] =
+                    addMoney(rows[transaction.description] || 0,transaction.amount_eur);
                   return rows;
-                }, {})
+                }, bills
+                  .filter(
+                    (bill) =>
+                      bill.status === "paid" &&
+                      inMonth(billActivityDate(bill), month),
+                  )
+                  .reduce<Record<string, number>>((rows, bill) => {
+                    rows[bill.name] =
+                      addMoney(rows[bill.name] || 0,bill.amount_eur);
+                    return rows;
+                  }, {}))
             : {};
 
         const debtRows =

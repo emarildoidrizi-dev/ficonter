@@ -10,6 +10,10 @@ import {
   Database,
   Download,
   FileClock,
+  FilePenLine,
+  FileText,
+  FileUp,
+  FolderLock,
   ImageIcon,
   ImagePlus,
   Landmark,
@@ -17,6 +21,7 @@ import {
   ReceiptText,
   RefreshCw,
   Save,
+  Search,
   Settings2,
   ShieldCheck,
   ShoppingCart,
@@ -25,6 +30,7 @@ import {
   Truck,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
 import {
   useEffect,
@@ -51,6 +57,46 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ]);
 const LOGO_MAX_BYTES = 3 * 1024 * 1024;
 const COVER_MAX_BYTES = 5 * 1024 * 1024;
+const BUSINESS_DOCUMENT_BUCKET = "business-documents";
+const DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
+const DOCUMENT_CATEGORIES = [
+  "Company registration",
+  "Tax & VAT",
+  "Licences & permits",
+  "Contracts",
+  "Supplier documents",
+  "Insurance",
+  "Banking & finance",
+  "Receipts & invoices",
+  "Employment",
+  "Other",
+] as const;
+const DOCUMENT_EXTENSIONS = new Set([
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "csv",
+  "txt",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+]);
+const DOCUMENT_MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+  txt: "text/plain",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
 
 const BUSINESS_TYPES = [
   "Sole trader",
@@ -82,6 +128,7 @@ const MONTHS = [
 const TABS = [
   ["profile", Building2, "Business Profile"],
   ["financial", Settings2, "Financial Setup"],
+  ["documents", FolderLock, "Documents"],
   ["audit", FileClock, "Audit Log"],
   ["data", Database, "Data & Status"],
 ] as const;
@@ -99,6 +146,22 @@ type AdministrationSettings = {
   invoice_prefix: string;
   next_invoice_number: number;
   default_low_stock_threshold: number | string;
+  created_at: string;
+  updated_at: string;
+};
+
+type BusinessDocument = {
+  id: string;
+  business_id: string;
+  uploaded_by: string;
+  title: string;
+  category: string;
+  description: string | null;
+  file_path: string;
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  expires_on: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -154,6 +217,63 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatBytes(value: number) {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function documentExtension(file: File) {
+  return file.name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function documentMimeType(file: File) {
+  return (
+    file.type ||
+    DOCUMENT_MIME_BY_EXTENSION[documentExtension(file)] ||
+    "application/octet-stream"
+  );
+}
+
+function safeDocumentFilename(value: string) {
+  const extension = value.split(".").pop()?.toLowerCase() ?? "";
+  const base = value
+    .replace(/\.[^.]+$/, "")
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "document";
+  return extension ? `${base}.${extension}` : base;
+}
+
+function documentExpiry(expiresOn: string | null) {
+  if (!expiresOn) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(`${expiresOn}T00:00:00`);
+  const days = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
+
+  if (days < 0) {
+    return { label: `Expired ${formatDate(expiresOn)}`, tone: "expired" };
+  }
+  if (days === 0) {
+    return { label: "Expires today", tone: "expiring" };
+  }
+  if (days <= 30) {
+    return { label: `Expires in ${days} days`, tone: "expiring" };
+  }
+  return { label: formatDate(expiresOn), tone: "valid" };
+}
+
 function entityLabel(value: string) {
   return value
     .replace(/^business_/, "")
@@ -167,6 +287,7 @@ export function BusinessAdministration({
   initialBusiness,
   initialSettings,
   initialAudit,
+  initialDocuments,
   counts,
 }: {
   userId: string;
@@ -174,6 +295,7 @@ export function BusinessAdministration({
   initialBusiness: Business;
   initialSettings: AdministrationSettings;
   initialAudit: AuditEvent[];
+  initialDocuments: BusinessDocument[];
   counts: RecordCounts;
 }) {
   const router = useRouter();
@@ -183,6 +305,14 @@ export function BusinessAdministration({
   const [settings, setSettings] = useState(initialSettings);
   const [audit, setAudit] = useState(initialAudit);
   const [auditSearch, setAuditSearch] = useState("");
+  const [documents, setDocuments] = useState(initialDocuments);
+  const [documentSearch, setDocumentSearch] = useState("");
+  const [documentCategory, setDocumentCategory] = useState("All");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [editingDocument, setEditingDocument] =
+    useState<BusinessDocument | null>(null);
+  const [deletingDocument, setDeletingDocument] =
+    useState<BusinessDocument | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState("");
@@ -245,6 +375,28 @@ export function BusinessAdministration({
     };
   }, [business.id, supabase]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`business-documents-${business.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "business_documents",
+          filter: `business_id=eq.${business.id}`,
+        },
+        () => {
+          void refreshDocuments();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [business.id, supabase]);
+
   function clearMessages() {
     setNotice("");
     setError("");
@@ -261,6 +413,235 @@ export function BusinessAdministration({
       .limit(100);
 
     if (!auditError) setAudit((data ?? []) as AuditEvent[]);
+  }
+
+  async function refreshDocuments() {
+    const { data, error: documentsError } = await supabase
+      .from("business_documents")
+      .select(
+        "id,business_id,uploaded_by,title,category,description,file_path,original_filename,mime_type,file_size,expires_on,created_at,updated_at",
+      )
+      .eq("business_id", business.id)
+      .order("created_at", { ascending: false });
+
+    if (!documentsError) {
+      setDocuments((data ?? []) as BusinessDocument[]);
+    }
+  }
+
+  function selectDocumentFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+
+    const extension = documentExtension(file);
+    if (!DOCUMENT_EXTENSIONS.has(extension)) {
+      setError(
+        "Use PDF, Word, Excel, CSV, TXT, PNG, JPG or WEBP documents.",
+      );
+      return;
+    }
+
+    if (file.size <= 0 || file.size > DOCUMENT_MAX_BYTES) {
+      setError("The document must be 15 MB or smaller.");
+      return;
+    }
+
+    clearMessages();
+    setDocumentFile(file);
+  }
+
+  async function uploadDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+
+    if (!documentFile) {
+      setError("Choose a document before uploading.");
+      return;
+    }
+
+    setBusy("document-upload");
+    clearMessages();
+
+    const documentId = crypto.randomUUID();
+    const storagePath =
+      `${userId}/${business.id}/${documentId}/` +
+      `${Date.now()}-${safeDocumentFilename(documentFile.name)}`;
+
+    try {
+      const mimeType = documentMimeType(documentFile);
+      const { error: uploadError } = await supabase.storage
+        .from(BUSINESS_DOCUMENT_BUCKET)
+        .upload(storagePath, documentFile, {
+          cacheControl: "3600",
+          contentType: mimeType,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data, error: createError } = await supabase.rpc(
+        "create_business_document",
+        {
+          p_document_id: documentId,
+          p_business_id: business.id,
+          p_title: String(form.get("title") ?? "").trim(),
+          p_category: String(form.get("category") ?? "Other"),
+          p_description: cleanText(form.get("description")),
+          p_file_path: storagePath,
+          p_original_filename: documentFile.name,
+          p_mime_type: mimeType,
+          p_file_size: documentFile.size,
+          p_expires_on: cleanText(form.get("expires_on")),
+        },
+      );
+
+      if (createError || !data) {
+        await supabase.storage
+          .from(BUSINESS_DOCUMENT_BUCKET)
+          .remove([storagePath]);
+        throw createError ?? new Error("The document could not be saved.");
+      }
+
+      const created = data as BusinessDocument;
+      setDocuments((current) => [
+        created,
+        ...current.filter((item) => item.id !== created.id),
+      ]);
+      setDocumentFile(null);
+      formElement.reset();
+      setNotice("Business document uploaded securely.");
+      await refreshAudit();
+    } catch (uploadFailure) {
+      setError(
+        uploadFailure instanceof Error
+          ? uploadFailure.message
+          : "The document could not be uploaded.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function openDocument(
+    item: BusinessDocument,
+    download: boolean,
+  ) {
+    if (busy) return;
+
+    setBusy(`${download ? "download" : "view"}-${item.id}`);
+    clearMessages();
+
+    const { data, error: signedUrlError } = await supabase.storage
+      .from(BUSINESS_DOCUMENT_BUCKET)
+      .createSignedUrl(
+        item.file_path,
+        60,
+        download ? { download: item.original_filename } : undefined,
+      );
+
+    if (signedUrlError || !data?.signedUrl) {
+      setError(
+        signedUrlError?.message ??
+          "A secure document link could not be created.",
+      );
+      setBusy("");
+      return;
+    }
+
+    const anchor = window.document.createElement("a");
+    anchor.href = data.signedUrl;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    if (download) anchor.download = item.original_filename;
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setBusy("");
+  }
+
+  async function saveDocumentMetadata(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    if (!editingDocument || busy) return;
+
+    const form = new FormData(event.currentTarget);
+    setBusy(`document-edit-${editingDocument.id}`);
+    clearMessages();
+
+    const { data, error: updateError } = await supabase.rpc(
+      "update_business_document",
+      {
+        p_document_id: editingDocument.id,
+        p_title: String(form.get("title") ?? "").trim(),
+        p_category: String(form.get("category") ?? "Other"),
+        p_description: cleanText(form.get("description")),
+        p_expires_on: cleanText(form.get("expires_on")),
+      },
+    );
+
+    if (updateError || !data) {
+      setError(
+        updateError?.message ?? "The document details could not be updated.",
+      );
+      setBusy("");
+      return;
+    }
+
+    const updated = data as BusinessDocument;
+    setDocuments((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
+    setEditingDocument(null);
+    setNotice("Document details updated.");
+    setBusy("");
+    await refreshAudit();
+  }
+
+  async function deleteDocument() {
+    if (!deletingDocument || busy) return;
+
+    setBusy(`document-delete-${deletingDocument.id}`);
+    clearMessages();
+
+    const { data, error: deleteError } = await supabase.rpc(
+      "delete_business_document",
+      { p_document_id: deletingDocument.id },
+    );
+
+    if (deleteError || !data) {
+      setError(
+        deleteError?.message ?? "The document could not be deleted.",
+      );
+      setBusy("");
+      return;
+    }
+
+    const deleted = data as {
+      id: string;
+      file_path: string;
+      original_filename: string;
+    };
+
+    const { error: storageError } = await supabase.storage
+      .from(BUSINESS_DOCUMENT_BUCKET)
+      .remove([deleted.file_path]);
+
+    setDocuments((current) =>
+      current.filter((item) => item.id !== deleted.id),
+    );
+    setDeletingDocument(null);
+    setNotice(
+      storageError
+        ? "Document removed. The stored file may require later cleanup."
+        : "Document deleted permanently.",
+    );
+    setBusy("");
+    await refreshAudit();
   }
 
   function selectImage(
@@ -461,7 +842,11 @@ export function BusinessAdministration({
       generated_at: new Date().toISOString(),
       business,
       financial_setup: settings,
-      record_counts: counts,
+      record_counts: {
+        ...counts,
+        documents: documents.length,
+      },
+      documents: documents.map(({ file_path, ...item }) => item),
       recent_audit: audit.slice(0, 25),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -483,13 +868,36 @@ export function BusinessAdministration({
       .includes(query);
   });
 
+  const filteredDocuments = documents.filter((item) => {
+    const query = documentSearch.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      `${item.title} ${item.original_filename} ${item.category} ${item.description ?? ""}`
+        .toLowerCase()
+        .includes(query);
+    const matchesCategory =
+      documentCategory === "All" || item.category === documentCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const expiringDocuments = documents.filter((item) => {
+    const expiry = documentExpiry(item.expires_on);
+    return expiry?.tone === "expired" || expiry?.tone === "expiring";
+  }).length;
+
+  const totalDocumentStorage = documents.reduce(
+    (sum, item) => sum + Number(item.file_size || 0),
+    0,
+  );
+
   const totalOperationalRecords =
     counts.transactions +
     counts.suppliers +
     counts.supplierInvoices +
     counts.inventoryItems +
     counts.inventoryMovements +
-    counts.sales;
+    counts.sales +
+    documents.length;
 
   return (
     <section className={styles.shell}>
@@ -498,8 +906,9 @@ export function BusinessAdministration({
           <span>FICONTER BUSINESS</span>
           <h1>Administration</h1>
           <p>
-            Control the active business profile, financial defaults, audit
-            history and workspace status from one protected area.
+            Control the active business profile, financial defaults,
+            private documents, audit history and workspace status from one
+            protected area.
           </p>
         </div>
         <div className={styles.heroIdentity}>
@@ -668,6 +1077,249 @@ export function BusinessAdministration({
             </form>
           ) : null}
 
+          {activeTab === "documents" ? (
+            <section className={styles.panel}>
+              <div className={styles.panelHeading}>
+                <div>
+                  <span>PRIVATE BUSINESS VAULT</span>
+                  <h2>Documents</h2>
+                  <p>
+                    Store company records, contracts, certificates and other
+                    business files inside the active workspace.
+                  </p>
+                </div>
+                <FolderLock size={27} />
+              </div>
+
+              <div className={styles.documentSummary}>
+                <article>
+                  <FileText size={20} />
+                  <span>Total documents</span>
+                  <strong>{documents.length}</strong>
+                </article>
+                <article>
+                  <Clock3 size={20} />
+                  <span>Expired or due soon</span>
+                  <strong>{expiringDocuments}</strong>
+                </article>
+                <article>
+                  <Database size={20} />
+                  <span>Storage used</span>
+                  <strong>{formatBytes(totalDocumentStorage)}</strong>
+                </article>
+              </div>
+
+              <form
+                className={styles.documentUploadForm}
+                onSubmit={uploadDocument}
+              >
+                <div className={styles.documentUploadHeading}>
+                  <div>
+                    <strong>Upload document</strong>
+                    <span>
+                      Private files are available only to the business owner
+                      and administrators.
+                    </span>
+                  </div>
+                  <FileUp size={22} />
+                </div>
+
+                <div className={styles.documentFormGrid}>
+                  <label>
+                    Document title
+                    <input
+                      name="title"
+                      required
+                      minLength={2}
+                      maxLength={160}
+                      placeholder="e.g. Trade registration certificate"
+                    />
+                  </label>
+                  <label>
+                    Category
+                    <select name="category" defaultValue="Company registration">
+                      {DOCUMENT_CATEGORIES.map((category) => (
+                        <option key={category}>{category}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Expiry date
+                    <input type="date" name="expires_on" />
+                    <small>Optional — useful for licences and insurance.</small>
+                  </label>
+                  <label className={styles.documentDescription}>
+                    Description
+                    <textarea
+                      name="description"
+                      rows={3}
+                      maxLength={1000}
+                      placeholder="Optional notes about this document"
+                    />
+                  </label>
+                </div>
+
+                <div className={styles.documentFileRow}>
+                  <label className={styles.documentFilePicker}>
+                    <FileUp size={18} />
+                    <span>
+                      {documentFile
+                        ? documentFile.name
+                        : "Choose business document"}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+                      onChange={selectDocumentFile}
+                    />
+                  </label>
+                  {documentFile ? (
+                    <button
+                      type="button"
+                      className={styles.clearFileButton}
+                      onClick={() => setDocumentFile(null)}
+                    >
+                      <X size={15} />
+                      Clear
+                    </button>
+                  ) : null}
+                  <small>
+                    PDF, Word, Excel, CSV, TXT or image · maximum 15 MB
+                  </small>
+                </div>
+
+                <button
+                  className={styles.primaryButton}
+                  disabled={busy === "document-upload"}
+                >
+                  <FileUp size={17} />
+                  {busy === "document-upload"
+                    ? "Uploading securely…"
+                    : "Upload document"}
+                </button>
+              </form>
+
+              <div className={styles.documentToolbar}>
+                <label>
+                  <Search size={16} />
+                  <input
+                    value={documentSearch}
+                    onChange={(event) =>
+                      setDocumentSearch(event.target.value)
+                    }
+                    placeholder="Search documents"
+                  />
+                </label>
+                <select
+                  value={documentCategory}
+                  onChange={(event) =>
+                    setDocumentCategory(event.target.value)
+                  }
+                  aria-label="Filter documents by category"
+                >
+                  <option>All</option>
+                  {DOCUMENT_CATEGORIES.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.documentList}>
+                {filteredDocuments.length ? (
+                  filteredDocuments.map((item) => {
+                    const expiry = documentExpiry(item.expires_on);
+                    return (
+                      <article key={item.id}>
+                        <div className={styles.documentIcon}>
+                          <FileText size={22} />
+                        </div>
+                        <div className={styles.documentIdentity}>
+                          <strong>{item.title}</strong>
+                          <span>
+                            {item.original_filename} · {formatBytes(item.file_size)}
+                          </span>
+                          <small>
+                            {item.category} · Uploaded{" "}
+                            {formatDateTime(item.created_at)}
+                          </small>
+                        </div>
+                        <div className={styles.documentExpiry}>
+                          {expiry ? (
+                            <span className={styles[expiry.tone]}>
+                              {expiry.label}
+                            </span>
+                          ) : (
+                            <span className={styles.noExpiry}>No expiry</span>
+                          )}
+                        </div>
+                        <div className={styles.documentActions}>
+                          <button
+                            type="button"
+                            onClick={() => void openDocument(item, false)}
+                            disabled={busy === `view-${item.id}`}
+                          >
+                            <FileText size={15} />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void openDocument(item, true)}
+                            disabled={busy === `download-${item.id}`}
+                          >
+                            <Download size={15} />
+                            Download
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingDocument(item);
+                              clearMessages();
+                            }}
+                          >
+                            <FilePenLine size={15} />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.documentDelete}
+                            onClick={() => {
+                              setDeletingDocument(item);
+                              clearMessages();
+                            }}
+                          >
+                            <Trash2 size={15} />
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className={styles.emptyState}>
+                    <FolderLock size={36} />
+                    <h3>No matching business documents</h3>
+                    <p>
+                      Upload the first file or change the current search and
+                      category filter.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.assurance}>
+                <ShieldCheck size={20} />
+                <div>
+                  <strong>Private document storage</strong>
+                  <p>
+                    Files use short-lived secure links and are separated by
+                    user, business and document. They are not placed in the
+                    public business-image bucket.
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           {activeTab === "audit" ? (
             <section className={styles.panel}>
               <div className={styles.panelHeading}>
@@ -729,6 +1381,7 @@ export function BusinessAdministration({
                 <article><PackageOpen /><span>Inventory items</span><strong>{counts.inventoryItems}</strong></article>
                 <article><RefreshCw /><span>Stock movements</span><strong>{counts.inventoryMovements}</strong></article>
                 <article><ShoppingCart /><span>Sales</span><strong>{counts.sales}</strong></article>
+                <article><FolderLock /><span>Documents</span><strong>{documents.length}</strong></article>
               </div>
 
               <div className={styles.dataActions}>
@@ -748,6 +1401,137 @@ export function BusinessAdministration({
           ) : null}
         </main>
       </div>
+
+      {editingDocument ? (
+        <div className={styles.modalBackdrop}>
+          <form
+            className={styles.documentModal}
+            onSubmit={saveDocumentMetadata}
+          >
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => {
+                setEditingDocument(null);
+                clearMessages();
+              }}
+              aria-label="Close document editor"
+            >
+              <X size={18} />
+            </button>
+
+            <FilePenLine className={styles.modalIcon} />
+            <span>EDIT DOCUMENT</span>
+            <h2>{editingDocument.title}</h2>
+
+            <div className={styles.documentModalGrid}>
+              <label>
+                Document title
+                <input
+                  name="title"
+                  defaultValue={editingDocument.title}
+                  required
+                  minLength={2}
+                  maxLength={160}
+                />
+              </label>
+              <label>
+                Category
+                <select
+                  name="category"
+                  defaultValue={editingDocument.category}
+                >
+                  {DOCUMENT_CATEGORIES.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Expiry date
+                <input
+                  type="date"
+                  name="expires_on"
+                  defaultValue={editingDocument.expires_on ?? ""}
+                />
+              </label>
+              <label className={styles.documentDescription}>
+                Description
+                <textarea
+                  name="description"
+                  rows={4}
+                  maxLength={1000}
+                  defaultValue={editingDocument.description ?? ""}
+                />
+              </label>
+            </div>
+
+            <p className={styles.fileLockedNote}>
+              The stored file remains unchanged. Upload a replacement as a new
+              document when the file itself changes.
+            </p>
+
+            <button
+              className={styles.primaryButton}
+              disabled={busy === `document-edit-${editingDocument.id}`}
+            >
+              <Save size={16} />
+              {busy === `document-edit-${editingDocument.id}`
+                ? "Saving document…"
+                : "Save document details"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {deletingDocument ? (
+        <div className={styles.modalBackdrop}>
+          <section className={styles.documentModal}>
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => {
+                setDeletingDocument(null);
+                clearMessages();
+              }}
+              aria-label="Close document deletion"
+            >
+              <X size={18} />
+            </button>
+
+            <Trash2 className={styles.modalDangerIcon} />
+            <span>DELETE DOCUMENT</span>
+            <h2>Delete {deletingDocument.title}?</h2>
+            <p>
+              The document record and its stored file will be removed
+              permanently. This action cannot be undone.
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeletingDocument(null);
+                  clearMessages();
+                }}
+              >
+                Keep document
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDelete}
+                onClick={() => void deleteDocument()}
+                disabled={
+                  busy === `document-delete-${deletingDocument.id}`
+                }
+              >
+                {busy === `document-delete-${deletingDocument.id}`
+                  ? "Deleting…"
+                  : "Delete permanently"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

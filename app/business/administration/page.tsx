@@ -34,6 +34,7 @@ export default async function BusinessAdministrationPage() {
     salesResult,
     categoriesResult,
     centresResult,
+    documentsResult,
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -82,6 +83,13 @@ export default async function BusinessAdministrationPage() {
       .from("business_cost_centres")
       .select("id", { count: "exact", head: true })
       .eq("business_id", business.id),
+    supabase
+      .from("business_documents")
+      .select(
+        "id,business_id,uploaded_by,title,category,description,file_path,original_filename,mime_type,file_size,expires_on,created_at,updated_at",
+      )
+      .eq("business_id", business.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (settingsResult.error) {
@@ -95,6 +103,7 @@ export default async function BusinessAdministrationPage() {
       initialBusiness={business}
       initialSettings={settingsResult.data}
       initialAudit={auditResult.data ?? []}
+      initialDocuments={documentsResult.data ?? []}
       counts={{
         transactions: transactionsResult.count ?? 0,
         suppliers: suppliersResult.count ?? 0,

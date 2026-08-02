@@ -302,3 +302,476 @@
   .statusCard { grid-template-columns: auto minmax(0, 1fr); }
   .statusCard > div:last-child { grid-column: 2; }
 }
+
+
+.documentSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.documentSummary article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 11px;
+  padding: 17px;
+  border: 1px solid rgba(183, 198, 216, .14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .03);
+}
+
+.documentSummary svg {
+  grid-row: 1 / 3;
+  color: #d9bb72;
+}
+
+.documentSummary span {
+  color: #9facbb;
+  font-size: 12px;
+}
+
+.documentSummary strong {
+  overflow: hidden;
+  font-size: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentUploadForm {
+  display: grid;
+  gap: 17px;
+  padding: 20px;
+  border: 1px solid rgba(217, 187, 114, .2);
+  border-radius: 19px;
+  background: rgba(217, 187, 114, .035);
+}
+
+.documentUploadHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.documentUploadHeading strong,
+.documentUploadHeading span {
+  display: block;
+}
+
+.documentUploadHeading strong {
+  font-size: 18px;
+}
+
+.documentUploadHeading span {
+  margin-top: 5px;
+  color: #a9b5c3;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.documentUploadHeading svg {
+  color: #d9bb72;
+}
+
+.documentFormGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.documentFormGrid label,
+.documentModalGrid label {
+  display: grid;
+  gap: 7px;
+  color: #c7d0dc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.documentFormGrid input,
+.documentFormGrid select,
+.documentFormGrid textarea,
+.documentModalGrid input,
+.documentModalGrid select,
+.documentModalGrid textarea {
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid rgba(183, 198, 216, .19);
+  border-radius: 11px;
+  background: #0f1a2a;
+  color: #f7f4ed;
+  font: inherit;
+  resize: vertical;
+}
+
+.documentFormGrid small {
+  color: #8997a8;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.documentDescription {
+  grid-column: 1 / -1;
+}
+
+.documentFileRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.documentFilePicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px dashed rgba(217, 187, 114, .45);
+  border-radius: 11px;
+  background: rgba(217, 187, 114, .06);
+  color: #ead394;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.documentFilePicker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentFilePicker input {
+  display: none;
+}
+
+.clearFileButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid rgba(203, 83, 83, .3);
+  border-radius: 10px;
+  background: transparent;
+  color: #ffaaa2;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.documentFileRow > small {
+  color: #8997a8;
+  font-size: 10px;
+}
+
+.documentToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 260px);
+  gap: 12px;
+}
+
+.documentToolbar label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 1px solid rgba(183, 198, 216, .16);
+  border-radius: 11px;
+  background: #0f1a2a;
+  color: #8f9dad;
+}
+
+.documentToolbar input,
+.documentToolbar select {
+  width: 100%;
+  min-height: 43px;
+  border: 1px solid rgba(183, 198, 216, .16);
+  border-radius: 11px;
+  background: #0f1a2a;
+  color: #f7f4ed;
+  font: inherit;
+}
+
+.documentToolbar input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  outline: 0;
+}
+
+.documentToolbar select {
+  padding: 0 11px;
+}
+
+.documentList {
+  display: grid;
+  gap: 10px;
+}
+
+.documentList > article {
+  display: grid;
+  grid-template-columns:
+    auto minmax(220px, 1fr) minmax(130px, auto) minmax(310px, auto);
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid rgba(183, 198, 216, .13);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.documentIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(217, 187, 114, .1);
+  color: #d9bb72;
+}
+
+.documentIdentity {
+  min-width: 0;
+}
+
+.documentIdentity strong,
+.documentIdentity span,
+.documentIdentity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentIdentity strong {
+  font-size: 14px;
+}
+
+.documentIdentity span {
+  margin-top: 4px;
+  color: #aeb9c7;
+  font-size: 11px;
+}
+
+.documentIdentity small {
+  margin-top: 4px;
+  color: #8492a3;
+  font-size: 10px;
+}
+
+.documentExpiry span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.documentExpiry .expired {
+  background: rgba(203, 83, 83, .14);
+  color: #ffaaa2;
+}
+
+.documentExpiry .expiring {
+  background: rgba(217, 166, 72, .14);
+  color: #f4cd7c;
+}
+
+.documentExpiry .valid {
+  background: rgba(55, 174, 123, .13);
+  color: #9fe0c1;
+}
+
+.documentExpiry .noExpiry {
+  background: rgba(153, 164, 181, .1);
+  color: #b6c0cc;
+}
+
+.documentActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.documentActions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid rgba(183, 198, 216, .16);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .025);
+  color: #c7d0dc;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.documentActions button:hover {
+  border-color: rgba(217, 187, 114, .35);
+  color: #efd796;
+}
+
+.documentActions .documentDelete {
+  border-color: rgba(203, 83, 83, .28);
+  color: #ffaaa2;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 9, 16, .78);
+  backdrop-filter: blur(8px);
+}
+
+.documentModal {
+  position: relative;
+  display: grid;
+  gap: 17px;
+  width: min(680px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 27px;
+  border: 1px solid rgba(217, 187, 114, .24);
+  border-radius: 22px;
+  background: #142033;
+  box-shadow: 0 26px 85px rgba(0, 0, 0, .38);
+}
+
+.documentModal > span {
+  color: #d9bb72;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.documentModal h2,
+.documentModal p {
+  margin: 0;
+}
+
+.documentModal h2 {
+  padding-right: 44px;
+  font-size: 27px;
+}
+
+.documentModal p {
+  color: #b3bfcd;
+  line-height: 1.6;
+}
+
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border: 1px solid rgba(183, 198, 216, .17);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .03);
+  color: #cbd4df;
+  cursor: pointer;
+}
+
+.modalIcon {
+  color: #d9bb72;
+}
+
+.modalDangerIcon {
+  color: #ffaaa2;
+}
+
+.documentModalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fileLockedNote {
+  padding: 11px 13px;
+  border: 1px solid rgba(183, 198, 216, .13);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+  font-size: 11px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.modalActions button {
+  min-height: 41px;
+  padding: 0 14px;
+  border: 1px solid rgba(183, 198, 216, .17);
+  border-radius: 10px;
+  background: transparent;
+  color: #d5dce5;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modalActions .confirmDelete {
+  border-color: rgba(203, 83, 83, .36);
+  background: rgba(203, 83, 83, .1);
+  color: #ffaaa2;
+}
+
+@media (max-width: 1180px) {
+  .documentList > article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .documentExpiry,
+  .documentActions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 820px) {
+  .documentSummary,
+  .documentFormGrid,
+  .documentModalGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .documentToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .documentDescription {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .documentList > article {
+    grid-template-columns: 1fr;
+  }
+
+  .documentIcon,
+  .documentExpiry,
+  .documentActions {
+    grid-column: 1;
+  }
+}

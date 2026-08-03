@@ -3,7 +3,7 @@
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  min-height: 1em;
+  min-height: 1em !important;
   margin-inline: 0;
   visibility: visible !important;
   opacity: 1 !important;
@@ -23,13 +23,8 @@
   opacity: 1 !important;
   white-space: nowrap !important;
   overflow: visible;
-  text-overflow: clip;
-  overflow-wrap: normal !important;
-  word-break: keep-all !important;
-  hyphens: none !important;
   line-height: 1;
   transform-origin: left center;
-  will-change: font-size, transform;
 }
 
 :global([dir="rtl"]) .text {

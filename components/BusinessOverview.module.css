@@ -134,3 +134,64 @@
     overflow: hidden;
   }
 }
+/* FICONTER MOBILE BUSINESS TITLE COLLAPSE FIX — BEGIN */
+.hero {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.hero > div:first-child {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.hero > div:first-child > span,
+.hero > div:first-child > p,
+.hero > div:first-child > h1 {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.hero h1 {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 1em !important;
+  margin: 8px 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+@media (max-width: 650px) {
+  .hero {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .hero > div:first-child {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: max-content !important;
+    overflow: visible !important;
+  }
+}
+/* FICONTER MOBILE BUSINESS TITLE COLLAPSE FIX — END */

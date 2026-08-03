@@ -58,3 +58,40 @@
     max-width: calc(100vw - 36px);
   }
 }
+/* FICONTER FINAL BUSINESS NAME VISIBILITY */
+.hero,
+.hero > div:first-child {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hero > div:first-child {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.hero h1 {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+@media (max-width: 650px) {
+  .hero {
+    overflow: hidden;
+  }
+
+  .hero > div:first-child {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+}

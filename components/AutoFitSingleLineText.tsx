@@ -19,12 +19,14 @@ type Props = {
   style?: CSSProperties;
 };
 
-function visibleViewportWidth(): number {
+function getViewportWidth(): number {
   return Math.max(
     0,
-    window.visualViewport?.width ??
-      document.documentElement.clientWidth ??
-      window.innerWidth,
+    Math.floor(
+      window.visualViewport?.width ??
+        document.documentElement.clientWidth ??
+        window.innerWidth,
+    ),
   );
 }
 
@@ -32,195 +34,149 @@ export function AutoFitSingleLineText({
   text,
   as: Tag = "h1",
   className = "",
-  minSize = 7,
+  minSize = 8,
   maxSize = 62,
-  safetyMargin = 12,
+  safetyMargin = 24,
   style,
 }: Props) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const containerRef = useRef<HTMLHeadingElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
-    const heading = headingRef.current;
-    const container = heading?.parentElement;
+    const container = containerRef.current;
+    const textElement = textRef.current;
+    const parent = container?.parentElement;
 
-    if (!heading || !container) return;
+    if (!container || !textElement || !parent) return;
 
     let animationFrame = 0;
-    let measurementNode: HTMLSpanElement | null = null;
 
-    const createMeasurementNode = () => {
-      if (measurementNode) return measurementNode;
-
-      measurementNode = document.createElement("span");
-      measurementNode.setAttribute("aria-hidden", "true");
-      Object.assign(measurementNode.style, {
-        position: "fixed",
-        inset: "auto auto -10000px -10000px",
-        visibility: "hidden",
-        pointerEvents: "none",
-        whiteSpace: "nowrap",
-        width: "max-content",
-        maxWidth: "none",
-        overflow: "visible",
-        contain: "layout style paint",
-      });
-      document.body.appendChild(measurementNode);
-      return measurementNode;
-    };
-
-    const measureAtSize = (
-      fontSize: number,
-      computed: CSSStyleDeclaration,
-    ): number => {
-      const node = createMeasurementNode();
-
-      node.textContent = text;
-      node.style.fontFamily = computed.fontFamily;
-      node.style.fontStyle = computed.fontStyle;
-      node.style.fontWeight = computed.fontWeight;
-      node.style.fontVariant = computed.fontVariant;
-      node.style.fontStretch = computed.fontStretch;
-      node.style.lineHeight = computed.lineHeight;
-      node.style.letterSpacing = computed.letterSpacing;
-      node.style.textTransform = computed.textTransform;
-      node.style.fontSize = `${fontSize}px`;
-
-      return node.getBoundingClientRect().width;
-    };
-
-    const fitText = () => {
+    const fit = () => {
       window.cancelAnimationFrame(animationFrame);
 
       animationFrame = window.requestAnimationFrame(() => {
-        const viewportWidth = visibleViewportWidth();
-        const headingRect = heading.getBoundingClientRect();
+        const viewportWidth = getViewportWidth();
         const containerRect = container.getBoundingClientRect();
-        const computed = window.getComputedStyle(heading);
-        const isRtl = computed.direction === "rtl";
+        const parentRect = parent.getBoundingClientRect();
 
-        const visibleLeft = Math.max(
+        const leftEdge = Math.max(
           0,
-          Math.min(headingRect.left, containerRect.left),
+          containerRect.left,
+          parentRect.left,
         );
-        const visibleRight = Math.min(
+
+        const viewportSpace = Math.max(
+          0,
+          viewportWidth - leftEdge - safetyMargin,
+        );
+
+        const parentVisibleRight = Math.min(
           viewportWidth - safetyMargin,
-          containerRect.right,
+          parentRect.right,
         );
-        const viewportAvailable = Math.max(
+
+        const parentVisibleSpace = Math.max(
           0,
-          viewportWidth - Math.max(headingRect.left, 0) - safetyMargin,
-        );
-        const containerAvailable = Math.max(0, visibleRight - visibleLeft);
-        const renderedBoxWidth = Math.max(
-          0,
-          Math.min(headingRect.width || containerRect.width, viewportAvailable),
+          parentVisibleRight - leftEdge,
         );
 
         const availableWidth = Math.floor(
-          Math.max(
-            0,
-            Math.min(
-              viewportAvailable,
-              containerAvailable || viewportAvailable,
-              renderedBoxWidth || viewportAvailable,
-            ),
+          Math.min(
+            viewportSpace,
+            parentVisibleSpace || viewportSpace,
           ),
         );
 
         if (availableWidth <= 0) return;
 
-        heading.style.width = `${availableWidth}px`;
-        heading.style.maxWidth = `${availableWidth}px`;
-        heading.style.minWidth = "0";
-        heading.style.whiteSpace = "nowrap";
-        heading.style.overflow = "hidden";
-        heading.style.textOverflow = "clip";
-        heading.style.wordBreak = "keep-all";
-        heading.style.overflowWrap = "normal";
-        heading.style.hyphens = "none";
-        heading.style.transform = "none";
-        heading.style.transformOrigin = isRtl ? "right center" : "left center";
+        container.style.width = `${availableWidth}px`;
+        container.style.maxWidth = `${availableWidth}px`;
+        container.style.minWidth = "0";
+        container.style.overflow = "hidden";
+        container.style.whiteSpace = "nowrap";
 
-        const preferredMinimum = Math.max(6, Math.min(minSize, maxSize));
-        let lower = preferredMinimum;
-        let upper = Math.max(lower, maxSize);
-        let fittedSize = lower;
+        textElement.style.transform = "none";
+        textElement.style.fontSize = `${maxSize}px`;
 
-        for (let iteration = 0; iteration < 16; iteration += 1) {
-          const candidate = (lower + upper) / 2;
-          const measuredWidth = measureAtSize(candidate, computed);
+        const minimum = Math.max(6, Math.min(minSize, maxSize));
+        let low = minimum;
+        let high = Math.max(minimum, maxSize);
+        let best = minimum;
 
-          if (measuredWidth <= availableWidth) {
-            fittedSize = candidate;
-            lower = candidate;
+        for (let iteration = 0; iteration < 18; iteration += 1) {
+          const candidate = (low + high) / 2;
+          textElement.style.fontSize = `${candidate}px`;
+
+          const renderedWidth = textElement.getBoundingClientRect().width;
+
+          if (renderedWidth <= availableWidth - 2) {
+            best = candidate;
+            low = candidate;
           } else {
-            upper = candidate;
+            high = candidate;
           }
         }
 
-        heading.style.fontSize = `${Math.floor(fittedSize * 10) / 10}px`;
+        textElement.style.fontSize =
+          `${Math.floor(best * 10) / 10}px`;
+        textElement.style.transform = "none";
 
-        let finalWidth = measureAtSize(fittedSize, computed);
+        const finalRenderedWidth =
+          textElement.getBoundingClientRect().width;
 
-        if (finalWidth > availableWidth) {
-          let emergencySize = fittedSize;
+        if (finalRenderedWidth > availableWidth - 2) {
+          const scale = Math.max(
+            0.25,
+            Math.min(
+              1,
+              (availableWidth - 2) / finalRenderedWidth,
+            ),
+          );
 
-          while (emergencySize > 6 && finalWidth > availableWidth) {
-            emergencySize = Math.max(6, emergencySize - 0.5);
-            finalWidth = measureAtSize(emergencySize, computed);
-          }
-
-          heading.style.fontSize = `${emergencySize}px`;
-
-          if (finalWidth > availableWidth) {
-            const horizontalScale = Math.max(
-              0.35,
-              Math.min(1, availableWidth / finalWidth),
-            );
-            heading.style.transform = `scaleX(${horizontalScale})`;
-          }
+          textElement.style.transform = `scaleX(${scale})`;
         }
+
+        container.dataset.fitted = "true";
       });
     };
 
-    const resizeObserver = new ResizeObserver(fitText);
-    resizeObserver.observe(container);
+    const observer = new ResizeObserver(fit);
+    observer.observe(parent);
+    observer.observe(container);
 
-    window.addEventListener("resize", fitText);
-    window.visualViewport?.addEventListener("resize", fitText);
-    window.visualViewport?.addEventListener("scroll", fitText);
+    window.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
 
     const fontSet = document.fonts;
-    const handleFontsChanged = () => fitText();
+    const refitAfterFonts = () => fit();
 
-    void fontSet.ready.then(fitText);
-    fontSet.addEventListener?.("loadingdone", handleFontsChanged);
+    void fontSet.ready.then(fit);
+    fontSet.addEventListener?.("loadingdone", refitAfterFonts);
 
-    fitText();
+    fit();
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", fitText);
-      window.visualViewport?.removeEventListener("resize", fitText);
-      window.visualViewport?.removeEventListener("scroll", fitText);
-      fontSet.removeEventListener?.("loadingdone", handleFontsChanged);
-      measurementNode?.remove();
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
+      fontSet.removeEventListener?.("loadingdone", refitAfterFonts);
     };
   }, [maxSize, minSize, safetyMargin, text]);
 
   return (
     <Tag
-      ref={headingRef}
-      className={`${styles.singleLine} ${className}`.trim()}
+      ref={containerRef}
+      className={`${styles.container} ${className}`.trim()}
       title={text}
       aria-label={text}
-      style={{
-        ...style,
-        fontSize: `${maxSize}px`,
-      }}
+      style={style}
     >
-      {text}
+      <span ref={textRef} className={styles.text}>
+        {text}
+      </span>
     </Tag>
   );
 }

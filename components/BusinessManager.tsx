@@ -895,7 +895,7 @@ export function BusinessManager({
                   </div>
                   <div>
                     <div className={styles.nameRow}>
-                      <AutoFitSingleLineText text={business.name} as="h2" minSize={9} maxSize={21} safetyMargin={8} />
+                      <AutoFitSingleLineText text={business.name} as="h2" minSize={8} maxSize={21} safetyMargin={12} />
                       {isActiveWorkspace ? (
                         <span className={styles.activeBadge}>
                           <Check size={13} /> Active workspace

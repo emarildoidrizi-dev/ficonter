@@ -1,18 +1,30 @@
-.singleLine {
+.container {
   display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   white-space: nowrap !important;
   overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+.text {
+  display: inline-block;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap !important;
+  overflow: visible;
   text-overflow: clip;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
   hyphens: none !important;
   transform-origin: left center;
-  line-height: 1;
+  will-change: font-size, transform;
 }
 
-:global([dir="rtl"]) .singleLine {
+:global([dir="rtl"]) .text {
   transform-origin: right center;
 }

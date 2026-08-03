@@ -1,8 +1,12 @@
 .container {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 1em;
+  margin-inline: 0;
+  visibility: visible !important;
+  opacity: 1 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
@@ -12,15 +16,18 @@
 }
 
 .text {
-  display: inline-block;
+  display: inline-block !important;
   width: max-content;
   max-width: none;
+  visibility: visible !important;
+  opacity: 1 !important;
   white-space: nowrap !important;
   overflow: visible;
   text-overflow: clip;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
   hyphens: none !important;
+  line-height: 1;
   transform-origin: left center;
   will-change: font-size, transform;
 }

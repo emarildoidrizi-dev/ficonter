@@ -832,3 +832,28 @@
   word-break: keep-all !important;
   hyphens: none !important;
 }
+/* FICONTER MOBILE BUSINESS CARD NAME VISIBLE REPAIR */
+.card,
+.cardHeader,
+.cardHeader > div:last-child,
+.nameRow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nameRow h2 {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 1em;
+  flex: 1 1 0;
+  visibility: visible !important;
+  opacity: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}

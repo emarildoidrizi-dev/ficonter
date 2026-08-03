@@ -161,7 +161,7 @@ export function BusinessOverview({
   return (
     <section className={styles.shell}>
       <header className={styles.hero}>
-        <div><span>FICONTER BUSINESS · OVERVIEW</span><AutoFitSingleLineText text={business.name} minSize={8} maxSize={62} safetyMargin={32} /><p>{business.business_type} · Base currency {business.base_currency}</p></div>
+        <div><span>FICONTER BUSINESS · OVERVIEW</span><AutoFitSingleLineText text={business.name} minSize={8} maxSize={62} safetyMargin={28} /><p>{business.business_type} · Base currency {business.base_currency}</p></div>
         <div className={styles.heroActions}>
           <Link href="/business/reports"><FileText size={18} /> Reports <ArrowRight size={17} /></Link>
           <Link href="/business/sales"><ShoppingCart size={18} /> Sales <ArrowRight size={17} /></Link>

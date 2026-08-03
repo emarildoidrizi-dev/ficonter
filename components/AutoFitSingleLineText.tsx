@@ -3,6 +3,7 @@
 import {
   type CSSProperties,
   useLayoutEffect,
+  useMemo,
   useRef,
 } from "react";
 import styles from "./AutoFitSingleLineText.module.css";
@@ -19,14 +20,15 @@ type Props = {
   style?: CSSProperties;
 };
 
-function getViewportWidth(): number {
+function safeViewportWidth(): number {
+  if (typeof window === "undefined") return 390;
+
   return Math.max(
-    0,
-    Math.floor(
-      window.visualViewport?.width ??
-        document.documentElement.clientWidth ??
-        window.innerWidth,
-    ),
+    240,
+    window.visualViewport?.width ??
+      document.documentElement.clientWidth ??
+      window.innerWidth ??
+      390,
   );
 }
 
@@ -39,77 +41,76 @@ export function AutoFitSingleLineText({
   safetyMargin = 24,
   style,
 }: Props) {
-  const containerRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    const textElement = textRef.current;
-    const parent = container?.parentElement;
+  const fallbackFontSize = useMemo(() => {
+    const characterCount = Math.max(1, Array.from(text.trim()).length);
+    const widthFactor = 0.78;
+    const viewportCoefficient = 100 / (characterCount * widthFactor);
+    const marginCoefficient =
+      safetyMargin / (characterCount * widthFactor);
 
-    if (!container || !textElement || !parent) return;
+    return `clamp(${minSize}px, calc(${viewportCoefficient.toFixed(
+      5,
+    )}vw - ${marginCoefficient.toFixed(3)}px), ${maxSize}px)`;
+  }, [maxSize, minSize, safetyMargin, text]);
+
+  useLayoutEffect(() => {
+    const heading = headingRef.current;
+    const textElement = textRef.current;
+
+    if (!heading || !textElement) return;
 
     let animationFrame = 0;
 
-    const fit = () => {
+    const fitText = () => {
       window.cancelAnimationFrame(animationFrame);
 
       animationFrame = window.requestAnimationFrame(() => {
-        const viewportWidth = getViewportWidth();
-        const containerRect = container.getBoundingClientRect();
-        const parentRect = parent.getBoundingClientRect();
+        textElement.style.transform = "none";
 
-        const leftEdge = Math.max(
+        const headingRect = heading.getBoundingClientRect();
+        const parentRect = heading.parentElement?.getBoundingClientRect();
+        const viewportWidth = safeViewportWidth();
+
+        const viewportAvailable = Math.max(
+          40,
+          viewportWidth -
+            Math.max(0, headingRect.left) -
+            safetyMargin,
+        );
+
+        const containerAvailable = Math.max(
           0,
-          containerRect.left,
-          parentRect.left,
+          heading.clientWidth,
+          heading.parentElement?.clientWidth ?? 0,
+          parentRect?.width ?? 0,
         );
 
-        const viewportSpace = Math.max(
-          0,
-          viewportWidth - leftEdge - safetyMargin,
-        );
-
-        const parentVisibleRight = Math.min(
-          viewportWidth - safetyMargin,
-          parentRect.right,
-        );
-
-        const parentVisibleSpace = Math.max(
-          0,
-          parentVisibleRight - leftEdge,
-        );
-
-        const availableWidth = Math.floor(
+        const availableWidth = Math.max(
+          40,
           Math.min(
-            viewportSpace,
-            parentVisibleSpace || viewportSpace,
+            viewportAvailable,
+            containerAvailable > 0
+              ? containerAvailable
+              : viewportAvailable,
           ),
         );
 
-        if (availableWidth <= 0) return;
-
-        container.style.width = `${availableWidth}px`;
-        container.style.maxWidth = `${availableWidth}px`;
-        container.style.minWidth = "0";
-        container.style.overflow = "hidden";
-        container.style.whiteSpace = "nowrap";
-
-        textElement.style.transform = "none";
-        textElement.style.fontSize = `${maxSize}px`;
-
-        const minimum = Math.max(6, Math.min(minSize, maxSize));
-        let low = minimum;
-        let high = Math.max(minimum, maxSize);
-        let best = minimum;
+        let low = Math.max(6, minSize);
+        let high = Math.max(low, maxSize);
+        let best = low;
 
         for (let iteration = 0; iteration < 18; iteration += 1) {
           const candidate = (low + high) / 2;
           textElement.style.fontSize = `${candidate}px`;
 
-          const renderedWidth = textElement.getBoundingClientRect().width;
+          const renderedWidth =
+            textElement.scrollWidth ||
+            textElement.getBoundingClientRect().width;
 
-          if (renderedWidth <= availableWidth - 2) {
+          if (renderedWidth <= availableWidth - 4) {
             best = candidate;
             low = candidate;
           } else {
@@ -119,62 +120,72 @@ export function AutoFitSingleLineText({
 
         textElement.style.fontSize =
           `${Math.floor(best * 10) / 10}px`;
-        textElement.style.transform = "none";
 
         const finalRenderedWidth =
+          textElement.scrollWidth ||
           textElement.getBoundingClientRect().width;
 
-        if (finalRenderedWidth > availableWidth - 2) {
+        if (finalRenderedWidth > availableWidth - 4) {
           const scale = Math.max(
             0.25,
             Math.min(
               1,
-              (availableWidth - 2) / finalRenderedWidth,
+              (availableWidth - 4) / finalRenderedWidth,
             ),
           );
 
           textElement.style.transform = `scaleX(${scale})`;
         }
-
-        container.dataset.fitted = "true";
       });
     };
 
-    const observer = new ResizeObserver(fit);
-    observer.observe(parent);
-    observer.observe(container);
+    const observer = new ResizeObserver(fitText);
+    observer.observe(heading);
 
-    window.addEventListener("resize", fit);
-    window.visualViewport?.addEventListener("resize", fit);
-    window.visualViewport?.addEventListener("scroll", fit);
+    if (heading.parentElement) {
+      observer.observe(heading.parentElement);
+    }
 
-    const fontSet = document.fonts;
-    const refitAfterFonts = () => fit();
+    window.addEventListener("resize", fitText);
+    window.visualViewport?.addEventListener("resize", fitText);
 
-    void fontSet.ready.then(fit);
-    fontSet.addEventListener?.("loadingdone", refitAfterFonts);
+    const handleFontsLoaded = () => fitText();
+    void document.fonts.ready.then(fitText);
+    document.fonts.addEventListener?.(
+      "loadingdone",
+      handleFontsLoaded,
+    );
 
-    fit();
+    fitText();
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
       observer.disconnect();
-      window.removeEventListener("resize", fit);
-      window.visualViewport?.removeEventListener("resize", fit);
-      window.visualViewport?.removeEventListener("scroll", fit);
-      fontSet.removeEventListener?.("loadingdone", refitAfterFonts);
+      window.removeEventListener("resize", fitText);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        fitText,
+      );
+      document.fonts.removeEventListener?.(
+        "loadingdone",
+        handleFontsLoaded,
+      );
     };
   }, [maxSize, minSize, safetyMargin, text]);
 
   return (
     <Tag
-      ref={containerRef}
+      ref={headingRef}
       className={`${styles.container} ${className}`.trim()}
       title={text}
       aria-label={text}
       style={style}
     >
-      <span ref={textRef} className={styles.text}>
+      <span
+        ref={textRef}
+        className={styles.text}
+        style={{ fontSize: fallbackFontSize }}
+      >
         {text}
       </span>
     </Tag>

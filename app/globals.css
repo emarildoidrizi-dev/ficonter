@@ -1451,3 +1451,25 @@ html[dir="rtl"] :where(svg) {
   }
 }
 /* FICONTER MOBILE EXPERIENCE FOUNDATION — END */
+
+/* FICONTER MOBILE DRAWER LAYER HOTFIX — BEGIN */
+@media (max-width: 900px) {
+  .sidebar {
+    z-index: 1350 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: translate3d(calc(-100% - 24px), 0, 0) !important;
+    pointer-events: none;
+  }
+
+  html[data-mobile-nav-open="true"] .sidebar {
+    z-index: 1350 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto;
+  }
+}
+/* FICONTER MOBILE DRAWER LAYER HOTFIX — END */

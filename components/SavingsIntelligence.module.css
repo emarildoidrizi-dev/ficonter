@@ -961,3 +961,230 @@
 .trendBadge[data-direction="waiting"] {
   color: var(--text-secondary);
 }
+
+
+.notice {
+  border: 1px solid color-mix(in srgb, var(--sage) 44%, var(--border-subtle));
+  border-radius: 15px;
+  padding: 13px 15px;
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-weight: 650;
+}
+
+.recentMeta {
+  min-width: 0;
+}
+
+.recentRight {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+}
+
+.rowActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rowActions button,
+.inlineLink {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rowActions button:hover,
+.inlineLink:hover {
+  border-color: var(--gold);
+  background: var(--surface-hover);
+}
+
+.deleteRowButton {
+  color: var(--burgundy) !important;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 8, 18, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.modal {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(90vh, 860px);
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 24px;
+  background: var(--surface-card);
+  box-shadow: 0 20px 80px rgba(5, 10, 18, 0.35);
+}
+
+.smallModal {
+  width: min(520px, 100%);
+}
+
+.close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.close:hover {
+  border-color: var(--gold);
+  background: var(--surface-hover);
+}
+
+.modal small {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.modal h3 {
+  margin: 10px 0 0;
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.fieldNote {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.modalForm {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.modalForm label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modalForm input,
+.modalForm select {
+  min-height: 46px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  padding: 0 14px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fxPreview {
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.secondaryButton,
+.primaryButton,
+.dangerButton {
+  display: inline-flex;
+  min-height: var(--density-control-height);
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  padding: 0 16px;
+  font-weight: 750;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.primaryButton {
+  border: 1px solid var(--solid-bg);
+  background: var(--solid-bg);
+  color: var(--solid-text);
+}
+
+.dangerButton {
+  border: 1px solid color-mix(in srgb, var(--burgundy) 55%, var(--border-subtle));
+  background: var(--danger-soft);
+  color: var(--burgundy);
+}
+
+@media (max-width: 620px) {
+  .recentRight {
+    justify-items: start;
+  }
+
+  .rowActions {
+    justify-content: flex-start;
+  }
+
+  .modal {
+    padding: 20px;
+  }
+
+  .modalGrid,
+  .modalActions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .secondaryButton,
+  .primaryButton,
+  .dangerButton {
+    width: 100%;
+  }
+}

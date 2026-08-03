@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   BarChart3,
@@ -9,16 +9,32 @@ import {
   CheckCircle2,
   CircleAlert,
   Layers3,
+  Pencil,
   PiggyBank,
   RefreshCw,
   Sparkles,
   Target,
+  Trash2,
   TrendingDown,
   TrendingUp,
   WalletCards,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
+import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
+import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import {
+  convertToReportingCurrency,
+  finiteNumber,
+  roundMoney,
+  roundRate,
+} from "@/lib/finance/money";
+import {
+  CURRENCY_CODES,
+  currencyName,
+  currencySymbol,
+  formatCurrency,
+} from "@/lib/financialOptions";
 import {
   calculateSavingsIntelligence,
   normalizeSavingsIntelligenceInputs,
@@ -34,6 +50,42 @@ type Props = {
   initialInputs: SavingsIntelligenceInputs;
   initialError?: string;
 };
+
+type EditableSavingTransaction = {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  amount_eur: number;
+  exchange_rate_to_eur: number;
+  exchange_rate_date: string | null;
+  exchange_rate_source: string | null;
+  category: string;
+  transaction_date: string;
+  occurred_at: string | null;
+  type: string;
+};
+
+type DeleteSavingTarget = {
+  id: string;
+  description: string;
+};
+
+type RateState = {
+  rate: number;
+  date: string;
+  source: string;
+};
+
+const SAVING_CATEGORIES = [
+  "General savings",
+  "Holiday savings",
+  "House deposit",
+  "Retirement",
+  "Education",
+  "Car fund",
+  "Other / custom",
+] as const;
 
 const INSIGHT_ICONS = {
   positive: CheckCircle2,
@@ -68,6 +120,18 @@ function trendLabel(change: number): string {
   return "Stable";
 }
 
+function toLocalDateTimeInput(value: string | null, fallbackDate: string) {
+  const date = value ? new Date(value) : new Date(`${fallbackDate}T12:00:00`);
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
+function isGoalManagedSaving(category: string): boolean {
+  return category.trim().toLowerCase() === "goal investments";
+}
+
 export function SavingsIntelligence({
   userId,
   initialInputs,
@@ -77,14 +141,75 @@ export function SavingsIntelligence({
   const refreshTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
+  const [notice, setNotice] = useState("");
+  const [actionError, setActionError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [averagePeriod, setAveragePeriod] =
     useState<SavingsAveragePeriod>(6);
+  const [editTarget, setEditTarget] =
+    useState<EditableSavingTransaction | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<DeleteSavingTarget | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [editDescription, setEditDescription] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editCurrency, setEditCurrency] = useState("EUR");
+  const [editCategory, setEditCategory] = useState("General savings");
+  const [customEditCategory, setCustomEditCategory] = useState("");
+  const [editOccurredAt, setEditOccurredAt] = useState("");
+  const [editRate, setEditRate] = useState<RateState>({
+    rate: 1,
+    date: new Date().toISOString().slice(0, 10),
+    source: "identity",
+  });
+  const [editRateLoading, setEditRateLoading] = useState(false);
+  const [editRateError, setEditRateError] = useState("");
+  const noticeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setInputs(initialInputs);
     setError(initialError);
   }, [initialError, initialInputs]);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) {
+        window.clearTimeout(noticeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const currencyOptions = useMemo(
+    () =>
+      CURRENCY_CODES.map((code) => ({
+        code,
+        symbol: currencySymbol(code),
+        name: currencyName(code),
+      })).sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  );
+
+  const visibleSavingCategories = useMemo(() => {
+    const values = new Set<string>(SAVING_CATEGORIES);
+    if (
+      editTarget?.category &&
+      !isGoalManagedSaving(editTarget.category) &&
+      !values.has(editTarget.category)
+    ) {
+      values.add(editTarget.category);
+    }
+    return [...values];
+  }, [editTarget]);
+
+  const announceNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current);
+    }
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNotice("");
+    }, 3200);
+  }, []);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -171,6 +296,223 @@ export function SavingsIntelligence({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
+
+
+  useEffect(() => {
+    if (!editTarget) return;
+    const controller = new AbortController();
+
+    if (editCurrency === "EUR") {
+      setEditRate({
+        rate: 1,
+        date: new Date().toISOString().slice(0, 10),
+        source: "identity",
+      });
+      setEditRateError("");
+      setEditRateLoading(false);
+      return () => controller.abort();
+    }
+
+    async function loadEditRate() {
+      setEditRateLoading(true);
+      setEditRateError("");
+      try {
+        const data = await getExchangeRate(editCurrency, "EUR", {
+          signal: controller.signal,
+        });
+        setEditRate({ rate: data.rate, date: data.date, source: data.source });
+      } catch (rateFetchError) {
+        if ((rateFetchError as Error).name !== "AbortError") {
+          setEditRateError((rateFetchError as Error).message);
+        }
+      } finally {
+        if (!controller.signal.aborted) setEditRateLoading(false);
+      }
+    }
+
+    void loadEditRate();
+    return () => controller.abort();
+  }, [editCurrency, editTarget]);
+
+  const openEdit = useCallback(
+    async (savingId: string) => {
+      setActionError("");
+      setActionLoading(true);
+      const { data, error: transactionError } = await supabase
+        .from("transactions")
+        .select(
+          "id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,category,transaction_date,occurred_at,type",
+        )
+        .eq("id", savingId)
+        .single();
+
+      if (transactionError || !data) {
+        setActionError(
+          transactionError?.message ||
+            "The saving could not be loaded for editing.",
+        );
+        setActionLoading(false);
+        return;
+      }
+
+      if (data.type !== "saving") {
+        setActionError("Only saving transactions can be edited here.");
+        setActionLoading(false);
+        return;
+      }
+
+      setEditTarget(data as EditableSavingTransaction);
+      setEditDescription(data.description || "");
+      setEditAmount(String(finiteNumber(data.amount)));
+      setEditCurrency(data.currency || "EUR");
+      setEditCategory(data.category || "General savings");
+      setCustomEditCategory("");
+      setEditOccurredAt(
+        toLocalDateTimeInput(data.occurred_at, data.transaction_date),
+      );
+      setEditRate({
+        rate:
+          data.currency === "EUR"
+            ? 1
+            : finiteNumber(data.exchange_rate_to_eur) || 1,
+        date:
+          data.exchange_rate_date || new Date().toISOString().slice(0, 10),
+        source: data.exchange_rate_source || "stored",
+      });
+      setEditRateError("");
+      setActionLoading(false);
+    },
+    [supabase],
+  );
+
+  const requestDelete = useCallback((savingId: string, description: string) => {
+    setActionError("");
+    setDeleteTarget({ id: savingId, description });
+  }, []);
+
+  const saveEditedSaving = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!editTarget || actionLoading) return;
+
+      const finalCategory =
+        editCategory === "Other / custom"
+          ? customEditCategory.trim()
+          : editCategory;
+
+      if (!finalCategory) {
+        setActionError("Please enter a custom saving category.");
+        return;
+      }
+
+      if (isGoalManagedSaving(finalCategory)) {
+        setActionError(
+          "Goal investments should continue to be managed from Goals.",
+        );
+        return;
+      }
+
+      if (
+        editCurrency !== "EUR" &&
+        (editRateLoading || editRateError || !editRate.rate)
+      ) {
+        setActionError(
+          "A valid EUR exchange rate is required before saving changes.",
+        );
+        return;
+      }
+
+      const occurred = new Date(editOccurredAt);
+      if (Number.isNaN(occurred.getTime())) {
+        setActionError("Please choose a valid saving date and time.");
+        return;
+      }
+
+      const originalAmount = roundMoney(editAmount);
+      if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+        setActionError("Please enter a saving amount greater than zero.");
+        return;
+      }
+
+      const description = editDescription.trim() || "Saving contribution";
+      setActionLoading(true);
+      setActionError("");
+
+      const update = {
+        description,
+        amount: roundMoney(originalAmount),
+        currency: editCurrency,
+        amount_eur: convertToReportingCurrency(originalAmount, editRate.rate),
+        exchange_rate_to_eur: roundRate(editRate.rate),
+        exchange_rate_date: editRate.date,
+        exchange_rate_source: editRate.source,
+        type: "saving",
+        category: finalCategory,
+        transaction_date: editOccurredAt.slice(0, 10),
+        occurred_at: occurred.toISOString(),
+      };
+
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update(update)
+        .eq("id", editTarget.id);
+
+      if (updateError) {
+        setActionError(updateError.message);
+      } else {
+        setEditTarget(null);
+        await refresh();
+        notifyFiconterDataChange("all");
+        announceNotice(
+          "Saving updated. Transactions and connected summaries were refreshed.",
+        );
+      }
+
+      setActionLoading(false);
+    },
+    [
+      actionLoading,
+      announceNotice,
+      customEditCategory,
+      editAmount,
+      editCategory,
+      editCurrency,
+      editDescription,
+      editOccurredAt,
+      editRate,
+      editRateError,
+      editRateLoading,
+      editTarget,
+      refresh,
+      supabase,
+    ],
+  );
+
+  const deleteSaving = useCallback(async () => {
+    if (!deleteTarget || actionLoading) return;
+
+    setActionLoading(true);
+    setActionError("");
+
+    const { error: deleteError } = await supabase.rpc(
+      "delete_transactions_with_linked_bills",
+      { p_transaction_ids: [deleteTarget.id] },
+    );
+
+    if (deleteError) {
+      setActionError(deleteError.message);
+    } else {
+      setDeleteTarget(null);
+      await refresh();
+      notifyFiconterDataChange("all");
+      announceNotice(
+        "Saving removed. The linked transaction and connected summaries were refreshed.",
+      );
+    }
+
+    setActionLoading(false);
+  }, [actionLoading, announceNotice, deleteTarget, refresh, supabase]);
+
   const result = useMemo(() => calculateSavingsIntelligence(inputs), [inputs]);
   const statusSlug = result.status.toLowerCase().replaceAll(" ", "-");
   const maxMonthlySaving = Math.max(
@@ -221,6 +563,10 @@ export function SavingsIntelligence({
       </header>
 
       {error ? <div className={styles.error}>{error}</div> : null}
+      {notice ? <div className={styles.notice}>{notice}</div> : null}
+      {actionError && !editTarget && !deleteTarget ? (
+        <div className={styles.error}>{actionError}</div>
+      ) : null}
 
       <div className={styles.metricGrid}>
         <article>
@@ -518,20 +864,50 @@ export function SavingsIntelligence({
 
           {result.recentSavings.length ? (
             <div className={`${styles.recentList} ficonter-scroll-region`}>
-              {result.recentSavings.map((saving) => (
-                <div className={styles.recentRow} key={saving.id}>
-                  <div className={styles.recentIcon}>
-                    <PiggyBank size={17} aria-hidden="true" />
+              {result.recentSavings.map((saving) => {
+                const managedInGoals = isGoalManagedSaving(saving.category);
+                return (
+                  <div className={styles.recentRow} key={saving.id}>
+                    <div className={styles.recentIcon}>
+                      <PiggyBank size={17} aria-hidden="true" />
+                    </div>
+                    <div className={styles.recentMeta}>
+                      <strong>{saving.description}</strong>
+                      <span>
+                        {saving.category} · {dateLabel(saving.occurredAt)}
+                      </span>
+                    </div>
+                    <div className={styles.recentRight}>
+                      <b>{formatCurrency(saving.amount, "EUR")}</b>
+                      {managedInGoals ? (
+                        <Link className={styles.inlineLink} href="/dashboard/goals">
+                          Managed in Goals
+                        </Link>
+                      ) : (
+                        <div className={styles.rowActions}>
+                          <button
+                            type="button"
+                            onClick={() => void openEdit(saving.id)}
+                            disabled={actionLoading}
+                          >
+                            <Pencil size={14} aria-hidden="true" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteRowButton}
+                            onClick={() => requestDelete(saving.id, saving.description)}
+                            disabled={actionLoading}
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <strong>{saving.description}</strong>
-                    <span>
-                      {saving.category} · {dateLabel(saving.occurredAt)}
-                    </span>
-                  </div>
-                  <b>{formatCurrency(saving.amount, "EUR")}</b>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className={styles.emptyState}>
@@ -542,6 +918,182 @@ export function SavingsIntelligence({
           )}
         </article>
       </div>
+
+      {editTarget ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={() => !actionLoading && setEditTarget(null)}
+        >
+          <div
+            className={styles.modal}
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              className={styles.close}
+              type="button"
+              onClick={() => setEditTarget(null)}
+            >
+              <X size={18} />
+            </button>
+            <small>SAVINGS ADJUSTMENT</small>
+            <h3>Edit saving</h3>
+            <p className={styles.fieldNote}>
+              This updates the linked transaction in Transactions and refreshes
+              Overview, Planner and Savings automatically.
+            </p>
+            <form className={styles.modalForm} onSubmit={saveEditedSaving}>
+              <label>
+                Description
+                <input
+                  value={editDescription}
+                  onChange={(event) => setEditDescription(event.target.value)}
+                  required
+                />
+              </label>
+              <div className={styles.modalGrid}>
+                <label>
+                  Amount
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={editAmount}
+                    onChange={(event) => setEditAmount(event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Currency
+                  <select
+                    value={editCurrency}
+                    onChange={(event) => setEditCurrency(event.target.value)}
+                  >
+                    {currencyOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.symbol} {option.code} — {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className={styles.modalGrid}>
+                <label>
+                  Category
+                  <select
+                    value={editCategory}
+                    onChange={(event) => setEditCategory(event.target.value)}
+                  >
+                    {visibleSavingCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Exact date and time
+                  <input
+                    type="datetime-local"
+                    value={editOccurredAt}
+                    onChange={(event) => setEditOccurredAt(event.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+              {editCategory === "Other / custom" ? (
+                <label>
+                  Custom category
+                  <input
+                    value={customEditCategory}
+                    onChange={(event) =>
+                      setCustomEditCategory(event.target.value)
+                    }
+                    required
+                  />
+                </label>
+              ) : null}
+              <div className={styles.fxPreview}>
+                {editRateLoading
+                  ? "Retrieving EUR rate…"
+                  : editRateError
+                    ? editRateError
+                    : `EUR equivalent: ${formatCurrency(
+                        convertToReportingCurrency(editAmount, editRate.rate),
+                        "EUR",
+                      )} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}
+              </div>
+              {actionError ? <div className={styles.error}>{actionError}</div> : null}
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={() => setEditTarget(null)}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  type="submit"
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div
+          className={styles.backdrop}
+          onMouseDown={() => !actionLoading && setDeleteTarget(null)}
+        >
+          <div
+            className={`${styles.modal} ${styles.smallModal}`}
+            onMouseDown={(event) => event.stopPropagation()}
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <button
+              className={styles.close}
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+            >
+              <X size={18} />
+            </button>
+            <small>PERMANENT ACTION</small>
+            <h3>Remove saving?</h3>
+            <p className={styles.fieldNote}>
+              “{deleteTarget.description}” will be removed from Savings and the
+              linked transaction will be deleted from Transactions at the same
+              time.
+            </p>
+            {actionError ? <div className={styles.error}>{actionError}</div> : null}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setDeleteTarget(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.dangerButton}
+                type="button"
+                onClick={() => void deleteSaving()}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Removing…" : "Remove saving"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <article className={styles.panel}>
         <header className={styles.panelHeader}>

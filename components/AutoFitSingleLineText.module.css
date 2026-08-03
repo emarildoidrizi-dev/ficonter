@@ -1,0 +1,12 @@
+.singleLine {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+}

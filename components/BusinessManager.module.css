@@ -794,3 +794,20 @@
 .businessCard[role="button"] select {
   cursor: pointer;
 }
+/* FICONTER BUSINESS CARD NAME VIEWPORT GUARANTEE */
+.cardHeader > div:last-child,
+.nameRow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nameRow h2 {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 140px;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}

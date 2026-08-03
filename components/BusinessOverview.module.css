@@ -21,3 +21,40 @@
     width: 100%;
   }
 }
+/* FICONTER BUSINESS NAME VIEWPORT GUARANTEE */
+.hero {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hero > div:first-child {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.hero h1 {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+@media (max-width: 650px) {
+  .hero {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .hero > div:first-child {
+    width: 100%;
+    max-width: calc(100vw - 36px);
+  }
+}

@@ -3,10 +3,16 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: nowrap !important;
+  overflow: hidden !important;
   text-overflow: clip;
-  overflow-wrap: normal;
-  word-break: keep-all;
-  hyphens: none;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+  transform-origin: left center;
+  line-height: 1;
+}
+
+:global([dir="rtl"]) .singleLine {
+  transform-origin: right center;
 }

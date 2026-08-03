@@ -32,6 +32,7 @@ import {
   currencySymbol,
 } from "@/lib/financialOptions";
 import type { Business } from "@/lib/business/types";
+import { AutoFitSingleLineText } from "@/components/AutoFitSingleLineText";
 import styles from "./BusinessManager.module.css";
 
 const BUSINESS_TYPES = [
@@ -894,7 +895,7 @@ export function BusinessManager({
                   </div>
                   <div>
                     <div className={styles.nameRow}>
-                      <h2>{business.name}</h2>
+                      <AutoFitSingleLineText text={business.name} as="h2" minSize={9} maxSize={21} safetyMargin={8} />
                       {isActiveWorkspace ? (
                         <span className={styles.activeBadge}>
                           <Check size={13} /> Active workspace

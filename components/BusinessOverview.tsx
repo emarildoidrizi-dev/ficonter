@@ -30,6 +30,7 @@ import type {
   BusinessSale,
   BusinessTransaction,
 } from "@/lib/business/types";
+import { AutoFitSingleLineText } from "@/components/AutoFitSingleLineText";
 import styles from "./BusinessOverview.module.css";
 
 function mergeRealtime<T extends { id: string }>(
@@ -160,7 +161,7 @@ export function BusinessOverview({
   return (
     <section className={styles.shell}>
       <header className={styles.hero}>
-        <div><span>FICONTER BUSINESS · OVERVIEW</span><h1>{business.name}</h1><p>{business.business_type} · Base currency {business.base_currency}</p></div>
+        <div><span>FICONTER BUSINESS · OVERVIEW</span><AutoFitSingleLineText text={business.name} minSize={8} maxSize={62} safetyMargin={10} /><p>{business.business_type} · Base currency {business.base_currency}</p></div>
         <div className={styles.heroActions}>
           <Link href="/business/reports"><FileText size={18} /> Reports <ArrowRight size={17} /></Link>
           <Link href="/business/sales"><ShoppingCart size={18} /> Sales <ArrowRight size={17} /></Link>

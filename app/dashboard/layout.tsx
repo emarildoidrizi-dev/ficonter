@@ -6,6 +6,7 @@ import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLangua
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 
@@ -89,6 +90,7 @@ export default async function DashboardLayout({
         cacheKey={user.id}
       />
       <CommandPalette />
+            <MobileNavigationController workspace="personal" />
       <Sidebar
         isAdmin={Boolean(admin)}
         user={{

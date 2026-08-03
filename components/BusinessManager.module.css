@@ -794,3 +794,66 @@
 .businessCard[role="button"] select {
   cursor: pointer;
 }
+/* FICONTER BUSINESS CARD NAME VIEWPORT GUARANTEE */
+.cardHeader > div:last-child,
+.nameRow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nameRow h2 {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 140px;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+/* FICONTER FINAL BUSINESS CARD NAME VISIBILITY */
+.card,
+.cardHeader,
+.cardHeader > div:last-child,
+.nameRow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nameRow h2 {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 0;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+/* FICONTER MOBILE BUSINESS CARD NAME VISIBLE REPAIR */
+.card,
+.cardHeader,
+.cardHeader > div:last-child,
+.nameRow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nameRow h2 {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 1em;
+  flex: 1 1 0;
+  visibility: visible !important;
+  opacity: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}

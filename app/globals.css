@@ -1223,3 +1223,253 @@ html[dir="rtl"] :where(.side-link, .topbar, .panel-head, .stat-row) {
 html[dir="rtl"] :where(svg) {
   flex-shrink: 0;
 }
+/* FICONTER MOBILE EXPERIENCE FOUNDATION — BEGIN */
+@media (max-width: 900px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  html[data-mobile-nav-open="true"],
+  html[data-mobile-nav-open="true"] body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .app-shell {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    z-index: 1300;
+    width: min(86vw, 340px);
+    max-width: 340px;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: calc(18px + env(safe-area-inset-top)) 16px
+      calc(18px + env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left)) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 30px 0 70px rgba(2, 7, 12, 0.35);
+    transform: translateX(calc(-100% - 24px));
+    transition: transform 220ms ease;
+    will-change: transform;
+  }
+
+  html[data-mobile-nav-open="true"] .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar .brand {
+    padding-right: 52px;
+  }
+
+  .sidebar .side-nav {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    padding: calc(72px + env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      calc(28px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left)) !important;
+    overflow-x: clip !important;
+  }
+
+  .app-main > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-main :where(h1, h2, h3, h4, p, span, strong, small, label) {
+    overflow-wrap: anywhere;
+  }
+
+  .app-main h1 {
+    font-size: clamp(42px, 12vw, 64px) !important;
+    line-height: 0.98 !important;
+  }
+
+  .app-main h2 {
+    font-size: clamp(28px, 8vw, 42px) !important;
+  }
+
+  .app-main :where(input, select, textarea) {
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  .app-main :where(button, input:not([type="checkbox"]):not([type="radio"]), select) {
+    min-height: 44px;
+  }
+
+  .app-main :where(img, canvas) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .app-main :where(.table-wrap, [class*="tableWrap"], [class*="listViewport"], [class*="scrollRegion"]) {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-main table {
+    min-width: 680px;
+  }
+
+  .app-main :where([class*="headerActions"], [class*="toolbarTop"], [class*="panelHeader"], [class*="pageHeader"]) {
+    flex-wrap: wrap;
+  }
+
+  .app-main :where([class*="backdrop"]) {
+    align-items: end !important;
+    padding: 12px 0 0 !important;
+  }
+
+  .app-main :where([class*="modal"]) {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 90dvh !important;
+    border-radius: 24px 24px 0 0 !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .living-theme-grain,
+  .living-theme-depth {
+    display: none;
+  }
+
+  [class*="WorkspaceSwitcher_switcher"] {
+    position: sticky;
+    top: calc(58px + env(safe-area-inset-top));
+    z-index: 100;
+    width: 100%;
+    margin: 0 0 14px !important;
+    padding: 8px !important;
+    gap: 8px !important;
+    background: color-mix(in srgb, var(--surface-card) 96%, transparent) !important;
+    backdrop-filter: blur(18px) saturate(120%);
+  }
+
+  [class*="WorkspaceSwitcher_label"] {
+    display: none !important;
+  }
+
+  [class*="WorkspaceSwitcher_options"] {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-main :where(
+    .cards,
+    .kpis,
+    .metric-grid,
+    .grid-2,
+    [class*="metricGrid"],
+    [class*="summaryGrid"],
+    [class*="kpiGrid"],
+    [class*="cardGrid"],
+    [class*="twoColumn"],
+    [class*="twoColumnWide"],
+    [class*="formGrid"],
+    [class*="optionGrid"]
+  ) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .app-main :where([class*="periodMetric"]) {
+    grid-column: auto !important;
+  }
+
+  .app-main :where([class*="pageHeader"], [class*="panelHeader"], [class*="topbar"]) {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .app-main :where([class*="headerActions"], [class*="modalActions"]) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+  }
+
+  .app-main :where([class*="headerActions"] > *, [class*="modalActions"] > *) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  [class*="WorkspaceSwitcher_switcher"] {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  [class*="WorkspaceSwitcher_options"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --density-page-padding: 14px;
+    --density-section-gap: 14px;
+    --density-card-padding: 16px;
+  }
+
+  .app-main {
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+  }
+
+  .app-main :where(article, .panel, .card, .kpi, [class*="Card"], [class*="panel"]) {
+    border-radius: 17px !important;
+  }
+
+  .app-main table {
+    min-width: 620px;
+  }
+}
+/* FICONTER MOBILE EXPERIENCE FOUNDATION — END */
+
+/* FICONTER MOBILE DRAWER LAYER HOTFIX — BEGIN */
+@media (max-width: 900px) {
+  .sidebar {
+    z-index: 1350 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: translate3d(calc(-100% - 24px), 0, 0) !important;
+    pointer-events: none;
+  }
+
+  html[data-mobile-nav-open="true"] .sidebar {
+    z-index: 1350 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto;
+  }
+}
+/* FICONTER MOBILE DRAWER LAYER HOTFIX — END */

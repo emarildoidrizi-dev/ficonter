@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -77,6 +78,7 @@ export default async function BusinessLayout({
         cacheKey={business?.id ?? "none"}
       />
       <CommandPalette />
+            <MobileNavigationController workspace="business" />
       <BusinessSidebar
         businesses={businesses}
         business={business}

@@ -3,6 +3,13 @@ import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
+import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";
+import { LanguageProvider } from "@/components/LanguageProvider";
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_COOKIE_NAME,
+  LANGUAGE_STORAGE_KEY,
+} from "@/lib/i18n/config";
 import {
   APPEARANCE_VALUES,
   BACKGROUND_MOTION_VALUES,
@@ -95,17 +102,41 @@ const interfacePreferenceScript = `
   } catch (_) {}
 })();`;
 
+
+const languagePreferenceScript = `
+(function () {
+  try {
+    var supported = ["en","de","es","sq","ar","pt","it","ru"];
+    var stored = localStorage.getItem("${LANGUAGE_STORAGE_KEY}");
+    var cookieMatch = document.cookie.match(new RegExp("(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)"));
+    var language = stored || (cookieMatch ? decodeURIComponent(cookieMatch[1]) : "en");
+    language = String(language || "en").toLowerCase().split(/[-_]/)[0];
+    if (supported.indexOf(language) === -1) language = "en";
+    var rtl = language === "ar";
+    var locale = { en: "en-GB", de: "de-DE", es: "es-ES", sq: "sq-AL", ar: "ar", pt: "pt-PT", it: "it-IT", ru: "ru-RU" }[language] || "en-GB";
+    var root = document.documentElement;
+    root.lang = locale;
+    root.dir = rtl ? "rtl" : "ltr";
+    root.dataset.language = language;
+    root.dataset.direction = rtl ? "rtl" : "ltr";
+  } catch (_) {}
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en-GB" dir="ltr" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: interfacePreferenceScript }} />
+        <script dangerouslySetInnerHTML={{ __html: languagePreferenceScript }} />
       </head>
       <body>
-        <KeyboardInteractionBridge />
-        {children}
+        <LanguageProvider initialLanguage={DEFAULT_LANGUAGE}>
+          <KeyboardInteractionBridge />
+          <GlobalLanguageControl />
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

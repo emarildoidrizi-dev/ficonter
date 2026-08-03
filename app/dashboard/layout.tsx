@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
+import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -17,6 +18,7 @@ type StoredPreferences = {
   sidebarAtmosphereMode?: string;
   sidebarAtmosphereStyle?: string;
   sidebarAtmosphereMotion?: string;
+  language?: string;
 };
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
@@ -59,6 +61,8 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
       typeof value.sidebarAtmosphereMotion === "string"
         ? value.sidebarAtmosphereMotion
         : undefined,
+    language:
+      typeof value.language === "string" ? value.language : undefined,
   };
 }
 
@@ -77,6 +81,7 @@ export default async function DashboardLayout({
   return (
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
+      <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <NavigationSpeedBoost

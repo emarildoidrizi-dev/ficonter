@@ -3,6 +3,7 @@ import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
+import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
@@ -19,6 +20,7 @@ type StoredPreferences = {
   sidebarAtmosphereMode?: string;
   sidebarAtmosphereStyle?: string;
   sidebarAtmosphereMotion?: string;
+  language?: string;
 };
 
 function readInterfacePreferences(metadata: unknown): StoredPreferences {
@@ -42,6 +44,7 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     sidebarAtmosphereMode: get("sidebarAtmosphereMode"),
     sidebarAtmosphereStyle: get("sidebarAtmosphereStyle"),
     sidebarAtmosphereMotion: get("sidebarAtmosphereMotion"),
+    language: get("language"),
   };
 }
 
@@ -65,6 +68,7 @@ export default async function BusinessLayout({
   return (
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...preferences} />
+      <AuthenticatedLanguageBootstrap language={preferences.language} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <UsageHeartbeat workspace="business" />

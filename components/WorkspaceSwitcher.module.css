@@ -1,4 +1,7 @@
 .switcher {
+  position: sticky;
+  z-index: 70;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -48,4 +51,16 @@
   .switcher { align-items: stretch; flex-direction: column; }
   .options { display: grid; grid-template-columns: 1fr 1fr; }
   .options a { justify-content: center; }
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+html[dir="rtl"] .switcher {
+  direction: rtl;
+}
+@media (max-width: 640px) {
+  .controls { width: 100%; }
+  .options { flex: 1; }
 }

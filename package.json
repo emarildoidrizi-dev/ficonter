@@ -24,7 +24,8 @@
     "verify:performance-accuracy": "node scripts/verify-performance-accuracy.mjs",
     "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmospheres.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-horizon-layout.mjs",
     "verify:release-candidate": "node scripts/verify-release-candidate.mjs",
-    "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs"
+    "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs",
+    "verify:localization": "node scripts/verify-localization.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

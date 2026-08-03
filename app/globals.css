@@ -1199,3 +1199,27 @@ html[data-layout="horizon"] :where(a, button, input, select, textarea):focus-vis
     overflow: visible;
   }
 }
+
+/* FICONTER LOCALIZATION + RTL FOUNDATION */
+html[dir="rtl"] body {
+  direction: rtl;
+}
+html[dir="rtl"] .app-shell {
+  direction: rtl;
+}
+html[dir="rtl"] .app-main,
+html[dir="rtl"] .sidebar {
+  text-align: right;
+}
+html[dir="rtl"] :where(input, textarea, select) {
+  text-align: right;
+}
+html[dir="rtl"] :where(th, td) {
+  text-align: right;
+}
+html[dir="rtl"] :where(.side-link, .topbar, .panel-head, .stat-row) {
+  direction: rtl;
+}
+html[dir="rtl"] :where(svg) {
+  flex-shrink: 0;
+}

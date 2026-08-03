@@ -716,3 +716,12 @@
     animation: none !important;
   }
 }
+
+:global(html[dir="rtl"]) .navigation {
+  padding-right: 0;
+  padding-left: 2px;
+}
+:global(html[dir="rtl"]) .groupButton,
+:global(html[dir="rtl"]) .sectionLabel {
+  text-align: right;
+}

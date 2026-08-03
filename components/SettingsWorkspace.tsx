@@ -73,6 +73,9 @@ import {
   normalizeInterfaceLayout,
   type InterfaceLayoutPreference,
 } from "@/lib/interfaceLayout";
+import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
+import { LanguageSelector } from "./LanguageSelector";
+import { useLanguage } from "./LanguageProvider";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -105,7 +108,7 @@ type Preferences = {
   sidebarAtmosphereMode: SidebarAtmosphereMode;
   sidebarAtmosphereStyle: SidebarAtmosphereStyle;
   sidebarAtmosphereMotion: SidebarAtmosphereMotion;
-  language: "en";
+  language: FiconterLanguage;
   notifications: {
     billReminders: boolean;
     upcomingPayments: boolean;
@@ -149,7 +152,7 @@ const sections = [
   { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
-  { id: "language", label: "Language", description: "English by default", icon: Globe2 },
+  { id: "language", label: "Language", description: "Change the interface language", icon: Globe2 },
 ] as const;
 
 const defaultPreferences: Preferences = {
@@ -217,6 +220,7 @@ function readPreferences(metadata: Metadata): Preferences {
         ? stored.sidebarAtmosphereMotion
         : undefined,
     ),
+    language: normalizeLanguage(stored.language),
     notifications: {
       ...defaultPreferences.notifications,
       ...(stored.notifications ?? {}),
@@ -375,6 +379,7 @@ function emailChangeRedirectUrl() {
 }
 
 export function SettingsWorkspace({ userId, email, metadata, initialSection }: Props) {
+  const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
@@ -414,6 +419,12 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       setMessage(null);
     }
   }, [initialSection]);
+
+  useEffect(() => {
+    setPreferences((current) =>
+      current.language === language ? current : { ...current, language },
+    );
+  }, [language]);
 
   useEffect(() => {
     let active = true;
@@ -1317,7 +1328,17 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
         ) : null}
 
         {active === "language" ? (
-          <div className={styles.languageCard}><span className={styles.languageIcon}><Languages size={25} /></span><div><h3>English — Default</h3><p>English is the standard language for every new Ficonter account. More languages will be added after the translation system is connected.</p></div><span className={styles.defaultBadge}>Disabled for now</span></div>
+          <div className={styles.stack}>
+            <LanguageSelector variant="settings" showDetails />
+            <div className={styles.languageCard}>
+              <span className={styles.languageIcon}><Languages size={25} /></span>
+              <div>
+                <h3>Language available everywhere</h3>
+                <p>Use the globe selector in the top bar or this Settings section. Your choice changes the interface immediately and remains saved to your account.</p>
+              </div>
+              <span className={styles.defaultBadge}>Active</span>
+            </div>
+          </div>
         ) : null}
       </main>
 

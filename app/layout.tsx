@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
+import { PWARegister } from "@/components/PWARegister";
 import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import {
@@ -21,6 +22,11 @@ import {
 } from "@/lib/interfaceThemes";
 import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#13231b",
+};
 export const metadata: Metadata = {
   title: {
     default: "Ficonter",
@@ -28,6 +34,17 @@ export const metadata: Metadata = {
   },
   description: "Your private financial command center.",
   applicationName: "Ficonter",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Ficonter",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+    address: false,
+    email: false,
+  },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -134,6 +151,7 @@ export default function RootLayout({
       <body>
         <LanguageProvider initialLanguage={DEFAULT_LANGUAGE}>
           <KeyboardInteractionBridge />
+        <PWARegister />
           <GlobalLanguageControl />
           {children}
         </LanguageProvider>

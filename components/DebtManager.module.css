@@ -101,6 +101,13 @@
   }
 }
 
+
+.manualPolicyTitle {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
 /* CREDIT CARDS SHARED-LIABILITY BRIDGE — BEGIN */
 .creditCardBridge {
   display: grid;

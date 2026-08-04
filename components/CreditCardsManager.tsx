@@ -211,6 +211,13 @@ const EMPTY_PAYMENT: PaymentForm = {
   notes: "",
 };
 
+const AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03;
+
+function automaticMinimumPayment(statementBalance: unknown) {
+  const balance = Math.max(0, finiteNumber(statementBalance));
+  return Math.min(balance, roundMoney(balance * AUTOMATIC_MINIMUM_PAYMENT_RATE));
+}
+
 function money(value: unknown, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
 }
@@ -455,12 +462,15 @@ export function CreditCardsManager({
   function openStatement(card: CreditCardDebt) {
     const defaultDue = new Date();
     defaultDue.setDate(defaultDue.getDate() + 21);
+    const statementBalance = finiteNumber(
+      card.statement_balance ?? card.current_balance,
+    );
     setStatementTarget(card);
     setStatementForm({
-      statement_balance: String(card.statement_balance ?? card.current_balance),
+      statement_balance: String(statementBalance),
       statement_date: card.statement_date ?? localDateKey(),
       payment_due_date: card.payment_due_date ?? localDateKey(defaultDue),
-      minimum_payment: String(card.minimum_payment ?? 0),
+      minimum_payment: String(automaticMinimumPayment(statementBalance)),
       apr: String(card.annual_interest_rate ?? 0),
       interest_charged: String(card.interest_charged ?? 0),
     });
@@ -640,7 +650,7 @@ export function CreditCardsManager({
 
     try {
       const statementBalance = roundMoney(statementForm.statement_balance);
-      const minimumPayment = roundMoney(statementForm.minimum_payment || 0);
+      const minimumPayment = automaticMinimumPayment(statementBalance);
       const interestCharged = roundMoney(statementForm.interest_charged || 0);
       const apr = finiteNumber(statementForm.apr || 0);
 
@@ -1224,9 +1234,11 @@ export function CreditCardsManager({
                     <small>{readableDate(card.statement_date)}</small>
                   </div>
                   <div>
-                    <span>Minimum remaining</span>
-                    <strong>{money(minimumRemaining, card.currency)}</strong>
-                    <small>{paymentStatus(card)}</small>
+                    <span>Minimum payment due</span>
+                    <strong>{money(card.minimum_payment, card.currency)}</strong>
+                    <small>
+                      Automatic 3% · {money(minimumRemaining, card.currency)} still to pay · {paymentStatus(card)}
+                    </small>
                   </div>
                   <div>
                     <span>Payment due</span>
@@ -1378,8 +1390,9 @@ export function CreditCardsManager({
             <span>MONTHLY STATEMENT</span>
             <h2>Update {statementTarget.name}</h2>
             <p>
-              Enter the exact figures shown by the issuer. This reconciles the
-              shared debt balance without creating a cash transaction.
+              Enter the exact figures shown by the issuer. The minimum payment is
+              calculated automatically as 3% of the statement balance and is not
+              recorded as a purchase.
             </p>
             <div className={styles.modalGrid}>
               <label>
@@ -1389,30 +1402,30 @@ export function CreditCardsManager({
                   min="0"
                   step="0.01"
                   value={statementForm.statement_balance}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const statementBalance = event.target.value;
                     setStatementForm({
                       ...statementForm,
-                      statement_balance: event.target.value,
-                    })
-                  }
+                      statement_balance: statementBalance,
+                      minimum_payment: String(
+                        automaticMinimumPayment(statementBalance),
+                      ),
+                    });
+                  }}
                   required
                 />
               </label>
               <label>
-                Minimum payment
+                Minimum payment due — automatic 3%
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={statementForm.minimum_payment}
-                  onChange={(event) =>
-                    setStatementForm({
-                      ...statementForm,
-                      minimum_payment: event.target.value,
-                    })
-                  }
-                  required
+                  readOnly
+                  aria-readonly={true}
                 />
+                <small>Calculated automatically from the statement balance.</small>
               </label>
               <label>
                 Statement date

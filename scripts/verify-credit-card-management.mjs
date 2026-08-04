@@ -51,6 +51,38 @@ check(manager.includes('activity_type !== "statement_adjustment"'), "Confirmed s
 check(exportSource.includes('| "credit_card_activities"'), "Account export includes credit-card activity.");
 check(settings.includes('"credit_card_activities"'), "JSON/PDF account archive loads credit-card activity.");
 
+const minimumMigration = read("supabase/credit_card_minimum_payment_3_percent.sql");
+
+check(
+  manager.includes("AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03"),
+  "Minimum payment is calculated automatically at 3%."
+);
+check(
+  manager.includes("<span>Minimum payment due</span>"),
+  "Credit-card cards use the clear Minimum payment due label."
+);
+check(
+  !manager.includes("<span>Minimum remaining</span>"),
+  "The confusing Minimum remaining label has been removed."
+);
+check(
+  manager.includes("automaticMinimumPayment(statementBalance)"),
+  "Statement saving derives minimum payment from statement balance."
+);
+check(
+  manager.includes("readOnly") &&
+    manager.includes("Minimum payment due — automatic 3%"),
+  "The statement form displays a protected automatic 3% amount."
+);
+check(
+  minimumMigration.includes("new.statement_balance * 0.03"),
+  "Supabase enforces the 3% minimum-payment rule."
+);
+check(
+  minimumMigration.includes("credit_card_minimum_payment_3_percent"),
+  "The 3% database trigger is included."
+);
+
 if (failures) {
   console.error(`\n${failures} Credit Cards verification check(s) failed.`);
   process.exit(1);

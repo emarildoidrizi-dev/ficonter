@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import {
+  ArrowRight,
   Banknote,
   CheckCircle2,
   CreditCard,
@@ -18,7 +20,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate, getExchangeRate } from "@/lib/performance/exchangeRateCache";
-import { finiteNumber, roundMoney, roundRate, subtractMoney, sumMoney } from "@/lib/finance/money";
+import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import {
   CURRENCY_CODES,
   currencyName,
@@ -85,7 +87,6 @@ type DebtPayment = {
 };
 
 const CATEGORIES: DebtCategory[] = [
-  "Credit card",
   "Personal loan",
   "Mortgage",
   "Student loan",
@@ -116,7 +117,7 @@ const EMPTY_DEBT = {
   name: "",
   lender: "",
   description: "",
-  category: "Credit card" as DebtCategory,
+  category: "Personal loan" as DebtCategory,
   original_balance: "",
   current_balance: "",
   currency: "EUR",
@@ -269,6 +270,7 @@ export function DebtManager({
     const timezone = browserTimezone();
     const candidates = debts.filter(
       (debt) =>
+        debt.category !== "Credit card" &&
         debt.status === "active" &&
         finiteNumber(debt.current_balance) > 0 &&
         finiteNumber(debt.minimum_payment) > 0 &&
@@ -329,23 +331,36 @@ export function DebtManager({
   }, [debts, supabase, userId]);
 
   const activeDebts = debts.filter((debt) => debt.status !== "paid_off");
+  const creditCardDebts = debts.filter(
+    (debt) => debt.category === "Credit card" && debt.status !== "paid_off",
+  );
+  const standardDebts = debts.filter((debt) => debt.category !== "Credit card");
   const totals = useMemo(() => {
     const outstanding = sumMoney(
       activeDebts.map((debt) => debt.current_balance_eur),
     );
-    const original = sumMoney(
-      debts.map((debt) => debt.original_balance_eur),
-    );
     const minimum = sumMoney(
       activeDebts.map((debt) => debt.minimum_payment_eur),
     );
-    const paid = Math.max(0, subtractMoney(original, outstanding));
-    return { outstanding, original, minimum, paid };
-  }, [debts]);
+    const paid = sumMoney(payments.map((payment) => payment.amount_eur));
+    const creditCardOutstanding = sumMoney(
+      creditCardDebts.map((debt) => debt.current_balance_eur),
+    );
+    const creditCardMinimum = sumMoney(
+      creditCardDebts.map((debt) => debt.minimum_payment_eur),
+    );
+    return {
+      outstanding,
+      minimum,
+      paid,
+      creditCardOutstanding,
+      creditCardMinimum,
+    };
+  }, [activeDebts, creditCardDebts, payments]);
 
   const filteredDebts = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return debts
+    return standardDebts
       .filter((debt) => {
         const text =
           `${debt.name} ${debt.lender ?? ""} ${debt.description ?? ""} ${
@@ -358,7 +373,7 @@ export function DebtManager({
         );
       })
       .sort((a, b) => finiteNumber(b.current_balance_eur) - finiteNumber(a.current_balance_eur));
-  }, [debts, search, categoryFilter, statusFilter]);
+  }, [standardDebts, search, categoryFilter, statusFilter]);
 
   function resetDebtForm() {
     setForm({
@@ -592,8 +607,9 @@ export function DebtManager({
         <div>
           <h1>Debts</h1>
           <p>
-            Track every liability and automatically record scheduled minimum
-            repayments across Transactions, Monthly Planner and Net Worth.
+            Manage loans, instalments and fixed repayment liabilities. Credit
+            cards remain included in Total Debt but are managed in their own
+            synchronized section.
           </p>
         </div>
         <button
@@ -633,6 +649,25 @@ export function DebtManager({
         </article>
       </div>
 
+      <Link className={styles.creditCardBridge} href="/dashboard/credit-cards">
+        <span className={styles.bridgeIcon}>
+          <CreditCard size={22} />
+        </span>
+        <span className={styles.bridgeCopy}>
+          <small>CREDIT-CARD DEBT</small>
+          <strong>{money(totals.creditCardOutstanding)}</strong>
+          <span>
+            {creditCardDebts.length} active {creditCardDebts.length === 1 ? "card" : "cards"}
+            {totals.creditCardMinimum > 0
+              ? ` · ${money(totals.creditCardMinimum)} minimum due`
+              : ""}
+          </span>
+        </span>
+        <span className={styles.bridgeAction}>
+          Manage credit cards <ArrowRight size={17} />
+        </span>
+      </Link>
+
       {showForm && (
         <form className={styles.formCard} onSubmit={saveDebt}>
           <div className={styles.formHeading}>
@@ -653,7 +688,7 @@ export function DebtManager({
               <input
                 value={form.name}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="e.g. TF Bank credit card"
+                placeholder="e.g. Personal loan or sofa financing"
                 required
               />
             </label>
@@ -846,7 +881,7 @@ export function DebtManager({
               ? "Saving…"
               : editingId
                 ? "Save changes"
-                : "Save automatic debt"}
+                : "Save debt schedule"}
           </button>
         </form>
       )}
@@ -857,7 +892,7 @@ export function DebtManager({
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search debt, lender, category or description"
+            placeholder="Search loan, lender, category or description"
           />
         </label>
         <select
@@ -1010,8 +1045,8 @@ export function DebtManager({
         ) : (
           <div className={styles.emptyState}>
             <CreditCard size={34} />
-            <h3>No debt accounts found</h3>
-            <p>Add a debt or change the current filters.</p>
+            <h3>No loan or instalment debts found</h3>
+            <p>Add a fixed debt or change the current filters. Credit cards are managed separately.</p>
           </div>
         )}
       </div>

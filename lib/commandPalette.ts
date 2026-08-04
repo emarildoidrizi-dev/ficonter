@@ -105,6 +105,14 @@ export const FICONTER_COMMANDS: CommandPaletteItem[] = [
     keywords: ["loan", "credit", "repayment"],
   },
   {
+    id: "credit-cards",
+    label: "Credit Cards",
+    description: "Manage card balances, statements, interest and payments.",
+    href: "/dashboard/credit-cards",
+    group: "Financial progress",
+    keywords: ["card", "apr", "minimum payment", "statement", "interest"],
+  },
+  {
     id: "goals",
     label: "Goals",
     description: "Open financial targets and contributions.",

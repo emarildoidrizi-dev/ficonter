@@ -11,6 +11,7 @@ import {
   ChartNoAxesCombined,
   ChevronRight,
   CirclePlus,
+  CreditCard,
   FileText,
   Goal,
   HandCoins,
@@ -102,6 +103,12 @@ const personalRoutes: RouteItem[] = [
     label: "Debt",
     title: "Debt",
     icon: Landmark,
+  },
+  {
+    href: "/dashboard/credit-cards",
+    label: "Credit cards",
+    title: "Credit Cards",
+    icon: CreditCard,
   },
   {
     href: "/dashboard/goals",
@@ -319,7 +326,7 @@ export function FiconterNativeAppChrome({
           personalRoutes[0],
           personalRoutes[1],
           personalRoutes[2],
-          personalRoutes[15],
+          personalRoutes[16],
         ];
 
   const addHref =

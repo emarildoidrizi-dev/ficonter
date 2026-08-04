@@ -27,7 +27,7 @@ export default async function CreditCardsPage() {
     supabase
       .from("credit_card_activities")
       .select(
-        "id,debt_id,user_id,activity_type,description,amount,currency,amount_eur,exchange_rate_to_eur,balance_effect,balance_effect_eur,occurred_at,notes,transaction_id,created_at",
+        "id,debt_id,user_id,activity_type,description,amount,currency,amount_eur,exchange_rate_to_eur,balance_effect,balance_effect_eur,occurred_at,notes,created_at",
       )
       .eq("user_id", user.id)
       .order("occurred_at", { ascending: false }),

@@ -43,7 +43,6 @@ export type TransactionForPreset = {
   category: string;
   occurred_at?: string | null;
   transaction_date: string;
-  credit_card_debt_id?: string | null;
 };
 
 export const ENTRY_MODE_OPTIONS: Array<{
@@ -126,7 +125,6 @@ export function createRecentPresets(
   const presets: TransactionPreset[] = [];
 
   for (const transaction of transactions) {
-    if (transaction.credit_card_debt_id) continue;
     const type = normalizedType(transaction.type);
     const currency = transaction.currency || "EUR";
     const signature = [

@@ -46,7 +46,6 @@ type Transaction = {
   exchange_rate_to_eur: number | string;
   exchange_rate_date: string | null;
   exchange_rate_source: string | null;
-  credit_card_debt_id: string | null;
 };
 
 type Props = { transactions: Transaction[] };
@@ -78,8 +77,6 @@ const toLocalDateTimeInput = (value: string | null, fallbackDate: string) => {
 const csvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
 const directionOf = (type: string): FlowDirection => TYPE_BY_VALUE[type]?.direction ?? (type === "income" ? "inflow" : "outflow");
 const typeLabel = (type: string) => TYPE_BY_VALUE[type]?.label ?? type.replaceAll("_", " ");
-const transactionTypeLabel = (transaction: Transaction) =>
-  transaction.credit_card_debt_id ? "Credit Card Expense" : typeLabel(transaction.type);
 
 const groupedTypes = TRANSACTION_TYPES.reduce<Record<string, typeof TRANSACTION_TYPES>>(
   (groups, option) => {
@@ -231,7 +228,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
           !query ||
           item.description.toLowerCase().includes(query) ||
           item.category.toLowerCase().includes(query) ||
-          transactionTypeLabel(item).toLowerCase().includes(query) ||
+          typeLabel(item.type).toLowerCase().includes(query) ||
           (item.currency || "EUR").toLowerCase().includes(query);
         const matchesDirection = directionFilter === "all" || directionOf(item.type) === directionFilter;
         const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
@@ -370,7 +367,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       item.description,
       item.category,
       item.occurred_at ?? item.transaction_date,
-      transactionTypeLabel(item),
+      typeLabel(item.type),
       directionOf(item.type),
       item.currency,
       finiteNumber(item.amount).toFixed(2),
@@ -408,7 +405,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         items.map((transaction) => ({
           description: transaction.description,
           category: transaction.category,
-          type: transactionTypeLabel(transaction),
+          type: typeLabel(transaction.type),
           direction: directionOf(transaction.type),
           currency: transaction.currency || "EUR",
           amount: finiteNumber(transaction.amount),
@@ -489,14 +486,10 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         deleted_transaction_count?: number;
         deleted_bill_count?: number;
         reversed_debt_payment_count?: number;
-        reversed_credit_card_activity_count?: number;
       } | null;
       const deletedBillCount = Number(result?.deleted_bill_count ?? 0);
       const reversedDebtPaymentCount = Number(
         result?.reversed_debt_payment_count ?? 0,
-      );
-      const reversedCardActivityCount = Number(
-        result?.reversed_credit_card_activity_count ?? 0,
       );
       const deletedIdSet = new Set(ids);
       setTransactions((current) => current.filter((item) => !deletedIdSet.has(item.id)));
@@ -521,23 +514,10 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             } reversed`,
           );
         }
-        if (reversedCardActivityCount > 0) {
-          linkedChanges.push(
-            `${reversedCardActivityCount} credit-card ${
-              reversedCardActivityCount === 1 ? "purchase" : "purchases"
-            } reversed`,
-          );
-        }
         setNotice(
           linkedChanges.length
             ? `${ids.length} transactions deleted; ${linkedChanges.join(" and ")}.`
             : `${ids.length} transactions deleted.`,
-        );
-      } else if (reversedCardActivityCount > 0) {
-        setNotice(
-          reversedCardActivityCount === 1
-            ? "Card expense deleted and the credit-card balance restored."
-            : "Card expenses deleted and their credit-card balances restored.",
         );
       } else if (deletedBillCount > 0 && reversedDebtPaymentCount > 0) {
         setNotice(
@@ -607,7 +587,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       exchange_rate_to_eur: roundRate(editRate.rate),
       exchange_rate_date: editRate.date,
       exchange_rate_source: editRate.source,
-      type: editTarget.credit_card_debt_id ? "expense" : String(form.get("type")),
+      type: String(form.get("type")),
       category: finalCategory,
       transaction_date: editOccurredAt.slice(0, 10),
       occurred_at: occurred.toISOString(),
@@ -616,7 +596,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
       .from("transactions")
       .update(update)
       .eq("id", editTarget.id)
-      .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at,credit_card_debt_id")
+      .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
       .single();
     if (updateError) setError(updateError.message);
     else if (data) {
@@ -717,7 +697,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
                 />
               </label>
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
-              <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {transactionTypeLabel(transaction)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
+              <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
                 <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{formatCurrency(finiteNumber(transaction.amount_eur ?? transaction.amount), "EUR")}</strong>
                 <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${finiteNumber(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
@@ -753,17 +733,9 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
               <label>Description<input name="description" defaultValue={editTarget.description} required /></label>
               <div className={styles.formGrid}>
                 <label>Amount<input name="amount" type="number" min="0.01" step="0.01" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} required /></label>
-                <label>Currency<select name="currency" value={editCurrency} disabled={Boolean(editTarget.credit_card_debt_id)} onChange={(event) => setEditCurrency(event.target.value)}>{CURRENCY_CODES.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
+                <label>Currency<select name="currency" value={editCurrency} onChange={(event) => setEditCurrency(event.target.value)}>{CURRENCY_CODES.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
               </div>
-              {editTarget.credit_card_debt_id ? (
-                <label>
-                  Transaction type
-                  <input value="Credit Card Expense" readOnly />
-                  <input name="type" type="hidden" value="expense" />
-                </label>
-              ) : (
-                <label>Transaction type<select name="type" defaultValue={editTarget.type}>{Object.entries(groupedTypes).map(([group, options]) => <optgroup key={group} label={group}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
-              )}
+              <label>Transaction type<select name="type" defaultValue={editTarget.type}>{Object.entries(groupedTypes).map(([group, options]) => <optgroup key={group} label={group}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
               <div className={styles.formGrid}>
                 <label>Category<select value={editCategory} onChange={(event) => setEditCategory(event.target.value)}>{CATEGORY_GROUPS.map((group) => <optgroup key={group.group} label={group.group}>{group.items.map((item) => <option key={item} value={item}>{item}</option>)}</optgroup>)}</select></label>
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
@@ -781,7 +753,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         <div className={styles.backdrop} onMouseDown={() => !loading && setDeleteTarget(null)}>
           <div className={`${styles.modal} ${styles.smallModal}`} onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true">
             <button className={styles.close} type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
-            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. Linked Bills are removed, linked debt payments are reversed, and a linked credit-card purchase restores the card balance and removes its activity record.</p>
+            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. A linked Bill will also be removed. If this is a debt-payment transaction, the payment will be reversed and the outstanding debt balance restored.</p>
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
           </div>
@@ -794,7 +766,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
             <button className={styles.close} type="button" onClick={() => setBulkDeleteOpen(false)}><X size={18} /></button>
             <small>PERMANENT BULK ACTION</small>
             <h3 id="bulk-delete-title">Delete {selectedTransactions.length} transactions?</h3>
-            <p>The selected transactions will be permanently removed. Linked Bills will be deleted, linked debt payments will be reversed, and linked credit-card purchases will restore their card balances and activity history atomically.</p>
+            <p>The selected transactions will be permanently removed. Linked Bills will be deleted, while linked debt payments will be reversed and their outstanding balances restored in the same atomic action.</p>
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}>
               <button type="button" onClick={() => setBulkDeleteOpen(false)} disabled={loading}>Cancel</button>

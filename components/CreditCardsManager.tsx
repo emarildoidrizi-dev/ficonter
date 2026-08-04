@@ -96,6 +96,7 @@ type CreditCardActivity = {
   balance_effect_eur: number | string;
   occurred_at: string;
   notes: string | null;
+  transaction_id: string | null;
   created_at: string;
 };
 

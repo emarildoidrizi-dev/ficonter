@@ -14,7 +14,6 @@ import type {
 import {
   CATEGORY_GROUPS,
   CURRENCY_CODES,
-  TRANSACTION_TYPES,
   currencyName,
   currencySymbol,
   formatCurrency,
@@ -31,7 +30,17 @@ type RateState = {
   source: string;
 };
 
-type TransactionKind = "expense" | "income" | "saving";
+type TransactionKind = "expense" | "income" | "saving" | "credit_card";
+
+type CreditCardOption = {
+  id: string;
+  name: string;
+  lender: string | null;
+  card_last_four: string | null;
+  currency: string;
+  current_balance: number | string;
+  status: string;
+};
 
 type Props = {
   initialType?: TransactionKind;
@@ -47,6 +56,16 @@ function categoryForType(type: TransactionKind) {
   if (type === "saving") return "General savings";
   return "Groceries";
 }
+
+const TRANSACTION_ENTRY_TYPES: Array<{
+  value: TransactionKind;
+  label: string;
+}> = [
+  { value: "expense", label: "Expense" },
+  { value: "income", label: "Income" },
+  { value: "saving", label: "Saving" },
+  { value: "credit_card", label: "Credit Card" },
+];
 
 const QUICK_CATEGORIES: Record<TransactionKind, string[]> = {
   expense: [
@@ -73,11 +92,20 @@ const QUICK_CATEGORIES: Record<TransactionKind, string[]> = {
     "Retirement",
     "Other / custom",
   ],
+  credit_card: [
+    "Groceries",
+    "Restaurants",
+    "Public transport",
+    "Fuel",
+    "Shopping",
+    "Other / custom",
+  ],
 };
 
 function actionLabel(type: TransactionKind) {
   if (type === "income") return "Add income";
   if (type === "saving") return "Add saving";
+  if (type === "credit_card") return "Add card expense";
   return "Add expense";
 }
 
@@ -125,6 +153,74 @@ export function TransactionForm({
   });
   const [rateLoading, setRateLoading] = useState(false);
   const [rateError, setRateError] = useState("");
+  const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
+  const [creditCardsLoading, setCreditCardsLoading] = useState(true);
+  const [creditCardId, setCreditCardId] = useState("");
+
+  const selectedCreditCard = useMemo(
+    () => creditCards.find((card) => card.id === creditCardId) ?? null,
+    [creditCardId, creditCards],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function loadCreditCards() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!mounted || !user) {
+        if (mounted) setCreditCardsLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("debts")
+        .select("id,name,lender,card_last_four,currency,current_balance,status")
+        .eq("user_id", user.id)
+        .ilike("category", "credit card")
+        .neq("status", "paid_off")
+        .order("name", { ascending: true });
+
+      if (!mounted) return;
+      const cards = (data ?? []) as CreditCardOption[];
+      setCreditCards(cards);
+      setCreditCardId((current) => {
+        const next = cards.some((card) => card.id === current)
+          ? current
+          : cards[0]?.id ?? "";
+        const selected = cards.find((card) => card.id === next);
+        if (selected && type === "credit_card") setCurrency(selected.currency);
+        return next;
+      });
+      setCreditCardsLoading(false);
+    }
+
+    void loadCreditCards();
+
+    async function subscribe() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!mounted || !user) return;
+      channel = supabase
+        .channel(`transaction-credit-cards-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "debts",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => void loadCreditCards(),
+        )
+        .subscribe();
+    }
+
+    void subscribe();
+    return () => {
+      mounted = false;
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [supabase, type]);
 
   const currencyOptions = useMemo(
     () =>
@@ -187,6 +283,18 @@ export function TransactionForm({
     setCategory(categoryForType(nextType));
     setCustomCategory("");
     setShowAllCategories(false);
+
+    if (nextType === "credit_card") {
+      const card = selectedCreditCard ?? creditCards[0] ?? null;
+      if (card) {
+        setCreditCardId(card.id);
+        setCurrency(card.currency);
+      }
+      setRememberFavorite(false);
+      setRepeatMonthly(false);
+    } else if (type === "credit_card") {
+      setCurrency("EUR");
+    }
   }
 
   function continueGuidedEntry() {
@@ -197,6 +305,10 @@ export function TransactionForm({
     }
     if (category === "Other / custom" && !customCategory.trim()) {
       setError("Enter your custom category before continuing.");
+      return;
+    }
+    if (type === "credit_card" && !selectedCreditCard) {
+      setError("Choose the credit card used for this purchase.");
       return;
     }
     setError("");
@@ -220,6 +332,7 @@ export function TransactionForm({
     finalCategory: string;
     originalAmount: number;
   }): Promise<string | null> {
+    if (type === "credit_card") return null;
     if (!rememberFavorite && !repeatMonthly) return null;
 
     const label = templateLabel.trim() || finalDescription || finalCategory;
@@ -321,33 +434,67 @@ export function TransactionForm({
         throw new Error("Choose a monthly repeat day between 1 and 31.");
       }
 
-      const payload = {
-        user_id: user.id,
-        description: finalDescription,
-        amount: originalAmount,
-        currency,
-        amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
-        exchange_rate_to_eur: roundRate(rate.rate),
-        exchange_rate_date: rate.date,
-        exchange_rate_source: rate.source,
-        type,
-        category: finalCategory,
-        transaction_date: resolvedOccurredAt.slice(0, 10),
-        occurred_at: localInstant.toISOString(),
-      };
+      let savedTransaction: (Record<string, unknown> & { id: string }) | null = null;
 
-      const { data: savedTransaction, error: insertError } = await supabase
-        .from("transactions")
-        .insert(payload)
-        .select("*")
-        .single();
+      if (type === "credit_card") {
+        if (!selectedCreditCard) {
+          throw new Error("Choose the credit card used for this purchase.");
+        }
+        if (currency !== selectedCreditCard.currency) {
+          throw new Error(
+            `Enter the amount charged to the card in ${selectedCreditCard.currency}.`,
+          );
+        }
 
-      if (insertError) throw insertError;
-      if (!savedTransaction) {
+        const { data: result, error: cardExpenseError } = await supabase.rpc(
+          "record_credit_card_transaction",
+          {
+            p_debt_id: selectedCreditCard.id,
+            p_description: finalDescription,
+            p_category: finalCategory,
+            p_amount: originalAmount,
+            p_amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+            p_exchange_rate: roundRate(rate.rate),
+            p_exchange_rate_date: rate.date,
+            p_transaction_date: resolvedOccurredAt.slice(0, 10),
+            p_occurred_at: localInstant.toISOString(),
+          },
+        );
+
+        if (cardExpenseError) throw cardExpenseError;
+        const response = result as { transaction?: Record<string, unknown> } | null;
+        savedTransaction = (response?.transaction as (Record<string, unknown> & { id: string }) | undefined) ?? null;
+      } else {
+        const payload = {
+          user_id: user.id,
+          description: finalDescription,
+          amount: originalAmount,
+          currency,
+          amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+          exchange_rate_to_eur: roundRate(rate.rate),
+          exchange_rate_date: rate.date,
+          exchange_rate_source: rate.source,
+          type,
+          category: finalCategory,
+          transaction_date: resolvedOccurredAt.slice(0, 10),
+          occurred_at: localInstant.toISOString(),
+        };
+
+        const { data, error: insertError } = await supabase
+          .from("transactions")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (insertError) throw insertError;
+        savedTransaction = data as (Record<string, unknown> & { id: string }) | null;
+      }
+
+      if (!savedTransaction?.id) {
         throw new Error("The saved transaction could not be returned.");
       }
 
-      if (preset?.templateId && preset.periodKey) {
+      if (type !== "credit_card" && preset?.templateId && preset.periodKey) {
         const { error: postingError } = await supabase
           .from("transaction_template_postings")
           .insert({
@@ -366,7 +513,7 @@ export function TransactionForm({
         }
       }
 
-      const templateWarning = await createReusableTemplate({
+      const templateWarning = type === "credit_card" ? null : await createReusableTemplate({
         supabase,
         userId: user.id,
         transactionId: savedTransaction.id,
@@ -383,9 +530,11 @@ export function TransactionForm({
       );
 
       setNotice(
-        templateWarning
-          ? "Transaction saved, but the reusable shortcut could not be created."
-          : "Saved. Your connected financial views are updating now.",
+        type === "credit_card"
+          ? "Card expense saved in Transactions and Credit Card activity."
+          : templateWarning
+            ? "Transaction saved, but the reusable shortcut could not be created."
+            : "Saved. Your connected financial views are updating now.",
       );
       setAmount("");
       setDescription("");
@@ -415,26 +564,58 @@ export function TransactionForm({
 
   const typeSelector = (
     <div className="transaction-type-buttons" role="group" aria-label="Transaction type">
-      {TRANSACTION_TYPES.map((option) => {
-        const optionType = option.value as TransactionKind;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            className={type === option.value ? "is-active" : ""}
-            aria-pressed={type === option.value}
-            onClick={() => changeType(optionType)}
-          >
-            {option.value === "expense"
-              ? "Expense"
-              : option.value === "income"
-                ? "Income"
-                : "Saving"}
-          </button>
-        );
-      })}
+      {TRANSACTION_ENTRY_TYPES.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={type === option.value ? "is-active" : ""}
+          aria-pressed={type === option.value}
+          onClick={() => changeType(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
+
+  const creditCardSelector = type === "credit_card" ? (
+    <div className="field">
+      <label>Credit card used</label>
+      {creditCardsLoading ? (
+        <div className="input">Loading your credit cards…</div>
+      ) : creditCards.length ? (
+        <>
+          <select
+            className="input"
+            value={creditCardId}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+              const nextId = event.target.value;
+              const nextCard = creditCards.find((card) => card.id === nextId);
+              setCreditCardId(nextId);
+              if (nextCard) setCurrency(nextCard.currency);
+            }}
+            required
+          >
+            {creditCards.map((card) => (
+              <option key={card.id} value={card.id}>
+                {card.name}
+                {card.card_last_four ? ` · •••• ${card.card_last_four}` : ""}
+                {` · ${card.currency}`}
+              </option>
+            ))}
+          </select>
+          <small className="muted">
+            Enter the amount posted to this card. Saving creates one linked
+            expense and one card-activity record.
+          </small>
+        </>
+      ) : (
+        <div className="alert alert-error">
+          Add an active credit card in the Credit Cards section first.
+        </div>
+      )}
+    </div>
+  ) : null;
 
   const categorySelect = (
     <>
@@ -603,6 +784,8 @@ export function TransactionForm({
           {typeSelector}
         </div>
 
+        {creditCardSelector}
+
         <div className="effortless-simple-amount">
           <label htmlFor="simple-amount">Amount</label>
           <div>
@@ -690,7 +873,7 @@ export function TransactionForm({
         {statusMessages}
         <button
           className="btn btn-primary effortless-primary-action"
-          disabled={loading || rateLoading || Boolean(rateError)}
+          disabled={loading || rateLoading || Boolean(rateError) || (type === "credit_card" && !selectedCreditCard)}
         >
           {loading
             ? "Saving…"
@@ -761,7 +944,16 @@ export function TransactionForm({
                 <strong>Saving</strong>
                 <span>Money intentionally moved toward future security.</span>
               </button>
+              <button
+                type="button"
+                className={type === "credit_card" ? "is-active" : ""}
+                onClick={() => changeType("credit_card")}
+              >
+                <strong>Credit Card</strong>
+                <span>Record a purchase and update the selected card instantly.</span>
+              </button>
             </div>
+            {creditCardSelector}
             <button
               type="button"
               className="btn btn-primary effortless-primary-action"
@@ -769,6 +961,7 @@ export function TransactionForm({
                 setError("");
                 setGuidedStep(2);
               }}
+              disabled={type === "credit_card" && !selectedCreditCard}
             >
               Continue <ArrowRight size={16} />
             </button>
@@ -839,7 +1032,7 @@ export function TransactionForm({
 
             <div className="effortless-guided-summary">
               <div>
-                <span>{type === "expense" ? "Expense" : type === "income" ? "Income" : "Saving"}</span>
+                <span>{type === "expense" ? "Expense" : type === "income" ? "Income" : type === "saving" ? "Saving" : "Credit Card"}</span>
                 <strong>{category === "Other / custom" ? customCategory : category}</strong>
               </div>
               <strong>{formatCurrency(finiteNumber(amount), currency)}</strong>
@@ -866,6 +1059,7 @@ export function TransactionForm({
                   className="input"
                   name="currency"
                   value={currency}
+                  disabled={type === "credit_card"}
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setCurrency(event.target.value)
                   }
@@ -894,7 +1088,7 @@ export function TransactionForm({
             </div>
 
             {exchangePreview}
-            {reusableSettings}
+            {type !== "credit_card" && reusableSettings}
             {statusMessages}
 
             <div className="effortless-guided-actions">
@@ -910,7 +1104,7 @@ export function TransactionForm({
               </button>
               <button
                 className="btn btn-primary"
-                disabled={loading || rateLoading || Boolean(rateError)}
+                disabled={loading || rateLoading || Boolean(rateError) || (type === "credit_card" && !selectedCreditCard)}
               >
                 {loading
                   ? "Saving…"
@@ -947,6 +1141,8 @@ export function TransactionForm({
         <label>Money movement</label>
         {typeSelector}
       </div>
+
+      {creditCardSelector}
 
       <div className="transaction-form-grid transaction-form-grid-amount">
         <div className="field">
@@ -994,6 +1190,7 @@ export function TransactionForm({
             className="input"
             name="currency"
             value={currency}
+            disabled={type === "credit_card"}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setCurrency(event.target.value)
             }
@@ -1022,18 +1219,18 @@ export function TransactionForm({
       </div>
 
       {exchangePreview}
-      {reusableSettings}
+      {type !== "credit_card" && reusableSettings}
       {statusMessages}
 
       <button
         className="btn btn-primary effortless-primary-action"
-        disabled={loading || rateLoading || Boolean(rateError)}
+        disabled={loading || rateLoading || Boolean(rateError) || (type === "credit_card" && !selectedCreditCard)}
       >
         {loading
           ? "Saving…"
           : rateLoading
             ? "Retrieving rate…"
-            : "Save complete transaction"}
+            : actionLabel(type)}
       </button>
     </form>
   );

@@ -27,7 +27,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
+    .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at,credit_card_debt_id")
     .eq("user_id", user.id)
     .order("occurred_at", { ascending: false });
 

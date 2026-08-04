@@ -417,17 +417,30 @@ export function FiconterNativeAppChrome({
     if (signingOut) return;
 
     setSigningOut(true);
+    setDrawerOpen(false);
+
+    const root = document.documentElement;
+
+    root.dataset.ficonterAppDrawer = "closed";
+    root.removeAttribute("data-ficonter-route-loading");
+    root.removeAttribute("data-mobile-nav-open");
+
+    document.documentElement.style.removeProperty("overflow");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("pointer-events");
 
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       setSigningOut(false);
+      synchronizeNativeAppMode();
       return;
     }
 
-    setDrawerOpen(false);
-    router.replace("/login");
-    router.refresh();
+    root.removeAttribute("data-ficonter-native-app");
+    root.removeAttribute("data-ficonter-pwa-phone");
+
+    window.location.replace("/login");
   }
 
   return (

@@ -243,6 +243,10 @@ export function NavigationSpeedBoost({
         window.clearTimeout(loadingTimer.current);
         loadingTimer.current = null;
       }
+
+      document.documentElement.removeAttribute(
+        "data-ficonter-route-loading",
+      );
     };
   }, [pathname, router]);
 

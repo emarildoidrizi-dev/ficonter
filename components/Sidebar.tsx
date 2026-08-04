@@ -11,6 +11,7 @@ import {
   CircleHelp,
   CreditCard,
   FileArchive,
+  Landmark,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -22,6 +23,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  TrendingUp,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -100,8 +102,10 @@ const standardGroups = [
     key: "financial-progress",
     label: "Financial progress",
     links: [
-      ["/dashboard/debt", CreditCard, "Debts"],
+      ["/dashboard/debt", Landmark, "Debts"],
+      ["/dashboard/credit-cards", CreditCard, "Credit Cards"],
       ["/dashboard/goals", Target, "Goals"],
+      ["/dashboard/net-worth", TrendingUp, "Net Worth"],
     ],
   },
   {
@@ -154,7 +158,9 @@ export function Sidebar({
       isRouteActive(pathname, "/dashboard/insights"),
     "financial-progress":
       isRouteActive(pathname, "/dashboard/debt") ||
-      isRouteActive(pathname, "/dashboard/goals"),
+      isRouteActive(pathname, "/dashboard/credit-cards") ||
+      isRouteActive(pathname, "/dashboard/goals") ||
+      isRouteActive(pathname, "/dashboard/net-worth"),
     resources: isRouteActive(pathname, "/dashboard/documents"),
     administration:
       isRouteActive(pathname, "/dashboard/admin") ||

@@ -787,6 +787,8 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       "goal_investments",
       "debts",
       "debt_payments",
+      "credit_card_activities",
+      "credit_card_monthly_records",
       "monthly_budget_plans",
       "monthly_budget_items",
       "financial_documents",
@@ -815,7 +817,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
     ]);
 
     return {
-      schema_version: "1.2",
+      schema_version: "1.4",
       export_type: "ficonter-account-archive",
       exported_at: new Date().toISOString(),
       privacy: {
@@ -879,7 +881,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       setConfirmation("");
       notifyFiconterDataChange("all");
       showSuccess(
-        "All transactions, bills, goals, debts and planner records were deleted. Your account remains active.",
+        "All transactions, bills, goals, debts, credit cards and planner records were deleted. Your account remains active.",
       );
     } catch (error) {
       showError(error, "Financial records could not be deleted.");
@@ -1345,7 +1347,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       {dialog ? <Modal title={dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
         {dialog === "privacy" ? <div className={styles.modalCopy}><p>Ficonter stores the profile and financial records required to provide your private finance workspace. Account preferences are stored in your authenticated user metadata. Financial data is protected by Supabase row-level access controls.</p><p>Ficonter does not become a bank, move funds or provide credit decisions.</p></div> : null}
         {dialog === "retention" ? <div className={styles.modalCopy}><p>Your records remain available while your account is active. You may export them at any time. Deleting financial records removes the selected financial tables while preserving your login. Deleting your account removes the account and associated data permanently.</p></div> : null}
-        {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, goals, debt records and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button type="button" data-enter-confirm="true" className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
+        {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, goals, debt and credit-card records, and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button type="button" data-enter-confirm="true" className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
         {dialog === "delete-account" ? <div className={styles.modalCopy}><p>This permanently removes your Ficonter account and all associated records. This action cannot be undone.</p><label>Type <strong>DELETE ACCOUNT</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button type="button" data-enter-confirm="true" className={styles.dangerButton} disabled={confirmation !== "DELETE ACCOUNT" || loading} onClick={deleteAccount}>{loading ? "Deleting…" : "Delete account permanently"}</button></div> : null}
       </Modal> : null}
     </div>

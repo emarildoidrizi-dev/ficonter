@@ -25,6 +25,7 @@ const personalCriticalRoutes = [
 const personalSecondaryRoutes = [
   "/dashboard/savings",
   "/dashboard/debt",
+  "/dashboard/credit-cards",
   "/dashboard/goals",
   "/dashboard/net-worth",
   "/dashboard/cash-flow",

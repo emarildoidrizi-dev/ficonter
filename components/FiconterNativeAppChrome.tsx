@@ -377,7 +377,7 @@ export function FiconterNativeAppChrome({
           aria-label="Open app navigation"
           aria-expanded={drawerOpen}
         >
-          <Menu size={22} aria-hidden="true" />
+          <Menu size={22} aria-hidden={true} />
         </button>
 
         <div className={styles.routeIdentity}>
@@ -411,7 +411,7 @@ export function FiconterNativeAppChrome({
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={21} aria-hidden="true" />
+              <Icon size={21} aria-hidden={true} />
               <span>{item.label}</span>
             </Link>
           );
@@ -426,7 +426,7 @@ export function FiconterNativeAppChrome({
               : "Add transaction"
           }
         >
-          <CirclePlus size={27} aria-hidden="true" />
+          <CirclePlus size={27} aria-hidden={true} />
         </Link>
 
         {primaryItems.slice(2, 3).map((item) => {
@@ -446,7 +446,7 @@ export function FiconterNativeAppChrome({
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={21} aria-hidden="true" />
+              <Icon size={21} aria-hidden={true} />
               <span>{item.label}</span>
             </Link>
           );
@@ -458,7 +458,7 @@ export function FiconterNativeAppChrome({
           onClick={() => setDrawerOpen(true)}
           aria-label="Open all sections"
         >
-          <LayoutGrid size={21} aria-hidden="true" />
+          <LayoutGrid size={21} aria-hidden={true} />
           <span>More</span>
         </button>
       </nav>
@@ -490,7 +490,7 @@ export function FiconterNativeAppChrome({
             onClick={() => setDrawerOpen(false)}
             aria-label="Close app navigation"
           >
-            <X size={22} aria-hidden="true" />
+            <X size={22} aria-hidden={true} />
           </button>
         </div>
 
@@ -500,7 +500,7 @@ export function FiconterNativeAppChrome({
               ? "Open personal workspace"
               : "Open business workspace"}
           </span>
-          <ChevronRight size={18} aria-hidden="true" />
+          <ChevronRight size={18} aria-hidden={true} />
         </Link>
 
         <div className={styles.drawerLabel}>All sections</div>
@@ -524,10 +524,10 @@ export function FiconterNativeAppChrome({
                 aria-current={active ? "page" : undefined}
               >
                 <span className={styles.drawerIcon}>
-                  <Icon size={19} aria-hidden="true" />
+                  <Icon size={19} aria-hidden={true} />
                 </span>
                 <span>{item.label}</span>
-                <ChevronRight size={16} aria-hidden="true" />
+                <ChevronRight size={16} aria-hidden={true} />
               </Link>
             );
           })}

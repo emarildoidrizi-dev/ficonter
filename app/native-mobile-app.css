@@ -599,3 +599,153 @@ html[data-ficonter-native-app="true"] .app-main
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* FICONTER NATIVE APP FULL-BLEED SCREEN — BEGIN */
+
+/*
+  The installed application canvas must cover the complete physical display.
+  Interactive content remains inside safe-area padding, while Ficonter's own
+  background extends beneath the notch, status bar and home indicator.
+*/
+html[data-ficonter-native-app="true"] {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: clip !important;
+  background-color: var(--native-canvas, #08110e) !important;
+  overscroll-behavior: none;
+}
+
+html[data-ficonter-native-app="true"] body {
+  position: relative;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: clip !important;
+  background-color: var(--native-canvas, #08110e) !important;
+  overscroll-behavior: none;
+}
+
+/* Extends one physical pixel beyond the viewport to eliminate iOS seam lines. */
+html[data-ficonter-native-app="true"] body::before {
+  position: fixed !important;
+  z-index: -10 !important;
+  inset: -2px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: calc(100dvh + 4px) !important;
+  background:
+    radial-gradient(
+      circle at 88% 8%,
+      rgba(216, 189, 124, 0.1),
+      transparent 25%
+    ),
+    linear-gradient(
+      180deg,
+      #08110e 0%,
+      #091311 48%,
+      #07100d 100%
+    ) !important;
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"] body > div,
+html[data-ficonter-native-app="true"] .app-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overscroll-behavior-y: contain;
+}
+
+/*
+  Do not allow page-level containers inherited from the website to constrain
+  the installed app to a centered desktop-width canvas.
+*/
+html[data-ficonter-native-app="true"] .app-main > :where(
+  main,
+  section,
+  div
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Keep safe content padding while the application canvas itself stays edge-to-edge. */
+html[data-ficonter-native-app="true"] .app-main {
+  padding-top:
+    calc(88px + max(env(safe-area-inset-top), 0px))
+    !important;
+  padding-right:
+    max(13px, env(safe-area-inset-right))
+    !important;
+  padding-bottom:
+    calc(105px + max(env(safe-area-inset-bottom), 0px))
+    !important;
+  padding-left:
+    max(13px, env(safe-area-inset-left))
+    !important;
+}
+
+/* Prevent bright pull-to-refresh / rubber-band gaps around the native app. */
+html[data-ficonter-native-app="true"],
+html[data-ficonter-native-app="true"] body,
+html[data-ficonter-native-app="true"] .app-shell,
+html[data-ficonter-native-app="true"] .app-main {
+  scrollbar-color:
+    rgba(216, 189, 124, 0.34)
+    transparent;
+}
+
+@media (orientation: landscape) {
+  html[data-ficonter-native-app="true"] .app-main {
+    min-height: 100dvh !important;
+    padding-top:
+      calc(70px + max(env(safe-area-inset-top), 0px))
+      !important;
+    padding-right:
+      max(14px, env(safe-area-inset-right))
+      !important;
+    padding-bottom:
+      calc(88px + max(env(safe-area-inset-bottom), 0px))
+      !important;
+    padding-left:
+      max(14px, env(safe-area-inset-left))
+      !important;
+  }
+}
+
+/* FICONTER NATIVE APP FULL-BLEED SCREEN — END */

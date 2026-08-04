@@ -366,3 +366,68 @@
     width: min(62vw, 390px);
   }
 }
+
+/* FICONTER NATIVE APP FULL-BLEED CHROME — BEGIN */
+
+:global(html[data-ficonter-native-app="true"]) .header {
+  top: 0 !important;
+  right: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(
+      180deg,
+      #0a1411 0%,
+      rgba(10, 20, 17, 0.965) 100%
+    ) !important;
+  transform: translateZ(0);
+}
+
+:global(html[data-ficonter-native-app="true"]) .bottomDock {
+  /*
+    The dock remains comfortably inside the safe area. The full-screen
+    Ficonter canvas continues beneath it and behind the home indicator.
+  */
+  z-index: 1800 !important;
+  margin: 0 !important;
+  transform: translateZ(0);
+}
+
+:global(html[data-ficonter-native-app="true"]) .backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  min-height: 100dvh !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawer {
+  top: 0 !important;
+  bottom: 0 !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+}
+
+@media (orientation: landscape) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    min-height:
+      calc(62px + max(env(safe-area-inset-top), 0px))
+      !important;
+    padding-right:
+      max(13px, env(safe-area-inset-right))
+      !important;
+    padding-left:
+      max(13px, env(safe-area-inset-left))
+      !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .drawer {
+    padding-left:
+      max(14px, env(safe-area-inset-left))
+      !important;
+  }
+}
+
+/* FICONTER NATIVE APP FULL-BLEED CHROME — END */

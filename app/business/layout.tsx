@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
+import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
@@ -78,6 +80,16 @@ export default async function BusinessLayout({
         cacheKey={business?.id ?? "none"}
       />
       <CommandPalette />
+      <FiconterNativeAppChrome
+        workspace="business"
+        displayName={String(
+          user.user_metadata?.display_name ??
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            "",
+        )}
+        businessName={business?.name ?? "Business workspace"}
+      />
             <MobileNavigationController workspace="business" />
       <BusinessSidebar
         businesses={businesses}
@@ -101,6 +113,7 @@ export default async function BusinessLayout({
         <WorkspaceSwitcher current="business" />
         {children}
       </main>
-    </div>
+          <PWAMobileDock workspace="business" />
+      </div>
   );
 }

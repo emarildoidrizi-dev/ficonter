@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
+import "./native-mobile-app.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
 import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";
@@ -25,7 +26,9 @@ import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#13231b",
+  minimumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#08110e",
 };
 export const metadata: Metadata = {
   title: {

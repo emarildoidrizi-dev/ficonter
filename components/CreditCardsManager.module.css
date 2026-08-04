@@ -833,3 +833,178 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* FICONTER CREDIT-CARD MONTHLY HISTORY — BEGIN */
+
+.heroActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthNav button,
+.monthNav input {
+  height: 46px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 12px;
+  background: var(--surface-raised, #fff);
+  color: var(--text-primary, #252826);
+  font: inherit;
+}
+
+.monthNav button {
+  display: grid;
+  width: 46px;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.monthNav input {
+  min-width: 164px;
+  padding: 0 12px;
+}
+
+.monthSummary {
+  display: grid;
+  gap: 15px;
+  padding: 20px;
+  border: 1px solid var(--border-subtle, #e5ddd2);
+  border-radius: 21px;
+  background: var(--surface-card, #fff);
+  box-shadow: 0 16px 42px rgba(41, 35, 27, 0.045);
+}
+
+.monthSummaryHeading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.monthSummaryHeading span {
+  color: #9a7a47;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.monthSummaryHeading h2 {
+  margin: 5px 0 0;
+  color: var(--text-primary, #252826);
+  font: 600 29px Georgia, serif;
+}
+
+.monthSummaryHeading p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--text-secondary, #706a63);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.currentPosition {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr) auto);
+  gap: 8px 18px;
+  align-items: center;
+  padding: 13px 15px;
+  border: 1px solid var(--border-subtle, #e5ddd2);
+  border-radius: 13px;
+  background: var(--surface-subtle, #f8f5ef);
+}
+
+.currentPosition span {
+  color: var(--text-muted, #81786e);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.currentPosition strong {
+  color: var(--text-primary, #252826);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+:global(html[data-resolved-theme="dark"]) .monthSummary,
+:global(html[data-resolved-theme="dark"]) .monthNav button,
+:global(html[data-resolved-theme="dark"]) .monthNav input {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-resolved-theme="dark"]) .currentPosition {
+  background: var(--surface-subtle) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+@media (max-width: 980px) {
+  .heroActions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .monthNav {
+    width: 100%;
+  }
+
+  .monthNav input {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .monthSummaryHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .monthSummaryHeading p {
+    text-align: left;
+  }
+
+  .currentPosition {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .monthNav button,
+  .monthNav input {
+    height: 44px;
+  }
+
+  .monthNav button {
+    width: 44px;
+  }
+
+  .monthSummary {
+    padding: 16px;
+  }
+
+  .monthSummaryHeading h2 {
+    font-size: 25px;
+  }
+
+  .currentPosition {
+    grid-template-columns: 1fr;
+  }
+
+  .currentPosition strong {
+    margin-bottom: 6px;
+  }
+}
+
+/* FICONTER CREDIT-CARD MONTHLY HISTORY — END */

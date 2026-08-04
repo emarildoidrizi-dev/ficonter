@@ -8,6 +8,7 @@ export type AccountExportTable =
   | "debts"
   | "debt_payments"
   | "credit_card_activities"
+  | "credit_card_monthly_records"
   | "monthly_budget_plans"
   | "monthly_budget_items"
   | "financial_documents"
@@ -16,7 +17,7 @@ export type AccountExportTable =
   | "user_notifications";
 
 export type AccountExportPayload = {
-  schema_version: "1.3";
+  schema_version: "1.4";
   export_type: "ficonter-account-archive";
   exported_at: string;
   privacy: {
@@ -735,6 +736,39 @@ export async function createAccountPdf(payload: AccountExportPayload): Promise<B
         text(valueOf(item, "currency"), preferredCurrency),
         locale,
       ),
+    ]),
+  );
+
+  report.table(
+    "Credit-card monthly records",
+    `${payload.data.credit_card_monthly_records.length} exported statement months`,
+    [
+      { label: "Month", width: 145 },
+      { label: "Credit card", width: 255 },
+      { label: "Statement", width: 210, align: "right" },
+      { label: "Minimum", width: 180, align: "right" },
+      { label: "Interest", width: 150, align: "right" },
+      { label: "Due date", width: 148 },
+    ],
+    payload.data.credit_card_monthly_records.map((item) => [
+      text(valueOf(item, "month_start")),
+      debtNames.get(text(valueOf(item, "debt_id"), "")) ?? "Credit card",
+      currency(
+        valueOf(item, "statement_balance"),
+        text(valueOf(item, "currency"), preferredCurrency),
+        locale,
+      ),
+      currency(
+        valueOf(item, "minimum_payment"),
+        text(valueOf(item, "currency"), preferredCurrency),
+        locale,
+      ),
+      currency(
+        valueOf(item, "interest_charged"),
+        text(valueOf(item, "currency"), preferredCurrency),
+        locale,
+      ),
+      dateLabel(valueOf(item, "payment_due_date")),
     ]),
   );
 

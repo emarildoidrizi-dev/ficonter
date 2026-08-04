@@ -10,7 +10,12 @@ export default async function CreditCardsPage() {
 
   if (!user) redirect("/login");
 
-  const [cardsResult, activitiesResult, paymentsResult] = await Promise.all([
+  const [
+    cardsResult,
+    activitiesResult,
+    paymentsResult,
+    monthlyRecordsResult,
+  ] = await Promise.all([
     supabase
       .from("debts")
       .select(
@@ -33,6 +38,13 @@ export default async function CreditCardsPage() {
       )
       .eq("user_id", user.id)
       .order("paid_at", { ascending: false }),
+    supabase
+      .from("credit_card_monthly_records")
+      .select(
+        "id,debt_id,user_id,month_start,currency,statement_balance,statement_balance_eur,minimum_payment,minimum_payment_eur,interest_charged,interest_charged_eur,statement_date,payment_due_date,created_at,updated_at",
+      )
+      .eq("user_id", user.id)
+      .order("month_start", { ascending: false }),
   ]);
 
   return (
@@ -41,10 +53,12 @@ export default async function CreditCardsPage() {
       initialCards={cardsResult.data ?? []}
       initialActivities={activitiesResult.data ?? []}
       initialPayments={paymentsResult.data ?? []}
+      initialMonthlyRecords={monthlyRecordsResult.data ?? []}
       initialError={
         cardsResult.error?.message ??
         activitiesResult.error?.message ??
         paymentsResult.error?.message ??
+        monthlyRecordsResult.error?.message ??
         ""
       }
     />

@@ -8,6 +8,8 @@ import {
   ArrowUpRight,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   Edit3,
   Gauge,
@@ -15,7 +17,6 @@ import {
   ReceiptText,
   RefreshCw,
   Trash2,
-  TrendingDown,
   WalletCards,
   X,
 } from "lucide-react";
@@ -112,6 +113,24 @@ type DebtPayment = {
   created_at: string;
 };
 
+type CreditCardMonthlyRecord = {
+  id: string;
+  debt_id: string;
+  user_id: string;
+  month_start: string;
+  currency: string;
+  statement_balance: number | string;
+  statement_balance_eur: number | string;
+  minimum_payment: number | string;
+  minimum_payment_eur: number | string;
+  interest_charged: number | string;
+  interest_charged_eur: number | string;
+  statement_date: string;
+  payment_due_date: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type CardForm = {
   name: string;
   lender: string;
@@ -174,6 +193,37 @@ function localDateTimeKey(date = new Date()) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${localDateKey(date)}T${hours}:${minutes}`;
+}
+
+function monthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthTitle(month: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${month}-01T12:00:00`));
+}
+
+function monthStart(month: string) {
+  return `${month}-01`;
+}
+
+function dateTimeForMonth(month: string) {
+  const currentMonth = monthKey();
+  if (month === currentMonth) return localDateTimeKey();
+  return `${month}-01T12:00`;
+}
+
+function dateForMonth(month: string) {
+  const currentMonth = monthKey();
+  if (month === currentMonth) return localDateKey();
+  return `${month}-01`;
+}
+
+function inMonth(value: string | null | undefined, month: string) {
+  return Boolean(value?.startsWith(month));
 }
 
 const EMPTY_CARD: CardForm = {
@@ -292,18 +342,22 @@ export function CreditCardsManager({
   initialCards,
   initialActivities,
   initialPayments,
+  initialMonthlyRecords,
   initialError,
 }: {
   userId: string;
   initialCards: CreditCardDebt[];
   initialActivities: CreditCardActivity[];
   initialPayments: DebtPayment[];
+  initialMonthlyRecords: CreditCardMonthlyRecord[];
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [cards, setCards] = useState(initialCards);
   const [activities, setActivities] = useState(initialActivities);
   const [payments, setPayments] = useState(initialPayments);
+  const [monthlyRecords, setMonthlyRecords] = useState(initialMonthlyRecords);
+  const [selectedMonth, setSelectedMonth] = useState(monthKey());
   const [cardForm, setCardForm] = useState<CardForm>(EMPTY_CARD);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
@@ -402,6 +456,27 @@ export function CreditCardsManager({
           });
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "credit_card_monthly_records",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          setMonthlyRecords((current) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id?: string }).id;
+              return current.filter((record) => record.id !== id);
+            }
+            const next = payload.new as CreditCardMonthlyRecord;
+            return upsertById(current, next).sort(
+              (a, b) => b.month_start.localeCompare(a.month_start),
+            );
+          });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -414,9 +489,6 @@ export function CreditCardsManager({
     const outstanding = sumMoney(
       activeCards.map((card) => card.current_balance_eur),
     );
-    const minimums = sumMoney(
-      activeCards.map((card) => card.minimum_payment_eur),
-    );
     const availableCredit = sumMoney(
       activeCards.map((card) =>
         Math.max(
@@ -426,12 +498,234 @@ export function CreditCardsManager({
         ),
       ),
     );
+
+    return { outstanding, availableCredit };
+  }, [cards]);
+
+  function shiftMonth(offset: number) {
+    const next = new Date(`${selectedMonth}-01T12:00:00`);
+    next.setMonth(next.getMonth() + offset);
+    setSelectedMonth(monthKey(next));
+  }
+
+  function monthlyRecordFor(cardId: string, month = selectedMonth) {
+    return (
+      monthlyRecords.find(
+        (record) =>
+          record.debt_id === cardId &&
+          record.month_start.startsWith(month),
+      ) ?? null
+    );
+  }
+
+  function nextMonthlyRecord(record: CreditCardMonthlyRecord) {
+    return (
+      monthlyRecords
+        .filter(
+          (candidate) =>
+            candidate.debt_id === record.debt_id &&
+            candidate.statement_date > record.statement_date,
+        )
+        .sort((a, b) =>
+          a.statement_date.localeCompare(b.statement_date),
+        )[0] ?? null
+    );
+  }
+
+  function paymentsTowardStatement(
+    card: CreditCardDebt,
+    record: CreditCardMonthlyRecord | null,
+  ) {
+    if (!record?.statement_date) return 0;
+    const nextRecord = nextMonthlyRecord(record);
+    const start = new Date(
+      `${record.statement_date}T00:00:00`,
+    ).getTime();
+    const end = nextRecord
+      ? new Date(`${nextRecord.statement_date}T00:00:00`).getTime()
+      : Number.POSITIVE_INFINITY;
+
+    return sumMoney(
+      payments
+        .filter((payment) => {
+          if (payment.debt_id !== card.id) return false;
+          const paidAt = new Date(payment.paid_at).getTime();
+          return paidAt >= start && paidAt < end;
+        })
+        .map((payment) => payment.amount),
+    );
+  }
+
+  function monthlyMetrics(card: CreditCardDebt) {
+    const record = monthlyRecordFor(card.id);
+    const monthActivities = activities.filter(
+      (activity) =>
+        activity.debt_id === card.id &&
+        inMonth(activity.occurred_at, selectedMonth),
+    );
+    const monthPayments = payments.filter(
+      (payment) =>
+        payment.debt_id === card.id &&
+        inMonth(payment.paid_at, selectedMonth),
+    );
+    const paidThisMonth = sumMoney(
+      monthPayments.map((payment) => payment.amount),
+    );
+    const paidTowardStatement = paymentsTowardStatement(card, record);
+    const minimumPayment = finiteNumber(record?.minimum_payment);
+    const statementBalance = finiteNumber(record?.statement_balance);
+    const minimumRemaining = Math.max(
+      0,
+      roundMoney(minimumPayment - paidTowardStatement),
+    );
+    const statementRemaining = Math.max(
+      0,
+      roundMoney(statementBalance - paidTowardStatement),
+    );
+    const purchases = sumMoney(
+      monthActivities
+        .filter((activity) => activity.activity_type === "purchase")
+        .map((activity) => activity.amount),
+    );
+    const fees = sumMoney(
+      monthActivities
+        .filter((activity) => activity.activity_type === "fee")
+        .map((activity) => activity.amount),
+    );
+    const refunds = sumMoney(
+      monthActivities
+        .filter((activity) => activity.activity_type === "refund")
+        .map((activity) => activity.amount),
+    );
+    const activityInterest = sumMoney(
+      monthActivities
+        .filter((activity) => activity.activity_type === "interest")
+        .map((activity) => activity.amount),
+    );
+    const interest = record
+      ? finiteNumber(record.interest_charged)
+      : activityInterest;
+
+    return {
+      record,
+      paidThisMonth,
+      paidTowardStatement,
+      minimumPayment,
+      minimumRemaining,
+      statementBalance,
+      statementRemaining,
+      interest,
+      purchases,
+      fees,
+      refunds,
+      monthActivities,
+      monthPayments,
+    };
+  }
+
+  const monthlyTotals = useMemo(() => {
+    const cardIds = new Set(cards.map((card) => card.id));
+    const monthRecords = monthlyRecords.filter(
+      (record) =>
+        cardIds.has(record.debt_id) &&
+        record.month_start.startsWith(selectedMonth),
+    );
+    const paidThisMonth = sumMoney(
+      payments
+        .filter(
+          (payment) =>
+            cardIds.has(payment.debt_id) &&
+            inMonth(payment.paid_at, selectedMonth),
+        )
+        .map((payment) => payment.amount_eur),
+    );
     const interest = sumMoney(
-      activeCards.map((card) => card.interest_charged_eur),
+      cards.map((card) => {
+        const record = monthRecords.find(
+          (item) => item.debt_id === card.id,
+        );
+        if (record) return record.interest_charged_eur;
+        return sumMoney(
+          activities
+            .filter(
+              (activity) =>
+                activity.debt_id === card.id &&
+                activity.activity_type === "interest" &&
+                inMonth(activity.occurred_at, selectedMonth),
+            )
+            .map((activity) => activity.amount_eur),
+        );
+      }),
+    );
+    const statementBalances = sumMoney(
+      monthRecords.map((record) => record.statement_balance_eur),
+    );
+    const remainingByCard = cards.map((card) => {
+      const record = monthRecords.find(
+        (item) => item.debt_id === card.id,
+      );
+      if (!record) {
+        return { minimumRemaining: 0, statementRemaining: 0 };
+      }
+
+      const nextRecord =
+        monthlyRecords
+          .filter(
+            (candidate) =>
+              candidate.debt_id === record.debt_id &&
+              candidate.statement_date > record.statement_date,
+          )
+          .sort((a, b) =>
+            a.statement_date.localeCompare(b.statement_date),
+          )[0] ?? null;
+      const start = new Date(
+        `${record.statement_date}T00:00:00`,
+      ).getTime();
+      const end = nextRecord
+        ? new Date(
+            `${nextRecord.statement_date}T00:00:00`,
+          ).getTime()
+        : Number.POSITIVE_INFINITY;
+      const paidEur = sumMoney(
+        payments
+          .filter((payment) => {
+            if (payment.debt_id !== card.id) return false;
+            const paidAt = new Date(payment.paid_at).getTime();
+            return paidAt >= start && paidAt < end;
+          })
+          .map((payment) => payment.amount_eur),
+      );
+
+      return {
+        minimumRemaining: Math.max(
+          0,
+          roundMoney(
+            finiteNumber(record.minimum_payment_eur) - paidEur,
+          ),
+        ),
+        statementRemaining: Math.max(
+          0,
+          roundMoney(
+            finiteNumber(record.statement_balance_eur) - paidEur,
+          ),
+        ),
+      };
+    });
+    const minimumRemaining = sumMoney(
+      remainingByCard.map((item) => item.minimumRemaining),
+    );
+    const statementRemaining = sumMoney(
+      remainingByCard.map((item) => item.statementRemaining),
     );
 
-    return { outstanding, minimums, availableCredit, interest };
-  }, [cards]);
+    return {
+      statementBalances,
+      paidThisMonth,
+      minimumRemaining,
+      statementRemaining,
+      interest,
+    };
+  }, [activities, cards, monthlyRecords, payments, selectedMonth]);
 
   function resetCardForm() {
     setCardForm({ ...EMPTY_CARD, start_date: localDateKey() });
@@ -460,72 +754,69 @@ export function CreditCardsManager({
   }
 
   function openStatement(card: CreditCardDebt) {
-    const defaultDue = new Date();
+    const record = monthlyRecordFor(card.id);
+    const defaultStatementDate =
+      record?.statement_date ?? dateForMonth(selectedMonth);
+    const defaultDue = new Date(`${defaultStatementDate}T12:00:00`);
     defaultDue.setDate(defaultDue.getDate() + 21);
     const statementBalance = finiteNumber(
-      card.statement_balance ?? card.current_balance,
+      record?.statement_balance ??
+        (inMonth(card.statement_date, selectedMonth)
+          ? card.statement_balance
+          : card.current_balance),
     );
+
     setStatementTarget(card);
     setStatementForm({
       statement_balance: String(statementBalance),
-      statement_date: card.statement_date ?? localDateKey(),
-      payment_due_date: card.payment_due_date ?? localDateKey(defaultDue),
-      minimum_payment: String(automaticMinimumPayment(statementBalance)),
+      statement_date: defaultStatementDate,
+      payment_due_date:
+        record?.payment_due_date ?? localDateKey(defaultDue),
+      minimum_payment: String(
+        automaticMinimumPayment(statementBalance),
+      ),
       apr: String(card.annual_interest_rate ?? 0),
-      interest_charged: String(card.interest_charged ?? 0),
+      interest_charged: String(
+        record?.interest_charged ??
+          (inMonth(card.statement_date, selectedMonth)
+            ? card.interest_charged
+            : 0),
+      ),
     });
   }
 
   function openActivity(card: CreditCardDebt) {
     setActivityTarget(card);
-    setActivityForm({ ...EMPTY_ACTIVITY, occurred_at: localDateTimeKey() });
+    setActivityForm({
+      ...EMPTY_ACTIVITY,
+      occurred_at: dateTimeForMonth(selectedMonth),
+    });
   }
 
   function openPayment(card: CreditCardDebt) {
-    const minimumRemaining = minimumPaymentRemaining(card);
+    const metrics = monthlyMetrics(card);
     const suggested = Math.min(
       finiteNumber(card.current_balance),
-      minimumRemaining > 0
-        ? minimumRemaining
+      metrics.minimumRemaining > 0
+        ? metrics.minimumRemaining
         : finiteNumber(card.current_balance),
     );
     setPaymentTarget(card);
     setPaymentForm({
       amount: suggested > 0 ? String(roundMoney(suggested)) : "",
-      paid_at: localDateTimeKey(),
-      notes: "Credit-card payment",
+      paid_at: dateTimeForMonth(selectedMonth),
+      notes: `Credit-card payment · ${monthTitle(selectedMonth)}`,
     });
   }
 
-  function paymentsSinceStatement(card: CreditCardDebt) {
-    if (!card.statement_date) return 0;
-    const statementStart = new Date(`${card.statement_date}T00:00:00`).getTime();
-    return sumMoney(
-      payments
-        .filter(
-          (payment) =>
-            payment.debt_id === card.id &&
-            new Date(payment.paid_at).getTime() >= statementStart,
-        )
-        .map((payment) => payment.amount),
-    );
-  }
-
-  function minimumPaymentRemaining(card: CreditCardDebt) {
-    return Math.max(
-      0,
-      roundMoney(
-        finiteNumber(card.minimum_payment) - paymentsSinceStatement(card),
-      ),
-    );
-  }
-
-  function paymentStatus(card: CreditCardDebt) {
-    const minimum = finiteNumber(card.minimum_payment);
-    const paid = paymentsSinceStatement(card);
-    if (!card.statement_date || minimum <= 0) return "No statement due";
-    if (paid >= minimum) return "Minimum paid";
-    if (paid > 0) return "Partially paid";
+  function paymentStatus(
+    record: CreditCardMonthlyRecord | null,
+    paidTowardStatement: number,
+  ) {
+    const minimum = finiteNumber(record?.minimum_payment);
+    if (!record || minimum <= 0) return "No statement recorded";
+    if (paidTowardStatement >= minimum) return "Minimum paid";
+    if (paidTowardStatement > 0) return "Partially paid";
     return "Payment due";
   }
 
@@ -673,39 +964,74 @@ export function CreditCardsManager({
           convertToEur(interestCharged, card.currency),
         ]);
 
-      const { data, error } = await supabase.rpc(
-        "update_credit_card_statement",
-        {
-          p_debt_id: card.id,
-          p_statement_balance: statementBalance,
-          p_statement_balance_eur: roundMoney(balanceConversion.eur),
-          p_exchange_rate: roundRate(balanceConversion.rate),
-          p_statement_date: statementForm.statement_date,
-          p_payment_due_date: statementForm.payment_due_date,
-          p_minimum_payment: minimumPayment,
-          p_minimum_payment_eur: roundMoney(minimumConversion.eur),
-          p_apr: apr,
-          p_interest_charged: interestCharged,
-          p_interest_charged_eur: roundMoney(interestConversion.eur),
-        },
+      const historicalStatement = Boolean(
+        card.statement_date &&
+          statementForm.statement_date < card.statement_date,
       );
+      const rpcName = historicalStatement
+        ? "save_credit_card_monthly_record"
+        : "update_credit_card_statement";
+
+      const { data, error } = await supabase.rpc(rpcName, {
+        p_debt_id: card.id,
+        p_statement_balance: statementBalance,
+        p_statement_balance_eur: roundMoney(balanceConversion.eur),
+        p_exchange_rate: roundRate(balanceConversion.rate),
+        p_statement_date: statementForm.statement_date,
+        p_payment_due_date: statementForm.payment_due_date,
+        p_minimum_payment: minimumPayment,
+        p_minimum_payment_eur: roundMoney(minimumConversion.eur),
+        p_apr: apr,
+        p_interest_charged: interestCharged,
+        p_interest_charged_eur: roundMoney(interestConversion.eur),
+      });
 
       if (error) throw error;
-      const result = data as {
-        debt?: CreditCardDebt;
-        activity?: CreditCardActivity | null;
-      } | null;
-      if (result?.debt) {
-        setCards((current) => upsertById(current, result.debt as CreditCardDebt));
-      }
-      if (result?.activity) {
-        setActivities((current) =>
-          upsertById(current, result.activity as CreditCardActivity),
-        );
+
+      if (!historicalStatement) {
+        const result = data as {
+          debt?: CreditCardDebt;
+          activity?: CreditCardActivity | null;
+        } | null;
+        if (result?.debt) {
+          setCards((current) =>
+            upsertById(current, result.debt as CreditCardDebt),
+          );
+        }
+        if (result?.activity) {
+          setActivities((current) =>
+            upsertById(current, result.activity as CreditCardActivity),
+          );
+        }
       }
 
+      const statementMonth = statementForm.statement_date.slice(0, 7);
+      const { data: monthlyRecord, error: monthlyRecordError } =
+        await supabase
+          .from("credit_card_monthly_records")
+          .select(
+            "id,debt_id,user_id,month_start,currency,statement_balance,statement_balance_eur,minimum_payment,minimum_payment_eur,interest_charged,interest_charged_eur,statement_date,payment_due_date,created_at,updated_at",
+          )
+          .eq("user_id", userId)
+          .eq("debt_id", card.id)
+          .eq("month_start", monthStart(statementMonth))
+          .single();
+
+      if (monthlyRecordError) throw monthlyRecordError;
+      setMonthlyRecords((current) =>
+        upsertById(
+          current,
+          monthlyRecord as CreditCardMonthlyRecord,
+        ),
+      );
+      setSelectedMonth(statementMonth);
+
       setStatementTarget(null);
-      setNotice("Statement confirmed and the card balance reconciled.");
+      setNotice(
+        historicalStatement
+          ? "Historical monthly statement saved without changing the current balance."
+          : "Statement confirmed and the card balance reconciled.",
+      );
       notifyFiconterDataChange("all");
     } catch (error) {
       setNotice(readableError(error, "Statement could not be updated."));
@@ -910,6 +1236,9 @@ export function CreditCardsManager({
       setPayments((current) =>
         current.filter((item) => item.debt_id !== card.id),
       );
+      setMonthlyRecords((current) =>
+        current.filter((item) => item.debt_id !== card.id),
+      );
       setDeletingCard(null);
       setNotice("Credit card and its linked history deleted.");
       notifyFiconterDataChange("all");
@@ -922,14 +1251,22 @@ export function CreditCardsManager({
 
   function cardTimeline(card: CreditCardDebt): TimelineItem[] {
     const cardActivities: TimelineItem[] = activities
-      .filter((activity) => activity.debt_id === card.id)
+      .filter(
+        (activity) =>
+          activity.debt_id === card.id &&
+          inMonth(activity.occurred_at, selectedMonth),
+      )
       .map((activity) => ({
         kind: "activity" as const,
         date: activity.occurred_at,
         activity,
       }));
     const cardPayments: TimelineItem[] = payments
-      .filter((payment) => payment.debt_id === card.id)
+      .filter(
+        (payment) =>
+          payment.debt_id === card.id &&
+          inMonth(payment.paid_at, selectedMonth),
+      )
       .map((payment) => ({
         kind: "payment" as const,
         date: payment.paid_at,
@@ -938,7 +1275,7 @@ export function CreditCardsManager({
 
     return [...cardActivities, ...cardPayments]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 8);
+      .slice(0, 20);
   }
 
   return (
@@ -953,43 +1290,87 @@ export function CreditCardsManager({
             Overview and Net Worth synchronized.
           </p>
         </div>
-        <button
-          type="button"
-          className={styles.primaryButton}
-          onClick={() => {
-            if (showCardForm) resetCardForm();
-            else setShowCardForm(true);
-          }}
-        >
-          {showCardForm ? <X size={18} /> : <Plus size={18} />}
-          {showCardForm ? "Close form" : "Add credit card"}
-        </button>
+        <div className={styles.heroActions}>
+          <div className={styles.monthNav}>
+            <button
+              type="button"
+              onClick={() => shiftMonth(-1)}
+              aria-label="Previous month"
+            >
+              <ChevronLeft size={19} />
+            </button>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(event) => setSelectedMonth(event.target.value)}
+              aria-label="Credit-card month"
+            />
+            <button
+              type="button"
+              onClick={() => shiftMonth(1)}
+              aria-label="Next month"
+            >
+              <ChevronRight size={19} />
+            </button>
+          </div>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => {
+              if (showCardForm) resetCardForm();
+              else setShowCardForm(true);
+            }}
+          >
+            {showCardForm ? <X size={18} /> : <Plus size={18} />}
+            {showCardForm ? "Close form" : "Add credit card"}
+          </button>
+        </div>
       </header>
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
 
-      <div className={styles.summaryGrid}>
-        <article>
-          <TrendingDown />
-          <span>Total card debt</span>
+      <section className={styles.monthSummary}>
+        <div className={styles.monthSummaryHeading}>
+          <div>
+            <span>MONTHLY CREDIT-CARD RECORD</span>
+            <h2>{monthTitle(selectedMonth)}</h2>
+          </div>
+          <p>
+            Every statement, payment and interest charge remains attached to
+            its original month.
+          </p>
+        </div>
+        <div className={styles.summaryGrid}>
+          <article>
+            <ReceiptText />
+            <span>Statement balances</span>
+            <strong>{money(monthlyTotals.statementBalances)}</strong>
+          </article>
+          <article>
+            <ArrowDownLeft />
+            <span>Paid this month</span>
+            <strong>{money(monthlyTotals.paidThisMonth)}</strong>
+          </article>
+          <article>
+            <WalletCards />
+            <span>Balance left to pay</span>
+            <strong>{money(monthlyTotals.statementRemaining)}</strong>
+          </article>
+          <article>
+            <Gauge />
+            <span>Interest charged</span>
+            <strong>{money(monthlyTotals.interest)}</strong>
+          </article>
+        </div>
+        <div className={styles.currentPosition}>
+          <span>Current total card debt</span>
           <strong>{money(totals.outstanding)}</strong>
-        </article>
-        <article>
-          <ReceiptText />
-          <span>Minimum payments</span>
-          <strong>{money(totals.minimums)}</strong>
-        </article>
-        <article>
-          <WalletCards />
-          <span>Available credit</span>
+          <span>Current available credit</span>
           <strong>{money(totals.availableCredit)}</strong>
-        </article>
-        <article>
-          <Gauge />
-          <span>Statement interest</span>
-          <strong>{money(totals.interest)}</strong>
-        </article>
-      </div>
+          <span>Minimum still due</span>
+          <strong>{money(monthlyTotals.minimumRemaining)}</strong>
+        </div>
+      </section>
 
       <div className={styles.accountingNote}>
         <CheckCircle2 size={20} />
@@ -1159,8 +1540,8 @@ export function CreditCardsManager({
             const limit = finiteNumber(card.credit_limit);
             const available = Math.max(0, limit - current);
             const utilization = limit > 0 ? (current / limit) * 100 : 0;
-            const minimumRemaining = minimumPaymentRemaining(card);
-            const paidSinceStatement = paymentsSinceStatement(card);
+            const metrics = monthlyMetrics(card);
+            const minimumRemaining = metrics.minimumRemaining;
             const timeline = cardTimeline(card);
             const estimatedInterest = roundMoney(
               current * (finiteNumber(card.annual_interest_rate) / 100 / 12),
@@ -1227,30 +1608,92 @@ export function CreditCardsManager({
                   <div>
                     <span>Statement balance</span>
                     <strong>
-                      {card.statement_balance === null
-                        ? "Not confirmed"
-                        : money(card.statement_balance, card.currency)}
+                      {metrics.record
+                        ? money(metrics.statementBalance, card.currency)
+                        : "Not recorded"}
                     </strong>
-                    <small>{readableDate(card.statement_date)}</small>
+                    <small>
+                      {metrics.record
+                        ? readableDate(metrics.record.statement_date)
+                        : monthTitle(selectedMonth)}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Paid this month</span>
+                    <strong>{money(metrics.paidThisMonth, card.currency)}</strong>
+                    <small>
+                      Confirmed payments dated in {monthTitle(selectedMonth)}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Balance left to pay</span>
+                    <strong>
+                      {metrics.record
+                        ? money(metrics.statementRemaining, card.currency)
+                        : "No statement"}
+                    </strong>
+                    <small>Remaining from the selected statement balance</small>
                   </div>
                   <div>
                     <span>Minimum payment due</span>
-                    <strong>{money(card.minimum_payment, card.currency)}</strong>
+                    <strong>
+                      {metrics.record
+                        ? money(metrics.minimumPayment, card.currency)
+                        : "Not recorded"}
+                    </strong>
                     <small>
-                      Automatic 3% · {money(minimumRemaining, card.currency)} still to pay · {paymentStatus(card)}
+                      {metrics.record
+                        ? `Automatic 3% · ${money(
+                            minimumRemaining,
+                            card.currency,
+                          )} still to pay · ${paymentStatus(
+                            metrics.record,
+                            metrics.paidTowardStatement,
+                          )}`
+                        : "Update this month’s statement to create the record"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Interest charged</span>
+                    <strong>{money(metrics.interest, card.currency)}</strong>
+                    <small>
+                      {finiteNumber(card.annual_interest_rate).toFixed(2)}% APR · ~
+                      {money(estimatedInterest, card.currency)} estimated monthly
+                    </small>
+                  </div>
+                  <div>
+                    <span>Monthly activity</span>
+                    <strong>
+                      {money(
+                        metrics.purchases + metrics.fees - metrics.refunds,
+                        card.currency,
+                      )}
+                    </strong>
+                    <small>
+                      Purchases {money(metrics.purchases, card.currency)} · Fees{" "}
+                      {money(metrics.fees, card.currency)} · Refunds{" "}
+                      {money(metrics.refunds, card.currency)}
                     </small>
                   </div>
                   <div>
                     <span>Payment due</span>
-                    <strong>{readableDate(card.payment_due_date)}</strong>
-                    <small>{money(paidSinceStatement, card.currency)} paid since statement</small>
+                    <strong>
+                      {metrics.record
+                        ? readableDate(metrics.record.payment_due_date)
+                        : "Not set"}
+                    </strong>
+                    <small>
+                      {money(metrics.paidTowardStatement, card.currency)} paid
+                      toward this statement
+                    </small>
                   </div>
                   <div>
-                    <span>Interest charged</span>
-                    <strong>{money(card.interest_charged, card.currency)}</strong>
+                    <span>Monthly record</span>
+                    <strong>{monthTitle(selectedMonth)}</strong>
                     <small>
-                      {finiteNumber(card.annual_interest_rate).toFixed(2)}% APR · ~
-                      {money(estimatedInterest, card.currency)} estimated monthly
+                      {metrics.record
+                        ? "Statement snapshot saved permanently"
+                        : "Activity and payments are still tracked by date"}
                     </small>
                   </div>
                 </div>
@@ -1275,8 +1718,8 @@ export function CreditCardsManager({
                 <div className={styles.timeline}>
                   <div className={styles.timelineHeading}>
                     <div>
-                      <span>CONNECTED HISTORY</span>
-                      <h3>Recent card activity</h3>
+                      <span>CONNECTED MONTHLY HISTORY</span>
+                      <h3>{monthTitle(selectedMonth)} activity</h3>
                     </div>
                     <Link href="/dashboard/transactions">Payments in Transactions</Link>
                   </div>
@@ -1353,7 +1796,7 @@ export function CreditCardsManager({
                     })
                   ) : (
                     <p className={styles.emptyHistory}>
-                      No card activity or payments have been recorded yet.
+                      No card activity or payments were recorded in this month.
                     </p>
                   )}
                 </div>
@@ -1387,7 +1830,9 @@ export function CreditCardsManager({
               <X size={19} />
             </button>
             <CalendarDays className={styles.modalIcon} />
-            <span>MONTHLY STATEMENT</span>
+            <span>
+              MONTHLY STATEMENT · {monthTitle(selectedMonth).toUpperCase()}
+            </span>
             <h2>Update {statementTarget.name}</h2>
             <p>
               Enter the exact figures shown by the issuer. The minimum payment is
@@ -1647,7 +2092,12 @@ export function CreditCardsManager({
               <span>Current balance</span>
               <strong>{money(paymentTarget.current_balance, paymentTarget.currency)}</strong>
               <span>Minimum still due</span>
-              <strong>{money(minimumPaymentRemaining(paymentTarget), paymentTarget.currency)}</strong>
+              <strong>
+                {money(
+                  monthlyMetrics(paymentTarget).minimumRemaining,
+                  paymentTarget.currency,
+                )}
+              </strong>
             </div>
             <button className={styles.modalPrimary} disabled={busy === "save-payment"}>
               {busy === "save-payment" ? "Recording…" : "Record confirmed payment"}

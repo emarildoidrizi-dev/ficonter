@@ -788,6 +788,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
       "debts",
       "debt_payments",
       "credit_card_activities",
+      "credit_card_monthly_records",
       "monthly_budget_plans",
       "monthly_budget_items",
       "financial_documents",
@@ -816,7 +817,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
     ]);
 
     return {
-      schema_version: "1.3",
+      schema_version: "1.4",
       export_type: "ficonter-account-archive",
       exported_at: new Date().toISOString(),
       privacy: {

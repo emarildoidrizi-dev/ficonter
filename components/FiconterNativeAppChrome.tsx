@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import styles from "./FiconterNativeAppChrome.module.css";
 
 type Workspace = "personal" | "business";
+
 type IconType = ComponentType<{
   size?: number | string;
   strokeWidth?: number;
@@ -225,22 +226,6 @@ const businessRoutes: RouteItem[] = [
 ];
 
 function isStandalone() {
-  async function signOut() {
-    if (signingOut) return;
-
-    setSigningOut(true);
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      setSigningOut(false);
-      return;
-    }
-
-    setDrawerOpen(false);
-    router.replace("/login");
-    router.refresh();
-  }
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     Boolean((navigator as IOSNavigator).standalone)
@@ -278,22 +263,6 @@ function activeRoute(
     return pathname === "/dashboard";
   }
 
-  async function signOut() {
-    if (signingOut) return;
-
-    setSigningOut(true);
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      setSigningOut(false);
-      return;
-    }
-
-    setDrawerOpen(false);
-    router.replace("/login");
-    router.refresh();
-  }
   return (
     pathname === route.href ||
     pathname.startsWith(`${route.href}/`)
@@ -305,22 +274,6 @@ function currentRoute(
   routes: RouteItem[],
   workspace: Workspace,
 ) {
-  async function signOut() {
-    if (signingOut) return;
-
-    setSigningOut(true);
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      setSigningOut(false);
-      return;
-    }
-
-    setDrawerOpen(false);
-    router.replace("/login");
-    router.refresh();
-  }
   return (
     [...routes]
       .sort((a, b) => b.href.length - a.href.length)
@@ -436,6 +389,7 @@ export function FiconterNativeAppChrome({
     router.replace("/login");
     router.refresh();
   }
+
   return (
     <>
       <header className={styles.header}>

@@ -8,6 +8,7 @@ import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferences
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
+import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
@@ -79,6 +80,16 @@ export default async function BusinessLayout({
         cacheKey={business?.id ?? "none"}
       />
       <CommandPalette />
+      <FiconterNativeAppChrome
+        workspace="business"
+        displayName={String(
+          user.user_metadata?.display_name ??
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            "",
+        )}
+        businessName={business?.name ?? "Business workspace"}
+      />
             <MobileNavigationController workspace="business" />
       <BusinessSidebar
         businesses={businesses}

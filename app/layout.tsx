@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
+import "./native-mobile-app.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
 import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";

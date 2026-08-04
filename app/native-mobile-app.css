@@ -1,0 +1,601 @@
+/* FICONTER NATIVE MOBILE APPLICATION PRESENTATION LAYER
+   This stylesheet is active only for an installed standalone phone PWA. */
+
+html[data-ficonter-native-app="true"] {
+  --native-canvas: #08110e;
+  --native-surface: #101d18;
+  --native-surface-raised: #15251e;
+  --native-border: rgba(216, 189, 124, 0.19);
+  --native-text: #f7f3e9;
+  --native-muted: #aab5ae;
+  --native-gold: #d8bd7c;
+  --native-danger: #d99b9f;
+  --native-success: #9fc8b1;
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  background: var(--native-canvas);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html[data-ficonter-native-app="true"],
+html[data-ficonter-native-app="true"] body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+  background:
+    radial-gradient(
+      circle at 50% -10%,
+      rgba(216, 189, 124, 0.1),
+      transparent 31%
+    ),
+    linear-gradient(180deg, #08110e, #091311 45%, #07100d);
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-app-drawer="open"] {
+  overflow: hidden;
+}
+
+html[data-ficonter-native-app="true"] body {
+  min-height: 100dvh;
+  color: var(--native-text);
+  overscroll-behavior-y: contain;
+}
+
+html[data-ficonter-native-app="true"] body::before {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 90% 12%,
+      rgba(216, 189, 124, 0.09),
+      transparent 23%
+    ),
+    linear-gradient(180deg, #08110e, #091311);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"] .app-shell {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-native-app="true"] .sidebar,
+html[data-ficonter-native-app="true"]
+  [class*="MobileNavigationController_mobileBar"],
+html[data-ficonter-native-app="true"]
+  [class*="MobileNavigationController_overlay"],
+html[data-ficonter-native-app="true"]
+  [class*="PWAMobileDock_dock"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  padding:
+    calc(88px + env(safe-area-inset-top))
+    max(13px, env(safe-area-inset-right))
+    calc(105px + env(safe-area-inset-bottom))
+    max(13px, env(safe-area-inset-left))
+    !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main::before {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="WorkspaceSwitcher_switcher"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .topbar {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main,
+html[data-ficonter-native-app="true"] .app-main * {
+  box-sizing: border-box;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(h1, h2, h3, h4, strong, b) {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: -0.018em !important;
+  text-wrap: balance;
+}
+
+html[data-ficonter-native-app="true"] .app-main h1 {
+  font-size: 30px !important;
+  line-height: 1.08 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main h2 {
+  font-size: 23px !important;
+  line-height: 1.15 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main h3 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(p, li, label, td, th, input, select, textarea, button) {
+  font-size: 15px;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(p, small, span) {
+  line-height: 1.48;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(.panel, .kpi, article, section[class*="card"], div[class*="card"]) {
+  border-color: var(--native-border) !important;
+  border-radius: 22px !important;
+  color: var(--native-text) !important;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(22, 39, 32, 0.98),
+      rgba(13, 27, 22, 0.98)
+    )
+    !important;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025)
+    !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(button, .btn, a[class*="button"]) {
+  min-height: 50px;
+  border-radius: 16px !important;
+  touch-action: manipulation;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%;
+  max-width: 100%;
+  min-height: 52px !important;
+  padding: 14px 15px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 16px !important;
+  color: var(--native-text) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  font-size: 16px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main textarea {
+  min-height: 120px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input, textarea)::placeholder {
+  color: #7f8c84 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(.cards, .grid, .kpis, [class*="Grid"], [class*="grid"]) {
+  min-width: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="modal"], [role="dialog"]) {
+  max-width: 100% !important;
+  max-height: calc(100dvh - env(safe-area-inset-top)) !important;
+  border-radius: 26px 26px 0 0 !important;
+}
+
+/* Stable typography: remove previous business-name fitting transforms. */
+html[data-ficonter-native-app="true"]
+  [class*="AutoFitSingleLineText"] {
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* Business app home: remove the website masthead entirely. */
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_shell"] {
+  display: grid !important;
+  gap: 15px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_hero"] {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_hero"]
+  > div:first-child {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"] {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"]
+  > a {
+  display: inline-flex !important;
+  min-height: 56px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 18px !important;
+  color: #0c1712 !important;
+  background: linear-gradient(145deg, #ead79f, #cbb16f) !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"]
+  > a:first-child {
+  color: var(--native-text) !important;
+  background: var(--native-surface-raised) !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"] {
+  display: flex !important;
+  gap: 11px !important;
+  margin: 0 -13px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]
+  > article {
+  min-width: min(78vw, 300px) !important;
+  min-height: 150px !important;
+  flex: 0 0 min(78vw, 300px) !important;
+  padding: 19px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]
+  strong {
+  margin-top: 24px !important;
+  font-size: 28px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_panel"],
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costPanel"] {
+  padding: 19px !important;
+  border-radius: 24px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costSnapshot"] {
+  display: flex !important;
+  gap: 10px !important;
+  margin: 0 -4px !important;
+  padding: 0 4px 7px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costSnapshot"]
+  > div {
+  min-width: 190px !important;
+  flex: 0 0 190px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_row"] {
+  min-height: 88px !important;
+  padding: 16px 0 !important;
+}
+
+/* Personal app home: horizontal command cards and vertical financial feed. */
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_strip"] {
+  display: flex !important;
+  gap: 11px !important;
+  margin: 0 -13px 15px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_item"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_progressItem"] {
+  min-width: min(76vw, 285px) !important;
+  min-height: 145px !important;
+  flex: 0 0 min(76vw, 285px) !important;
+  align-items: flex-start !important;
+  padding: 18px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 22px !important;
+  background: var(--native-surface) !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_commandButton"] {
+  min-width: 170px !important;
+  min-height: 145px !important;
+  flex: 0 0 170px !important;
+  border-radius: 22px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_commandButton"]
+  kbd {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_board"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-areas:
+    "cash"
+    "allocation"
+    "gps" !important;
+  gap: 14px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_cashFlowCard"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_allocationCard"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_gpsCard"] {
+  grid-column: auto !important;
+  min-height: 0 !important;
+  padding: 20px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_heroNumber"] {
+  font-size: 40px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_gpsContent"]
+  h2 {
+  max-width: 100% !important;
+  font-size: 31px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_shell"] {
+  padding: 19px 17px !important;
+  border-radius: 24px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_heading"] {
+  align-items: flex-start !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_rail"] {
+  display: flex !important;
+  gap: 10px !important;
+  margin: 0 -4px !important;
+  padding: 4px 4px 12px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_stage"] {
+  min-width: 150px !important;
+  flex: 0 0 150px !important;
+  scroll-snap-align: start;
+}
+
+/* Financial health becomes a compact app card. */
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_module"] {
+  display: grid !important;
+  gap: 13px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_card"] {
+  width: 100% !important;
+  grid-template-columns: 88px minmax(0, 1fr) !important;
+  gap: 15px !important;
+  padding: 18px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_gauge"] {
+  width: 86px !important;
+  height: 86px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_factorList"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Transactions and lists are presented as touch cards. */
+html[data-ficonter-native-app="true"]
+  [class*="transactionRow"],
+html[data-ficonter-native-app="true"]
+  [class*="TransactionLedger_row"],
+html[data-ficonter-native-app="true"]
+  [class*="BillsManager_bill"],
+html[data-ficonter-native-app="true"]
+  [class*="SavingsIntelligence_transaction"] {
+  min-height: 86px !important;
+  margin-bottom: 9px !important;
+  padding: 15px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+/* Desktop tables remain usable through a native horizontal viewport. */
+html[data-ficonter-native-app="true"] .app-main table {
+  min-width: 700px;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="tableWrap"], [class*="tableContainer"]) {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  border-radius: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* All forms use one vertical app column. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(
+    [class*="formGrid"],
+    [class*="fields"],
+    [class*="fieldGrid"],
+    [class*="optionGrid"],
+    [class*="settingsGrid"]
+  ) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 13px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="formActions"], [class*="modalActions"]) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="formActions"], [class*="modalActions"])
+  > * {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+/* Remove page movement caused by scaling or heading transitions. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(h1, h2, h3, [class*="hero"], [class*="title"]) {
+  transform: none !important;
+  animation: none !important;
+  transition-property:
+    color, background-color, border-color, opacity !important;
+}
+
+@media (orientation: landscape) {
+  html[data-ficonter-native-app="true"] .app-main {
+    padding:
+      calc(72px + env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      calc(92px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left))
+      !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-shell {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .sidebar {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_heroActions"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_kpis"]
+    > article {
+    min-width: min(40vw, 300px) !important;
+    flex-basis: min(40vw, 300px) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonCommandStrip_item"],
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonCommandStrip_progressItem"] {
+    min-width: min(42vw, 285px) !important;
+    flex-basis: min(42vw, 285px) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonOverviewBoard_board"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "cash allocation"
+      "gps gps" !important;
+  }
+}
+
+@media (max-width: 350px) {
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_heroActions"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="FinancialHealthScore_card"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}

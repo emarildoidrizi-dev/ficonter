@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
@@ -101,6 +102,7 @@ export default async function BusinessLayout({
         <WorkspaceSwitcher current="business" />
         {children}
       </main>
-    </div>
+          <PWAMobileDock workspace="business" />
+      </div>
   );
 }

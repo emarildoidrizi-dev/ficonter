@@ -1473,3 +1473,158 @@ html[dir="rtl"] :where(svg) {
   }
 }
 /* FICONTER MOBILE DRAWER LAYER HOTFIX — END */
+
+/* FICONTER PWA MODERN MOBILE APP — BEGIN */
+html[data-ficonter-pwa-phone="true"] {
+  --pwa-app-gutter: 14px;
+  --pwa-card-radius: 24px;
+  --pwa-control-radius: 16px;
+  --density-page-padding: 14px;
+  --density-section-gap: 18px;
+  --density-card-padding: 19px;
+  --density-control-height: 50px;
+  --density-row-padding: 16px;
+  font-size: 16px;
+}
+
+html[data-ficonter-pwa-phone="true"],
+html[data-ficonter-pwa-phone="true"] body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
+html[data-ficonter-pwa-phone="true"] body {
+  background: radial-gradient(circle at 50% -12%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 34%), var(--surface-canvas);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: calc(80px + env(safe-area-inset-top)) max(var(--pwa-app-gutter), env(safe-area-inset-right)) calc(108px + env(safe-area-inset-bottom)) max(var(--pwa-app-gutter), env(safe-area-inset-left)) !important;
+  overflow-x: clip !important;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main > * { min-width: 0 !important; max-width: 100% !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_mobileBar"] {
+  min-height: calc(66px + env(safe-area-inset-top)) !important;
+  background: color-mix(in srgb, var(--surface-card) 91%, transparent) !important;
+  border-bottom-color: color-mix(in srgb, var(--border-strong) 72%, transparent) !important;
+  box-shadow: 0 12px 38px rgba(4,10,14,.12) !important;
+  backdrop-filter: blur(24px) saturate(145%) !important;
+}
+html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_menuButton"] {
+  min-width: 88px !important;
+  min-height: 46px !important;
+  border-radius: 15px !important;
+  font-size: 14px !important;
+}
+html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_brand"] { font-size: 25px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_workspace"] { min-height: 36px !important; font-size: 11.5px !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="WorkspaceSwitcher_switcher"] {
+  position: relative !important;
+  top: auto !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
+  margin: 0 0 17px !important;
+  padding: 14px !important;
+  border-radius: 23px !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-card) 97%, var(--gold) 3%), var(--surface-card)) !important;
+  box-shadow: 0 14px 42px rgba(5,12,17,.075) !important;
+}
+html[data-ficonter-pwa-phone="true"] [class*="WorkspaceSwitcher_label"] { display: block !important; padding: 0 3px; font-size: 10.5px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="WorkspaceSwitcher_options"] { display: grid !important; width: 100% !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 5px !important; padding: 5px !important; border-radius: 16px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="WorkspaceSwitcher_options"] a { min-height: 48px !important; justify-content: center !important; border-radius: 13px !important; font-size: 14px !important; }
+
+html[data-ficonter-pwa-phone="true"] .topbar {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 18px !important;
+  margin: 0 0 18px !important;
+  padding: 21px 19px !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: 27px;
+  background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--gold) 17%, transparent), transparent 38%), linear-gradient(145deg, color-mix(in srgb, var(--surface-card) 97%, var(--gold) 3%), var(--surface-card));
+  box-shadow: 0 18px 52px rgba(5,12,17,.09);
+}
+html[data-ficonter-pwa-phone="true"] .page-title h1 { margin: 0 !important; font-size: clamp(38px,10.2vw,46px) !important; line-height: .98 !important; overflow-wrap: normal !important; }
+html[data-ficonter-pwa-phone="true"] .page-title p { margin: 13px 0 0 !important; font-size: 14.5px !important; line-height: 1.55 !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="DashboardLiveOverview_headerActions"] { display: grid !important; width: 100% !important; grid-template-columns: auto minmax(0,1fr) !important; gap: 10px !important; align-items: center !important; }
+html[data-ficonter-pwa-phone="true"] [class*="DashboardLiveOverview_livePill"] { min-height: 48px !important; justify-content: center; padding: 0 15px !important; font-size: 13px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="DashboardLiveOverview_headerActions"] .btn { width: 100% !important; min-height: 48px !important; font-size: 14px !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_strip"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 10px !important; margin: 0 0 18px !important; overflow: visible !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_item"],
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_progressItem"] { min-height: 132px; align-items: flex-start !important; flex-direction: column !important; gap: 11px !important; padding: 15px !important; border: 1px solid var(--border-subtle); border-radius: 22px; box-shadow: 0 12px 36px rgba(5,12,17,.065); }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_item"] strong,
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_progressItem"] strong { font-size: 14px !important; line-height: 1.35 !important; white-space: normal !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_item"] span:not([class*="icon"]),
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_progressItem"] span { font-size: 12px !important; white-space: normal !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_commandButton"] { grid-column: 1 / -1 !important; min-height: 52px !important; border-radius: 18px !important; font-size: 14px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_commandButton"] kbd { display: none !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_board"] { grid-template-columns: 1fr !important; grid-template-areas: "cash" "allocation" "gps" !important; gap: 14px !important; margin: 14px 0 18px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_card"] { border-radius: 26px !important; box-shadow: 0 16px 46px rgba(5,12,17,.085) !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_cashFlowCard"],
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_allocationCard"],
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_gpsCard"] { grid-column: auto !important; min-height: 0 !important; padding: 20px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_heroNumber"] { font-size: clamp(37px,11vw,48px) !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_cashFlowCard"] > p { font-size: 14px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_miniStats"] small { font-size: 10.5px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_miniStats"] strong { font-size: 14px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_gpsCard"] { min-height: 360px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_gpsContent"] h2 { max-width: 82% !important; font-size: clamp(31px,9vw,39px) !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_gpsContent"] p { font-size: 14px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="HorizonOverviewBoard_evidenceGrid"] { grid-template-columns: 1fr !important; }
+
+html[data-ficonter-pwa-phone="true"] [class*="FinancialJourneyRail_shell"] { padding: 19px 17px !important; border-radius: 26px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialJourneyRail_heading"] { align-items: stretch !important; flex-direction: column !important; gap: 13px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialJourneyRail_heading"] strong { font-size: 26px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialJourneyRail_rail"] { grid-template-columns: repeat(6,158px) !important; overflow-x: auto !important; scroll-snap-type: x proximity; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialJourneyRail_stage"] { scroll-snap-align: start; }
+
+html[data-ficonter-pwa-phone="true"] [class*="FinancialHealthScore_card"] { width: 100% !important; grid-template-columns: 94px minmax(0,1fr) !important; gap: 16px !important; padding: 18px !important; border-radius: 25px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialHealthScore_gaugeWrap"],
+html[data-ficonter-pwa-phone="true"] [class*="FinancialHealthScore_gauge"] { width: 90px !important; height: 90px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialHealthScore_summary"] { font-size: 12.5px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="FinancialHealthScore_factorList"] { grid-template-columns: 1fr !important; }
+
+html[data-ficonter-pwa-phone="true"] .app-main :where(.panel,.kpi,.card,article) { border-radius: var(--pwa-card-radius) !important; }
+html[data-ficonter-pwa-phone="true"] .app-main .kpis { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 11px !important; }
+html[data-ficonter-pwa-phone="true"] .app-main .kpi { min-height: 128px; padding: 19px !important; box-shadow: 0 14px 40px rgba(5,12,17,.07); }
+html[data-ficonter-pwa-phone="true"] .app-main .kpi span { font-size: 13px !important; }
+html[data-ficonter-pwa-phone="true"] .app-main .kpi strong { font-size: clamp(24px,7.2vw,31px) !important; overflow-wrap: anywhere; }
+
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_hero__"] { display: grid !important; grid-template-columns: 1fr !important; gap: 17px !important; padding: 21px 19px; border: 1px solid var(--border-subtle); border-radius: 27px; background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--gold) 16%, transparent), transparent 38%), var(--surface-card); box-shadow: 0 18px 52px rgba(5,12,17,.085); }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_hero__"] h1 { font-size: clamp(37px,10.5vw,47px) !important; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_heroActions"] { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 9px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_heroActions"] > a { min-height: 52px !important; justify-content: center !important; font-size: 13px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_kpis"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 11px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_kpis"] article { min-height: 145px !important; padding: 18px !important; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_kpis"] strong { font-size: clamp(24px,7.5vw,31px) !important; overflow-wrap: anywhere; }
+html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_costSnapshot"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+
+html[data-ficonter-pwa-phone="true"] .app-main :where(button,.btn,input:not([type="checkbox"]):not([type="radio"]),select) { min-height: 50px !important; border-radius: var(--pwa-control-radius) !important; font-size: 15px !important; }
+html[data-ficonter-pwa-phone="true"] .app-main :where(input,select,textarea) { width: 100%; max-width: 100%; padding: 14px 15px; font-size: 16px !important; }
+html[data-ficonter-pwa-phone="true"] .app-main :where(.field label,[class*="field"] label) { font-size: 14px !important; }
+
+@media (max-width: 350px) {
+  html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_menuButton"] { min-width: 46px !important; width: 46px !important; padding: 0 !important; }
+  html[data-ficonter-pwa-phone="true"] [class*="MobileNavigationController_menuButton"] span { display: none !important; }
+  html[data-ficonter-pwa-phone="true"] [class*="HorizonCommandStrip_strip"],
+  html[data-ficonter-pwa-phone="true"] .app-main .kpis,
+  html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_heroActions"],
+  html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_kpis"],
+  html[data-ficonter-pwa-phone="true"] [class*="BusinessOverview_costSnapshot"] { grid-template-columns: 1fr !important; }
+  html[data-ficonter-pwa-phone="true"] [class*="DashboardLiveOverview_headerActions"] { grid-template-columns: 1fr !important; }
+}
+/* FICONTER PWA MODERN MOBILE APP — END */

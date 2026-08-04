@@ -431,3 +431,68 @@
 }
 
 /* FICONTER NATIVE APP FULL-BLEED CHROME — END */
+/* FICONTER NATIVE APP SIGN OUT — BEGIN */
+.drawerFooter {
+  position: sticky;
+  z-index: 2;
+  bottom: calc(-1 * max(22px, env(safe-area-inset-bottom)));
+  margin-top: 18px;
+  padding:
+    13px
+    0
+    max(22px, env(safe-area-inset-bottom));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 21, 17, 0),
+      #0b1511 22%,
+      #0b1511 100%
+    );
+}
+
+.signOutButton {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 7px 14px 7px 8px;
+  border: 1px solid rgba(184, 79, 79, 0.35);
+  border-radius: 17px;
+  color: #f3d7d7;
+  background: rgba(132, 45, 45, 0.13);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.signOutButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.signOutIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  color: #f1c4c4;
+  background: rgba(184, 79, 79, 0.16);
+}
+
+.signOutButton:focus-visible {
+  outline: 2px solid #d8bd7c;
+  outline-offset: 3px;
+}
+
+@media (orientation: landscape) {
+  .drawerFooter {
+    bottom: calc(-1 * max(14px, env(safe-area-inset-bottom)));
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+}
+/* FICONTER NATIVE APP SIGN OUT — END */

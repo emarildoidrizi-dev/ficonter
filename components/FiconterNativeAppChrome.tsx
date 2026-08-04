@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Bell,
@@ -18,6 +18,7 @@ import {
   House,
   Landmark,
   LayoutGrid,
+  LogOut,
   Menu,
   MessageSquareText,
   PackageOpen,
@@ -37,6 +38,7 @@ import {
   useState,
   type ComponentType,
 } from "react";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./FiconterNativeAppChrome.module.css";
 
 type Workspace = "personal" | "business";
@@ -223,6 +225,22 @@ const businessRoutes: RouteItem[] = [
 ];
 
 function isStandalone() {
+  async function signOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setSigningOut(false);
+      return;
+    }
+
+    setDrawerOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     Boolean((navigator as IOSNavigator).standalone)
@@ -260,6 +278,22 @@ function activeRoute(
     return pathname === "/dashboard";
   }
 
+  async function signOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setSigningOut(false);
+      return;
+    }
+
+    setDrawerOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
   return (
     pathname === route.href ||
     pathname.startsWith(`${route.href}/`)
@@ -271,6 +305,22 @@ function currentRoute(
   routes: RouteItem[],
   workspace: Workspace,
 ) {
+  async function signOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setSigningOut(false);
+      return;
+    }
+
+    setDrawerOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
   return (
     [...routes]
       .sort((a, b) => b.href.length - a.href.length)
@@ -285,7 +335,10 @@ export function FiconterNativeAppChrome({
   businessName = "",
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const routes =
     workspace === "business" ? businessRoutes : personalRoutes;
@@ -367,6 +420,22 @@ export function FiconterNativeAppChrome({
     };
   }, [drawerOpen]);
 
+  async function signOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setSigningOut(false);
+      return;
+    }
+
+    setDrawerOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
   return (
     <>
       <header className={styles.header}>
@@ -532,6 +601,22 @@ export function FiconterNativeAppChrome({
             );
           })}
         </nav>
+
+        <div className={styles.drawerFooter}>
+          <button
+            type="button"
+            className={styles.signOutButton}
+            onClick={() => void signOut()}
+            disabled={signingOut}
+          >
+            <span className={styles.signOutIcon}>
+              <LogOut size={19} aria-hidden={true} />
+            </span>
+            <span>
+              {signingOut ? "Signing out…" : "Sign out"}
+            </span>
+          </button>
+        </div>
       </aside>
     </>
   );

@@ -749,3 +749,86 @@ html[data-ficonter-native-app="true"] .app-main {
 }
 
 /* FICONTER NATIVE APP FULL-BLEED SCREEN — END */
+
+/* FICONTER NATIVE APP NAVIGATION PERFORMANCE — BEGIN */
+
+html[data-ficonter-native-app="true"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-ficonter-native-app="true"]
+  :where(a, button) {
+  touch-action: manipulation;
+}
+
+html[data-ficonter-native-app="true"]
+  body::after {
+  content: "";
+  position: fixed;
+  z-index: 2600;
+  top: 0;
+  right: 100%;
+  left: 0;
+  height: 3px;
+  opacity: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #d8bd7c 34%,
+      #f3dfa4 66%,
+      transparent
+    );
+  transform: translate3d(-40%, 0, 0);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [data-ficonter-route-loading="true"] {
+  cursor: progress;
+}
+
+html[data-ficonter-native-app="true"]
+  body:has(
+    html[data-ficonter-route-loading="true"]
+  )::after {
+  opacity: 1;
+}
+
+/*
+  Safari does not support matching an html ancestor through body:has()
+  consistently in every installed-app release, so this direct selector
+  is the authoritative loading indicator.
+*/
+html[data-ficonter-native-app="true"][data-ficonter-route-loading="true"]
+  body::after {
+  right: 0;
+  opacity: 1;
+  animation:
+    ficonter-native-route-progress
+    900ms
+    ease-in-out
+    infinite;
+}
+
+@keyframes ficonter-native-route-progress {
+  0% {
+    transform: translate3d(-65%, 0, 0);
+  }
+  55% {
+    transform: translate3d(15%, 0, 0);
+  }
+  100% {
+    transform: translate3d(75%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ficonter-native-app="true"][data-ficonter-route-loading="true"]
+    body::after {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* FICONTER NATIVE APP NAVIGATION PERFORMANCE — END */

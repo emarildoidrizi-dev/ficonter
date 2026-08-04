@@ -496,3 +496,32 @@
   }
 }
 /* FICONTER NATIVE APP SIGN OUT — END */
+
+/* FICONTER NATIVE APP CHROME PERFORMANCE — BEGIN */
+
+.header,
+.bottomDock,
+.drawer,
+.backdrop {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.header,
+.bottomDock {
+  contain: layout paint style;
+}
+
+.drawerNavigation {
+  contain: layout paint;
+}
+
+.dockItem,
+.addButton,
+.drawerLink,
+.menuButton {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* FICONTER NATIVE APP CHROME PERFORMANCE — END */

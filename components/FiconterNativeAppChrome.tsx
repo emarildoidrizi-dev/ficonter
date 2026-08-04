@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
-  Bell,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -29,7 +28,6 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  WalletCards,
   X,
 } from "lucide-react";
 import {
@@ -277,8 +275,9 @@ function currentRoute(
   return (
     [...routes]
       .sort((a, b) => b.href.length - a.href.length)
-      .find((route) => activeRoute(pathname, route, workspace)) ??
-    routes[0]
+      .find((route) =>
+        activeRoute(pathname, route, workspace),
+      ) ?? routes[0]
   );
 }
 
@@ -294,7 +293,9 @@ export function FiconterNativeAppChrome({
   const [signingOut, setSigningOut] = useState(false);
 
   const routes =
-    workspace === "business" ? businessRoutes : personalRoutes;
+    workspace === "business"
+      ? businessRoutes
+      : personalRoutes;
 
   const route = useMemo(
     () => currentRoute(pathname, routes, workspace),
@@ -341,8 +342,14 @@ export function FiconterNativeAppChrome({
     const synchronize = () => synchronizeNativeAppMode();
 
     window.addEventListener("resize", synchronize);
-    window.addEventListener("orientationchange", synchronize);
-    window.visualViewport?.addEventListener("resize", synchronize);
+    window.addEventListener(
+      "orientationchange",
+      synchronize,
+    );
+    window.visualViewport?.addEventListener(
+      "resize",
+      synchronize,
+    );
     displayMode.addEventListener?.("change", synchronize);
 
     return () => {
@@ -355,9 +362,32 @@ export function FiconterNativeAppChrome({
         "resize",
         synchronize,
       );
-      displayMode.removeEventListener?.("change", synchronize);
+      displayMode.removeEventListener?.(
+        "change",
+        synchronize,
+      );
     };
   }, []);
+
+  useEffect(() => {
+    const scheduled = primaryItems.map((item, index) =>
+      window.setTimeout(() => {
+        router.prefetch(item.href);
+      }, 80 + index * 80),
+    );
+
+    scheduled.push(
+      window.setTimeout(() => {
+        router.prefetch(addHref);
+      }, 140),
+    );
+
+    return () => {
+      scheduled.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+    };
+  }, [addHref, router, workspace]);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -372,6 +402,16 @@ export function FiconterNativeAppChrome({
         "closed";
     };
   }, [drawerOpen]);
+
+  function openDrawer() {
+    setDrawerOpen(true);
+
+    routes.forEach((item, index) => {
+      window.setTimeout(() => {
+        router.prefetch(item.href);
+      }, index * 45);
+    });
+  }
 
   async function signOut() {
     if (signingOut) return;
@@ -396,7 +436,7 @@ export function FiconterNativeAppChrome({
         <button
           type="button"
           className={styles.menuButton}
-          onClick={() => setDrawerOpen(true)}
+          onClick={openDrawer}
           aria-label="Open app navigation"
           aria-expanded={drawerOpen}
         >
@@ -409,7 +449,9 @@ export function FiconterNativeAppChrome({
         </div>
 
         <span className={styles.workspaceBadge}>
-          {workspace === "business" ? "Business" : "Personal"}
+          {workspace === "business"
+            ? "Business"
+            : "Personal"}
         </span>
       </header>
 
@@ -429,6 +471,7 @@ export function FiconterNativeAppChrome({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={`${styles.dockItem} ${
                 active ? styles.dockActive : ""
               }`}
@@ -442,6 +485,7 @@ export function FiconterNativeAppChrome({
 
         <Link
           href={addHref}
+          prefetch={true}
           className={styles.addButton}
           aria-label={
             workspace === "business"
@@ -464,6 +508,7 @@ export function FiconterNativeAppChrome({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={`${styles.dockItem} ${
                 active ? styles.dockActive : ""
               }`}
@@ -478,7 +523,7 @@ export function FiconterNativeAppChrome({
         <button
           type="button"
           className={styles.dockItem}
-          onClick={() => setDrawerOpen(true)}
+          onClick={openDrawer}
           aria-label="Open all sections"
         >
           <LayoutGrid size={21} aria-hidden={true} />
@@ -517,7 +562,11 @@ export function FiconterNativeAppChrome({
           </button>
         </div>
 
-        <Link href={switchHref} className={styles.workspaceSwitch}>
+        <Link
+          href={switchHref}
+          prefetch={true}
+          className={styles.workspaceSwitch}
+        >
           <span>
             {workspace === "business"
               ? "Open personal workspace"
@@ -526,7 +575,9 @@ export function FiconterNativeAppChrome({
           <ChevronRight size={18} aria-hidden={true} />
         </Link>
 
-        <div className={styles.drawerLabel}>All sections</div>
+        <div className={styles.drawerLabel}>
+          All sections
+        </div>
 
         <nav className={styles.drawerNavigation}>
           {routes.map((item) => {
@@ -540,17 +591,28 @@ export function FiconterNativeAppChrome({
             return (
               <Link
                 href={item.href}
+                prefetch={true}
                 key={item.href}
                 className={`${styles.drawerLink} ${
-                  active ? styles.drawerLinkActive : ""
+                  active
+                    ? styles.drawerLinkActive
+                    : ""
                 }`}
-                aria-current={active ? "page" : undefined}
+                aria-current={
+                  active ? "page" : undefined
+                }
               >
                 <span className={styles.drawerIcon}>
-                  <Icon size={19} aria-hidden={true} />
+                  <Icon
+                    size={19}
+                    aria-hidden={true}
+                  />
                 </span>
                 <span>{item.label}</span>
-                <ChevronRight size={16} aria-hidden={true} />
+                <ChevronRight
+                  size={16}
+                  aria-hidden={true}
+                />
               </Link>
             );
           })}
@@ -564,10 +626,15 @@ export function FiconterNativeAppChrome({
             disabled={signingOut}
           >
             <span className={styles.signOutIcon}>
-              <LogOut size={19} aria-hidden={true} />
+              <LogOut
+                size={19}
+                aria-hidden={true}
+              />
             </span>
             <span>
-              {signingOut ? "Signing out…" : "Sign out"}
+              {signingOut
+                ? "Signing out…"
+                : "Sign out"}
             </span>
           </button>
         </div>

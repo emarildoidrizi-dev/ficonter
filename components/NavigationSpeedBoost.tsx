@@ -5,6 +5,54 @@ import { usePathname, useRouter } from "next/navigation";
 
 type Workspace = "personal" | "business";
 
+type NetworkInformation = {
+  effectiveType?: string;
+  saveData?: boolean;
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: NetworkInformation;
+};
+
+const personalCriticalRoutes = [
+  "/dashboard",
+  "/dashboard/transactions",
+  "/dashboard/budget",
+  "/dashboard/bills",
+  "/dashboard/settings",
+];
+
+const personalSecondaryRoutes = [
+  "/dashboard/savings",
+  "/dashboard/debt",
+  "/dashboard/goals",
+  "/dashboard/net-worth",
+  "/dashboard/cash-flow",
+  "/dashboard/emergency-fund",
+  "/dashboard/gps",
+  "/dashboard/financial-independence",
+  "/dashboard/insights",
+  "/dashboard/documents",
+  "/dashboard/inbox",
+];
+
+const businessCriticalRoutes = [
+  "/business/overview",
+  "/business/sales",
+  "/business/transactions",
+  "/business/reports",
+  "/business/inventory",
+];
+
+const businessSecondaryRoutes = [
+  "/business/cost-control",
+  "/business/suppliers",
+  "/business/administration",
+  "/business/manage",
+];
+
+const warmedByContext = new Map<string, Set<string>>();
+
 function internalRoute(target: EventTarget | null) {
   if (!(target instanceof Element)) return null;
 
@@ -18,29 +66,43 @@ function internalRoute(target: EventTarget | null) {
 
   try {
     const url = new URL(href, window.location.href);
+
     if (url.origin !== window.location.origin) return null;
+
     return `${url.pathname}${url.search}`;
   } catch {
     return null;
   }
 }
 
-function canWarmRoute(
-  workspace: Workspace,
-  pathname: string,
-  route: string,
-) {
-  if (route === pathname) return false;
+function shouldHandleClick(event: MouseEvent) {
+  return (
+    event.button === 0 &&
+    !event.defaultPrevented &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
+}
 
-  if (
-    workspace === "business" &&
-    route.startsWith("/business/") &&
-    route !== "/business"
-  ) {
-    return false;
-  }
+function allowsBackgroundPrefetch() {
+  const connection = (
+    navigator as NavigatorWithConnection
+  ).connection;
 
-  return true;
+  if (connection?.saveData) return false;
+
+  return !["slow-2g", "2g"].includes(
+    connection?.effectiveType ?? "",
+  );
+}
+
+function isNativePhoneApp() {
+  return (
+    document.documentElement.dataset.ficonterNativeApp ===
+    "true"
+  );
 }
 
 export function NavigationSpeedBoost({
@@ -53,40 +115,102 @@ export function NavigationSpeedBoost({
   const router = useRouter();
   const pathname = usePathname();
   const warmedRoutes = useRef(new Set<string>());
+  const loadingTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    warmedRoutes.current.clear();
-  }, [cacheKey]);
+    const contextKey = `${workspace}:${cacheKey}`;
+    const existing =
+      warmedByContext.get(contextKey) ?? new Set<string>();
+
+    warmedByContext.set(contextKey, existing);
+    warmedRoutes.current = existing;
+  }, [cacheKey, workspace]);
 
   useEffect(() => {
-    function warmRoute(target: EventTarget | null) {
-      const route = internalRoute(target);
-      if (!route) return;
-      if (!canWarmRoute(workspace, pathname, route)) return;
+    const root = document.documentElement;
+
+    root.removeAttribute("data-ficonter-route-loading");
+
+    if (loadingTimer.current) {
+      window.clearTimeout(loadingTimer.current);
+      loadingTimer.current = null;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    function warmRoute(route: string | null) {
+      if (!route || route === pathname) return;
       if (warmedRoutes.current.has(route)) return;
 
       warmedRoutes.current.add(route);
-      router.prefetch(route);
+
+      try {
+        router.prefetch(route);
+      } catch {
+        warmedRoutes.current.delete(route);
+      }
+    }
+
+    function warmTarget(target: EventTarget | null) {
+      warmRoute(internalRoute(target));
     }
 
     function handlePointerOver(event: PointerEvent) {
-      warmRoute(event.target);
+      warmTarget(event.target);
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      warmTarget(event.target);
     }
 
     function handleFocusIn(event: FocusEvent) {
-      warmRoute(event.target);
+      warmTarget(event.target);
     }
 
     function handleTouchStart(event: TouchEvent) {
-      warmRoute(event.target);
+      warmTarget(event.target);
     }
 
-    document.addEventListener("pointerover", handlePointerOver, true);
+    function handleClick(event: MouseEvent) {
+      if (!shouldHandleClick(event)) return;
+
+      const route = internalRoute(event.target);
+
+      if (!route || route === pathname) return;
+
+      warmRoute(route);
+
+      document.documentElement.dataset.ficonterRouteLoading =
+        "true";
+
+      if (loadingTimer.current) {
+        window.clearTimeout(loadingTimer.current);
+      }
+
+      loadingTimer.current = window.setTimeout(() => {
+        document.documentElement.removeAttribute(
+          "data-ficonter-route-loading",
+        );
+        loadingTimer.current = null;
+      }, 9000);
+    }
+
+    document.addEventListener(
+      "pointerover",
+      handlePointerOver,
+      true,
+    );
+    document.addEventListener(
+      "pointerdown",
+      handlePointerDown,
+      true,
+    );
     document.addEventListener("focusin", handleFocusIn, true);
     document.addEventListener("touchstart", handleTouchStart, {
       capture: true,
       passive: true,
     });
+    document.addEventListener("click", handleClick, true);
 
     return () => {
       document.removeEventListener(
@@ -94,31 +218,94 @@ export function NavigationSpeedBoost({
         handlePointerOver,
         true,
       );
-      document.removeEventListener("focusin", handleFocusIn, true);
+      document.removeEventListener(
+        "pointerdown",
+        handlePointerDown,
+        true,
+      );
+      document.removeEventListener(
+        "focusin",
+        handleFocusIn,
+        true,
+      );
       document.removeEventListener(
         "touchstart",
         handleTouchStart,
         true,
       );
+      document.removeEventListener(
+        "click",
+        handleClick,
+        true,
+      );
+
+      if (loadingTimer.current) {
+        window.clearTimeout(loadingTimer.current);
+        loadingTimer.current = null;
+      }
     };
-  }, [pathname, router, workspace]);
+  }, [pathname, router]);
 
   useEffect(() => {
-    const currentRoot =
-      workspace === "personal" ? "/dashboard" : "/business";
-    const otherRoot =
-      workspace === "personal" ? "/business" : "/dashboard";
+    const criticalRoutes =
+      workspace === "personal"
+        ? personalCriticalRoutes
+        : businessCriticalRoutes;
 
-    const timeoutId = window.setTimeout(() => {
-      for (const route of [currentRoot, otherRoot]) {
-        if (warmedRoutes.current.has(route)) continue;
-        warmedRoutes.current.add(route);
-        router.prefetch(route);
-      }
-    }, 500);
+    const secondaryRoutes =
+      workspace === "personal"
+        ? personalSecondaryRoutes
+        : businessSecondaryRoutes;
 
-    return () => window.clearTimeout(timeoutId);
-  }, [cacheKey, router, workspace]);
+    const oppositeWorkspace =
+      workspace === "personal"
+        ? "/business/overview"
+        : "/dashboard";
+
+    const scheduled: number[] = [];
+
+    function schedule(route: string, delay: number) {
+      scheduled.push(
+        window.setTimeout(() => {
+          if (
+            route === pathname ||
+            warmedRoutes.current.has(route)
+          ) {
+            return;
+          }
+
+          warmedRoutes.current.add(route);
+
+          try {
+            router.prefetch(route);
+          } catch {
+            warmedRoutes.current.delete(route);
+          }
+        }, delay),
+      );
+    }
+
+    criticalRoutes.forEach((route, index) => {
+      schedule(route, 120 + index * 130);
+    });
+
+    schedule(oppositeWorkspace, 900);
+
+    if (
+      allowsBackgroundPrefetch() &&
+      isNativePhoneApp()
+    ) {
+      secondaryRoutes.forEach((route, index) => {
+        schedule(route, 1100 + index * 190);
+      });
+    }
+
+    return () => {
+      scheduled.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+    };
+  }, [cacheKey, pathname, router, workspace]);
 
   return null;
 }

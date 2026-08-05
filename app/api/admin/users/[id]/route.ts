@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, type AdminRole } from "@/lib/admin/access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { AdminAuditRow } from "@/lib/admin/snapshot";
+import type { Json } from "@/lib/supabase/database.types";
 import {
   isSameOriginRequest,
   noStoreHeaders,
@@ -26,6 +27,8 @@ type TargetAccount = {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LONG_SUSPENSION = "876000h";
+
+type AuditDetails = { [key: string]: Json | undefined };
 
 function jsonError(message: string, status: number) {
   return NextResponse.json(
@@ -102,7 +105,7 @@ async function writeAuditLog(
   adminUserId: string,
   action: string,
   targetUserId: string | null,
-  details: Record<string, unknown>,
+  details: AuditDetails,
 ): Promise<AdminAuditRow> {
   const service = createServiceClient();
   const { data, error } = await service
@@ -123,7 +126,7 @@ async function writeAuditLog(
 async function updateAuditLog(
   auditId: string,
   action: string,
-  details: Record<string, unknown>,
+  details: AuditDetails,
 ): Promise<AdminAuditRow | null> {
   const service = createServiceClient();
   const { data, error } = await service

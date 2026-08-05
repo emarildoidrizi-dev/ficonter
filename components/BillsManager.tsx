@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.contract";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
@@ -60,6 +61,21 @@ type Bill = {
   created_at: string;
   updated_at: string;
 };
+
+type LinkedTransactionRollback = Pick<
+  Database["public"]["Tables"]["transactions"]["Update"],
+  | "description"
+  | "amount"
+  | "currency"
+  | "amount_eur"
+  | "exchange_rate_to_eur"
+  | "exchange_rate_date"
+  | "exchange_rate_source"
+  | "type"
+  | "category"
+  | "transaction_date"
+  | "occurred_at"
+>;
 
 const CURRENCIES = [
   "EUR","USD","GBP","CHF","AUD","CAD","JPY","CNY","HKD","SGD","NZD","SEK","NOK",
@@ -515,19 +531,7 @@ export function BillsManager({
           throw new Error("The bill being edited could not be found.");
         }
 
-        let linkedTransactionBefore: {
-          description: string;
-          amount: number;
-          currency: string;
-          amount_eur: number;
-          exchange_rate_to_eur: number;
-          exchange_rate_date: string | null;
-          exchange_rate_source: string | null;
-          type: string;
-          category: string;
-          transaction_date: string;
-          occurred_at: string | null;
-        } | null = null;
+        let linkedTransactionBefore: LinkedTransactionRollback | null = null;
 
         if (existingBill.status === "paid" && existingBill.transaction_id) {
           const { data: linkedTransaction, error: linkedReadError } =

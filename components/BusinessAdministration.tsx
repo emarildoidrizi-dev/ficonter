@@ -41,6 +41,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.contract";
 import {
   CURRENCY_CODES,
   currencyName,
@@ -175,7 +176,7 @@ type AuditEvent = {
   entity_type: string;
   entity_id: string | null;
   summary: string;
-  metadata: Record<string, unknown> | null;
+  metadata: Json;
   occurred_at: string;
 };
 

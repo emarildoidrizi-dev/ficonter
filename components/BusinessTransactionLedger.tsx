@@ -69,12 +69,14 @@ function mergeRealtime<T extends { id: string }>(
 }
 
 export function BusinessTransactionLedger({
+  userId,
   business,
   initialTransactions,
   initialCategories,
   initialCostCentres,
   initialSuppliers,
 }: {
+  userId: string;
   business: Business;
   initialTransactions: BusinessTransaction[];
   initialCategories: BusinessCostCategory[];
@@ -290,7 +292,7 @@ export function BusinessTransactionLedger({
       } else {
         const { data, error: insertError } = await supabase
           .from("business_transactions")
-          .insert(payload)
+          .insert({ ...payload, created_by: userId })
           .select()
           .single();
         if (insertError) throw insertError;

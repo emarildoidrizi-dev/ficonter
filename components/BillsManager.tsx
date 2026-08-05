@@ -517,10 +517,10 @@ export function BillsManager({
 
         let linkedTransactionBefore: {
           description: string;
-          amount: number | string;
+          amount: number;
           currency: string;
-          amount_eur: number | string;
-          exchange_rate_to_eur: number | string;
+          amount_eur: number;
+          exchange_rate_to_eur: number;
           exchange_rate_date: string | null;
           exchange_rate_source: string | null;
           type: string;

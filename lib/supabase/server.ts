@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database.contract";
 import { cookies } from "next/headers";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;

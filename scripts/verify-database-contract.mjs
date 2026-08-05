@@ -86,14 +86,23 @@ for (const file of requiredFiles) {
 }
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-const baseline = fs.readFileSync(baselinePath);
-const baselineHash = crypto.createHash("sha256").update(baseline).digest("hex");
+const baselineBytes = fs.readFileSync(baselinePath);
+const baselineText = baselineBytes
+  .toString("utf8")
+  .replace(/^\uFEFF/, "")
+  .replace(/\r\n?/g, "\n");
+const baselineHash = crypto
+  .createHash("sha256")
+  .update(baselineText, "utf8")
+  .digest("hex");
+
 if (baselineHash !== manifest.baseline_sha256) {
-  throw new Error("The committed Production baseline checksum has changed.");
+  throw new Error(
+    `The committed Production baseline content has changed. Expected ${manifest.baseline_sha256}, received ${baselineHash}.`,
+  );
 }
 
 const forbidden = ["postgresql://", "SUPABASE_DB_URL=", "sb_secret_"];
-const baselineText = baseline.toString("utf8");
 for (const token of forbidden) {
   if (baselineText.includes(token)) {
     throw new Error(`The database baseline contains a forbidden secret token: ${token}`);

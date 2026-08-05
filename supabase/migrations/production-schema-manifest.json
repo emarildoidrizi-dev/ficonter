@@ -2,7 +2,7 @@
   "generated_at": "2026-08-05",
   "source": "GitHub Actions live Supabase schema export",
   "baseline_file": "20260805000000_live_production_baseline.sql",
-  "baseline_sha256": "b9d15fff692235470e17f98a5b48d2be7340d761b9922bc44ba3e50a43064496",
+  "baseline_sha256": "5b6ded920d84906f440b40a22cce5bd37a73526c70f0cd49a077e7edb23d17b4",
   "database_types_file": "lib/supabase/database.types.ts",
   "counts": {
     "functions": 109,
@@ -331,5 +331,7 @@
   ],
   "pending_migrations": [
     "20260805000100_bill_paid_unpaid_reversal.sql"
-  ]
+  ],
+  "baseline_checksum_mode": "canonical_utf8_lf",
+  "baseline_original_export_sha256": "b9d15fff692235470e17f98a5b48d2be7340d761b9922bc44ba3e50a43064496"
 }

@@ -6,6 +6,7 @@ import {
   Clock3,
   Edit3,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
   X,
@@ -141,6 +142,25 @@ function errorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function isMissingMarkUnpaidRpc(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+
+  const value = error as { code?: unknown; message?: unknown; details?: unknown };
+  const code = String(value.code ?? "").toUpperCase();
+  const message = `${String(value.message ?? "")} ${String(
+    value.details ?? "",
+  )}`.toLowerCase();
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    (message.includes("mark_bill_unpaid") &&
+      (message.includes("schema cache") ||
+        message.includes("could not find") ||
+        message.includes("does not exist")))
+  );
 }
 
 async function convertToEur(amount: number, currency: string) {
@@ -589,6 +609,96 @@ export function BillsManager({
     }
   }
 
+  async function markBillUnpaid(bill: Bill) {
+    if (busy || bill.status !== "paid") return;
+
+    setBusy(`unpaid-${bill.id}`);
+    setMessage("");
+
+    try {
+      let reopenedBill: Bill | null = null;
+      const { data: result, error } = await supabase.rpc(
+        "mark_bill_unpaid",
+        { p_bill_id: bill.id },
+      );
+
+      if (error && !isMissingMarkUnpaidRpc(error)) throw error;
+
+      if (!error) {
+        reopenedBill = (result as { bill?: Bill } | null)?.bill ?? null;
+      } else {
+        const originalPaidAt = bill.paid_at;
+        const originalTransactionId = bill.transaction_id;
+        const updatedAt = new Date().toISOString();
+
+        const { data: fallbackBill, error: reopenError } = await supabase
+          .from("bills")
+          .update({
+            status: "pending",
+            paid_at: null,
+            transaction_id: null,
+            updated_at: updatedAt,
+          })
+          .eq("id", bill.id)
+          .eq("user_id", userId)
+          .eq("status", "paid")
+          .select()
+          .single();
+
+        if (reopenError) throw reopenError;
+
+        if (originalTransactionId) {
+          const { error: transactionDeleteError } = await supabase
+            .from("transactions")
+            .delete()
+            .eq("id", originalTransactionId)
+            .eq("user_id", userId);
+
+          if (transactionDeleteError) {
+            // Restore the original paid state if fallback transaction deletion
+            // fails, so the Bill and cash ledger cannot disagree.
+            const { error: compensationError } = await supabase
+              .from("bills")
+              .update({
+                status: "paid",
+                paid_at: originalPaidAt,
+                transaction_id: originalTransactionId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", bill.id)
+              .eq("user_id", userId);
+
+            if (compensationError) {
+              throw new Error(
+                `${transactionDeleteError.message} The Bill could not be restored automatically: ${compensationError.message}`,
+              );
+            }
+
+            throw transactionDeleteError;
+          }
+        }
+
+        reopenedBill = fallbackBill as Bill;
+      }
+
+      if (!reopenedBill || reopenedBill.id !== bill.id) {
+        throw new Error("The reopened Bill was not returned by the database.");
+      }
+
+      setBills((current) =>
+        current.map((item) => (item.id === bill.id ? reopenedBill : item)),
+      );
+      notifyFiconterDataChange("all");
+      setMessage("Bill marked unpaid and its linked transaction removed.");
+    } catch (error) {
+      setMessage(
+        errorMessage(error, "The Bill could not be marked unpaid."),
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function requestBillDeletion(bill: Bill) {
     if (busy) return;
     setBillPendingDeletion(bill);
@@ -800,6 +910,17 @@ export function BillsManager({
                 {bill.currency !== "EUR" && <span>{money(bill.amount, bill.currency)}</span>}
               </div>
               <div className={styles.cardActions}>
+                {status === "paid" ? (
+                  <button
+                    type="button"
+                    className={`${styles.paidButton} ${styles.unpaidButton}`}
+                    onClick={() => void markBillUnpaid(bill)}
+                    disabled={busy === `unpaid-${bill.id}`}
+                  >
+                    <RotateCcw size={17} />
+                    {busy === `unpaid-${bill.id}` ? "Reopening…" : "Mark unpaid"}
+                  </button>
+                ) : null}
                 <button type="button" className={styles.iconButton} onClick={()=>editBill(bill)} aria-label="Edit bill"><Edit3 size={17}/></button>
                 <button type="button" className={`${styles.iconButton} ${styles.deleteButton}`} onClick={()=>requestBillDeletion(bill)} aria-label="Delete bill"><Trash2 size={17}/></button>
               </div>

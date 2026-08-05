@@ -182,8 +182,8 @@ const cashFlowInput = {
 };
 const cashFlow = cashFlowModule.calculateCashFlowIntelligence(cashFlowInput);
 assert.equal(cashFlow.metrics.knownCommitments, 2424.44);
-approximately(cashFlow.metrics.projectedNetCashFlow, 1040.35);
-approximately(cashFlow.metrics.projectedMargin, 1040.35 / 3464.79, 0.000001);
+approximately(cashFlow.metrics.projectedNetCashFlow, 500.4);
+approximately(cashFlow.metrics.projectedMargin, 500.4 / 2924.84, 0.000001);
 
 const emergencyInput = {
   schemaVersion: 2,

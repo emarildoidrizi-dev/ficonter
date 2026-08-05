@@ -14,6 +14,7 @@ const rateCache = read("lib/performance/exchangeRateCache.ts");
 const form = read("components/TransactionForm.tsx");
 const ledger = read("components/TransactionLedger.tsx");
 const planner = read("components/MonthlyPlanner.tsx");
+const monthlyCashActuals = read("lib/finance/monthlyCashActuals.ts");
 const bills = read("components/BillsManager.tsx");
 const currentUser = read("lib/auth/currentUser.ts");
 const adminAccess = read("lib/admin/access.ts");
@@ -31,8 +32,8 @@ check("Transaction entry uses the cached exchange-rate service", form.includes("
 check("Transaction search uses deferred rendering", ledger.includes("useDeferredValue") && ledger.includes("deferredSearch"));
 check("Large ledgers progressively render records", ledger.includes("visibleLimit") && ledger.includes("Load 120 more"));
 check("Ledger totals use precision-safe aggregation", ledger.includes("sumMoney(inflowValues)") && ledger.includes("sumMoney(netValues)"));
-check("Planner assigns transactions by their local transaction date", planner.includes("transactionActivityDate") && planner.includes("tx.transaction_date||"));
-check("Planner assigns paid bills to one activity month", planner.includes("billActivityDate") && planner.includes('bill.status==="paid"'));
+check("Planner assigns transactions by their local transaction date", planner.includes("transactionActivityDate") && monthlyCashActuals.includes("transaction.transaction_date ||") && monthlyCashActuals.includes("transaction.occurred_at?.slice(0, 10)"));
+check("Planner assigns paid bills to one activity month", planner.includes("billActivityDate") && monthlyCashActuals.includes('bill.status === "paid"') && monthlyCashActuals.includes("bill.paid_at?.slice(0, 10)"));
 check("Planner excludes linked bill transactions from expenses", planner.includes("paidBillTxIds.has(t.id)"));
 check("Bills use the authenticated cached exchange-rate endpoint", bills.includes("convertWithCachedRate") && !bills.includes("api.frankfurter"));
 check("Server dashboard auth is request-cached", currentUser.includes("cache(async () =>") && currentUser.includes("auth.getUser"));

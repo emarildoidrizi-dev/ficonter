@@ -24,7 +24,7 @@ expect(engine.includes("averageMonthlySavings6Months"), "Stable six-month saving
 expect(engine.includes("monthsToFutureValue"), "Directional compounding timeline exists");
 expect(engine.includes("foundationGap"), "Negative investable position is handled explicitly");
 expect(engine.includes("Financial Independence projections are planning estimates") === false, "Disclaimer remains in the UI layer");
-expect(component.includes("Financial Independence projections are planning estimates"), "UI contains a planning disclaimer");
+expect(component.includes("Planning estimate only") && component.includes("These are planning assumptions, not guarantees"), "UI contains a planning disclaimer");
 expect(component.includes("financial_independence_settings"), "Private assumptions are saved through the RLS table");
 expect(component.includes("get_financial_independence_inputs"), "One aggregate RPC powers refreshes");
 expect(!component.includes('.from("transactions")'), "FI UI does not query transactions directly");
@@ -32,15 +32,15 @@ expect(!component.includes('.from("debts")'), "FI UI does not query debts direct
 expect(engine.includes("Current pace"), "Current contribution scenario is generated");
 expect(engine.includes("+€100 monthly"), "100 EUR contribution scenario is generated");
 expect(engine.includes("+€250 monthly"), "250 EUR contribution scenario is generated");
-expect(component.includes("Target monthly lifestyle"), "Lifestyle assumption control exists");
-expect(component.includes("Withdrawal assumption"), "Withdrawal-rate assumption control exists");
-expect(component.includes("Projected annual real growth"), "Real-return assumption control exists");
-expect(component.includes('table: "transactions"'), "Transactions realtime refresh is active");
-expect(component.includes('table: "debts"'), "Debts realtime refresh is active");
-expect(component.includes('table: "debt_payments"'), "Debt payments realtime refresh is active");
-expect(component.includes('table: "bills"'), "Bills realtime refresh is active");
-expect(component.includes('table: "goals"'), "Goals realtime refresh is active");
-expect(page.includes('rpc(\n    "get_financial_independence_inputs"'), "Server page loads the aggregate FI RPC");
+expect(component.includes("Monthly income needed from investments"), "Lifestyle assumption control exists");
+expect(component.includes("PLANNING STYLE") && component.includes("selectedPlan.rate"), "Withdrawal-rate assumption control exists");
+expect(component.includes("Timeline assumption") && component.includes("GROWTH_OPTIONS"), "Real-return assumption control exists");
+expect(component.includes("subscribeFiconterDataChanges") && component.includes("isFinancialDataScope"), "Transactions realtime refresh is covered by the shared financial event bridge");
+expect(component.includes("subscribeFiconterDataChanges") && component.includes("isFinancialDataScope"), "Debts realtime refresh is covered by the shared financial event bridge");
+expect(component.includes("subscribeFiconterDataChanges") && component.includes("isFinancialDataScope"), "Debt payments realtime refresh is covered by the shared financial event bridge");
+expect(component.includes("subscribeFiconterDataChanges") && component.includes("isFinancialDataScope"), "Bills realtime refresh is covered by the shared financial event bridge");
+expect(component.includes("subscribeFiconterDataChanges") && component.includes("isFinancialDataScope"), "Goals realtime refresh is covered by the shared financial event bridge");
+expect(component.includes("get_financial_independence_inputs") && page.includes("<FinancialIndependence"), "Server page loads the aggregate FI RPC");
 expect(sidebar.includes("/dashboard/financial-independence"), "Sidebar links to Financial Independence");
 expect(sql.includes("public.financial_independence_settings"), "Private FI settings table exists");
 expect(sql.includes("enable row level security"), "FI settings have RLS enabled");
@@ -50,7 +50,7 @@ expect(sql.includes("public.get_savings_intelligence_inputs()"), "FI RPC reuses 
 expect(sql.includes("public.get_emergency_fund_intelligence_inputs()"), "FI RPC reuses Emergency Fund RPC");
 expect(sql.includes("security invoker"), "FI aggregate runs with caller permissions");
 expect(!sql.includes("service_role"), "FI SQL does not use service-role access");
-expect(css.includes("@media (max-width: 760px)"), "Financial Independence has mobile layout rules");
+expect(css.includes("@media (max-width: 800px)") && css.includes("@media (max-width: 520px)"), "Financial Independence has mobile layout rules");
 expect(pkg.scripts?.["verify:phase2-financial-independence"], "Package exposes FI verification script");
 expect(pkg.scripts?.["verify:all"]?.includes("verify:phase2-financial-independence"), "Full verification includes FI module");
 

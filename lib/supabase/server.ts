@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/lib/supabase/database.types";
 import { cookies } from "next/headers";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -16,7 +17,7 @@ export async function createClient() {
   const keepSignedIn =
     cookieStore.get(TRUST_COOKIE)?.value === "1";
 
-  return createServerClient(url, key, {
+  return createServerClient<Database>(url, key, {
     cookieOptions: {
       path: "/",
       sameSite: "lax",

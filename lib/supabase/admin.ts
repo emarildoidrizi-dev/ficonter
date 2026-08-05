@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 
 function readAdminKey(): string {
   const key =
@@ -32,7 +33,7 @@ export function createServiceClient() {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL.");
   }
 
-  return createSupabaseClient(url, readAdminKey(), {
+  return createSupabaseClient<Database>(url, readAdminKey(), {
     auth: {
       autoRefreshToken: false,
       detectSessionInUrl: false,

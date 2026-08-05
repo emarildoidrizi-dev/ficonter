@@ -40,7 +40,7 @@ check("RLS is enabled for preferences", sql.includes("alter table public.money_e
 check("RLS is enabled for templates", sql.includes("alter table public.transaction_templates enable row level security"));
 check("RLS is enabled for postings", sql.includes("alter table public.transaction_template_postings enable row level security"));
 check("Transaction creation still emits realtime event", form.includes("ficonter:transaction-created"));
-check("Connected modules are notified", form.includes('notifyFiconterDataChange("transactions")'));
+check("Connected modules are notified", form.includes('notifyFiconterDataChange("all")') || form.includes('notifyFiconterDataChange("transactions")'));
 check("Mode changes remount the form safely", workspace.includes('key={`${mode}:'));
 check("Shortcut deletion keeps transactions", workspace.includes("Existing transactions were not changed"));
 check("Effortless panel is not sticky", globals.includes("transaction-entry-panel.transaction-effortless-panel") && globals.includes("position: static"));

@@ -46,7 +46,7 @@ check("component discloses no duplicate balance", component.includes("No second\
 check("component renders reserve milestones", component.includes("Protection milestones"));
 check("component renders scrollable full monthly history", component.includes("Full monthly history"));
 check("component reuses Transactions workflow", component.includes('href="/dashboard/transactions"'));
-check("sidebar exposes Emergency fund route", sidebar.includes('["/dashboard/emergency-fund", Umbrella, "Emergency fund"]'));
+check("sidebar exposes Emergency fund route", sidebar.includes('["/dashboard/emergency-fund", ShieldCheck, "Emergency Fund"]'));
 check("SQL is security invoker", sql.includes("security invoker"));
 check("SQL scopes transactions to authenticated user", (sql.match(/user_id = v_user_id/g) ?? []).length >= 3);
 check("SQL reuses Financial Health source", sql.includes("v_health := public.get_financial_health_inputs()"));

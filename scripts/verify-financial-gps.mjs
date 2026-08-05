@@ -35,7 +35,7 @@ function compileModule(relativePath, moduleMap = {}) {
       .join("\n"),
   );
 
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   const localRequire = (specifier) => {
     if (specifier in moduleMap) return moduleMap[specifier];
     return require(specifier);
@@ -45,9 +45,9 @@ function compileModule(relativePath, moduleMap = {}) {
     `(function(require, module, exports) {${output.outputText}\n})`,
     { console, structuredClone },
     { filename },
-  )(localRequire, module, module.exports);
+  )(localRequire, compiledModule, compiledModule.exports);
 
-  return module.exports;
+  return compiledModule.exports;
 }
 
 const averages = compileModule("lib/wealth/averagePeriods.ts");

@@ -20,6 +20,7 @@ jobs:
   verify-build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_ci_placeholder
@@ -38,6 +39,40 @@ jobs:
 
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Collect complete TypeScript diagnostics
+        id: typescript
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > typescript-diagnostics.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
+          if [ -s typescript-diagnostics.txt ]; then
+            cat typescript-diagnostics.txt
+          else
+            echo "No TypeScript diagnostics were produced."
+          fi
+
+          exit 0
+
+      - name: Upload TypeScript diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ficonter-typescript-diagnostics
+          path: typescript-diagnostics.txt
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 9
+
+      - name: Stop when TypeScript diagnostics contain errors
+        if: steps.typescript.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          echo "::error::TypeScript diagnostics found errors. Download the ficonter-typescript-diagnostics artifact."
+          exit 1
 
       - name: Verify database and application contracts
         run: npm run verify:hardening

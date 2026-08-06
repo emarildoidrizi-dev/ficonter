@@ -525,3 +525,99 @@
 }
 
 /* FICONTER NATIVE APP CHROME PERFORMANCE — END */
+
+/* FICONTER ADAPTIVE TABLET CHROME V3 - BEGIN */
+
+:global(html[data-ficonter-device="tablet"]) .header {
+  min-height: calc(76px + env(safe-area-inset-top));
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  padding-right:
+    max(22px, env(safe-area-inset-right));
+  padding-left:
+    max(22px, env(safe-area-inset-left));
+}
+
+:global(html[data-ficonter-device="tablet"]) .menuButton {
+  width: 48px;
+  height: 48px;
+}
+
+:global(html[data-ficonter-device="tablet"]) .routeIdentity span {
+  font-size: 19px;
+}
+
+:global(html[data-ficonter-device="tablet"]) .routeIdentity strong {
+  font-size: 12.5px;
+}
+
+:global(html[data-ficonter-device="tablet"]) .bottomDock {
+  right: auto !important;
+  left: 50% !important;
+  width: min(
+    720px,
+    calc(
+      100vw -
+      max(28px, env(safe-area-inset-left)) -
+      max(28px, env(safe-area-inset-right))
+    )
+  ) !important;
+  transform: translateX(-50%) translateZ(0) !important;
+}
+
+:global(html[data-ficonter-device="tablet"]) .drawer {
+  width: min(58vw, 430px) !important;
+}
+
+@media (max-width: 380px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-right:
+      max(10px, env(safe-area-inset-right));
+    padding-left:
+      max(10px, env(safe-area-inset-left));
+  }
+
+  .menuButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .workspaceBadge {
+    max-width: 68px;
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: 9.5px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    right: max(6px, env(safe-area-inset-right));
+    left: max(6px, env(safe-area-inset-left));
+    gap: 1px;
+    padding: 5px;
+    border-radius: 21px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    min-height: calc(58px + env(safe-area-inset-top));
+    padding-bottom: 6px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    min-height: 62px;
+  }
+
+  .dockItem {
+    min-height: 47px;
+  }
+
+  .addButton {
+    width: 49px;
+    height: 49px;
+    border-radius: 17px;
+  }
+}
+
+/* FICONTER ADAPTIVE TABLET CHROME V3 - END */

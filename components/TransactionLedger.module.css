@@ -67,142 +67,37 @@
   outline: none;
 }
 
-/* FICONTER EXACT MOBILE LEDGER CONTROLS V4 - BEGIN */
-:global(html[data-ficonter-native-app="true"]) :is(
-  .toolbarTop,
-  .toolbar,
-  .toolbarFive,
-  .dateRangeCard,
-  .selectionBar,
-  .bulkActions,
-  .summary,
-  .listViewport,
-  .list,
-  .row
-) {
+
+/* Native phone fix: keep date-range controls inside the card width. */
+.dateRangeCard,
+.dateRangeCard > label,
+.dateRangeCard input,
+.dateApplyButton,
+.dateClearButton {
+  min-width: 0;
+}
+
+.dateRangeCard {
   width: 100%;
   max-width: 100%;
-  min-width: 0;
+  overflow: hidden;
+}
+
+.dateRangeCard > label,
+.dateRangeCard input,
+.dateApplyButton,
+.dateClearButton {
+  width: 100%;
   box-sizing: border-box;
 }
 
-:global(html[data-ficonter-native-app="true"]) :is(
-  .toolbarTop,
-  .toolbar,
-  .toolbarFive,
-  .dateRangeCard,
-  .selectionBar,
-  .bulkActions,
-  .summary,
-  .row
-) > * {
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
+@media (max-width: 650px) {
+  .dateRangeCard {
+    padding: 12px;
+    gap: 12px;
+  }
 
-:global(html[data-ficonter-native-app="true"]) :is(
-  .searchBox,
-  .secondaryAction,
-  .exportButton,
-  .dateApplyButton,
-  .dateClearButton,
-  .dateRangeCard input,
-  .dateRangeCard select,
-  .toolbar select
-) {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-:global(html[data-ficonter-native-app="true"]) .searchBox input {
-  min-width: 0;
-  width: 100%;
-}
-
-:global(html[data-ficonter-native-app="true"]) .selectionCount {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-:global(html[data-ficonter-native-app="true"]) .bulkActions button,
-:global(html[data-ficonter-native-app="true"]) .actions button {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-}
-
-:global(html[data-ficonter-device="phone"]) :is(
-  .toolbarTop,
-  .toolbar,
-  .toolbarFive,
-  .dateRangeCard,
-  .summary
-) {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-
-:global(html[data-ficonter-device="phone"]) .searchBox,
-:global(html[data-ficonter-device="phone"]) .dateRangeHeading {
-  grid-column: auto !important;
-}
-
-:global(html[data-ficonter-device="phone"]) .selectionBar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
-}
-
-:global(html[data-ficonter-device="phone"]) .bulkActions {
-  display: grid;
-  width: 100%;
-  grid-column: auto;
-  grid-template-columns: minmax(0, 1fr);
-  margin-left: 0;
-}
-
-:global(html[data-ficonter-device="phone"]) .bulkActions button {
-  width: 100%;
-}
-
-:global(html[data-ficonter-device="phone"]) .row {
-  grid-template-columns: 24px 4px minmax(0, 1fr);
-  gap: 10px;
-  padding: 13px 12px;
-}
-
-:global(html[data-ficonter-device="phone"]) .rowCheckbox {
-  width: 24px;
-}
-
-:global(html[data-ficonter-device="phone"]) :is(
-  .details,
-  .amountBlock,
-  .balanceBlock,
-  .actions
-) {
-  min-width: 0;
-  max-width: 100%;
-  grid-column: 3;
-}
-
-:global(html[data-ficonter-device="phone"]) .actions {
-  display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-:global(html[data-ficonter-device="phone"]) .actions button {
-  width: 100%;
-  justify-content: center;
-}
-
-@media (max-width: 360px) {
-  :global(html[data-ficonter-device="phone"]) .actions {
-    grid-template-columns: minmax(0, 1fr);
+  .dateRangeCard > label {
+    gap: 6px;
   }
 }
-/* FICONTER EXACT MOBILE LEDGER CONTROLS V4 - END */

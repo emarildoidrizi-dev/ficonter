@@ -300,15 +300,6 @@ function synchronizeNativeAppMode() {
   const { width, height } = readViewportSize();
   const device = resolveDeviceClass();
 
-  root.style.setProperty(
-    "--ficonter-viewport-width",
-    `${width}px`,
-  );
-  root.style.setProperty(
-    "--ficonter-viewport-height",
-    `${height}px`,
-  );
-
   root.dataset.ficonterNativeApp =
     device === "desktop" ? "false" : "true";
   root.dataset.ficonterDevice = device;
@@ -400,6 +391,11 @@ export function FiconterNativeAppChrome({
     workspace === "business"
       ? "/business/transactions"
       : "/dashboard/transactions";
+
+  const onTransactionPage =
+    workspace === "business"
+      ? pathname === "/business/transactions"
+      : pathname === "/dashboard/transactions";
 
   const switchHref =
     workspace === "business"
@@ -524,8 +520,6 @@ export function FiconterNativeAppChrome({
 
     root.removeAttribute("data-ficonter-native-app");
     root.removeAttribute("data-ficonter-pwa-phone");
-    root.style.removeProperty("--ficonter-viewport-width");
-    root.style.removeProperty("--ficonter-viewport-height");
 
     window.location.replace("/login");
   }
@@ -583,18 +577,29 @@ export function FiconterNativeAppChrome({
           );
         })}
 
-        <Link
-          href={addHref}
-          prefetch={true}
+        <button
+          type="button"
           className={styles.addButton}
           aria-label={
             workspace === "business"
-              ? "Add business transaction"
-              : "Add transaction"
+              ? "Quick add business transaction"
+              : "Quick add transaction"
           }
+          onClick={() => {
+            if (onTransactionPage) {
+              window.dispatchEvent(
+                new CustomEvent("ficonter:quick-add-transaction", {
+                  detail: { workspace },
+                }),
+              );
+              return;
+            }
+
+            router.push(`${addHref}?quickAdd=1`);
+          }}
         >
           <CirclePlus size={27} aria-hidden={true} />
-        </Link>
+        </button>
 
         {primaryItems.slice(2, 3).map((item) => {
           const Icon = item.icon;

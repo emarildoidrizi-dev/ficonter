@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from "@/lib/financialOptions";
 import { TransactionForm } from "./TransactionForm";
 import styles from "./EffortlessEntryWorkspace.module.css";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   initialTransactions: TransactionForPreset[];
@@ -50,6 +51,10 @@ export function EffortlessEntryWorkspace({
   initialType = "expense",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const formSectionRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EntryMode>("guided");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
@@ -64,6 +69,28 @@ export function EffortlessEntryWorkspace({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const periodKey = useMemo(() => currentPeriodKey(), []);
+
+
+  function activateQuickAdd() {
+    setActivePreset(null);
+    setMode("simple");
+
+    window.setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      const amountInput =
+        document.getElementById("simple-amount") ??
+        formSectionRef.current?.querySelector<HTMLInputElement>(
+          'input[name="amount"]',
+        );
+
+      amountInput?.focus();
+      amountInput?.select?.();
+    }, 120);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -152,6 +179,31 @@ export function EffortlessEntryWorkspace({
     return () =>
       window.removeEventListener("ficonter:transaction-created", handleCreated);
   }, []);
+
+
+  useEffect(() => {
+    function handleQuickAdd() {
+      activateQuickAdd();
+    }
+
+    window.addEventListener(
+      "ficonter:quick-add-transaction",
+      handleQuickAdd,
+    );
+
+    return () =>
+      window.removeEventListener(
+        "ficonter:quick-add-transaction",
+        handleQuickAdd,
+      );
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("quickAdd") !== "1") return;
+
+    activateQuickAdd();
+    router.replace(pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const favorites = useMemo(
     () => templates.filter((template) => template.is_favorite).slice(0, 6),
@@ -487,7 +539,12 @@ export function EffortlessEntryWorkspace({
         </div>
       )}
 
-      <section className={styles.formSection} aria-labelledby="add-transaction-title">
+      <section
+        ref={formSectionRef}
+        className={styles.formSection}
+        aria-labelledby="add-transaction-title"
+        id="ficonter-quick-add-section"
+      >
         <div className={styles.formHeading}>
           <div>
             <h3 id="add-transaction-title">Add transaction</h3>

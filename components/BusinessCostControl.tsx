@@ -118,6 +118,7 @@ const EMPTY_RECURRING = {
 };
 
 export function BusinessCostControl({
+  userId,
   business,
   initialTransactions,
   initialCategories,
@@ -126,6 +127,7 @@ export function BusinessCostControl({
   initialRecurringCosts,
   initialSuppliers,
 }: {
+  userId: string;
   business: Business;
   initialTransactions: BusinessTransaction[];
   initialCategories: BusinessCostCategory[];
@@ -514,7 +516,9 @@ export function BusinessCostControl({
             .update(payload)
             .eq("id", editingRecurring.id)
             .eq("business_id", business.id)
-        : supabase.from("business_recurring_costs").insert(payload);
+        : supabase
+            .from("business_recurring_costs")
+            .insert({ ...payload, created_by: userId });
       const { data, error: saveError } = await query.select().single();
       if (saveError) throw saveError;
       setRecurringCosts((current) => [

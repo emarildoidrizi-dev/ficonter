@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
       p_category: payload.category,
       p_mime_type: mimeType,
       p_size_bytes: sizeBytes,
-      p_document_date: documentDate || null,
-      p_notes: notes || null,
+      p_document_date: documentDate || undefined,
+      p_notes: notes || undefined,
     });
 
     if (reservationError || typeof intentId !== "string") {

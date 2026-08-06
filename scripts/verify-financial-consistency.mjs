@@ -37,7 +37,7 @@ function compileModule(relativePath, moduleMap = {}) {
     errors.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n"),
   );
 
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   const localRequire = (specifier) => {
     if (specifier in moduleMap) return moduleMap[specifier];
     return require(specifier);
@@ -46,8 +46,8 @@ function compileModule(relativePath, moduleMap = {}) {
     `(function(require, module, exports) {${output.outputText}\n})`,
     { console, structuredClone, Intl, Date, Math, JSON, Set, Map },
     { filename },
-  )(localRequire, module, module.exports);
-  return module.exports;
+  )(localRequire, compiledModule, compiledModule.exports);
+  return compiledModule.exports;
 }
 
 const averages = compileModule("lib/wealth/averagePeriods.ts");
@@ -182,8 +182,8 @@ const cashFlowInput = {
 };
 const cashFlow = cashFlowModule.calculateCashFlowIntelligence(cashFlowInput);
 assert.equal(cashFlow.metrics.knownCommitments, 2424.44);
-approximately(cashFlow.metrics.projectedNetCashFlow, 1040.35);
-approximately(cashFlow.metrics.projectedMargin, 1040.35 / 3464.79, 0.000001);
+approximately(cashFlow.metrics.projectedNetCashFlow, 500.4);
+approximately(cashFlow.metrics.projectedMargin, 500.4 / 2924.84, 0.000001);
 
 const emergencyInput = {
   schemaVersion: 2,

@@ -255,7 +255,7 @@ export function GoalsManager({
         p_goal_id: investmentGoal.id,
         p_amount: roundMoney(amount),
         p_invested_at: recordedAt.toISOString(),
-        p_notes: notes || null,
+        p_notes: notes,
       });
       if (error) throw error;
 

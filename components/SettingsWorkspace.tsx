@@ -780,32 +780,91 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
   }
 
   async function loadAccountExport(): Promise<AccountExportPayload> {
-    const userScopedTables: AccountExportTable[] = [
-      "transactions",
-      "bills",
-      "goals",
-      "goal_investments",
-      "debts",
-      "debt_payments",
-      "credit_card_activities",
-      "credit_card_monthly_records",
-      "monthly_budget_plans",
-      "monthly_budget_items",
-      "financial_documents",
-      "support_requests",
-      "user_notifications",
-    ];
+    type ExportQueryResult = {
+      data: unknown[] | null;
+      error: { message: string } | null;
+    };
 
-    const results = await Promise.all(
-      userScopedTables.map(async (table) => {
-        const { data, error } = await supabase
-          .from(table)
+    async function collectUserRows(
+      table: AccountExportTable,
+      query: PromiseLike<ExportQueryResult>,
+    ) {
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return [table, (data ?? []) as Record<string, unknown>[]] as const;
+    }
+
+    const results: Array<
+      readonly [AccountExportTable, Record<string, unknown>[]]
+    > = await Promise.all([
+      collectUserRows(
+        "transactions",
+        supabase.from("transactions").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "bills",
+        supabase.from("bills").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "goals",
+        supabase.from("goals").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "goal_investments",
+        supabase.from("goal_investments").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "debts",
+        supabase.from("debts").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "debt_payments",
+        supabase.from("debt_payments").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "credit_card_activities",
+        supabase
+          .from("credit_card_activities")
           .select("*")
-          .eq("user_id", userId);
-        if (error) throw error;
-        return [table, (data ?? []) as Record<string, unknown>[]] as const;
-      }),
-    );
+          .eq("user_id", userId),
+      ),
+      collectUserRows(
+        "credit_card_monthly_records",
+        supabase
+          .from("credit_card_monthly_records")
+          .select("*")
+          .eq("user_id", userId),
+      ),
+      collectUserRows(
+        "monthly_budget_plans",
+        supabase
+          .from("monthly_budget_plans")
+          .select("*")
+          .eq("user_id", userId),
+      ),
+      collectUserRows(
+        "monthly_budget_items",
+        supabase
+          .from("monthly_budget_items")
+          .select("*")
+          .eq("user_id", userId),
+      ),
+      collectUserRows(
+        "financial_documents",
+        supabase
+          .from("financial_documents")
+          .select("*")
+          .eq("user_id", userId),
+      ),
+      collectUserRows(
+        "support_requests",
+        supabase.from("support_requests").select("*").eq("user_id", userId),
+      ),
+      collectUserRows(
+        "user_notifications",
+        supabase.from("user_notifications").select("*").eq("user_id", userId),
+      ),
+    ]);
 
     const { data: supportMessages, error: supportMessagesError } = await supabase
       .from("support_messages")

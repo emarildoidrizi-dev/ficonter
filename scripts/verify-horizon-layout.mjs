@@ -49,7 +49,7 @@ assert(settings.includes('layout: "horizon"'), "Horizon is not the default layou
 
 const layout = fs.readFileSync(path.join(root, "app/dashboard/layout.tsx"), "utf8");
 assert(layout.includes("<CommandPalette />"), "Command palette is not mounted in the dashboard");
-assert(layout.includes("layout={interfacePreferences.layout}"), "Saved layout is not bootstrapped");
+assert(layout.includes("<InterfacePreferencesBootstrap {...interfacePreferences} />") && layout.includes("layout:"), "Saved layout is not bootstrapped");
 
 const commands = fs.readFileSync(path.join(root, "lib/commandPalette.ts"), "utf8");
 assert((commands.match(/id: "/g) ?? []).length >= 15, "Command palette contains too few actions");

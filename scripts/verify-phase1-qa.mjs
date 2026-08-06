@@ -102,7 +102,7 @@ check((sql.match(/\$\$/g) ?? []).length % 2 === 0, "SQL dollar-quoted blocks are
 check(sql.trimEnd().endsWith("commit;"), "SQL migration closes with a transaction commit.");
 
 const bills = await source("components/BillsManager.tsx");
-check(bills.includes('"mark_bill_paid"') && bills.includes('"delete_bill_with_transaction"'), "Bills use atomic database functions for settlement and deletion.");
+check(bills.includes('"mark_bill_unpaid"') && bills.includes('"delete_bill_with_transaction"'), "Bills use atomic database functions for reversal and deletion while automatic settlement stays server-managed.");
 check(!bills.includes("api.frankfurter"), "Bills do not bypass the authenticated exchange-rate endpoint.");
 
 const debt = await source("components/DebtManager.tsx");

@@ -57,8 +57,8 @@ check("component explains calendar average", component.includes("Months without 
 check("component renders savings allocation", component.includes("Where savings are going"));
 check("component explains Emergency Fund separation", component.includes("Emergency Fund") && component.includes("dedicated module"));
 check("component renders recent contributions", component.includes("Latest saving activity"));
-check("component discloses shared source of truth", component.includes("Financial Health inputs already used across FICONTER"));
-check("sidebar exposes Savings Intelligence route", sidebar.includes('["/dashboard/savings", PiggyBank, "Savings intelligence"]'));
+check("component discloses shared source of truth", component.includes("reuse the existing shared Financial Health and Cash Flow engines"));
+check("sidebar exposes Savings Intelligence route", sidebar.includes('["/dashboard/savings", PiggyBank, "Savings Intelligence"]'));
 check("SQL is security invoker", sql.includes("security invoker"));
 check("SQL scopes transactions to authenticated user", (sql.match(/user_id = v_user_id/g) ?? []).length >= 2);
 check("SQL reuses Cash Flow source", sql.includes("v_cash_flow := public.get_cash_flow_intelligence_inputs_v2()"));

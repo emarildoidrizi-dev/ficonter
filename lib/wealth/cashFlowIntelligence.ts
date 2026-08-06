@@ -318,6 +318,18 @@ function adjustCommitments(
     );
   }
 
+  // Preserve aggregate commitments when the RPC provides totals without the
+  // detailed item list. A partial payload must never erase valid obligations.
+  if (commitments.items.length === 0) {
+    return {
+      total: round(commitments.total),
+      billsTotal: round(commitments.billsTotal),
+      debtMinimums: round(commitments.debtMinimums),
+      items: [],
+      paidDebtMinimumsThisMonth: 0,
+    };
+  }
+
   let paidDebtMinimumsThisMonth = 0;
   const items = commitments.items
     .map((item) => {

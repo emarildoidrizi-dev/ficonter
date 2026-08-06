@@ -65,6 +65,7 @@ export default async function BusinessCostControlPage() {
   return (
     <BusinessCostControl
       key={business.id}
+      userId={user.id}
       business={business}
       initialTransactions={(transactions ?? []) as BusinessTransaction[]}
       initialCategories={(categories ?? []) as BusinessCostCategory[]}

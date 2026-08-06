@@ -46,7 +46,7 @@ export function BusinessSetup() {
       "create_business_workspace",
       {
         p_name: String(form.get("name") ?? "").trim(),
-        p_legal_name: String(form.get("legal_name") ?? "").trim() || null,
+        p_legal_name: String(form.get("legal_name") ?? "").trim() || undefined,
         p_business_type: String(form.get("business_type") ?? "Sole trader"),
         p_country_code: String(form.get("country_code") ?? "DE").toUpperCase(),
         p_base_currency: String(form.get("base_currency") ?? "EUR"),

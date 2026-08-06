@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/lib/supabase/database.contract";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 const TRUST_COOKIE = "ficonter_trusted_device";
@@ -39,7 +40,7 @@ function createConfiguredBrowserClient(
   key: string,
   keepSignedIn: boolean,
 ) {
-  return createBrowserClient(url, key, {
+  return createBrowserClient<Database>(url, key, {
     cookieOptions: {
       path: "/",
       sameSite: "lax",

@@ -51,6 +51,7 @@ export default async function BusinessTransactionsPage() {
   return (
     <BusinessTransactionLedger
       key={business.id}
+      userId={user.id}
       business={business}
       initialTransactions={(transactions ?? []) as BusinessTransaction[]}
       initialCategories={(categories ?? []) as BusinessCostCategory[]}

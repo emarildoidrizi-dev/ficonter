@@ -83,13 +83,17 @@ for (const token of [
 }
 
 for (const token of [
-  "sidebarAtmosphereMode={interfacePreferences.sidebarAtmosphereMode}",
-  "sidebarAtmosphereStyle={interfacePreferences.sidebarAtmosphereStyle}",
-  "sidebarAtmosphereMotion={interfacePreferences.sidebarAtmosphereMotion}",
+  "sidebarAtmosphereMode:",
+  "sidebarAtmosphereStyle:",
+  "sidebarAtmosphereMotion:",
 ]) {
   if (!dashboardLayoutSource.includes(token)) {
-    throw new Error(`Dashboard layout is missing: ${token}`);
+    throw new Error(`Dashboard preference parsing is missing: ${token}`);
   }
+}
+
+if (!dashboardLayoutSource.includes("<InterfacePreferencesBootstrap {...interfacePreferences} />")) {
+  throw new Error("Dashboard layout does not bootstrap the saved interface preferences");
 }
 
 for (const token of [

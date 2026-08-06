@@ -1069,7 +1069,7 @@ export function CreditCardsManager({
           p_amount_eur: roundMoney(conversion.eur),
           p_exchange_rate: roundRate(conversion.rate),
           p_occurred_at: occurredAt.toISOString(),
-          p_notes: activityForm.notes.trim() || null,
+          p_notes: activityForm.notes.trim() || undefined,
         },
       );
 
@@ -1124,7 +1124,7 @@ export function CreditCardsManager({
           p_amount_eur: roundMoney(conversion.eur),
           p_exchange_rate: roundRate(conversion.rate),
           p_paid_at: paidAt.toISOString(),
-          p_notes: paymentForm.notes.trim() || null,
+          p_notes: paymentForm.notes.trim(),
           p_exchange_rate_date: localDateKey(paidAt),
         },
       );

@@ -355,10 +355,10 @@ export function BusinessInventory({
           p_business_id: business.id,
           p_name: name,
           p_sku: sku,
-          p_barcode: itemForm.barcode.trim() || null,
-          p_category_id: itemForm.category_id || null,
-          p_supplier_id: itemForm.supplier_id || null,
-          p_location_id: itemForm.location_id || null,
+          p_barcode: itemForm.barcode.trim() || undefined,
+          p_category_id: itemForm.category_id || undefined,
+          p_supplier_id: itemForm.supplier_id || undefined,
+          p_location_id: itemForm.location_id || undefined,
           p_unit: itemForm.unit,
           p_low_stock_threshold: threshold,
           p_default_purchase_cost: defaultPurchaseCost,
@@ -367,7 +367,7 @@ export function BusinessInventory({
           p_default_exchange_rate_to_base: roundRate(rate.rate),
           p_selling_price_base: sellingPrice,
           p_opening_quantity: openingQuantity,
-          p_notes: itemForm.notes.trim() || null,
+          p_notes: itemForm.notes.trim() || undefined,
         });
         if (rpcError) throw rpcError;
         setNotice(openingQuantity > 0 ? "Inventory item and opening stock added." : "Inventory item added.");
@@ -432,15 +432,15 @@ export function BusinessInventory({
         p_exchange_rate_to_base: roundRate(rate.rate),
         p_exchange_rate_date: rate.date,
         p_exchange_rate_source: rate.source,
-        p_supplier_id: movementForm.supplier_id || null,
+        p_supplier_id: movementForm.supplier_id || undefined,
         p_movement_date: movementForm.movement_date,
         p_occurred_at: occurredAt,
-        p_reference: movementForm.reference.trim() || null,
-        p_notes: movementForm.notes.trim() || null,
+        p_reference: movementForm.reference.trim() || undefined,
+        p_notes: movementForm.notes.trim() || undefined,
         p_create_expense: movementForm.movement_type === "purchase" && movementForm.create_expense,
-        p_payment_method: movementForm.payment_method || null,
-        p_cost_category_id: movementForm.cost_category_id || null,
-        p_cost_centre_id: movementForm.cost_centre_id || null,
+        p_payment_method: movementForm.payment_method || undefined,
+        p_cost_category_id: movementForm.cost_category_id || undefined,
+        p_cost_centre_id: movementForm.cost_centre_id || undefined,
       });
       if (rpcError) throw rpcError;
 

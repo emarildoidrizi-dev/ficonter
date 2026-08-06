@@ -65,7 +65,7 @@ check("Aggregate function reuses existing Phase 2 RPCs", sql.includes("get_cash_
 check("Aggregate function is authenticated only", sql.includes("grant execute on function public.get_ai_insights_inputs() to authenticated"));
 check("Smart page is authenticated", page.includes('redirect("/login")'));
 check("Smart page only loads Smart Engine snapshots", page.includes("SMART_INSIGHTS_ENGINE_VERSION") && page.includes('.eq("model", SMART_INSIGHTS_ENGINE_VERSION)'));
-check("Sidebar exposes Smart insights", sidebar.includes('"/dashboard/insights"') && sidebar.includes('"Smart insights"'));
+check("Sidebar exposes Smart insights", sidebar.includes('"/dashboard/insights"') && sidebar.includes('"Smart Insights"'));
 check("Component refreshes on financial realtime changes", component.includes("postgres_changes") && component.includes("ficonter:data-changed"));
 check("Report displays deterministic evidence values", component.includes("evidenceValue") && component.includes("EvidenceChips"));
 check("Report includes a 90-day action plan", component.includes("90-DAY ACTION PLAN"));

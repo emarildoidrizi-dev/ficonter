@@ -125,6 +125,7 @@ const EMPTY_INVOICE = {
 };
 
 export function BusinessSuppliers({
+  userId,
   business,
   initialSuppliers,
   initialInvoices,
@@ -132,6 +133,7 @@ export function BusinessSuppliers({
   initialCategories,
   initialCentres,
 }: {
+  userId: string;
   business: Business;
   initialSuppliers: BusinessSupplier[];
   initialInvoices: BusinessSupplierInvoice[];
@@ -334,7 +336,9 @@ export function BusinessSuppliers({
             .update(payload)
             .eq("id", editingSupplier.id)
             .eq("business_id", business.id)
-        : supabase.from("business_suppliers").insert(payload);
+        : supabase
+            .from("business_suppliers")
+            .insert({ ...payload, created_by: userId });
 
       const { data, error: saveError } = await query.select().single();
       if (saveError) throw saveError;
@@ -410,7 +414,7 @@ export function BusinessSuppliers({
 
       const { data, error: insertError } = await supabase
         .from("business_supplier_invoices")
-        .insert(payload)
+        .insert({ ...payload, created_by: userId })
         .select()
         .single();
       if (insertError) throw insertError;

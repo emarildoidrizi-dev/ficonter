@@ -356,8 +356,8 @@ export function BusinessSales({
           ? { p_sale_id: editingSale.id }
           : { p_business_id: business.id }),
         p_sale_number: saleNumber.trim(),
-        p_customer_name: customerName.trim() || null,
-        p_customer_email: customerEmail.trim() || null,
+        p_customer_name: customerName.trim() || undefined,
+        p_customer_email: customerEmail.trim() || undefined,
         p_currency: currency,
         p_exchange_rate_to_base: roundRate(rate.rate),
         p_exchange_rate_date: rate.date,
@@ -367,8 +367,8 @@ export function BusinessSales({
         p_payment_method: paymentMethod,
         p_discount: roundMoney(previewDiscount),
         p_tax: roundMoney(previewTax),
-        p_reference: reference.trim() || null,
-        p_notes: notes.trim() || null,
+        p_reference: reference.trim() || undefined,
+        p_notes: notes.trim() || undefined,
         p_lines: validLines,
       };
 

@@ -59,6 +59,7 @@ export default async function BusinessSuppliersPage() {
   return (
     <BusinessSuppliers
       key={business.id}
+      userId={user.id}
       business={business}
       initialSuppliers={(suppliers ?? []) as BusinessSupplier[]}
       initialInvoices={(invoices ?? []) as BusinessSupplierInvoice[]}

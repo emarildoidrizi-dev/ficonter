@@ -9,12 +9,12 @@ const styles = await readFile(path.join(root, "components", "BillsManager.module
 const sql = await readFile(path.join(root, "supabase", "bill_paid_unpaid_reversal.sql"), "utf8");
 
 const checks = [
-  [component.includes('supabase.rpc("mark_bill_unpaid"'), "BillsManager prefers the atomic mark_bill_unpaid RPC"],
+  [component.includes('supabase.rpc(') && component.includes('"mark_bill_unpaid"'), "BillsManager prefers the atomic mark_bill_unpaid RPC"],
   [component.includes('isMissingMarkUnpaidRpc'), "Missing RPC/schema-cache errors are detected"],
   [component.includes('.from("bills")') && component.includes('.eq("status", "paid")'), "RLS-protected fallback reopens only a paid customer-owned Bill"],
   [component.includes('.from("transactions")') && component.includes('.delete()'), "Fallback removes the linked generated transaction"],
   [component.includes("Restore the original paid state"), "Fallback compensates if linked transaction deletion fails"],
-  [component.includes('notifyFiconterDataChange("bills")'), "All FICONTER financial modules receive a live refresh signal"],
+  [component.includes('notifyFiconterDataChange("all")') || component.includes('notifyFiconterDataChange("bills")'), "All FICONTER financial modules receive a live refresh signal"],
   [component.includes("Mark unpaid"), "Paid Bill cards expose Mark unpaid"],
   [component.includes("RotateCcw"), "The reversal action has a clear icon"],
   [styles.includes(".unpaidButton"), "The unpaid action has a distinct visual treatment"],

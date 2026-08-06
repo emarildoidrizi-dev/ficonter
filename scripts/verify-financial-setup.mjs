@@ -31,7 +31,7 @@ function compileModule(relativePath, moduleMap = {}) {
     errors.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n"),
   );
 
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   const localRequire = (specifier) => {
     if (specifier in moduleMap) return moduleMap[specifier];
     return require(specifier);
@@ -41,9 +41,9 @@ function compileModule(relativePath, moduleMap = {}) {
     `(function(require, module, exports) {${output.outputText}\n})`,
     { console },
     { filename },
-  )(localRequire, module, module.exports);
+  )(localRequire, compiledModule, compiledModule.exports);
 
-  return module.exports;
+  return compiledModule.exports;
 }
 
 const readinessModule = compileModule("lib/wealth/dataReadiness.ts");

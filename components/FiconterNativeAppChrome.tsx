@@ -66,6 +66,8 @@ type IOSNavigator = Navigator & {
   standalone?: boolean;
 };
 
+type DeviceClass = "phone" | "tablet" | "desktop";
+
 const personalRoutes: RouteItem[] = [
   {
     href: "/dashboard",
@@ -237,19 +239,75 @@ function isStandalone() {
   );
 }
 
-function synchronizeNativeAppMode() {
-  const root = document.documentElement;
-  const shortestPhysicalSide = Math.min(
-    window.screen.width || 390,
-    window.screen.height || 844,
+function readViewportSize() {
+  const viewport = window.visualViewport;
+  const width = Math.max(
+    1,
+    Math.round(
+      viewport?.width ||
+        window.innerWidth ||
+        document.documentElement.clientWidth,
+    ),
+  );
+  const height = Math.max(
+    1,
+    Math.round(
+      viewport?.height ||
+        window.innerHeight ||
+        document.documentElement.clientHeight,
+    ),
   );
 
-  const phone =
-    isStandalone() &&
-    shortestPhysicalSide <= 768 &&
-    window.matchMedia("(pointer: coarse)").matches;
+  return { width, height };
+}
 
-  root.dataset.ficonterNativeApp = phone ? "true" : "false";
+function resolveDeviceClass(): DeviceClass {
+  const { width, height } = readViewportSize();
+  const shortestPhysicalSide = Math.min(
+    window.screen.width || width,
+    window.screen.height || height,
+  );
+  const touchCapable =
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches;
+  const compactViewport = width <= 900;
+  const tabletOrFoldable =
+    touchCapable &&
+    shortestPhysicalSide <= 1180 &&
+    Math.max(width, height) <= 1440;
+  const installedCompact = isStandalone() && width <= 1180;
+
+  if (
+    !compactViewport &&
+    !tabletOrFoldable &&
+    !installedCompact
+  ) {
+    return "desktop";
+  }
+
+  if (
+    width <= 640 ||
+    (touchCapable && shortestPhysicalSide <= 640)
+  ) {
+    return "phone";
+  }
+
+  return "tablet";
+}
+
+function synchronizeNativeAppMode() {
+  const root = document.documentElement;
+  const { width, height } = readViewportSize();
+  const device = resolveDeviceClass();
+
+  root.dataset.ficonterNativeApp =
+    device === "desktop" ? "false" : "true";
+  root.dataset.ficonterDevice = device;
+  root.dataset.ficonterDisplayMode = isStandalone()
+    ? "standalone"
+    : "browser";
+  root.dataset.ficonterOrientation =
+    width >= height ? "landscape" : "portrait";
 }
 
 function activeRoute(
@@ -345,6 +403,9 @@ export function FiconterNativeAppChrome({
     const displayMode = window.matchMedia(
       "(display-mode: standalone)",
     );
+    const compactViewport = window.matchMedia(
+      "(max-width: 900px)",
+    );
 
     const synchronize = () => synchronizeNativeAppMode();
 
@@ -358,6 +419,10 @@ export function FiconterNativeAppChrome({
       synchronize,
     );
     displayMode.addEventListener?.("change", synchronize);
+    compactViewport.addEventListener?.(
+      "change",
+      synchronize,
+    );
 
     return () => {
       window.removeEventListener("resize", synchronize);
@@ -370,6 +435,10 @@ export function FiconterNativeAppChrome({
         synchronize,
       );
       displayMode.removeEventListener?.(
+        "change",
+        synchronize,
+      );
+      compactViewport.removeEventListener?.(
         "change",
         synchronize,
       );

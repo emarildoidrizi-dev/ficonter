@@ -918,3 +918,73 @@ html[data-ficonter-device="tablet"] .app-main
 }
 
 /* FICONTER ADAPTIVE TABLET SHELL V3 - END */
+
+/* FICONTER EXACT VIEWPORT CONTAINMENT V4 - BEGIN */
+
+html[data-ficonter-native-app="true"],
+html[data-ficonter-native-app="true"] body,
+html[data-ficonter-native-app="true"] body > div,
+html[data-ficonter-native-app="true"] .app-shell,
+html[data-ficonter-native-app="true"] .app-main {
+  inline-size: 100% !important;
+  max-inline-size: 100% !important;
+  min-inline-size: 0 !important;
+  box-sizing: border-box !important;
+}
+
+html[data-ficonter-native-app="true"] body,
+html[data-ficonter-native-app="true"] .app-shell,
+html[data-ficonter-native-app="true"] .app-main {
+  overflow-x: clip !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main > *,
+html[data-ficonter-native-app="true"] .app-main > * > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(button, a, input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(
+    [class*="toolbar"],
+    [class*="Toolbar"],
+    [class*="controls"],
+    [class*="Controls"],
+    [class*="actions"],
+    [class*="Actions"]
+  ) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-ficonter-device="phone"] .app-main
+  :where(
+    [class*="TransactionLedger_toolbarTop"],
+    [class*="TransactionLedger_toolbar"],
+    [class*="TransactionLedger_dateRangeCard"]
+  ) {
+  width: 100% !important;
+  max-width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-device="phone"] .app-main
+  :where(
+    [class*="TransactionLedger_searchBox"],
+    [class*="TransactionLedger_secondaryAction"],
+    [class*="TransactionLedger_exportButton"],
+    [class*="TransactionLedger_dateApplyButton"],
+    [class*="TransactionLedger_dateClearButton"]
+  ) {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* FICONTER EXACT VIEWPORT CONTAINMENT V4 - END */

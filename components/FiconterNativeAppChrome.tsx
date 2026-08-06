@@ -300,6 +300,15 @@ function synchronizeNativeAppMode() {
   const { width, height } = readViewportSize();
   const device = resolveDeviceClass();
 
+  root.style.setProperty(
+    "--ficonter-viewport-width",
+    `${width}px`,
+  );
+  root.style.setProperty(
+    "--ficonter-viewport-height",
+    `${height}px`,
+  );
+
   root.dataset.ficonterNativeApp =
     device === "desktop" ? "false" : "true";
   root.dataset.ficonterDevice = device;
@@ -515,6 +524,8 @@ export function FiconterNativeAppChrome({
 
     root.removeAttribute("data-ficonter-native-app");
     root.removeAttribute("data-ficonter-pwa-phone");
+    root.style.removeProperty("--ficonter-viewport-width");
+    root.style.removeProperty("--ficonter-viewport-height");
 
     window.location.replace("/login");
   }

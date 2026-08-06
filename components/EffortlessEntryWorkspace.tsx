@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -28,7 +28,6 @@ import {
 import { formatCurrency } from "@/lib/financialOptions";
 import { TransactionForm } from "./TransactionForm";
 import styles from "./EffortlessEntryWorkspace.module.css";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   initialTransactions: TransactionForPreset[];
@@ -51,9 +50,6 @@ export function EffortlessEntryWorkspace({
   initialType = "expense",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const formSectionRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EntryMode>("guided");
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -71,7 +67,7 @@ export function EffortlessEntryWorkspace({
   const periodKey = useMemo(() => currentPeriodKey(), []);
 
 
-  function activateQuickAdd() {
+  const activateQuickAdd = useCallback(() => {
     setActivePreset(null);
     setMode("simple");
 
@@ -82,15 +78,16 @@ export function EffortlessEntryWorkspace({
       });
 
       const amountInput =
-        document.getElementById("simple-amount") ??
+        (document.getElementById("simple-amount") as HTMLInputElement | null) ??
         formSectionRef.current?.querySelector<HTMLInputElement>(
           'input[name="amount"]',
-        );
+        ) ??
+        null;
 
       amountInput?.focus();
-      amountInput?.select?.();
+      amountInput?.select();
     }, 120);
-  }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -196,14 +193,19 @@ export function EffortlessEntryWorkspace({
         "ficonter:quick-add-transaction",
         handleQuickAdd,
       );
-  }, []);
+  }, [activateQuickAdd]);
 
   useEffect(() => {
-    if (searchParams.get("quickAdd") !== "1") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("quickAdd") !== "1") return;
 
     activateQuickAdd();
-    router.replace(pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+    params.delete("quickAdd");
+
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }, [activateQuickAdd]);
 
   const favorites = useMemo(
     () => templates.filter((template) => template.is_favorite).slice(0, 6),

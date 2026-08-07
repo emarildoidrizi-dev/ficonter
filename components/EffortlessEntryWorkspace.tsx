@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from "@/lib/financialOptions";
 import { TransactionForm } from "./TransactionForm";
 import styles from "./EffortlessEntryWorkspace.module.css";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   initialTransactions: TransactionForPreset[];
@@ -50,6 +51,9 @@ export function EffortlessEntryWorkspace({
   initialType = "expense",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const formSectionRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EntryMode>("guided");
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -196,16 +200,17 @@ export function EffortlessEntryWorkspace({
   }, [activateQuickAdd]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("quickAdd") !== "1") return;
+    if (searchParams.get("quickAdd") !== "1") return;
 
     activateQuickAdd();
-    params.delete("quickAdd");
 
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("quickAdd");
     const query = params.toString();
-    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
-  }, [activateQuickAdd]);
+    const nextUrl = `${pathname}${query ? `?${query}` : ""}#ficonter-quick-add-section`;
+
+    router.replace(nextUrl, { scroll: false });
+  }, [activateQuickAdd, pathname, router, searchParams]);
 
   const favorites = useMemo(
     () => templates.filter((template) => template.is_favorite).slice(0, 6),

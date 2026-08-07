@@ -586,16 +586,24 @@ export function FiconterNativeAppChrome({
               : "Quick add transaction"
           }
           onClick={() => {
-            if (onTransactionPage) {
-              window.dispatchEvent(
-                new CustomEvent("ficonter:quick-add-transaction", {
-                  detail: { workspace },
-                }),
-              );
+            window.dispatchEvent(
+              new CustomEvent("ficonter:quick-add-transaction", {
+                detail: { workspace },
+              }),
+            );
+
+            if (workspace === "personal") {
+              const quickAddUrl = `${addHref}?quickAdd=1#ficonter-quick-add-section`;
+
+              if (onTransactionPage) {
+                router.replace(quickAddUrl, { scroll: false });
+              } else {
+                router.push(quickAddUrl, { scroll: false });
+              }
               return;
             }
 
-            router.push(`${addHref}?quickAdd=1`);
+            router.push(addHref);
           }}
         >
           <CirclePlus size={27} aria-hidden={true} />

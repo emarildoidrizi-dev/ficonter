@@ -162,7 +162,18 @@ export function BusinessSidebar({
 
   return (
     <aside className={`sidebar ${styles.sidebar}`}>
-      <Brand href="/business" />
+      <div className={styles.sidebarHeader}>
+        <span className={styles.headerGlow} aria-hidden="true" />
+        <Brand href="/business" />
+        <div className={styles.headerProfile}>
+          <span>{displayName.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <strong>{displayName}</strong>
+            <small>Business workspace</small>
+          </div>
+          <span className={styles.workspacePill}>Business</span>
+        </div>
+      </div>
 
       <section className={styles.businessIdentity}>
         <span className={styles.workspaceLabel}>

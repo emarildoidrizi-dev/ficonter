@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -50,6 +50,8 @@ export function EffortlessEntryWorkspace({
   initialType = "expense",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const quickAddRequestedRef = useRef(false);
+  const formSectionRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EntryMode>("guided");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
@@ -64,6 +66,26 @@ export function EffortlessEntryWorkspace({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const periodKey = useMemo(() => currentPeriodKey(), []);
+
+  const activateQuickAdd = useCallback(() => {
+    quickAddRequestedRef.current = true;
+    setActivePreset(null);
+    setMode("simple");
+
+    window.setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      const amountInput = document.getElementById(
+        "simple-amount",
+      ) as HTMLInputElement | null;
+
+      amountInput?.focus({ preventScroll: true });
+      amountInput?.select();
+    }, 160);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -117,7 +139,13 @@ export function EffortlessEntryWorkspace({
       }
 
       const savedMode = preferencesResult.data?.entry_mode;
-      if (savedMode === "simple" || savedMode === "guided" || savedMode === "detailed") {
+      if (quickAddRequestedRef.current) {
+        setMode("simple");
+      } else if (
+        savedMode === "simple" ||
+        savedMode === "guided" ||
+        savedMode === "detailed"
+      ) {
         setMode(savedMode);
       }
 
@@ -152,6 +180,33 @@ export function EffortlessEntryWorkspace({
     return () =>
       window.removeEventListener("ficonter:transaction-created", handleCreated);
   }, []);
+
+
+  useEffect(() => {
+    function handleQuickAdd() {
+      activateQuickAdd();
+    }
+
+    window.addEventListener(
+      "ficonter:quick-add-transaction",
+      handleQuickAdd,
+    );
+
+    if (window.location.hash === "#quick-add") {
+      activateQuickAdd();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+
+    return () =>
+      window.removeEventListener(
+        "ficonter:quick-add-transaction",
+        handleQuickAdd,
+      );
+  }, [activateQuickAdd]);
 
   const favorites = useMemo(
     () => templates.filter((template) => template.is_favorite).slice(0, 6),
@@ -487,7 +542,12 @@ export function EffortlessEntryWorkspace({
         </div>
       )}
 
-      <section className={styles.formSection} aria-labelledby="add-transaction-title">
+      <section
+        ref={formSectionRef}
+        id="ficonter-quick-add"
+        className={styles.formSection}
+        aria-labelledby="add-transaction-title"
+      >
         <div className={styles.formHeading}>
           <div>
             <h3 id="add-transaction-title">Add transaction</h3>

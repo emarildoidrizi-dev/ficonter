@@ -76,6 +76,13 @@ import {
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
 import { LanguageSelector } from "./LanguageSelector";
 import { useLanguage } from "./LanguageProvider";
+import {
+  PUBLIC_SUBSCRIPTION_PLANS,
+  SUBSCRIPTION_PLANS,
+  normalizeSubscriptionPlan,
+  normalizeSubscriptionStatus,
+  type BillingInterval,
+} from "@/lib/subscriptionPlans";
 import styles from "./SettingsWorkspace.module.css";
 
 type Metadata = Record<string, unknown>;
@@ -118,11 +125,21 @@ type Preferences = {
   };
 };
 
+type SubscriptionSnapshot = {
+  plan_code?: string | null;
+  status?: string | null;
+  billing_interval?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
+  provider?: string | null;
+};
+
 type Props = {
   userId: string;
   email: string;
   metadata: Metadata;
   initialSection?: string;
+  subscription?: SubscriptionSnapshot | null;
 };
 
 type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
@@ -378,9 +395,11 @@ function emailChangeRedirectUrl() {
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection }: Props) {
+export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
+  const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
+    useState<Exclude<BillingInterval, null>>("monthly");
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
     isSectionId(initialSection) ? initialSection : "profile",
@@ -970,6 +989,19 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
   }
 
   const activeSection = sections.find((section) => section.id === active)!;
+  const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
+  const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
+  const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
+  const subscriptionStatusLabel =
+    currentSubscriptionStatus === "past_due"
+      ? "Past due"
+      : currentSubscriptionStatus === "canceled"
+        ? "Canceled"
+        : currentSubscriptionStatus === "unpaid"
+          ? "Unpaid"
+          : currentSubscriptionStatus === "trialing"
+            ? "Trialing"
+            : "Active";
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
@@ -1383,8 +1415,84 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection }: P
 
         {active === "subscription" ? (
           <div className={styles.stack}>
-            <div className={styles.planCard}><div><span className={styles.eyebrow}>Current plan</span><h3>Ficonter Preview</h3><p>Your account currently uses the development preview plan.</p></div><span className={styles.defaultBadge}>Active</span></div>
-            <div className={styles.disabledGrid}>{['Billing cycle','Upgrade plan','Cancel subscription','Invoices'].map((label) => <div key={label}><CreditCard size={17} /><strong>{label}</strong><small>Available when paid subscriptions launch</small><button disabled>Coming soon</button></div>)}</div>
+            <div className={styles.subscriptionCurrentCard}>
+              <div>
+                <span className={styles.eyebrow}>Current plan</span>
+                <h3>{currentPlan.name}</h3>
+                <p>{currentPlan.description}</p>
+                {currentPlanCode === "beta" ? (
+                  <small className={styles.betaNotice}>
+                    Private Beta: full Personal Pro + Business Pro access for €0. No payment method is required.
+                  </small>
+                ) : null}
+              </div>
+              <div className={styles.subscriptionCurrentMeta}>
+                <span className={styles.defaultBadge}>{subscriptionStatusLabel}</span>
+                <small>{subscription?.provider === "stripe" ? "Stripe" : "Internal beta access"}</small>
+              </div>
+            </div>
+
+            <div className={styles.subscriptionIntro}>
+              <div>
+                <span className={styles.eyebrow}>Plan separation</span>
+                <h3>Choose the level of Ficonter that fits the customer</h3>
+                <p>
+                  Phase 1 defines plans and entitlements only. Checkout and real billing stay disabled until Stripe Test Mode is connected in Phase 2.
+                </p>
+              </div>
+              <div className={styles.billingPreviewToggle} aria-label="Preview billing interval">
+                <button type="button" className={subscriptionPreviewInterval === "monthly" ? styles.billingPreviewActive : ""} onClick={() => setSubscriptionPreviewInterval("monthly")}>Monthly</button>
+                <button type="button" className={subscriptionPreviewInterval === "annual" ? styles.billingPreviewActive : ""} onClick={() => setSubscriptionPreviewInterval("annual")}>Annual</button>
+              </div>
+            </div>
+
+            <div className={styles.subscriptionPlanGrid}>
+              {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => {
+                const annual = subscriptionPreviewInterval === "annual";
+                const price = annual ? plan.annualPriceEur : plan.monthlyPriceEur;
+                const isCurrent = currentPlanCode === plan.code;
+                const highlights =
+                  plan.code === "free"
+                    ? ["Everyday money management", "Core planner and obligations", "Basic net worth"]
+                    : plan.code === "personal_pro"
+                      ? ["Everything in Free", "Financial intelligence & GPS", "Advanced insights and exports"]
+                      : ["Everything in Personal Pro", "Complete Business workspace", "Sales, inventory, costs and reports"];
+
+                return (
+                  <article key={plan.code} className={`${styles.subscriptionPlanCard}${plan.code === "personal_pro" ? ` ${styles.subscriptionPlanFeatured}` : ""}`}>
+                    <div className={styles.subscriptionPlanHeading}>
+                      <div>
+                        <span className={styles.eyebrow}>{plan.code === "personal_pro" ? "Recommended" : "Plan"}</span>
+                        <h3>{plan.shortName}</h3>
+                      </div>
+                      {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
+                    </div>
+                    <div className={styles.subscriptionPrice}>
+                      <strong>€{Number(price ?? 0).toFixed(price === 0 ? 0 : 2)}</strong>
+                      <span>{price === 0 ? "forever" : annual ? "/ year" : "/ month"}</span>
+                    </div>
+                    <p>{plan.description}</p>
+                    <ul className={styles.subscriptionFeatureList}>
+                      {highlights.map((highlight) => (
+                        <li key={highlight}><Check size={15} /> <span>{highlight}</span></li>
+                      ))}
+                    </ul>
+                    {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €16.88 compared with monthly billing.</small> : null}
+                    {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €30.88 compared with monthly billing.</small> : null}
+                    <button type="button" className={styles.subscriptionDisabledButton} disabled>
+                      {isCurrent ? "Current plan" : "Available in Stripe Test Mode — Phase 2"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={styles.subscriptionFoundationGrid}>
+              <div><CreditCard size={18} /><strong>Billing</strong><small>No live charges are enabled in Phase 1.</small></div>
+              <div><ShieldCheck size={18} /><strong>Secure entitlement source</strong><small>Subscription state is read-only to customers and controlled by trusted server logic.</small></div>
+              <div><ReceiptText size={18} /><strong>Invoices</strong><small>Stripe invoice history will be connected in Phase 5.</small></div>
+              <div><Check size={18} /><strong>Beta access</strong><small>Private Beta accounts retain full access for €0 while testing continues.</small></div>
+            </div>
           </div>
         ) : null}
 

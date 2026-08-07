@@ -72,6 +72,58 @@ type RefinedTable<
     UpdateOverride;
 };
 
+type SubscriptionTable = {
+  Row: {
+    id: string;
+    user_id: string;
+    plan_code: "beta" | "free" | "personal_pro" | "business_pro";
+    status: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
+    billing_interval: "monthly" | "annual" | null;
+    provider: "internal" | "stripe";
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+    stripe_price_id: string | null;
+    current_period_start: string | null;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    user_id: string;
+    plan_code?: "beta" | "free" | "personal_pro" | "business_pro";
+    status?: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
+    billing_interval?: "monthly" | "annual" | null;
+    provider?: "internal" | "stripe";
+    stripe_customer_id?: string | null;
+    stripe_subscription_id?: string | null;
+    stripe_price_id?: string | null;
+    current_period_start?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    user_id?: string;
+    plan_code?: "beta" | "free" | "personal_pro" | "business_pro";
+    status?: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
+    billing_interval?: "monthly" | "annual" | null;
+    provider?: "internal" | "stripe";
+    stripe_customer_id?: string | null;
+    stripe_subscription_id?: string | null;
+    stripe_price_id?: string | null;
+    current_period_start?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Relationships: [];
+};
+
 type ContractTables = {
   business_audit_log: RefinedTable<
     "business_audit_log",
@@ -182,7 +234,8 @@ type ContractFunctions = {
 
 export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<PublicSchema, "Tables" | "Functions"> & {
-    Tables: Omit<PublicTables, keyof ContractTables> & ContractTables;
+    Tables: Omit<PublicTables, keyof ContractTables> &
+      ContractTables & { subscriptions: SubscriptionTable };
     Functions: Omit<PublicFunctions, keyof ContractFunctions> &
       ContractFunctions;
   };

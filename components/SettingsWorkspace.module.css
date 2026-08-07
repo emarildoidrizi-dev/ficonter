@@ -527,3 +527,329 @@
     text-align: left;
   }
 }
+
+/* FICONTER Subscription System — Phase 1 */
+.subscriptionCurrentCard,
+.subscriptionIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: var(--paper);
+}
+
+.subscriptionCurrentCard h3,
+.subscriptionIntro h3,
+.subscriptionPlanCard h3 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.subscriptionCurrentCard h3 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.subscriptionCurrentCard p,
+.subscriptionIntro p,
+.subscriptionPlanCard p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.subscriptionCurrentCard p,
+.subscriptionIntro p {
+  margin: 6px 0 0;
+}
+
+.betaNotice {
+  display: block;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 38%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.subscriptionCurrentMeta {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.subscriptionCurrentMeta small {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.subscriptionIntro {
+  background: var(--surface-subtle);
+}
+
+.subscriptionIntro h3 {
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.billingPreviewToggle {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper);
+}
+
+.billingPreviewToggle button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.billingPreviewToggle button:hover {
+  color: var(--ink);
+}
+
+.billingPreviewToggle .billingPreviewActive {
+  background: var(--solid-bg);
+  color: var(--solid-text);
+}
+
+.subscriptionPlanGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.subscriptionPlanCard {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 390px;
+  padding: 20px;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.subscriptionPlanFeatured {
+  border-color: color-mix(in srgb, var(--gold) 62%, var(--line));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 10%, transparent),
+    0 18px 50px rgba(31, 35, 38, 0.06);
+}
+
+.subscriptionPlanFeatured::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #8c7147, #d8bd7c, #8c7147);
+}
+
+.subscriptionPlanHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.subscriptionPlanHeading h3 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.subscriptionPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 24px;
+}
+
+.subscriptionPrice strong {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.subscriptionPrice span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.subscriptionPlanCard > p {
+  min-height: 58px;
+  margin: 10px 0 0;
+}
+
+.subscriptionFeatureList {
+  display: grid;
+  gap: 9px;
+  margin: 17px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subscriptionFeatureList li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.subscriptionFeatureList svg {
+  margin-top: 1px;
+  color: #6f867b;
+}
+
+.subscriptionSaving {
+  display: block;
+  margin-top: 14px;
+  color: #6f7f70;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.subscriptionDisabledButton {
+  width: 100%;
+  min-height: 43px;
+  margin-top: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.subscriptionFoundationGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.subscriptionFoundationGrid > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface-subtle);
+}
+
+.subscriptionFoundationGrid svg {
+  color: #a58a5d;
+}
+
+.subscriptionFoundationGrid strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.subscriptionFoundationGrid small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+:global(html[data-resolved-theme="dark"]) .subscriptionCurrentCard,
+:global(html[data-resolved-theme="dark"]) .subscriptionPlanCard,
+:global(html[data-resolved-theme="dark"]) .billingPreviewToggle {
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+}
+
+:global(html[data-resolved-theme="dark"]) .subscriptionIntro,
+:global(html[data-resolved-theme="dark"]) .subscriptionFoundationGrid > div,
+:global(html[data-resolved-theme="dark"]) .subscriptionDisabledButton {
+  background: var(--surface-raised);
+  border-color: var(--border-subtle);
+}
+
+:global(html[data-resolved-theme="dark"]) :is(
+  .subscriptionCurrentCard h3,
+  .subscriptionIntro h3,
+  .subscriptionPlanCard h3,
+  .subscriptionPrice strong,
+  .subscriptionFeatureList li,
+  .subscriptionFoundationGrid strong
+) {
+  color: var(--text-primary);
+}
+
+:global(html[data-resolved-theme="dark"]) :is(
+  .subscriptionCurrentCard p,
+  .subscriptionIntro p,
+  .subscriptionPlanCard p,
+  .subscriptionPrice span,
+  .subscriptionCurrentMeta small,
+  .subscriptionFoundationGrid small,
+  .betaNotice
+) {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1150px) {
+  .subscriptionPlanGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .subscriptionPlanCard {
+    min-height: 0;
+  }
+
+  .subscriptionPlanCard > p {
+    min-height: 0;
+  }
+
+  .subscriptionFoundationGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .subscriptionCurrentCard,
+  .subscriptionIntro {
+    grid-template-columns: 1fr;
+  }
+
+  .subscriptionCurrentMeta {
+    justify-items: start;
+  }
+
+  .billingPreviewToggle {
+    width: 100%;
+  }
+
+  .subscriptionFoundationGrid {
+    grid-template-columns: 1fr;
+  }
+}

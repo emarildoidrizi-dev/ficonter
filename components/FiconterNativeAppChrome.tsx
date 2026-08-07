@@ -392,6 +392,11 @@ export function FiconterNativeAppChrome({
       ? "/business/transactions"
       : "/dashboard/transactions";
 
+  const isTransactionRoute =
+    workspace === "business"
+      ? pathname === "/business/transactions"
+      : pathname === "/dashboard/transactions";
+
   const switchHref =
     workspace === "business"
       ? "/dashboard"
@@ -572,18 +577,32 @@ export function FiconterNativeAppChrome({
           );
         })}
 
-        <Link
-          href={addHref}
-          prefetch={true}
+        <button
+          type="button"
           className={styles.addButton}
           aria-label={
             workspace === "business"
               ? "Add business transaction"
-              : "Add transaction"
+              : "Quick add transaction"
           }
+          onClick={() => {
+            if (workspace === "business") {
+              router.push(addHref);
+              return;
+            }
+
+            if (isTransactionRoute) {
+              window.dispatchEvent(
+                new CustomEvent("ficonter:quick-add-transaction"),
+              );
+              return;
+            }
+
+            router.push(`${addHref}#quick-add`);
+          }}
         >
           <CirclePlus size={27} aria-hidden={true} />
-        </Link>
+        </button>
 
         {primaryItems.slice(2, 3).map((item) => {
           const Icon = item.icon;

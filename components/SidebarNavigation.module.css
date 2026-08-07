@@ -725,3 +725,235 @@
 :global(html[dir="rtl"]) .sectionLabel {
   text-align: right;
 }
+
+
+/* FICONTER WEBSITE SIDEBAR — Gradient Header (Design 6) */
+.sidebarHeader {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  margin: -10px -8px 14px;
+  padding: 16px 16px 15px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 193, 119, 0.24);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 82% -10%, rgba(255, 226, 154, 0.28), transparent 42%),
+    linear-gradient(145deg, rgba(181, 133, 52, 0.96), rgba(112, 79, 31, 0.88) 44%, rgba(19, 25, 24, 0.98) 100%);
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.headerGlow {
+  position: absolute;
+  inset: -45% -30% auto 18%;
+  height: 145px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(255, 229, 164, 0.18);
+  filter: blur(28px);
+}
+
+.sidebarHeader :global(.brand) {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 !important;
+}
+
+.sidebarHeader :global(.brand) img {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+  border-radius: 11px;
+}
+
+.sidebarHeader :global(.brand) span {
+  color: #fff8e7;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.headerIdentity {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.headerAvatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 246, 221, 0.34);
+  border-radius: 12px;
+  background: rgba(9, 14, 13, 0.42);
+  color: #fff5dc;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.headerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerIdentityText {
+  min-width: 0;
+}
+
+.headerIdentityText strong,
+.headerIdentityText small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerIdentityText strong {
+  color: #fffdf7;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.headerIdentityText small {
+  margin-top: 3px;
+  color: rgba(255, 247, 227, 0.72);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.workspacePill {
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 244, 215, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 13, 12, 0.24);
+  color: #fff0ca;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.navigation {
+  gap: 4px;
+  padding: 2px 1px 8px 0;
+}
+
+.navigationSection,
+.navigationGroup {
+  gap: 2px;
+}
+
+.navigationGroup + .navigationGroup {
+  margin-top: 3px;
+}
+
+.sectionLabel,
+.groupButton {
+  color: rgba(227, 211, 179, 0.64);
+}
+
+.sectionLabel {
+  padding: 5px 10px 4px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.groupButton {
+  min-height: 26px;
+  padding: 5px 9px 4px 10px;
+  border-radius: 8px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+}
+
+.groupButton:hover,
+.groupButton:focus-visible,
+.groupButtonActive {
+  background: rgba(216, 189, 124, 0.055);
+  color: #dfc98f;
+}
+
+.primaryLinks,
+.groupLinks {
+  gap: 2px;
+}
+
+.link {
+  position: relative;
+  min-height: 34px;
+  gap: 10px;
+  padding: 7px 10px 7px 12px !important;
+  border: 1px solid transparent;
+  border-radius: 10px !important;
+  font-size: 12.5px;
+  font-weight: 690;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: rgba(222, 215, 202, 0.74);
+}
+
+.link:hover {
+  transform: translateX(2px);
+  border-color: rgba(216, 189, 124, 0.12);
+  background: rgba(255, 255, 255, 0.045) !important;
+}
+
+.link:global(.active) {
+  border-color: rgba(225, 194, 121, 0.27) !important;
+  background:
+    linear-gradient(90deg, rgba(204, 161, 72, 0.24), rgba(216, 189, 124, 0.075)) !important;
+  color: #fff8e7 !important;
+  box-shadow: inset 3px 0 0 #d8bd7c;
+}
+
+.link:global(.active) svg {
+  color: #e5c779;
+}
+
+.accountDock {
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.accountButton {
+  border-color: rgba(216, 189, 124, 0.18);
+  background: linear-gradient(145deg, rgba(255,255,255,0.055), rgba(216,189,124,0.035));
+}
+
+@media (min-width: 901px) {
+  .sidebarRoot {
+    padding: 18px 14px 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebarHeader {
+    margin: 0 0 15px;
+  }
+
+  .sidebarHeader :global(.brand) span {
+    font-size: 17px;
+  }
+}

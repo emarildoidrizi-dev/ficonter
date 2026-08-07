@@ -638,3 +638,139 @@
 }
 
 /* FICONTER ADAPTIVE TABLET CHROME V3 - END */
+
+/* FICONTER EXACT MOBILE CONTROL CONTAINMENT V4 - BEGIN */
+
+.header,
+.bottomDock,
+.drawer,
+.backdrop,
+.header *,
+.bottomDock *,
+.drawer * {
+  box-sizing: border-box;
+}
+
+:global(html[data-ficonter-native-app="true"]) .header {
+  width: auto !important;
+  max-width: var(--ficonter-viewport-width, 100vw) !important;
+  min-width: 0 !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .header > *,
+:global(html[data-ficonter-native-app="true"]) .bottomDock > *,
+:global(html[data-ficonter-native-app="true"]) .drawer > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.workspaceBadge {
+  min-width: 0;
+  max-width: min(88px, 24vw);
+}
+
+:global(html[data-ficonter-native-app="true"]) .bottomDock {
+  width: auto;
+  max-width: calc(
+    var(--ficonter-viewport-width, 100vw) -
+    max(10px, env(safe-area-inset-left)) -
+    max(10px, env(safe-area-inset-right))
+  );
+  overflow: hidden;
+}
+
+.dockItem,
+.addButton {
+  max-width: 100%;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawer {
+  width: min(
+    88vw,
+    390px,
+    calc(
+      var(--ficonter-viewport-width, 100vw) -
+      max(8px, env(safe-area-inset-right))
+    )
+  ) !important;
+  max-width: calc(
+    var(--ficonter-viewport-width, 100vw) -
+    max(8px, env(safe-area-inset-right))
+  ) !important;
+}
+
+.workspaceSwitch > span,
+.drawerLink > span:nth-child(2),
+.signOutButton > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 380px) {
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    max-width: calc(
+      var(--ficonter-viewport-width, 100vw) -
+      max(6px, env(safe-area-inset-left)) -
+      max(6px, env(safe-area-inset-right))
+    );
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      58px
+      minmax(0, 1fr)
+      minmax(0, 1fr);
+  }
+
+  .addButton {
+    width: 54px;
+    height: 54px;
+  }
+}
+
+@media (max-width: 330px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    grid-template-columns: 42px minmax(0, 1fr) minmax(0, auto);
+    gap: 6px;
+  }
+
+  .menuButton {
+    width: 42px;
+    height: 42px;
+  }
+
+  .workspaceBadge {
+    max-width: 58px;
+    padding-right: 7px;
+    padding-left: 7px;
+    font-size: 9px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      54px
+      minmax(0, 1fr)
+      minmax(0, 1fr);
+  }
+
+  .dockItem {
+    font-size: 8.5px;
+  }
+
+  .addButton {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+:global(html[data-ficonter-device="tablet"]) .bottomDock {
+  max-width: calc(
+    var(--ficonter-viewport-width, 100vw) -
+    max(28px, env(safe-area-inset-left)) -
+    max(28px, env(safe-area-inset-right))
+  ) !important;
+}
+
+/* FICONTER EXACT MOBILE CONTROL CONTAINMENT V4 - END */

@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from "@/lib/financialOptions";
 import { TransactionForm } from "./TransactionForm";
 import styles from "./EffortlessEntryWorkspace.module.css";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   initialTransactions: TransactionForPreset[];

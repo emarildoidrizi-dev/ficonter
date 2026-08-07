@@ -1658,3 +1658,61 @@ html[data-ficonter-pwa-phone="true"] .app-main :where(input[type="date"], input[
   min-height: 56px;
   padding: 0;
 }
+
+/* FICONTER PWA phone iOS date-control containment — V6.1 */
+html[data-ficonter-pwa-phone="true"] .app-main
+  :where(.field, [class*="field"], [class*="formGrid"], [class*="transaction-form-grid"]) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"]) {
+  display: block !important;
+  inline-size: 100% !important;
+  width: 100% !important;
+  min-inline-size: 0 !important;
+  min-width: 0 !important;
+  max-inline-size: 100% !important;
+  max-width: 100% !important;
+  block-size: 56px !important;
+  height: 56px !important;
+  min-block-size: 56px !important;
+  min-height: 56px !important;
+  max-block-size: 56px !important;
+  max-height: 56px !important;
+  box-sizing: border-box !important;
+  padding: 0 14px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  line-height: normal !important;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-date-and-time-value {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 54px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-datetime-edit {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}

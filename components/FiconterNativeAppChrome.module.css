@@ -159,6 +159,23 @@
   box-shadow:
     0 12px 28px rgba(216, 189, 124, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+}
+
+.addButton:active {
+  transform: scale(0.92);
+  filter: brightness(0.96);
+  box-shadow:
+    0 6px 16px rgba(216, 189, 124, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.addButton:focus-visible {
+  outline: 2px solid #f3dfa4;
+  outline-offset: 3px;
 }
 
 :global(html[data-ficonter-native-app="true"]) .backdrop {

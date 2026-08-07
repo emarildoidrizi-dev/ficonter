@@ -587,14 +587,7 @@ export function FiconterNativeAppChrome({
           }
           onClick={() => {
             if (workspace === "business") {
-              if (isTransactionRoute) {
-                window.dispatchEvent(
-                  new CustomEvent("ficonter:business-quick-add-transaction"),
-                );
-                return;
-              }
-
-              router.push(`${addHref}?quickAdd=1`);
+              router.push(addHref);
               return;
             }
 

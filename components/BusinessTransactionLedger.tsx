@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { CalendarRange, Edit3, Plus, Search, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -106,6 +106,7 @@ export function BusinessTransactionLedger({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!notice) return;
@@ -196,6 +197,61 @@ export function BusinessTransactionLedger({
     setShowForm(false);
     setError("");
   }
+
+
+  const activateQuickAdd = useCallback(() => {
+    const nextCategory = categories.find((item) => item.is_active) ?? categories[0];
+    const nextCentre = costCentres.find((item) => item.is_active) ?? costCentres[0];
+
+    setForm({
+      ...EMPTY,
+      currency: business.base_currency,
+      occurred_at: localDateTimeInput(),
+      category_id: nextCategory?.id ?? "",
+      supplier_id: "",
+      cost_centre_id: nextCentre?.id ?? "",
+      cost_nature: nextCategory?.default_nature ?? "variable",
+    });
+    setEditing(null);
+    setShowForm(true);
+    setError("");
+
+    window.setTimeout(() => {
+      const amountInput = amountInputRef.current;
+      amountInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+      amountInput?.focus({ preventScroll: true });
+      amountInput?.select();
+    }, 120);
+  }, [business.base_currency, categories, costCentres]);
+
+  useEffect(() => {
+    function handleBusinessQuickAdd() {
+      activateQuickAdd();
+    }
+
+    window.addEventListener(
+      "ficonter:business-quick-add-transaction",
+      handleBusinessQuickAdd,
+    );
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("quickAdd") === "1") {
+      activateQuickAdd();
+      params.delete("quickAdd");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+      );
+    }
+
+    return () =>
+      window.removeEventListener(
+        "ficonter:business-quick-add-transaction",
+        handleBusinessQuickAdd,
+      );
+  }, [activateQuickAdd]);
 
   function openEdit(item: BusinessTransaction) {
     if (item.source_sale_id) {
@@ -382,7 +438,7 @@ export function BusinessTransactionLedger({
             )}
             {(form.type === "income" && form.income_category === "Other / custom") || (form.type === "expense" && form.category_id === "custom") ? <label>Custom category<input value={form.customCategory} onChange={(event) => setForm({ ...form, customCategory: event.target.value })} required /></label> : null}
             {form.type === "expense" ? <><label>Cost type<select value={form.cost_nature} onChange={(event) => setForm({ ...form, cost_nature: event.target.value as Exclude<BusinessCostNature, null> })}><option value="fixed">Fixed cost</option><option value="variable">Variable cost</option></select></label><label>Cost centre<select value={form.cost_centre_id} onChange={(event) => setForm({ ...form, cost_centre_id: event.target.value })}><option value="">No cost centre</option>{costCentres.filter((centre) => centre.is_active).map((centre) => <option value={centre.id} key={centre.id}>{centre.name}</option>)}</select></label></> : null}
-            <label>Amount<input type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></label>
+            <label>Amount<input ref={amountInputRef} type="number" min="0.01" step="0.01" inputMode="decimal" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></label>
             <label>Currency<select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })}>{CURRENCY_CODES.map((code) => <option value={code} key={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
             <label>Date and exact time<input type="datetime-local" value={form.occurred_at} onChange={(event) => setForm({ ...form, occurred_at: event.target.value })} required /></label>
             <label>Payment method<select value={form.payment_method} onChange={(event) => setForm({ ...form, payment_method: event.target.value })}>{PAYMENT_METHODS.map((method) => <option key={method}>{method}</option>)}</select></label>

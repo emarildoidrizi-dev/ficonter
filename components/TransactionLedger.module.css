@@ -68,36 +68,26 @@
 }
 
 
-/* Native phone fix: keep date-range controls inside the card width. */
-.dateRangeCard,
-.dateRangeCard > label,
+/* Mobile ledger controls: compact heights and proper text centering. */
+.toolbar select,
 .dateRangeCard input,
 .dateApplyButton,
 .dateClearButton {
-  min-width: 0;
-}
-
-.dateRangeCard {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.dateRangeCard > label,
-.dateRangeCard input,
-.dateApplyButton,
-.dateClearButton {
-  width: 100%;
   box-sizing: border-box;
 }
 
 @media (max-width: 650px) {
-  .dateRangeCard {
-    padding: 12px;
-    gap: 12px;
+  .toolbar select,
+  .dateRangeCard input,
+  .dateApplyButton,
+  .dateClearButton {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 16px !important;
+    line-height: 1.2 !important;
   }
 
-  .dateRangeCard > label {
-    gap: 6px;
+  .toolbar select {
+    text-overflow: ellipsis;
   }
 }

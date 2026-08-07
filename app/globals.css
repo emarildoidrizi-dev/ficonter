@@ -1628,3 +1628,33 @@ html[data-ficonter-pwa-phone="true"] .app-main :where(.field label,[class*="fiel
   html[data-ficonter-pwa-phone="true"] [class*="DashboardLiveOverview_headerActions"] { grid-template-columns: 1fr !important; }
 }
 /* FICONTER PWA MODERN MOBILE APP — END */
+
+
+/* FICONTER PWA PHONE CONTROL TUNING — keep mobile fields properly sized. */
+html[data-ficonter-pwa-phone="true"] .app-main :where(input, select, textarea) {
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main :where(select, input[type="date"], input[type="datetime-local"]) {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main :where(input[type="date"], input[type="datetime-local"])::-webkit-date-and-time-value {
+  min-height: 56px;
+  text-align: left;
+}
+
+html[data-ficonter-pwa-phone="true"] .app-main :where(input[type="date"], input[type="datetime-local"])::-webkit-datetime-edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0;
+}

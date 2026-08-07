@@ -21,6 +21,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ? query.section[0]
     : query?.section;
 
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <section>
       <div className="page-heading">
@@ -39,6 +45,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         email={user.email ?? ""}
         metadata={user.user_metadata ?? {}}
         initialSection={section}
+        subscription={subscription}
       />
     </section>
   );

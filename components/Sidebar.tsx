@@ -75,21 +75,31 @@ const primaryLinks = [
 const standardGroups = [
   {
     key: "money-management",
-    label: "Money management",
+    label: "Money",
     links: [
       ["/dashboard/transactions", ArrowLeftRight, "Transactions"],
-      ["/dashboard/cash-flow", Activity, "Cash flow"],
-      ["/dashboard/budget", ChartPie, "Monthly planner"],
       ["/dashboard/bills", ReceiptText, "Bills"],
+      ["/dashboard/credit-cards", CreditCard, "Credit Cards"],
+      ["/dashboard/debt", Landmark, "Debts"],
+      ["/dashboard/cash-flow", Activity, "Cash flow"],
+    ],
+  },
+  {
+    key: "financial-progress",
+    label: "Planning",
+    links: [
+      ["/dashboard/budget", ChartPie, "Monthly planner"],
+      ["/dashboard/savings", PiggyBank, "Savings Intelligence"],
+      ["/dashboard/goals", Target, "Goals"],
+      ["/dashboard/emergency-fund", ShieldCheck, "Emergency Fund"],
     ],
   },
   {
     key: "wealth-engine",
-    label: "Wealth Engine",
+    label: "Wealth",
     links: [
+      ["/dashboard/net-worth", TrendingUp, "Net Worth"],
       ["/dashboard/gps", Compass, "Financial GPS"],
-      ["/dashboard/emergency-fund", ShieldCheck, "Emergency Fund"],
-      ["/dashboard/savings", PiggyBank, "Savings Intelligence"],
       [
         "/dashboard/financial-independence",
         Route,
@@ -99,18 +109,8 @@ const standardGroups = [
     ],
   },
   {
-    key: "financial-progress",
-    label: "Financial progress",
-    links: [
-      ["/dashboard/debt", Landmark, "Debts"],
-      ["/dashboard/credit-cards", CreditCard, "Credit Cards"],
-      ["/dashboard/goals", Target, "Goals"],
-      ["/dashboard/net-worth", TrendingUp, "Net Worth"],
-    ],
-  },
-  {
     key: "resources",
-    label: "Account & support",
+    label: "Tools",
     links: [["/dashboard/documents", FileArchive, "Documents"]],
   },
 ] as const satisfies readonly NavigationGroup[];
@@ -146,25 +146,11 @@ export function Sidebar({
   const [openGroups, setOpenGroups] = useState<
     Record<NavigationGroupKey, boolean>
   >(() => ({
-    "money-management": isRouteActive(pathname, "/dashboard/transactions") ||
-      isRouteActive(pathname, "/dashboard/cash-flow") ||
-      isRouteActive(pathname, "/dashboard/budget") ||
-      isRouteActive(pathname, "/dashboard/bills"),
-    "wealth-engine":
-      isRouteActive(pathname, "/dashboard/gps") ||
-      isRouteActive(pathname, "/dashboard/emergency-fund") ||
-      isRouteActive(pathname, "/dashboard/savings") ||
-      isRouteActive(pathname, "/dashboard/financial-independence") ||
-      isRouteActive(pathname, "/dashboard/insights"),
-    "financial-progress":
-      isRouteActive(pathname, "/dashboard/debt") ||
-      isRouteActive(pathname, "/dashboard/credit-cards") ||
-      isRouteActive(pathname, "/dashboard/goals") ||
-      isRouteActive(pathname, "/dashboard/net-worth"),
-    resources: isRouteActive(pathname, "/dashboard/documents"),
-    administration:
-      isRouteActive(pathname, "/dashboard/admin") ||
-      isRouteActive(pathname, "/dashboard/admin/support"),
+    "money-management": true,
+    "wealth-engine": true,
+    "financial-progress": true,
+    resources: true,
+    administration: true,
   }));
   const [menuOpen, setMenuOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -349,7 +335,20 @@ export function Sidebar({
 
   return (
     <aside className={`sidebar ${styles.sidebarRoot}`}>
-      <Brand href="/dashboard" />
+      <div className={styles.sidebarHeader}>
+        <span className={styles.headerGlow} aria-hidden="true" />
+        <Brand href="/dashboard" />
+        <div className={styles.headerIdentity}>
+          <span className={styles.headerAvatar} aria-hidden="true">
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : avatarText}
+          </span>
+          <span className={styles.headerIdentityText}>
+            <strong>{displayName}</strong>
+            <small>Personal workspace</small>
+          </span>
+          <span className={styles.workspacePill}>Personal</span>
+        </div>
+      </div>
 
       <nav
         className={`side-nav ${styles.navigation}`}

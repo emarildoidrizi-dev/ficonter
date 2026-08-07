@@ -392,7 +392,7 @@ export function FiconterNativeAppChrome({
       ? "/business/transactions"
       : "/dashboard/transactions";
 
-  const onTransactionPage =
+  const isTransactionRoute =
     workspace === "business"
       ? pathname === "/business/transactions"
       : pathname === "/dashboard/transactions";
@@ -582,28 +582,30 @@ export function FiconterNativeAppChrome({
           className={styles.addButton}
           aria-label={
             workspace === "business"
-              ? "Quick add business transaction"
+              ? "Add business transaction"
               : "Quick add transaction"
           }
           onClick={() => {
-            window.dispatchEvent(
-              new CustomEvent("ficonter:quick-add-transaction", {
-                detail: { workspace },
-              }),
-            );
-
-            if (workspace === "personal") {
-              const quickAddUrl = `${addHref}?quickAdd=1#ficonter-quick-add-section`;
-
-              if (onTransactionPage) {
-                router.replace(quickAddUrl, { scroll: false });
-              } else {
-                router.push(quickAddUrl, { scroll: false });
+            if (workspace === "business") {
+              if (isTransactionRoute) {
+                window.dispatchEvent(
+                  new CustomEvent("ficonter:business-quick-add-transaction"),
+                );
+                return;
               }
+
+              router.push(`${addHref}?quickAdd=1`);
               return;
             }
 
-            router.push(addHref);
+            if (isTransactionRoute) {
+              window.dispatchEvent(
+                new CustomEvent("ficonter:quick-add-transaction"),
+              );
+              return;
+            }
+
+            router.push(`${addHref}#quick-add`);
           }}
         >
           <CirclePlus size={27} aria-hidden={true} />

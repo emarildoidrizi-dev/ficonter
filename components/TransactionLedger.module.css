@@ -66,3 +66,79 @@
   border-color: var(--gold);
   outline: none;
 }
+
+
+/* Mobile ledger controls: compact heights and proper text centering. */
+.toolbar select,
+.dateRangeCard input,
+.dateApplyButton,
+.dateClearButton {
+  box-sizing: border-box;
+}
+
+@media (max-width: 650px) {
+  .toolbar select,
+  .dateRangeCard input,
+  .dateApplyButton,
+  .dateClearButton {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .toolbar select {
+    text-overflow: ellipsis;
+  }
+}
+
+/* Transactions date-range iOS containment — V6.1 */
+@media (max-width: 650px) {
+  .dateRangeCard,
+  .dateRangeCard > label {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .dateRangeCard > label {
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .dateRangeCard input[type="date"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    box-sizing: border-box !important;
+    padding: 0 14px !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    line-height: normal !important;
+  }
+
+  .dateRangeCard input[type="date"]::-webkit-date-and-time-value {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 54px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+  }
+
+  .dateRangeCard input[type="date"]::-webkit-datetime-edit {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+}

@@ -51,6 +51,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           throw new Error("Enter your full name.");
         }
 
+        // SECURITY: URL/path/query values never select a subscription plan.
+        // Beta is possible only when the user manually submits a valid invitation code.
         let betaSignupToken = "";
 
         if (betaCode) {
@@ -225,7 +227,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       {mode === "register" && (
         <div className="field">
-          <label htmlFor="beta-code">Beta invitation code (optional)</label>
+          <label htmlFor="beta-code">Beta invitation code (required only for Beta access)</label>
           <input
             id="beta-code"
             className="input"
@@ -238,7 +240,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             placeholder="Only for invited Beta testers"
           />
           <small className="muted">
-            Leave this blank for a normal Ficonter Free account.
+            A Beta-looking URL never grants Beta access. Leave this blank for a normal Ficonter Free account; only a valid invitation code can create a Beta account.
           </small>
         </div>
       )}

@@ -469,7 +469,11 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
-    isSectionId(initialSection) ? initialSection : "profile",
+    isSubscriptionExempt && initialSection === "subscription"
+      ? "profile"
+      : isSectionId(initialSection)
+        ? initialSection
+        : "profile",
   );
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
@@ -500,11 +504,17 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    if (isSectionId(initialSection)) {
-      setActive(initialSection);
-      setMessage(null);
-    }
-  }, [initialSection]);
+    if (!isSectionId(initialSection)) return;
+
+    // Owner / Super Admin / Admin never enter the customer Subscription area.
+    // Their access is role-based and does not require a plan or payment.
+    setActive(
+      isSubscriptionExempt && initialSection === "subscription"
+        ? "profile"
+        : initialSection,
+    );
+    setMessage(null);
+  }, [initialSection, isSubscriptionExempt]);
 
   useEffect(() => {
     if (
@@ -1158,7 +1168,12 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     }
   }
 
-  const activeSection = sections.find((section) => section.id === active)!;
+  const visibleSections = isSubscriptionExempt
+    ? sections.filter((section) => section.id !== "subscription")
+    : sections;
+  const activeSection =
+    visibleSections.find((section) => section.id === active) ??
+    visibleSections[0];
 const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
 const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
 
@@ -1250,7 +1265,7 @@ const showSubscriptionManagement =
           </div>
         </div>
         <div className={styles.sectionList}>
-          {sections.map(({ id, label, description, icon: Icon }) => (
+          {visibleSections.map(({ id, label, description, icon: Icon }) => (
             <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); }}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
@@ -1663,7 +1678,7 @@ const showSubscriptionManagement =
           </div>
         ) : null}
 
-        {active === "subscription" ? (
+        {!isSubscriptionExempt && active === "subscription" ? (
           <div className={styles.stack}>
             {requiredFeature &&
             requiredFeatureDefinition &&

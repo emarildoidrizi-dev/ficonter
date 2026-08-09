@@ -144,7 +144,13 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
 };
 
-type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
+type DialogState =
+  | null
+  | "delete-records"
+  | "delete-account"
+  | "privacy"
+  | "retention"
+  | "cancel-subscription";
 type ExportKind = null | "transactions" | "json" | "pdf";
 
 function isSectionId(value: string | undefined): value is SectionId {
@@ -397,11 +403,25 @@ function emailChangeRedirectUrl() {
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 
+function formatSubscriptionDate(value: string | null | undefined) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
+  const [subscriptionCanceling, setSubscriptionCanceling] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
     isSectionId(initialSection) ? initialSection : "profile",
@@ -990,27 +1010,86 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     }
   }
 
+  async function cancelSubscription() {
+    if (subscriptionCanceling) return;
+
+    setSubscriptionCanceling(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/paypal/cancel", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "The subscription could not be canceled.",
+        );
+      }
+
+      setDialog(null);
+      window.location.reload();
+    } catch (error) {
+      showError(error, "The subscription could not be canceled.");
+      setSubscriptionCanceling(false);
+    }
+  }
+
   const activeSection = sections.find((section) => section.id === active)!;
 const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
 const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
 
+const subscriptionEndLabel = formatSubscriptionDate(
+  subscription?.current_period_end,
+);
+
+const cancellationPaidThrough =
+  subscription?.cancel_at_period_end === true &&
+  currentSubscriptionStatus === "canceled" &&
+  Boolean(subscription?.current_period_end) &&
+  Date.parse(String(subscription?.current_period_end)) > Date.now();
+
 const hasActiveSubscriptionAccess =
-  isSubscriptionAccessActive(currentSubscriptionStatus);
+  isSubscriptionAccessActive(currentSubscriptionStatus) ||
+  cancellationPaidThrough;
 
 const effectivePlanCode =
   hasActiveSubscriptionAccess ? currentPlanCode : "free";
 
 const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
-  const subscriptionStatusLabel =
-    currentSubscriptionStatus === "past_due"
-      ? "Past due"
-      : currentSubscriptionStatus === "canceled"
-        ? "Canceled"
-        : currentSubscriptionStatus === "unpaid"
-          ? "Unpaid"
-          : currentSubscriptionStatus === "trialing"
-            ? "Trialing"
-            : "Active";
+
+const subscriptionStatusLabel = cancellationPaidThrough
+  ? "Active"
+  : currentSubscriptionStatus === "past_due"
+    ? "Past due"
+    : currentSubscriptionStatus === "canceled"
+      ? "Canceled"
+      : currentSubscriptionStatus === "unpaid"
+        ? "Unpaid"
+        : currentSubscriptionStatus === "trialing"
+          ? "Trialing"
+          : "Active";
+
+const canCancelSubscription =
+  subscription?.provider === "paypal" &&
+  (currentPlanCode === "personal_pro" ||
+    currentPlanCode === "business_pro") &&
+  (currentSubscriptionStatus === "active" ||
+    currentSubscriptionStatus === "trialing") &&
+  subscription?.cancel_at_period_end !== true;
+
+const showSubscriptionManagement =
+  subscription?.provider === "paypal" &&
+  (currentPlanCode === "personal_pro" ||
+    currentPlanCode === "business_pro");
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
@@ -1441,6 +1520,47 @@ const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
               </div>
             </div>
 
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <CreditCard size={19} />
+                  <div>
+                    <h3>Manage subscription</h3>
+                    <p>
+                      {subscription?.cancel_at_period_end === true &&
+                      cancellationPaidThrough
+                        ? subscriptionEndLabel
+                          ? `Your plan will not renew. Paid access remains active until ${subscriptionEndLabel}.`
+                          : "Your plan will not renew."
+                        : subscriptionEndLabel
+                          ? `Your ${subscription?.billing_interval === "annual" ? "annual" : "monthly"} PayPal subscription is active. Next billing date: ${subscriptionEndLabel}.`
+                          : `Your ${subscription?.billing_interval === "annual" ? "annual" : "monthly"} PayPal subscription is active.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.cardActions}>
+                  {subscription?.cancel_at_period_end === true ? (
+                    <span className={styles.currentBadge}>
+                      Cancellation scheduled
+                    </span>
+                  ) : canCancelSubscription ? (
+                    <button
+                      type="button"
+                      className={styles.dangerOutline}
+                      onClick={() => setDialog("cancel-subscription")}
+                    >
+                      Cancel subscription
+                    </button>
+                  ) : (
+                    <span className={styles.currentBadge}>
+                      {subscriptionStatusLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             <div className={styles.subscriptionIntro}>
               <div>
                 <span className={styles.eyebrow}>Plan separation</span>
@@ -1539,7 +1659,41 @@ const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
         ) : null}
       </main>
 
-      {dialog ? <Modal title={dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
+      {dialog ? <Modal title={dialog === "cancel-subscription" ? "Cancel your subscription?" : dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
+        {dialog === "cancel-subscription" ? (
+          <div className={styles.modalCopy}>
+            <p>
+              Future renewal will stop. Your Ficonter account and financial
+              data will not be deleted.
+            </p>
+            <p>
+              {subscriptionEndLabel
+                ? `You will keep your paid plan access until ${subscriptionEndLabel}.`
+                : "Ficonter will verify your paid-through date before the cancellation is completed."}
+            </p>
+            <div className={styles.cardActions}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={subscriptionCanceling}
+                onClick={() => setDialog(null)}
+              >
+                Keep subscription
+              </button>
+              <button
+                type="button"
+                data-enter-confirm="true"
+                className={styles.dangerButton}
+                disabled={subscriptionCanceling}
+                onClick={() => void cancelSubscription()}
+              >
+                {subscriptionCanceling
+                  ? "Canceling…"
+                  : "Confirm cancellation"}
+              </button>
+            </div>
+          </div>
+        ) : null}
         {dialog === "privacy" ? <div className={styles.modalCopy}><p>Ficonter stores the profile and financial records required to provide your private finance workspace. Account preferences are stored in your authenticated user metadata. Financial data is protected by Supabase row-level access controls.</p><p>Ficonter does not become a bank, move funds or provide credit decisions.</p></div> : null}
         {dialog === "retention" ? <div className={styles.modalCopy}><p>Your records remain available while your account is active. You may export them at any time. Deleting financial records removes the selected financial tables while preserving your login. Deleting your account removes the account and associated data permanently.</p></div> : null}
         {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, goals, debt and credit-card records, and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button type="button" data-enter-confirm="true" className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}

@@ -27,6 +27,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("fullName") ?? "").trim();
     const confirmPassword = String(form.get("confirmPassword") ?? "");
+    const betaCode = String(form.get("betaCode") ?? "").trim();
 
     if (mode === "register" && password !== confirmPassword) {
       setMessage({ type: "error", text: "Passwords do not match." });
@@ -50,12 +51,42 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           throw new Error("Enter your full name.");
         }
 
+        let betaSignupToken = "";
+
+        if (betaCode) {
+          const betaResponse = await fetch("/api/beta/prepare-signup", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code: betaCode }),
+          });
+
+          const betaPayload = (await betaResponse.json().catch(() => ({}))) as {
+            token?: string;
+            error?: string;
+          };
+
+          if (!betaResponse.ok || !betaPayload.token) {
+            throw new Error(betaPayload.error || "The Beta invitation code is invalid.");
+          }
+
+          betaSignupToken = betaPayload.token;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: redirectTo,
-            data: { full_name: fullName },
+            data: {
+              full_name: fullName,
+              ...(betaSignupToken
+                ? { ficonter_beta_token: betaSignupToken }
+                : {}),
+            },
           },
         });
 
@@ -189,6 +220,26 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             autoComplete="new-password"
             required
           />
+        </div>
+      )}
+
+      {mode === "register" && (
+        <div className="field">
+          <label htmlFor="beta-code">Beta invitation code (optional)</label>
+          <input
+            id="beta-code"
+            className="input"
+            name="betaCode"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="Only for invited Beta testers"
+          />
+          <small className="muted">
+            Leave this blank for a normal Ficonter Free account.
+          </small>
         </div>
       )}
 

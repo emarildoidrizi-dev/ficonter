@@ -86,7 +86,7 @@ export function BusinessSetup() {
           <div><span>BUSINESS PROFILE</span><h2>Workspace details</h2></div>
         </div>
         <div className={styles.grid}>
-          <label>Business name<input name="name" required minLength={2} placeholder="e.g. FICONTER " /></label>
+          <label>Business name<input name="name" required minLength={2} placeholder="Enter business name" /></label>
           <label>Legal name<input name="legal_name" placeholder="Optional registered name" /></label>
           <label>Business type<select name="business_type" defaultValue="Sole trader">{BUSINESS_TYPES.map(type=><option key={type}>{type}</option>)}</select></label>
           <label>Country code<input name="country_code" defaultValue="DE" maxLength={2} required /></label>

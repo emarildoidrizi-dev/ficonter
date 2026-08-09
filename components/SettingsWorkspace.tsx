@@ -1710,7 +1710,7 @@ const showSubscriptionManagement =
               </div>
               <div className={styles.subscriptionCurrentMeta}>
                 <span className={styles.defaultBadge}>{subscriptionStatusLabel}</span>
-                <small>{subscription?.provider === "paypal" ? "PayPal" : "Internal beta access"}</small>
+                <small>{subscription?.provider === "paypal" ? "PayPal" : currentPlanCode === "beta" ? "Private Beta access" : "Ficonter account"}</small>
               </div>
             </div>
 

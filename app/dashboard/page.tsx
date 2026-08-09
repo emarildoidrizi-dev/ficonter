@@ -1,75 +1,123 @@
 import { redirect } from "next/navigation";
+
+import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
+import { SettingsWorkspace } from "@/components/SettingsWorkspace";
+import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
-import {
-  reconcileAiInsightsInputs,
-  reconcileFinancialHealthInputs,
-} from "@/lib/finance/monthlyCashActuals";
-import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
-import { normalizeAiInsightsInputs } from "@/lib/wealth/aiInsights";
-import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function DashboardPage() {
+type SettingsPageProps = {
+  searchParams?: Promise<{
+    section?: string | string[];
+  }>;
+};
+
+type SubscriptionSnapshot = {
+  plan_code?: string | null;
+  status?: string | null;
+  billing_interval?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
+  provider?: string | null;
+};
+
+function hasPaidCancellationGrace(
+  subscription: SubscriptionSnapshot | null,
+) {
+  if (
+    !subscription ||
+    subscription.status !== "canceled" ||
+    subscription.cancel_at_period_end !== true ||
+    !subscription.current_period_end
+  ) {
+    return false;
+  }
+
+  const paidThrough = Date.parse(subscription.current_period_end);
+
+  return Number.isFinite(paidThrough) && paidThrough > Date.now();
+}
+
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 
-  const [
-    transactionResult,
-    billResult,
-    healthResult,
-    gpsResult,
-  ] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select(
-        "id,user_id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,type,category,transaction_date,occurred_at,created_at",
-      )
-      .eq("user_id", user.id)
-      .order("occurred_at", { ascending: false }),
-    supabase
-      .from("bills")
-      .select("id,status,amount_eur,due_date,paid_at,transaction_id")
-      .eq("user_id", user.id),
-    supabase.rpc("get_financial_health_inputs"),
-    supabase.rpc("get_ai_insights_inputs"),
-  ]);
+  const { admin } = await requireAdmin();
+  const isSubscriptionExempt = Boolean(admin);
 
-  const transactions = transactionResult.data ?? [];
-  const bills = billResult.data ?? [];
-  const healthInputs = reconcileFinancialHealthInputs(
-    normalizeFinancialHealthInputs(healthResult.data),
-    transactions,
-    bills,
-  );
-  const gpsInputs = reconcileAiInsightsInputs(
-    normalizeAiInsightsInputs(gpsResult.data),
-    transactions,
-    bills,
-  );
-  const name =
-    (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
-    "there";
+  const query = await searchParams;
+  const section = Array.isArray(query?.section)
+    ? query.section[0]
+    : query?.section;
+
+  if (isSubscriptionExempt && section === "subscription") {
+    redirect("/dashboard/settings?section=profile");
+  }
+
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select(
+      "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
+    )
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const subscriptionSnapshot =
+    (subscription as SubscriptionSnapshot | null) ?? null;
+
+  const displaySubscription = hasPaidCancellationGrace(subscriptionSnapshot)
+    ? {
+        ...subscriptionSnapshot,
+        status: "active",
+      }
+    : subscriptionSnapshot;
 
   return (
-    <DashboardLiveOverview
-      userId={user.id}
-      name={name}
-      initialTransactions={transactions}
-      initialBills={bills}
-      initialHealthInputs={healthInputs}
-      initialSetupAcknowledgements={readSetupAcknowledgements(
-        user.user_metadata,
-      )}
-      initialGpsInputs={gpsInputs}
-      initialError={
-        transactionResult.error?.message ?? billResult.error?.message ?? ""
+    <section
+      className={
+        isSubscriptionExempt
+          ? "ficonter-subscription-exempt-settings"
+          : undefined
       }
-      initialHealthError={healthResult.error?.message ?? ""}
-      initialGpsError={gpsResult.error?.message ?? ""}
-    />
+    >
+      {isSubscriptionExempt ? (
+        <style>{`
+          .ficonter-subscription-exempt-settings
+            aside[aria-label="Settings sections"]
+            > div:nth-child(2)
+            > button:nth-child(7) {
+              display: none !important;
+            }
+        `}</style>
+      ) : null}
+
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">Private preferences</div>
+          <h1>Settings</h1>
+          <p>
+            Manage your profile, account security and Ficonter preferences from
+            one private workspace.
+          </p>
+        </div>
+      </div>
+
+      {!isSubscriptionExempt ? (
+        <CustomerSubscriptionManager subscription={subscriptionSnapshot} />
+      ) : null}
+
+      <SettingsWorkspace
+        userId={user.id}
+        email={user.email ?? ""}
+        metadata={user.user_metadata ?? {}}
+        initialSection={section}
+        subscription={isSubscriptionExempt ? null : displaySubscription}
+      />
+    </section>
   );
 }

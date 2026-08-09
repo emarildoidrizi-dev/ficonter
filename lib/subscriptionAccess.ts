@@ -13,7 +13,9 @@ import {
   type SubscriptionStatus,
 } from "@/lib/subscriptionPlans";
 
-function isValidPlan(value: unknown): value is SubscriptionPlanCode {
+function isValidPlan(
+  value: unknown,
+): value is SubscriptionPlanCode {
   return (
     value === "beta" ||
     value === "free" ||
@@ -22,7 +24,9 @@ function isValidPlan(value: unknown): value is SubscriptionPlanCode {
   );
 }
 
-function isValidStatus(value: unknown): value is SubscriptionStatus {
+function isValidStatus(
+  value: unknown,
+): value is SubscriptionStatus {
   return (
     value === "trialing" ||
     value === "active" ||
@@ -32,73 +36,114 @@ function isValidStatus(value: unknown): value is SubscriptionStatus {
   );
 }
 
-export const getCurrentSubscriptionAccess = cache(async () => {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return {
-      authenticated: false,
-      isAdminExempt: false,
-      adminRole: null,
-      planCode: "free" as SubscriptionPlanCode,
-      status: "unpaid" as SubscriptionStatus,
-    };
-  }
-
-  /*
-   * Owner / Super Admin / Admin subscription exemption.
-   */
-  const { admin } = await requireAdmin();
-
-  if (admin) {
-    return {
-      authenticated: true,
-      isAdminExempt: true,
-      adminRole: admin.role,
-      planCode: "business_pro" as SubscriptionPlanCode,
-      status: "active" as SubscriptionStatus,
-    };
-  }
-
-  const { data: subscription, error } = await supabase
-    .from("subscriptions")
-    .select("plan_code, status")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  /*
-   * Normal customers fail closed.
-   * Missing, invalid or unreadable subscription data
-   * must never unlock paid features.
-   */
+function hasCancellationGraceAccess(
+  status: SubscriptionStatus,
+  cancelAtPeriodEnd: boolean,
+  currentPeriodEnd: string | null,
+) {
   if (
-    error ||
-    !subscription ||
-    !isValidPlan(subscription.plan_code) ||
-    !isValidStatus(subscription.status)
+    status !== "canceled" ||
+    !cancelAtPeriodEnd ||
+    !currentPeriodEnd
   ) {
+    return false;
+  }
+
+  const paidThrough = Date.parse(currentPeriodEnd);
+
+  return (
+    Number.isFinite(paidThrough) &&
+    paidThrough > Date.now()
+  );
+}
+
+export const getCurrentSubscriptionAccess = cache(
+  async () => {
+    const { supabase, user } = await getCurrentUser();
+
+    if (!user) {
+      return {
+        authenticated: false,
+        isAdminExempt: false,
+        adminRole: null,
+        planCode: "free" as SubscriptionPlanCode,
+        status: "unpaid" as SubscriptionStatus,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null as string | null,
+      };
+    }
+
+    /*
+     * Owner / Super Admin / Admin subscription exemption.
+     */
+    const { admin } = await requireAdmin();
+
+    if (admin) {
+      return {
+        authenticated: true,
+        isAdminExempt: true,
+        adminRole: admin.role,
+        planCode:
+          "business_pro" as SubscriptionPlanCode,
+        status: "active" as SubscriptionStatus,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null as string | null,
+      };
+    }
+
+    const {
+      data: subscription,
+      error,
+    } = await supabase
+      .from("subscriptions")
+      .select(
+        "plan_code,status,cancel_at_period_end,current_period_end",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    /*
+     * Normal customers fail closed.
+     */
+    if (
+      error ||
+      !subscription ||
+      !isValidPlan(subscription.plan_code) ||
+      !isValidStatus(subscription.status)
+    ) {
+      return {
+        authenticated: true,
+        isAdminExempt: false,
+        adminRole: null,
+        planCode: "free" as SubscriptionPlanCode,
+        status: "unpaid" as SubscriptionStatus,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null as string | null,
+      };
+    }
+
     return {
       authenticated: true,
       isAdminExempt: false,
       adminRole: null,
-      planCode: "free" as SubscriptionPlanCode,
-      status: "unpaid" as SubscriptionStatus,
+      planCode: subscription.plan_code,
+      status: subscription.status,
+      cancelAtPeriodEnd:
+        subscription.cancel_at_period_end === true,
+      currentPeriodEnd:
+        typeof subscription.current_period_end ===
+        "string"
+          ? subscription.current_period_end
+          : null,
     };
-  }
-
-  return {
-    authenticated: true,
-    isAdminExempt: false,
-    adminRole: null,
-    planCode: subscription.plan_code,
-    status: subscription.status,
-  };
-});
+  },
+);
 
 export async function canCurrentUserAccessSubscriptionFeature(
   feature: SubscriptionFeature,
 ) {
-  const access = await getCurrentSubscriptionAccess();
+  const access =
+    await getCurrentSubscriptionAccess();
 
   if (!access.authenticated) {
     return false;
@@ -108,8 +153,19 @@ export async function canCurrentUserAccessSubscriptionFeature(
     return true;
   }
 
+  const subscriptionIsUsable =
+    isSubscriptionAccessActive(access.status) ||
+    hasCancellationGraceAccess(
+      access.status,
+      access.cancelAtPeriodEnd,
+      access.currentPeriodEnd,
+    );
+
   return (
-    isSubscriptionAccessActive(access.status) &&
-    hasSubscriptionFeature(access.planCode, feature)
+    subscriptionIsUsable &&
+    hasSubscriptionFeature(
+      access.planCode,
+      feature,
+    )
   );
 }

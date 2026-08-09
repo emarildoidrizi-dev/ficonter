@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/currentUser";
-import { requireAdmin } from "@/lib/admin/access";
+
+import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
+import { requireAdmin } from "@/lib/admin/access";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +14,35 @@ type SettingsPageProps = {
   }>;
 };
 
-export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+type SubscriptionSnapshot = {
+  plan_code?: string | null;
+  status?: string | null;
+  billing_interval?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
+  provider?: string | null;
+};
+
+function hasPaidCancellationGrace(
+  subscription: SubscriptionSnapshot | null,
+) {
+  if (
+    !subscription ||
+    subscription.status !== "canceled" ||
+    subscription.cancel_at_period_end !== true ||
+    !subscription.current_period_end
+  ) {
+    return false;
+  }
+
+  const paidThrough = Date.parse(subscription.current_period_end);
+
+  return Number.isFinite(paidThrough) && paidThrough > Date.now();
+}
+
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
@@ -25,10 +55,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ? query.section[0]
     : query?.section;
 
-  /*
-   * Owner / Super Admin / Admin accounts are subscription-exempt.
-   * They must never see or enter the commercial Subscription section.
-   */
   if (isSubscriptionExempt && section === "subscription") {
     redirect("/dashboard/settings?section=profile");
   }
@@ -41,10 +67,27 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const subscriptionSnapshot =
+    (subscription as SubscriptionSnapshot | null) ?? null;
+
+  /*
+   * The database correctly stores a PayPal cancellation as "canceled".
+   * If the customer has already paid through a future date, Settings should
+   * still present that paid plan as active until the date actually arrives.
+   */
+  const displaySubscription = hasPaidCancellationGrace(subscriptionSnapshot)
+    ? {
+        ...subscriptionSnapshot,
+        status: "active",
+      }
+    : subscriptionSnapshot;
+
   return (
     <section
       className={
-        isSubscriptionExempt ? "ficonter-subscription-exempt-settings" : undefined
+        isSubscriptionExempt
+          ? "ficonter-subscription-exempt-settings"
+          : undefined
       }
     >
       {isSubscriptionExempt ? (
@@ -69,12 +112,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </div>
       </div>
 
+      {!isSubscriptionExempt ? (
+        <CustomerSubscriptionManager subscription={subscriptionSnapshot} />
+      ) : null}
+
       <SettingsWorkspace
         userId={user.id}
         email={user.email ?? ""}
         metadata={user.user_metadata ?? {}}
         initialSection={section}
-        subscription={isSubscriptionExempt ? null : subscription}
+        subscription={isSubscriptionExempt ? null : displaySubscription}
       />
     </section>
   );

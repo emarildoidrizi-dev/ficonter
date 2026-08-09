@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireAdmin } from "@/lib/admin/access";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -16,19 +17,47 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   if (!user) redirect("/login");
 
+  const { admin } = await requireAdmin();
+  const isSubscriptionExempt = Boolean(admin);
+
   const query = await searchParams;
   const section = Array.isArray(query?.section)
     ? query.section[0]
     : query?.section;
 
+  /*
+   * Owner / Super Admin / Admin accounts are subscription-exempt.
+   * They must never see or enter the commercial Subscription section.
+   */
+  if (isSubscriptionExempt && section === "subscription") {
+    redirect("/dashboard/settings?section=profile");
+  }
+
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select("plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider")
+    .select(
+      "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
   return (
-    <section>
+    <section
+      className={
+        isSubscriptionExempt ? "ficonter-subscription-exempt-settings" : undefined
+      }
+    >
+      {isSubscriptionExempt ? (
+        <style>{`
+          .ficonter-subscription-exempt-settings
+            aside[aria-label="Settings sections"]
+            > div:nth-child(2)
+            > button:nth-child(7) {
+              display: none !important;
+            }
+        `}</style>
+      ) : null}
+
       <div className="page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
@@ -45,7 +74,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         email={user.email ?? ""}
         metadata={user.user_metadata ?? {}}
         initialSection={section}
-        subscription={subscription}
+        subscription={isSubscriptionExempt ? null : subscription}
       />
     </section>
   );

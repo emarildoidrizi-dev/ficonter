@@ -38,6 +38,7 @@ type Props = {
   initialCategory?: string;
   entryMode?: EntryMode;
   preset?: TransactionPreset | null;
+  allowMultiCurrency?: boolean;
   onTemplateSaved?: (template: TransactionTemplate) => void;
   onSaved?: () => void;
 };
@@ -86,6 +87,7 @@ export function TransactionForm({
   initialCategory,
   entryMode = "guided",
   preset,
+  allowMultiCurrency = true,
   onTemplateSaved,
   onSaved,
 }: Props) {
@@ -100,7 +102,7 @@ export function TransactionForm({
   const [notice, setNotice] = useState("");
   const [type, setType] = useState<TransactionKind>(defaultType);
   const [description, setDescription] = useState(preset?.description ?? "");
-  const [currency, setCurrency] = useState(preset?.currency ?? "EUR");
+  const [currency, setCurrency] = useState(allowMultiCurrency ? preset?.currency ?? "EUR" : "EUR");
   const [amount, setAmount] = useState(
     preset?.amount ? String(preset.amount) : "",
   );
@@ -128,12 +130,12 @@ export function TransactionForm({
 
   const currencyOptions = useMemo(
     () =>
-      CURRENCY_CODES.map((code) => ({
+      (allowMultiCurrency ? CURRENCY_CODES : ["EUR"]).map((code) => ({
         code,
         symbol: currencySymbol(code),
         name: currencyName(code),
       })).sort((a, b) => a.name.localeCompare(b.name)),
-    [],
+    [allowMultiCurrency],
   );
 
   useEffect(() => {
@@ -866,6 +868,7 @@ export function TransactionForm({
                   className="input"
                   name="currency"
                   value={currency}
+                  title={allowMultiCurrency ? undefined : "Personal Pro unlocks additional currencies"}
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setCurrency(event.target.value)
                   }
@@ -994,6 +997,7 @@ export function TransactionForm({
             className="input"
             name="currency"
             value={currency}
+            title={allowMultiCurrency ? undefined : "Personal Pro unlocks additional currencies"}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setCurrency(event.target.value)
             }

@@ -744,7 +744,7 @@ export function BusinessManager({
                 name="name"
                 required
                 minLength={2}
-                placeholder="e.g. OTTE DOREZZI"
+                placeholder="Enter business name"
               />
             </label>
             <label>

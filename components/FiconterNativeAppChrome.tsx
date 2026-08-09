@@ -18,6 +18,7 @@ import {
   House,
   Landmark,
   LayoutGrid,
+  LockKeyhole,
   LogOut,
   Menu,
   MessageSquareText,
@@ -38,6 +39,8 @@ import {
   type ComponentType,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
+import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
 import styles from "./FiconterNativeAppChrome.module.css";
 
 type Workspace = "personal" | "business";
@@ -60,6 +63,7 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   businessName?: string;
+  subscriptionPlanCode: SubscriptionPlanCode;
 };
 
 type IOSNavigator = Navigator & {
@@ -350,6 +354,7 @@ export function FiconterNativeAppChrome({
   workspace,
   displayName,
   businessName = "",
+  subscriptionPlanCode,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -401,6 +406,17 @@ export function FiconterNativeAppChrome({
     workspace === "business"
       ? "/dashboard"
       : "/business/overview";
+
+  const businessWorkspaceLocked =
+    workspace === "personal" &&
+    !hasSubscriptionFeature(
+      subscriptionPlanCode,
+      "business_workspace",
+    );
+
+  const switchTargetHref = businessWorkspaceLocked
+    ? getSubscriptionUpgradeHref("business_workspace")
+    : switchHref;
 
   useEffect(() => {
     synchronizeNativeAppMode();
@@ -671,16 +687,27 @@ export function FiconterNativeAppChrome({
         </div>
 
         <Link
-          href={switchHref}
-          prefetch={true}
+          href={switchTargetHref}
+          prefetch={!businessWorkspaceLocked}
           className={styles.workspaceSwitch}
+          aria-label={
+            businessWorkspaceLocked
+              ? "Open business workspace — Business Pro required"
+              : undefined
+          }
         >
           <span>
             {workspace === "business"
               ? "Open personal workspace"
-              : "Open business workspace"}
+              : businessWorkspaceLocked
+                ? "Business workspace · Business Pro"
+                : "Open business workspace"}
           </span>
-          <ChevronRight size={18} aria-hidden={true} />
+          {businessWorkspaceLocked ? (
+            <LockKeyhole size={17} aria-hidden={true} />
+          ) : (
+            <ChevronRight size={18} aria-hidden={true} />
+          )}
         </Link>
 
         <div className={styles.drawerLabel}>
@@ -690,16 +717,29 @@ export function FiconterNativeAppChrome({
         <nav className={styles.drawerNavigation}>
           {routes.map((item) => {
             const Icon = item.icon;
-            const active = activeRoute(
-              pathname,
-              item,
-              workspace,
+            const feature =
+              workspace === "personal"
+                ? subscriptionFeatureForPersonalRoute(item.href)
+                : null;
+            const locked = Boolean(
+              feature &&
+                !hasSubscriptionFeature(
+                  subscriptionPlanCode,
+                  feature,
+                ),
             );
+            const targetHref =
+              locked && feature
+                ? getSubscriptionUpgradeHref(feature)
+                : item.href;
+            const active =
+              !locked &&
+              activeRoute(pathname, item, workspace);
 
             return (
               <Link
-                href={item.href}
-                prefetch={true}
+                href={targetHref}
+                prefetch={!locked}
                 key={item.href}
                 className={`${styles.drawerLink} ${
                   active
@@ -709,6 +749,11 @@ export function FiconterNativeAppChrome({
                 aria-current={
                   active ? "page" : undefined
                 }
+                aria-label={
+                  locked
+                    ? `${item.label} — upgrade required`
+                    : undefined
+                }
               >
                 <span className={styles.drawerIcon}>
                   <Icon
@@ -717,10 +762,17 @@ export function FiconterNativeAppChrome({
                   />
                 </span>
                 <span>{item.label}</span>
-                <ChevronRight
-                  size={16}
-                  aria-hidden={true}
-                />
+                {locked ? (
+                  <LockKeyhole
+                    size={15}
+                    aria-hidden={true}
+                  />
+                ) : (
+                  <ChevronRight
+                    size={16}
+                    aria-hidden={true}
+                  />
+                )}
               </Link>
             );
           })}

@@ -79,10 +79,10 @@ type SubscriptionTable = {
     plan_code: "beta" | "free" | "personal_pro" | "business_pro";
     status: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
     billing_interval: "monthly" | "annual" | null;
-    provider: "internal" | "stripe";
-    stripe_customer_id: string | null;
-    stripe_subscription_id: string | null;
-    stripe_price_id: string | null;
+    provider: "internal" | "paypal";
+    paypal_payer_id: string | null;
+    paypal_subscription_id: string | null;
+    paypal_plan_id: string | null;
     current_period_start: string | null;
     current_period_end: string | null;
     cancel_at_period_end: boolean;
@@ -95,10 +95,10 @@ type SubscriptionTable = {
     plan_code?: "beta" | "free" | "personal_pro" | "business_pro";
     status?: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
     billing_interval?: "monthly" | "annual" | null;
-    provider?: "internal" | "stripe";
-    stripe_customer_id?: string | null;
-    stripe_subscription_id?: string | null;
-    stripe_price_id?: string | null;
+    provider?: "internal" | "paypal";
+    paypal_payer_id?: string | null;
+    paypal_subscription_id?: string | null;
+    paypal_plan_id?: string | null;
     current_period_start?: string | null;
     current_period_end?: string | null;
     cancel_at_period_end?: boolean;
@@ -111,10 +111,10 @@ type SubscriptionTable = {
     plan_code?: "beta" | "free" | "personal_pro" | "business_pro";
     status?: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
     billing_interval?: "monthly" | "annual" | null;
-    provider?: "internal" | "stripe";
-    stripe_customer_id?: string | null;
-    stripe_subscription_id?: string | null;
-    stripe_price_id?: string | null;
+    provider?: "internal" | "paypal";
+    paypal_payer_id?: string | null;
+    paypal_subscription_id?: string | null;
+    paypal_plan_id?: string | null;
     current_period_start?: string | null;
     current_period_end?: string | null;
     cancel_at_period_end?: boolean;
@@ -123,7 +123,6 @@ type SubscriptionTable = {
   };
   Relationships: [];
 };
-
 type ContractTables = {
   business_audit_log: RefinedTable<
     "business_audit_log",

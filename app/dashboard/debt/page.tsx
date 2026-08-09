@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { DebtManager } from "@/components/DebtManager";
 
+import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DebtPage() {
+  await requireSubscriptionFeature("debt");
   const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 
 export type SwitchActiveBusinessResult =
   | { ok: true }
@@ -13,6 +14,8 @@ const UUID_PATTERN =
 export async function switchActiveBusinessAction(
   businessId: string,
 ): Promise<SwitchActiveBusinessResult> {
+  await requireSubscriptionFeature("business_workspace");
+
   if (!UUID_PATTERN.test(businessId)) {
     return {
       ok: false,

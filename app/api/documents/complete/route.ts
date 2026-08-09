@@ -4,6 +4,7 @@ import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -22,6 +23,8 @@ type IntentRow = {
 };
 
 export async function POST(request: NextRequest) {
+  const subscriptionAccessError = await subscriptionApiAccessError("financial_documents");
+  if (subscriptionAccessError) return subscriptionAccessError;
   if (!isSameOriginRequest(request)) return NextResponse.json({ error: "This request could not be verified." }, { status: 403, headers: noStoreHeaders() });
   try {
     const supabase = await createClient();

@@ -11,6 +11,7 @@ import {
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createClient } from "@/lib/supabase/server";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,8 @@ async function loadInputsAndUser() {
 }
 
 export async function POST(request: NextRequest) {
+  const subscriptionAccessError = await subscriptionApiAccessError("smart_insights");
+  if (subscriptionAccessError) return subscriptionAccessError;
   if (!isSameOriginRequest(request)) {
     return jsonError("Invalid request origin.", 403);
   }
@@ -196,6 +199,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const subscriptionAccessError = await subscriptionApiAccessError("smart_insights");
+  if (subscriptionAccessError) return subscriptionAccessError;
   if (!isSameOriginRequest(request)) {
     return jsonError("Invalid request origin.", 403);
   }

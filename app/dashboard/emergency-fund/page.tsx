@@ -3,10 +3,12 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { EmergencyFundIntelligence } from "@/components/EmergencyFundIntelligence";
 import { normalizeEmergencyFundInputs } from "@/lib/wealth/emergencyFund";
 
+import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function EmergencyFundPage() {
+  await requireSubscriptionFeature("emergency_fund_intelligence");
   const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");

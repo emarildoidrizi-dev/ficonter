@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -11,6 +12,8 @@ import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
+import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
+import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
 
 type StoredPreferences = {
   appearance?: string;
@@ -77,6 +80,21 @@ export default async function DashboardLayout({
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
 
+  const subscriptionAccess = await getCurrentSubscriptionAccess();
+  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+
+  const showBetaGate = await shouldShowBetaDomainAccessGate({
+    userId: user.id,
+    isAdminExempt: subscriptionAccess.isAdminExempt,
+    betaVerified: subscriptionAccess.betaVerified,
+  });
+
+  if (showBetaGate) {
+    return (
+      <BetaDomainAccessGate />
+    );
+  }
+
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
   );
@@ -94,6 +112,7 @@ export default async function DashboardLayout({
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="personal"
+        subscriptionPlanCode={subscriptionPlanCode}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
@@ -104,6 +123,7 @@ export default async function DashboardLayout({
             <MobileNavigationController workspace="personal" />
       <Sidebar
         isAdmin={Boolean(admin)}
+        subscriptionPlanCode={subscriptionPlanCode}
         user={{
           displayName: String(
             user.user_metadata?.display_name ??
@@ -118,7 +138,7 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
-        <WorkspaceSwitcher current="personal" />
+        <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
           <PWAMobileDock workspace="personal" />

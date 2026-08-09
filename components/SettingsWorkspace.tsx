@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
   Camera,
@@ -79,9 +80,14 @@ import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
   SUBSCRIPTION_PLANS,
+  getRequiredSubscriptionPlan,
+  getSubscriptionFeatureDefinition,
+  hasSubscriptionFeature,
+  isSubscriptionAccessActive,
   normalizeSubscriptionPlan,
   normalizeSubscriptionStatus,
   type BillingInterval,
+  type SubscriptionFeature,
 } from "@/lib/subscriptionPlans";
 import styles from "./SettingsWorkspace.module.css";
 
@@ -134,15 +140,41 @@ type SubscriptionSnapshot = {
   provider?: string | null;
 };
 
+type BillingHistoryTransaction = {
+  id: string;
+  status: string;
+  time: string;
+  amount: {
+    currency: string;
+    value: string;
+  };
+  fee?: {
+    currency: string;
+    value: string;
+  } | null;
+  net?: {
+    currency: string;
+    value: string;
+  } | null;
+};
+
 type Props = {
   userId: string;
   email: string;
   metadata: Metadata;
   initialSection?: string;
   subscription?: SubscriptionSnapshot | null;
+  requiredFeature?: SubscriptionFeature | null;
+  isSubscriptionExempt?: boolean;
 };
 
-type DialogState = null | "delete-records" | "delete-account" | "privacy" | "retention";
+type DialogState =
+  | null
+  | "delete-records"
+  | "delete-account"
+  | "privacy"
+  | "retention"
+  | "cancel-subscription";
 type ExportKind = null | "transactions" | "json" | "pdf";
 
 function isSectionId(value: string | undefined): value is SectionId {
@@ -395,14 +427,55 @@ function emailChangeRedirectUrl() {
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription }: Props) {
+function formatSubscriptionDate(value: string | null | undefined) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatBillingAmount(
+  currency: string | null | undefined,
+  value: string | null | undefined,
+) {
+  const amount = Number(value ?? 0);
+  const currencyCode = String(currency || "EUR").toUpperCase();
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  } catch {
+    return `${currencyCode} ${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
+  }
+}
+
+export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
+  const [subscriptionCanceling, setSubscriptionCanceling] = useState(false);
+  const [betaActivationCode, setBetaActivationCode] = useState("");
+  const [betaActivating, setBetaActivating] = useState(false);
+  const [billingHistory, setBillingHistory] = useState<BillingHistoryTransaction[]>([]);
+  const [billingHistoryLoading, setBillingHistoryLoading] = useState(false);
+  const [billingHistoryError, setBillingHistoryError] = useState("");
+  const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
-    isSectionId(initialSection) ? initialSection : "profile",
+    isSubscriptionExempt && initialSection === "subscription"
+      ? "profile"
+      : isSectionId(initialSection)
+        ? initialSection
+        : "profile",
   );
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
@@ -433,11 +506,87 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    if (isSectionId(initialSection)) {
-      setActive(initialSection);
-      setMessage(null);
+    if (!isSectionId(initialSection)) return;
+
+    // Owner / Super Admin / Admin never enter the customer Subscription area.
+    // Their access is role-based and does not require a plan or payment.
+    setActive(
+      isSubscriptionExempt && initialSection === "subscription"
+        ? "profile"
+        : initialSection,
+    );
+    setMessage(null);
+  }, [initialSection, isSubscriptionExempt]);
+
+  useEffect(() => {
+    if (
+      active !== "subscription" ||
+      subscription?.provider !== "paypal"
+    ) {
+      return;
     }
-  }, [initialSection]);
+
+    let cancelled = false;
+
+    async function loadBillingHistory() {
+      setBillingHistoryLoading(true);
+      setBillingHistoryError("");
+
+      try {
+        const response = await fetch("/api/paypal/billing-history", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          transactions?: BillingHistoryTransaction[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(
+            payload.error || "Billing history could not be loaded.",
+          );
+        }
+
+        if (!cancelled) {
+          setBillingHistory(
+            Array.isArray(payload.transactions)
+              ? payload.transactions
+              : [],
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBillingHistoryError(
+            error instanceof Error
+              ? error.message
+              : "Billing history could not be loaded.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setBillingHistoryLoading(false);
+        }
+      }
+    }
+
+    void loadBillingHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    active,
+    subscription?.provider,
+    subscription?.plan_code,
+    subscription?.billing_interval,
+    billingHistoryReloadKey,
+  ]);
 
   useEffect(() => {
     setPreferences((current) =>
@@ -988,20 +1137,166 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     }
   }
 
-  const activeSection = sections.find((section) => section.id === active)!;
-  const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
-  const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
-  const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
-  const subscriptionStatusLabel =
-    currentSubscriptionStatus === "past_due"
-      ? "Past due"
-      : currentSubscriptionStatus === "canceled"
-        ? "Canceled"
-        : currentSubscriptionStatus === "unpaid"
-          ? "Unpaid"
-          : currentSubscriptionStatus === "trialing"
-            ? "Trialing"
-            : "Active";
+  async function activateExistingBetaAccess() {
+    if (betaActivating) return;
+
+    const code = betaActivationCode.trim();
+    if (!code) {
+      setMessage({
+        type: "error",
+        text: "Enter your private Beta invitation code first.",
+      });
+      return;
+    }
+
+    setBetaActivating(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/beta/activate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "Beta access could not be activated.",
+        );
+      }
+
+      setBetaActivationCode("");
+      showSuccess("Private Beta access activated. Reloading your account…");
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      showError(error, "Beta access could not be activated.");
+      setBetaActivating(false);
+    }
+  }
+
+  async function cancelSubscription() {
+    if (subscriptionCanceling) return;
+
+    setSubscriptionCanceling(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/paypal/cancel", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "The subscription could not be canceled.",
+        );
+      }
+
+      setDialog(null);
+      window.location.reload();
+    } catch (error) {
+      showError(error, "The subscription could not be canceled.");
+      setSubscriptionCanceling(false);
+    }
+  }
+
+  const visibleSections = isSubscriptionExempt
+    ? sections.filter((section) => section.id !== "subscription")
+    : sections;
+  const activeSection =
+    visibleSections.find((section) => section.id === active) ??
+    visibleSections[0];
+const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
+const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
+
+const subscriptionEndLabel = formatSubscriptionDate(
+  subscription?.current_period_end,
+);
+
+const cancellationPaidThrough =
+  subscription?.cancel_at_period_end === true &&
+  Boolean(subscription?.current_period_end) &&
+  Date.parse(String(subscription?.current_period_end)) > Date.now();
+
+const hasActiveSubscriptionAccess =
+  isSubscriptionAccessActive(currentSubscriptionStatus) ||
+  cancellationPaidThrough;
+
+const effectivePlanCode =
+  hasActiveSubscriptionAccess ? currentPlanCode : "free";
+
+const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
+const settingsPlanCode = isSubscriptionExempt
+  ? "business_pro"
+  : effectivePlanCode;
+const requiredFeatureDefinition = requiredFeature
+  ? getSubscriptionFeatureDefinition(requiredFeature)
+  : null;
+const requiredPlanCode = requiredFeature
+  ? getRequiredSubscriptionPlan(requiredFeature)
+  : null;
+const requiredPlan = requiredPlanCode
+  ? SUBSCRIPTION_PLANS[requiredPlanCode]
+  : null;
+const requiredFeatureAlreadyAvailable = requiredFeature
+  ? hasSubscriptionFeature(settingsPlanCode, requiredFeature)
+  : true;
+const canUseFinancialPreferences = hasSubscriptionFeature(
+  settingsPlanCode,
+  "financial_preferences",
+);
+const canUseNotifications = hasSubscriptionFeature(
+  settingsPlanCode,
+  "automatic_bill_reminders",
+);
+const canUseAppearanceThemes = hasSubscriptionFeature(
+  settingsPlanCode,
+  "appearance_themes",
+);
+const canUsePrivatePdfExport = hasSubscriptionFeature(
+  settingsPlanCode,
+  "private_pdf_export",
+);
+
+const subscriptionStatusLabel = cancellationPaidThrough
+  ? "Active"
+  : currentSubscriptionStatus === "past_due"
+    ? "Past due"
+    : currentSubscriptionStatus === "canceled"
+      ? "Canceled"
+      : currentSubscriptionStatus === "unpaid"
+        ? "Unpaid"
+        : currentSubscriptionStatus === "trialing"
+          ? "Trialing"
+          : "Active";
+
+const canCancelSubscription =
+  subscription?.provider === "paypal" &&
+  (currentPlanCode === "personal_pro" ||
+    currentPlanCode === "business_pro") &&
+  (currentSubscriptionStatus === "active" ||
+    currentSubscriptionStatus === "trialing") &&
+  subscription?.cancel_at_period_end !== true;
+
+const showSubscriptionManagement =
+  subscription?.provider === "paypal" &&
+  (currentPlanCode === "personal_pro" ||
+    currentPlanCode === "business_pro");
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
@@ -1017,7 +1312,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
           </div>
         </div>
         <div className={styles.sectionList}>
-          {sections.map(({ id, label, description, icon: Icon }) => (
+          {visibleSections.map(({ id, label, description, icon: Icon }) => (
             <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); }}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
@@ -1093,20 +1388,25 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
         ) : null}
 
         {active === "financial" ? (
-          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
-            <div className={styles.formGrid}>
-              <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
-              <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
-              <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
-              <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
-            </div>
-            <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
-            <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
-            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
-          </form>
+          canUseFinancialPreferences ? (
+            <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
+              <div className={styles.formGrid}>
+                <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
+                <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
+                <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
+                <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
+              </div>
+              <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
+              <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
+              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
+            </form>
+          ) : (
+            <SubscriptionInlineLock feature="financial_preferences" />
+          )
         ) : null}
 
         {active === "notifications" ? (
+          canUseNotifications ? (
           <div className={styles.stack}>
             <div className={styles.formCard}><div className={styles.cardHeading}><Bell size={19} /><div><h3>Notification preferences</h3><p>These preferences are stored on your account and ready for Ficonter notification delivery.</p></div></div>
               <Toggle checked={preferences.notifications.emailEnabled} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, emailEnabled: value } }))} label="Email notifications" />
@@ -1117,11 +1417,17 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               <div className={styles.actions}><button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.")}><Save size={16} />Save notifications</button></div>
             </div>
           </div>
+          ) : (
+            <SubscriptionInlineLock feature="automatic_bill_reminders" />
+          )
         ) : null}
 
         {active === "appearance" ? (
           <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
-            <fieldset className={styles.optionGroup}>
+            {!canUseAppearanceThemes ? (
+              <SubscriptionInlineLock feature="appearance_themes" compact />
+            ) : null}
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
@@ -1150,7 +1456,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Scene wallpaper</legend>
               <p className={styles.themeHelp}>
                 Choose a real visual scene for the dashboard background. A theme-safe
@@ -1181,7 +1487,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Wallpaper motion</legend>
               <p className={styles.themeHelp}>
                 Animated uses a very slow cinematic drift. Static keeps the selected
@@ -1213,7 +1519,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Sidebar atmosphere</legend>
               <p className={styles.themeHelp}>
                 Use the empty sidebar area for a subtle visual treatment without repeating
@@ -1303,7 +1609,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 </div>
               ) : null}
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Sidebar atmosphere motion</legend>
               <p className={styles.themeHelp}>
                 Animated moves extremely slowly. Static keeps the selected treatment still.
@@ -1334,7 +1640,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Dashboard layout</legend>
               <p className={styles.themeHelp}>
                 Choose the visual structure of the Overview. Horizon adds a live command strip,
@@ -1407,14 +1713,52 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               exporting={exporting}
               onJson={exportAccountJson}
               onPdf={exportAccountPdf}
+              pdfLocked={!canUsePrivatePdfExport}
+              onUpgrade={() => {
+                window.location.assign(
+                  "/dashboard/settings?section=subscription&required=private_pdf_export",
+                );
+              }}
             />
             <div className={styles.infoGrid}><button type="button" onClick={() => setDialog("privacy")}><ShieldCheck size={18} /><span><strong>Privacy information</strong><small>How Ficonter handles your records</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setDialog("retention")}><FileText size={18} /><span><strong>Data retention</strong><small>When records remain or are removed</small></span><ChevronRight size={16} /></button></div>
             <div className={styles.dangerZone}><div><span className={styles.eyebrow}>Danger zone</span><h3>Permanent data controls</h3><p>These actions require a custom confirmation and cannot be undone.</p></div><div className={styles.dangerActions}><button type="button" className={styles.dangerOutline} onClick={() => { setDialog("delete-records"); setConfirmation(""); }}><Trash2 size={16} />Delete financial records</button><button type="button" className={styles.dangerButton} onClick={() => { setDialog("delete-account"); setConfirmation(""); }}><Trash2 size={16} />Delete account</button></div></div>
           </div>
         ) : null}
 
-        {active === "subscription" ? (
+        {!isSubscriptionExempt && active === "subscription" ? (
           <div className={styles.stack}>
+            {requiredFeature &&
+            requiredFeatureDefinition &&
+            requiredPlan &&
+            !requiredFeatureAlreadyAvailable ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <LockKeyhole size={19} />
+                  <div>
+                    <span className={styles.eyebrow}>Upgrade required</span>
+                    <h3>Unlock {requiredFeatureDefinition.label}</h3>
+                    <p>
+                      {requiredPlan.shortName} is required for this feature.
+                      Upgrade below to unlock it immediately after PayPal confirms the subscription.
+                    </p>
+                  </div>
+                </div>
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    onClick={() =>
+                      document
+                        .getElementById("subscription-plans")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                  >
+                    Choose {requiredPlan.shortName}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className={styles.subscriptionCurrentCard}>
               <div>
                 <span className={styles.eyebrow}>Current plan</span>
@@ -1428,16 +1772,251 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               </div>
               <div className={styles.subscriptionCurrentMeta}>
                 <span className={styles.defaultBadge}>{subscriptionStatusLabel}</span>
-                <small>{subscription?.provider === "stripe" ? "Stripe" : "Internal beta access"}</small>
+                <small>{subscription?.provider === "paypal" ? "PayPal" : currentPlanCode === "beta" ? "Private Beta access" : "Ficonter account"}</small>
               </div>
             </div>
+
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <CreditCard size={19} />
+                  <div>
+                    <h3>Manage subscription</h3>
+                    <p>
+                      {subscription?.cancel_at_period_end === true
+                        ? cancellationPaidThrough && subscriptionEndLabel
+                          ? `Your plan will not renew. Paid access remains active until ${subscriptionEndLabel}.`
+                          : "Your plan will not renew."
+                        : subscriptionEndLabel
+                          ? `Your ${subscription?.billing_interval === "annual" ? "annual" : "monthly"} PayPal subscription is active. Next billing date: ${subscriptionEndLabel}.`
+                          : `Your ${subscription?.billing_interval === "annual" ? "annual" : "monthly"} PayPal subscription is active.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.cardActions}>
+                  {subscription?.cancel_at_period_end === true ? (
+                    <span className={styles.currentBadge}>
+                      Cancellation scheduled
+                    </span>
+                  ) : canCancelSubscription ? (
+                    <button
+                      type="button"
+                      className={styles.dangerOutline}
+                      onClick={() => setDialog("cancel-subscription")}
+                    >
+                      Cancel subscription
+                    </button>
+                  ) : (
+                    <span className={styles.currentBadge}>
+                      {subscriptionStatusLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <WalletCards size={19} />
+                  <div>
+                    <h3>Billing settings</h3>
+                    <p>
+                      Review the billing details currently attached to your Ficonter subscription.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.formGrid}>
+                  <label>
+                    <span>Plan</span>
+                    <input value={currentPlan.name} disabled />
+                  </label>
+                  <label>
+                    <span>Billing cycle</span>
+                    <input
+                      value={
+                        subscription?.billing_interval === "annual"
+                          ? "Annual"
+                          : "Monthly"
+                      }
+                      disabled
+                    />
+                  </label>
+                  <label>
+                    <span>Payment provider</span>
+                    <input value="PayPal" disabled />
+                  </label>
+                  <label>
+                    <span>
+                      {subscription?.cancel_at_period_end === true
+                        ? "Paid access until"
+                        : "Next billing date"}
+                    </span>
+                    <input
+                      value={
+                        subscriptionEndLabel ||
+                        (subscription?.cancel_at_period_end === true
+                          ? "Cancellation scheduled"
+                          : "Pending from PayPal")
+                      }
+                      disabled
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <ReceiptText size={19} />
+                  <div>
+                    <h3>Billing history & invoices</h3>
+                    <p>
+                      View subscription payments verified directly with PayPal and download a PDF receipt for each payment.
+                    </p>
+                  </div>
+                </div>
+
+                {billingHistoryLoading ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>Loading billing history…</strong>
+                      <span>Ficonter is securely checking PayPal.</span>
+                    </div>
+                  </div>
+                ) : billingHistoryError ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>Billing history unavailable</strong>
+                      <span>{billingHistoryError}</span>
+                    </div>
+                  </div>
+                ) : billingHistory.length === 0 ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>No completed billing transactions yet</strong>
+                      <span>
+                        New PayPal subscription payments will appear here automatically.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.stack}>
+                    {billingHistory.map((transaction) => {
+                      const paymentDate = formatSubscriptionDate(
+                        transaction.time,
+                      );
+
+                      return (
+                        <div className={styles.sessionRow} key={transaction.id}>
+                          <span className={styles.sessionIcon}>
+                            <ReceiptText size={17} />
+                          </span>
+                          <div>
+                            <strong>
+                              {formatBillingAmount(
+                                transaction.amount.currency,
+                                transaction.amount.value,
+                              )}
+                              {paymentDate ? ` · ${paymentDate}` : ""}
+                            </strong>
+                            <small>
+                              {transaction.status.replaceAll("_", " ")} · PayPal transaction {transaction.id}
+                            </small>
+                          </div>
+                          <a
+                            className={styles.textLink}
+                            href={`/api/paypal/invoice/${encodeURIComponent(
+                              transaction.id,
+                            )}`}
+                          >
+                            Download PDF
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    disabled={billingHistoryLoading}
+                    onClick={() =>
+                      setBillingHistoryReloadKey((value) => value + 1)
+                    }
+                  >
+                    {billingHistoryLoading ? "Refreshing…" : "Refresh history"}
+                  </button>
+                </div>
+
+                <small className={styles.betaNotice}>
+                  Sandbox downloads are marked as test payment receipts. A production tax invoice requires Ficonter legal seller and tax details before live billing is enabled.
+                </small>
+              </div>
+            ) : null}
+
+            {currentPlanCode !== "beta" ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <KeyRound size={19} />
+                  <div>
+                    <h3>Private Beta invitation</h3>
+                    <p>
+                      Already registered? Your account can become Beta only after you manually enter a valid invitation code. The FICONTER URL or domain never changes your plan.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.formGrid}>
+                  <label>
+                    <span>Beta invitation code</span>
+                    <input
+                      type="password"
+                      value={betaActivationCode}
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      placeholder="Enter private invitation code"
+                      onChange={(event) =>
+                        setBetaActivationCode(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    disabled={betaActivating || !betaActivationCode.trim()}
+                    onClick={() => void activateExistingBetaAccess()}
+                  >
+                    <KeyRound size={16} />
+                    {betaActivating ? "Validating…" : "Activate Beta access"}
+                  </button>
+                </div>
+
+                <small className={styles.betaNotice}>
+                  Existing and new customer accounts follow the same rule: no valid invitation code, no Beta entitlement. Active PayPal subscriptions must finish or be canceled before conversion so billing cannot continue unnoticed.
+                </small>
+              </div>
+            ) : null}
 
             <div className={styles.subscriptionIntro}>
               <div>
                 <span className={styles.eyebrow}>Plan separation</span>
                 <h3>Choose the level of Ficonter that fits the customer</h3>
                 <p>
-                  Phase 1 defines plans and entitlements only. Checkout and real billing stay disabled until Stripe Test Mode is connected in Phase 2.
+                  Compare the available plans and choose monthly or annual billing.
                 </p>
               </div>
               <div className={styles.billingPreviewToggle} aria-label="Preview billing interval">
@@ -1446,16 +2025,16 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               </div>
             </div>
 
-            <div className={styles.subscriptionPlanGrid}>
+            <div className={styles.subscriptionPlanGrid} id="subscription-plans">
               {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => {
                 const annual = subscriptionPreviewInterval === "annual";
                 const price = annual ? plan.annualPriceEur : plan.monthlyPriceEur;
-                const isCurrent = currentPlanCode === plan.code;
+                const isCurrent = effectivePlanCode === plan.code;
                 const highlights =
                   plan.code === "free"
-                    ? ["Everyday money management", "Core planner and obligations", "Basic net worth"]
+                    ? ["Overview, transactions & bills", "Monthly planner", "CSV & JSON exports"]
                     : plan.code === "personal_pro"
-                      ? ["Everything in Free", "Financial intelligence & GPS", "Advanced insights and exports"]
+                      ? ["Everything in Free", "Savings, debt, cards, goals & net worth", "Financial intelligence, GPS & PDF exports"]
                       : ["Everything in Personal Pro", "Complete Business workspace", "Sales, inventory, costs and reports"];
 
                 return (
@@ -1477,22 +2056,36 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                         <li key={highlight}><Check size={15} /> <span>{highlight}</span></li>
                       ))}
                     </ul>
-                    {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €16.88 compared with monthly billing.</small> : null}
-                    {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €30.88 compared with monthly billing.</small> : null}
-                    <button type="button" className={styles.subscriptionDisabledButton} disabled>
-                      {isCurrent ? "Current plan" : "Available in Stripe Test Mode — Phase 2"}
-                    </button>
+                    {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €10.88 compared with monthly billing.</small> : null}
+                    {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €20.88 compared with monthly billing.</small> : null}
+                   {isCurrent ? (
+  <button
+    type="button"
+    className={styles.subscriptionDisabledButton}
+    disabled
+  >
+    Current plan
+  </button>
+) : plan.code === "personal_pro" || plan.code === "business_pro" ? (
+  <PayPalSubscriptionCheckout
+    planCode={plan.code}
+    billingInterval={annual ? "annual" : "monthly"}
+  />
+) : (
+  <button
+    type="button"
+    className={styles.subscriptionDisabledButton}
+    disabled
+  >
+    Free plan
+  </button>
+)}
                   </article>
                 );
               })}
             </div>
 
-            <div className={styles.subscriptionFoundationGrid}>
-              <div><CreditCard size={18} /><strong>Billing</strong><small>No live charges are enabled in Phase 1.</small></div>
-              <div><ShieldCheck size={18} /><strong>Secure entitlement source</strong><small>Subscription state is read-only to customers and controlled by trusted server logic.</small></div>
-              <div><ReceiptText size={18} /><strong>Invoices</strong><small>Stripe invoice history will be connected in Phase 5.</small></div>
-              <div><Check size={18} /><strong>Beta access</strong><small>Private Beta accounts retain full access for €0 while testing continues.</small></div>
-            </div>
+
           </div>
         ) : null}
 
@@ -1511,7 +2104,41 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
         ) : null}
       </main>
 
-      {dialog ? <Modal title={dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
+      {dialog ? <Modal title={dialog === "cancel-subscription" ? "Cancel your subscription?" : dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>
+        {dialog === "cancel-subscription" ? (
+          <div className={styles.modalCopy}>
+            <p>
+              Future renewal will stop. Your Ficonter account and financial
+              data will not be deleted.
+            </p>
+            <p>
+              {subscriptionEndLabel
+                ? `You will keep your paid plan access until ${subscriptionEndLabel}.`
+                : "Ficonter will verify your paid-through date before the cancellation is completed."}
+            </p>
+            <div className={styles.cardActions}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={subscriptionCanceling}
+                onClick={() => setDialog(null)}
+              >
+                Keep subscription
+              </button>
+              <button
+                type="button"
+                data-enter-confirm="true"
+                className={styles.dangerButton}
+                disabled={subscriptionCanceling}
+                onClick={() => void cancelSubscription()}
+              >
+                {subscriptionCanceling
+                  ? "Canceling…"
+                  : "Confirm cancellation"}
+              </button>
+            </div>
+          </div>
+        ) : null}
         {dialog === "privacy" ? <div className={styles.modalCopy}><p>Ficonter stores the profile and financial records required to provide your private finance workspace. Account preferences are stored in your authenticated user metadata. Financial data is protected by Supabase row-level access controls.</p><p>Ficonter does not become a bank, move funds or provide credit decisions.</p></div> : null}
         {dialog === "retention" ? <div className={styles.modalCopy}><p>Your records remain available while your account is active. You may export them at any time. Deleting financial records removes the selected financial tables while preserving your login. Deleting your account removes the account and associated data permanently.</p></div> : null}
         {dialog === "delete-records" ? <div className={styles.modalCopy}><p>This removes transactions, bills, goals, debt and credit-card records, and monthly planner records. Your login and profile remain active.</p><label>Type <strong>DELETE RECORDS</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button type="button" data-enter-confirm="true" className={styles.dangerButton} disabled={confirmation !== "DELETE RECORDS" || loading} onClick={deleteFinancialRecords}>{loading ? "Deleting…" : "Delete financial records"}</button></div> : null}
@@ -1539,11 +2166,15 @@ function ExportFormatCard({
   exporting,
   onJson,
   onPdf,
+  pdfLocked = false,
+  onUpgrade,
 }: {
   disabled: boolean;
   exporting: ExportKind;
   onJson: () => void | Promise<void>;
   onPdf: () => void | Promise<void>;
+  pdfLocked?: boolean;
+  onUpgrade?: () => void;
 }) {
   return (
     <div className={styles.privacyCard}>
@@ -1558,10 +2189,64 @@ function ExportFormatCard({
         <button type="button" className={styles.secondaryButton} onClick={() => void onJson()} disabled={disabled}>
           <FileJson size={16} />{exporting === "json" ? "Preparing JSON…" : "Download JSON"}
         </button>
-        <button type="button" className={styles.primaryButton} onClick={() => void onPdf()} disabled={disabled}>
-          <FileType2 size={16} />{exporting === "pdf" ? "Building PDF…" : "Download PDF"}
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={() => {
+            if (pdfLocked) {
+              onUpgrade?.();
+              return;
+            }
+            void onPdf();
+          }}
+          disabled={disabled}
+          title={pdfLocked ? "Personal Pro required" : undefined}
+        >
+          {pdfLocked ? <LockKeyhole size={16} /> : <FileType2 size={16} />}
+          {pdfLocked
+            ? "PDF · Personal Pro"
+            : exporting === "pdf"
+              ? "Building PDF…"
+              : "Download PDF"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function SubscriptionInlineLock({
+  feature,
+  compact = false,
+}: {
+  feature: SubscriptionFeature;
+  compact?: boolean;
+}) {
+  const definition = getSubscriptionFeatureDefinition(feature);
+  const requiredCode = getRequiredSubscriptionPlan(feature);
+  const requiredPlan = requiredCode ? SUBSCRIPTION_PLANS[requiredCode] : null;
+
+  return (
+    <div className={compact ? styles.infoStrip : styles.formCard}>
+      <LockKeyhole size={18} />
+      <div>
+        <strong>
+          {definition.label} · {requiredPlan?.shortName ?? "Upgrade required"}
+        </strong>
+        <span>
+          Upgrade to {requiredPlan?.shortName ?? "the required plan"} to use this setting.
+        </span>
+      </div>
+      <button
+        type="button"
+        className={styles.secondaryButton}
+        onClick={() =>
+          window.location.assign(
+            `/dashboard/settings?section=subscription&required=${encodeURIComponent(feature)}`,
+          )
+        }
+      >
+        Upgrade
+      </button>
     </div>
   );
 }

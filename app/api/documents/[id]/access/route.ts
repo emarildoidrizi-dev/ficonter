@@ -4,10 +4,13 @@ import { noStoreHeaders } from "@/lib/security/request";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
+  const subscriptionAccessError = await subscriptionApiAccessError("financial_documents");
+  if (subscriptionAccessError) return subscriptionAccessError;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: noStoreHeaders() });

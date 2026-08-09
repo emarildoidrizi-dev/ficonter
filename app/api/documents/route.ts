@@ -3,6 +3,7 @@ import { MAX_USER_DOCUMENT_BYTES } from "@/lib/documentVault";
 import { noStoreHeaders } from "@/lib/security/request";
 import { createClient } from "@/lib/supabase/server";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const dynamic = "force-dynamic";
 
 type DocumentRow = {
@@ -34,6 +35,8 @@ function mapDocument(row: DocumentRow) {
 }
 
 export async function GET() {
+  const subscriptionAccessError = await subscriptionApiAccessError("financial_documents");
+  if (subscriptionAccessError) return subscriptionAccessError;
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

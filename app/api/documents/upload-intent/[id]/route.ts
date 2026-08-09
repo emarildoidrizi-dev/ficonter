@@ -4,10 +4,13 @@ import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const subscriptionAccessError = await subscriptionApiAccessError("financial_documents");
+  if (subscriptionAccessError) return subscriptionAccessError;
   if (!isSameOriginRequest(request)) return NextResponse.json({ error: "This request could not be verified." }, { status: 403, headers: noStoreHeaders() });
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

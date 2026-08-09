@@ -5,6 +5,7 @@ import {
   groupPdfTextItemsIntoLines,
   type PdfTextItem,
 } from "@/lib/pdfFinancialImport";
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createClient } from "@/lib/supabase/server";
 
@@ -97,6 +98,8 @@ function positionedItemsToLines(
 }
 
 export async function POST(request: NextRequest) {
+  const subscriptionAccessError = await subscriptionApiAccessError("financial_documents");
+  if (subscriptionAccessError) return subscriptionAccessError;
   if (!isSameOriginRequest(request)) {
     return NextResponse.json(
       { error: "This request could not be verified." },

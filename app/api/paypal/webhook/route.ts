@@ -382,7 +382,7 @@ export async function POST(request: Request) {
       error: existingError,
     } = await admin
       .from("subscriptions")
-      .select("user_id")
+      .select("user_id, current_period_end")
       .eq("paypal_subscription_id", subscriptionId)
       .maybeSingle();
 
@@ -397,7 +397,15 @@ export async function POST(request: Request) {
         reason: "Subscription is not linked to a FICONTER user.",
       });
     }
+const isCancellation =
+  eventType === "BILLING.SUBSCRIPTION.CANCELLED" ||
+  subscription.status === "CANCELLED";
 
+const currentPeriodEnd =
+  subscription.billing_info?.next_billing_time ??
+  (isCancellation
+    ? existingSubscription.current_period_end
+    : null);
     const { error: updateError } = await admin
       .from("subscriptions")
       .update({
@@ -410,10 +418,8 @@ export async function POST(request: Request) {
           subscription.subscriber?.payer_id ?? null,
         paypal_plan_id:
           subscription.plan_id ?? null,
-        current_period_end:
-          subscription.billing_info?.next_billing_time ??
-          null,
-        cancel_at_period_end: false,
+     current_period_end: currentPeriodEnd,
+cancel_at_period_end: isCancellation,
         updated_at: new Date().toISOString(),
       })
       .eq("paypal_subscription_id", subscriptionId);

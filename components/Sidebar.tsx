@@ -14,6 +14,7 @@ import {
   Landmark,
   LayoutDashboard,
   ListChecks,
+  LockKeyhole,
   LogOut,
   MessageSquareText,
   PiggyBank,
@@ -31,6 +32,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
+import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
+import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
 import { Brand } from "./Brand";
 import { ContactSupportModal } from "./ContactSupportModal";
 import { NotificationCenter } from "./NotificationCenter";
@@ -133,9 +136,11 @@ function fallbackDisplayName(user: SidebarUser): string {
 
 export function Sidebar({
   isAdmin = false,
+  subscriptionPlanCode,
   user,
 }: {
   isAdmin?: boolean;
+  subscriptionPlanCode: SubscriptionPlanCode;
   user: SidebarUser;
 }) {
   const pathname = usePathname();
@@ -425,24 +430,38 @@ export function Sidebar({
                   data-testid={`sidebar-${group.key}`}
                 >
                   {group.links.map(([href, Icon, label]) => {
-                    const active = isRouteActive(pathname, href);
-                    const pending = pendingHref === href;
+                    const feature = subscriptionFeatureForPersonalRoute(href);
+                    const locked = Boolean(
+                      feature &&
+                        !hasSubscriptionFeature(subscriptionPlanCode, feature),
+                    );
+                    const targetHref =
+                      locked && feature
+                        ? getSubscriptionUpgradeHref(feature)
+                        : href;
+                    const active = !locked && isRouteActive(pathname, href);
+                    const pending = pendingHref === targetHref;
 
                     return (
                       <Link
                         className={`side-link ${styles.link}${
                           active ? " active" : ""
                         }${pending ? ` ${styles.pending}` : ""}`}
-                        href={href}
+                        href={targetHref}
                         key={href}
                         prefetch={false}
                         aria-current={active ? "page" : undefined}
+                        aria-label={locked ? `${label} — upgrade required` : undefined}
+                        title={locked ? "Upgrade required" : undefined}
                         onClick={() => {
-                          if (!active) setPendingHref(href);
+                          if (!active) setPendingHref(targetHref);
                         }}
                       >
                         <Icon size={18} aria-hidden="true" />
                         <span>{label}</span>
+                        {locked ? (
+                          <LockKeyhole size={13} aria-hidden="true" />
+                        ) : null}
                         {pending ? (
                           <span
                             className={styles.spinner}

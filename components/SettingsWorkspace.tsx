@@ -80,10 +80,14 @@ import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
   SUBSCRIPTION_PLANS,
+  getRequiredSubscriptionPlan,
+  getSubscriptionFeatureDefinition,
+  hasSubscriptionFeature,
   isSubscriptionAccessActive,
   normalizeSubscriptionPlan,
   normalizeSubscriptionStatus,
   type BillingInterval,
+  type SubscriptionFeature,
 } from "@/lib/subscriptionPlans";
 import styles from "./SettingsWorkspace.module.css";
 
@@ -160,6 +164,8 @@ type Props = {
   metadata: Metadata;
   initialSection?: string;
   subscription?: SubscriptionSnapshot | null;
+  requiredFeature?: SubscriptionFeature | null;
+  isSubscriptionExempt?: boolean;
 };
 
 type DialogState =
@@ -451,7 +457,7 @@ function formatBillingAmount(
   }
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription }: Props) {
+export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
@@ -1173,6 +1179,37 @@ const effectivePlanCode =
   hasActiveSubscriptionAccess ? currentPlanCode : "free";
 
 const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
+const settingsPlanCode = isSubscriptionExempt
+  ? "business_pro"
+  : effectivePlanCode;
+const requiredFeatureDefinition = requiredFeature
+  ? getSubscriptionFeatureDefinition(requiredFeature)
+  : null;
+const requiredPlanCode = requiredFeature
+  ? getRequiredSubscriptionPlan(requiredFeature)
+  : null;
+const requiredPlan = requiredPlanCode
+  ? SUBSCRIPTION_PLANS[requiredPlanCode]
+  : null;
+const requiredFeatureAlreadyAvailable = requiredFeature
+  ? hasSubscriptionFeature(settingsPlanCode, requiredFeature)
+  : true;
+const canUseFinancialPreferences = hasSubscriptionFeature(
+  settingsPlanCode,
+  "financial_preferences",
+);
+const canUseNotifications = hasSubscriptionFeature(
+  settingsPlanCode,
+  "automatic_bill_reminders",
+);
+const canUseAppearanceThemes = hasSubscriptionFeature(
+  settingsPlanCode,
+  "appearance_themes",
+);
+const canUsePrivatePdfExport = hasSubscriptionFeature(
+  settingsPlanCode,
+  "private_pdf_export",
+);
 
 const subscriptionStatusLabel = cancellationPaidThrough
   ? "Active"
@@ -1289,20 +1326,25 @@ const showSubscriptionManagement =
         ) : null}
 
         {active === "financial" ? (
-          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
-            <div className={styles.formGrid}>
-              <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
-              <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
-              <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
-              <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
-            </div>
-            <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
-            <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
-            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
-          </form>
+          canUseFinancialPreferences ? (
+            <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
+              <div className={styles.formGrid}>
+                <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
+                <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
+                <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
+                <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
+              </div>
+              <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
+              <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
+              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
+            </form>
+          ) : (
+            <SubscriptionInlineLock feature="financial_preferences" />
+          )
         ) : null}
 
         {active === "notifications" ? (
+          canUseNotifications ? (
           <div className={styles.stack}>
             <div className={styles.formCard}><div className={styles.cardHeading}><Bell size={19} /><div><h3>Notification preferences</h3><p>These preferences are stored on your account and ready for Ficonter notification delivery.</p></div></div>
               <Toggle checked={preferences.notifications.emailEnabled} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, emailEnabled: value } }))} label="Email notifications" />
@@ -1313,11 +1355,17 @@ const showSubscriptionManagement =
               <div className={styles.actions}><button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.")}><Save size={16} />Save notifications</button></div>
             </div>
           </div>
+          ) : (
+            <SubscriptionInlineLock feature="automatic_bill_reminders" />
+          )
         ) : null}
 
         {active === "appearance" ? (
           <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
-            <fieldset className={styles.optionGroup}>
+            {!canUseAppearanceThemes ? (
+              <SubscriptionInlineLock feature="appearance_themes" compact />
+            ) : null}
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
@@ -1346,7 +1394,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Scene wallpaper</legend>
               <p className={styles.themeHelp}>
                 Choose a real visual scene for the dashboard background. A theme-safe
@@ -1377,7 +1425,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Wallpaper motion</legend>
               <p className={styles.themeHelp}>
                 Animated uses a very slow cinematic drift. Static keeps the selected
@@ -1409,7 +1457,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Sidebar atmosphere</legend>
               <p className={styles.themeHelp}>
                 Use the empty sidebar area for a subtle visual treatment without repeating
@@ -1499,7 +1547,7 @@ const showSubscriptionManagement =
                 </div>
               ) : null}
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Sidebar atmosphere motion</legend>
               <p className={styles.themeHelp}>
                 Animated moves extremely slowly. Static keeps the selected treatment still.
@@ -1530,7 +1578,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
+            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Dashboard layout</legend>
               <p className={styles.themeHelp}>
                 Choose the visual structure of the Overview. Horizon adds a live command strip,
@@ -1603,6 +1651,12 @@ const showSubscriptionManagement =
               exporting={exporting}
               onJson={exportAccountJson}
               onPdf={exportAccountPdf}
+              pdfLocked={!canUsePrivatePdfExport}
+              onUpgrade={() => {
+                window.location.assign(
+                  "/dashboard/settings?section=subscription&required=private_pdf_export",
+                );
+              }}
             />
             <div className={styles.infoGrid}><button type="button" onClick={() => setDialog("privacy")}><ShieldCheck size={18} /><span><strong>Privacy information</strong><small>How Ficonter handles your records</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setDialog("retention")}><FileText size={18} /><span><strong>Data retention</strong><small>When records remain or are removed</small></span><ChevronRight size={16} /></button></div>
             <div className={styles.dangerZone}><div><span className={styles.eyebrow}>Danger zone</span><h3>Permanent data controls</h3><p>These actions require a custom confirmation and cannot be undone.</p></div><div className={styles.dangerActions}><button type="button" className={styles.dangerOutline} onClick={() => { setDialog("delete-records"); setConfirmation(""); }}><Trash2 size={16} />Delete financial records</button><button type="button" className={styles.dangerButton} onClick={() => { setDialog("delete-account"); setConfirmation(""); }}><Trash2 size={16} />Delete account</button></div></div>
@@ -1611,6 +1665,38 @@ const showSubscriptionManagement =
 
         {active === "subscription" ? (
           <div className={styles.stack}>
+            {requiredFeature &&
+            requiredFeatureDefinition &&
+            requiredPlan &&
+            !requiredFeatureAlreadyAvailable ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <LockKeyhole size={19} />
+                  <div>
+                    <span className={styles.eyebrow}>Upgrade required</span>
+                    <h3>Unlock {requiredFeatureDefinition.label}</h3>
+                    <p>
+                      {requiredPlan.shortName} is required for this feature.
+                      Upgrade below to unlock it immediately after PayPal confirms the subscription.
+                    </p>
+                  </div>
+                </div>
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    onClick={() =>
+                      document
+                        .getElementById("subscription-plans")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                  >
+                    Choose {requiredPlan.shortName}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className={styles.subscriptionCurrentCard}>
               <div>
                 <span className={styles.eyebrow}>Current plan</span>
@@ -1829,16 +1915,16 @@ const showSubscriptionManagement =
               </div>
             </div>
 
-            <div className={styles.subscriptionPlanGrid}>
+            <div className={styles.subscriptionPlanGrid} id="subscription-plans">
               {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => {
                 const annual = subscriptionPreviewInterval === "annual";
                 const price = annual ? plan.annualPriceEur : plan.monthlyPriceEur;
                 const isCurrent = effectivePlanCode === plan.code;
                 const highlights =
                   plan.code === "free"
-                    ? ["Everyday money management", "Core planner and obligations", "Basic net worth"]
+                    ? ["Overview, transactions & bills", "Monthly planner", "CSV & JSON exports"]
                     : plan.code === "personal_pro"
-                      ? ["Everything in Free", "Financial intelligence & GPS", "Advanced insights and exports"]
+                      ? ["Everything in Free", "Savings, debt, cards, goals & net worth", "Financial intelligence, GPS & PDF exports"]
                       : ["Everything in Personal Pro", "Complete Business workspace", "Sales, inventory, costs and reports"];
 
                 return (
@@ -1970,11 +2056,15 @@ function ExportFormatCard({
   exporting,
   onJson,
   onPdf,
+  pdfLocked = false,
+  onUpgrade,
 }: {
   disabled: boolean;
   exporting: ExportKind;
   onJson: () => void | Promise<void>;
   onPdf: () => void | Promise<void>;
+  pdfLocked?: boolean;
+  onUpgrade?: () => void;
 }) {
   return (
     <div className={styles.privacyCard}>
@@ -1989,10 +2079,64 @@ function ExportFormatCard({
         <button type="button" className={styles.secondaryButton} onClick={() => void onJson()} disabled={disabled}>
           <FileJson size={16} />{exporting === "json" ? "Preparing JSON…" : "Download JSON"}
         </button>
-        <button type="button" className={styles.primaryButton} onClick={() => void onPdf()} disabled={disabled}>
-          <FileType2 size={16} />{exporting === "pdf" ? "Building PDF…" : "Download PDF"}
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={() => {
+            if (pdfLocked) {
+              onUpgrade?.();
+              return;
+            }
+            void onPdf();
+          }}
+          disabled={disabled}
+          title={pdfLocked ? "Personal Pro required" : undefined}
+        >
+          {pdfLocked ? <LockKeyhole size={16} /> : <FileType2 size={16} />}
+          {pdfLocked
+            ? "PDF · Personal Pro"
+            : exporting === "pdf"
+              ? "Building PDF…"
+              : "Download PDF"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function SubscriptionInlineLock({
+  feature,
+  compact = false,
+}: {
+  feature: SubscriptionFeature;
+  compact?: boolean;
+}) {
+  const definition = getSubscriptionFeatureDefinition(feature);
+  const requiredCode = getRequiredSubscriptionPlan(feature);
+  const requiredPlan = requiredCode ? SUBSCRIPTION_PLANS[requiredCode] : null;
+
+  return (
+    <div className={compact ? styles.infoStrip : styles.formCard}>
+      <LockKeyhole size={18} />
+      <div>
+        <strong>
+          {definition.label} · {requiredPlan?.shortName ?? "Upgrade required"}
+        </strong>
+        <span>
+          Upgrade to {requiredPlan?.shortName ?? "the required plan"} to use this setting.
+        </span>
+      </div>
+      <button
+        type="button"
+        className={styles.secondaryButton}
+        onClick={() =>
+          window.location.assign(
+            `/dashboard/settings?section=subscription&required=${encodeURIComponent(feature)}`,
+          )
+        }
+      >
+        Upgrade
+      </button>
     </div>
   );
 }

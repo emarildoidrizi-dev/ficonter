@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { FinancialGps } from "@/components/FinancialGps";
 
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";
+import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 import { normalizeAiInsightsInputs } from "@/lib/wealth/aiInsights";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
@@ -16,14 +16,7 @@ export default async function FinancialGpsPage() {
 
   if (!user) redirect("/login");
 
-  const canUseFinancialGps =
-    await canCurrentUserAccessSubscriptionFeature("financial_gps");
-
-  if (!canUseFinancialGps) {
-    redirect(
-      "/dashboard/settings?section=subscription&required=financial_gps",
-    );
-  }
+  await requireSubscriptionFeature("financial_gps");
 
   const { data, error } = await supabase.rpc(
     "get_ai_insights_inputs",

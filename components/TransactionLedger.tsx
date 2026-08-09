@@ -5,6 +5,7 @@ import {
   CalendarRange,
   Download,
   FileText,
+  LockKeyhole,
   Pencil,
   RotateCcw,
   Search,
@@ -48,7 +49,7 @@ type Transaction = {
   exchange_rate_source: string | null;
 };
 
-type Props = { transactions: Transaction[] };
+type Props = { transactions: Transaction[]; allowMultiCurrency?: boolean; allowPdfExport?: boolean };
 type DirectionFilter = "all" | FlowDirection;
 type SortMode = "newest" | "oldest" | "highest" | "lowest" | "description";
 
@@ -93,7 +94,7 @@ function signedEuroValue(item: Transaction) {
   return finiteNumber(item.amount_eur ?? item.amount) * sign;
 }
 
-export function TransactionLedger({ transactions: initialTransactions }: Props) {
+export function TransactionLedger({ transactions: initialTransactions, allowMultiCurrency = true, allowPdfExport = true }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [search, setSearch] = useState("");
@@ -115,6 +116,9 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
   const [editCategory, setEditCategory] = useState("");
   const [customEditCategory, setCustomEditCategory] = useState("");
   const [editCurrency, setEditCurrency] = useState("EUR");
+  const editCurrencyOptions = allowMultiCurrency
+    ? CURRENCY_CODES
+    : [editCurrency || "EUR"];
   const [editAmount, setEditAmount] = useState("");
   const [editOccurredAt, setEditOccurredAt] = useState("");
   const [editRate, setEditRate] = useState({ rate: 1, date: new Date().toISOString().slice(0, 10), source: "identity" });
@@ -620,7 +624,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         </label>
         <button className={styles.secondaryAction} type="button" onClick={clearFilters}><RotateCcw size={16} /> Reset</button>
         <button className={styles.exportButton} type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}><Download size={16} /> Export CSV</button>
-        <button className={styles.exportButton} type="button" onClick={() => void exportPdf(visible, "view")} disabled={!visible.length || exportingPdf}><FileText size={16} /> {exportingPdf ? "Preparing PDF…" : "Export PDF"}</button>
+        <button className={styles.exportButton} type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(visible, "view"); }} disabled={!visible.length || exportingPdf} title={!allowPdfExport ? "Personal Pro required" : undefined}>{allowPdfExport ? <FileText size={16} /> : <LockKeyhole size={16} />} {allowPdfExport ? (exportingPdf ? "Preparing PDF…" : "Export PDF") : "PDF · Personal Pro"}</button>
       </div>
 
       <section className={styles.dateRangeCard} aria-label="Filter transactions by date range">
@@ -671,7 +675,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
         {selectedTransactions.length > 0 && (
           <div className={styles.bulkActions}>
             <button type="button" onClick={() => exportCsv(selectedTransactions, "selected")}><Download size={15} /> Export selected CSV</button>
-            <button type="button" onClick={() => void exportPdf(selectedTransactions, "selected")} disabled={exportingPdf}><FileText size={15} /> Export selected PDF</button>
+            <button type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(selectedTransactions, "selected"); }} disabled={exportingPdf}>{allowPdfExport ? <FileText size={15} /> : <LockKeyhole size={15} />} {allowPdfExport ? "Export selected PDF" : "PDF · Personal Pro"}</button>
             <button className={styles.bulkDeleteButton} type="button" onClick={() => setBulkDeleteOpen(true)}><Trash2 size={15} /> Delete selected</button>
             <button type="button" onClick={() => setSelectedIds(new Set())}>Clear selection</button>
           </div>
@@ -733,7 +737,7 @@ export function TransactionLedger({ transactions: initialTransactions }: Props) 
               <label>Description<input name="description" defaultValue={editTarget.description} required /></label>
               <div className={styles.formGrid}>
                 <label>Amount<input name="amount" type="number" min="0.01" step="0.01" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} required /></label>
-                <label>Currency<select name="currency" value={editCurrency} onChange={(event) => setEditCurrency(event.target.value)}>{CURRENCY_CODES.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
+                <label>Currency<select name="currency" value={editCurrency} onChange={(event) => setEditCurrency(event.target.value)}>{editCurrencyOptions.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
               </div>
               <label>Transaction type<select name="type" defaultValue={editTarget.type}>{Object.entries(groupedTypes).map(([group, options]) => <optgroup key={group} label={group}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
               <div className={styles.formGrid}>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { noStoreHeaders } from "@/lib/security/request";
 import { roundConvertedAmount, roundRate } from "@/lib/finance/money";
 
+import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
 export const runtime = "nodejs";
 
 type FrankfurterRate = {
@@ -15,6 +16,8 @@ type FrankfurterRate = {
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
 export async function GET(request: NextRequest) {
+  const subscriptionAccessError = await subscriptionApiAccessError("multi_currency_transactions");
+  if (subscriptionAccessError) return subscriptionAccessError;
   const supabase = await createClient();
   const {
     data: { user },

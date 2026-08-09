@@ -33,6 +33,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 type Props = {
   initialTransactions: TransactionForPreset[];
   initialType?: "expense" | "income" | "saving";
+  allowMultiCurrency?: boolean;
 };
 
 type PostingRow = {
@@ -49,6 +50,7 @@ function normalizeSavedTransaction(value: unknown) {
 export function EffortlessEntryWorkspace({
   initialTransactions,
   initialType = "expense",
+  allowMultiCurrency = true,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const quickAddRequestedRef = useRef(false);
@@ -567,6 +569,7 @@ export function EffortlessEntryWorkspace({
           initialType={initialType}
           entryMode={mode}
           preset={activePreset}
+          allowMultiCurrency={allowMultiCurrency}
           onTemplateSaved={(template) =>
             setTemplates((current) => [
               template,

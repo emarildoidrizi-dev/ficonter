@@ -4,6 +4,7 @@ import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionMa
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,6 +12,7 @@ export const revalidate = 0;
 type SettingsPageProps = {
   searchParams?: Promise<{
     section?: string | string[];
+    required?: string | string[];
   }>;
 };
 
@@ -54,6 +56,12 @@ export default async function SettingsPage({
   const section = Array.isArray(query?.section)
     ? query.section[0]
     : query?.section;
+  const requiredValue = Array.isArray(query?.required)
+    ? query.required[0]
+    : query?.required;
+  const requiredFeature = isSubscriptionFeatureKey(requiredValue)
+    ? requiredValue
+    : null;
 
   if (isSubscriptionExempt && section === "subscription") {
     redirect("/dashboard/settings?section=profile");
@@ -122,6 +130,8 @@ export default async function SettingsPage({
         metadata={user.user_metadata ?? {}}
         initialSection={section}
         subscription={isSubscriptionExempt ? null : displaySubscription}
+        requiredFeature={requiredFeature}
+        isSubscriptionExempt={isSubscriptionExempt}
       />
     </section>
   );

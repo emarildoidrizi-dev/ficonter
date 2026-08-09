@@ -11,6 +11,7 @@ import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
+import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
 type StoredPreferences = {
   appearance?: string;
@@ -77,6 +78,9 @@ export default async function DashboardLayout({
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
 
+  const subscriptionAccess = await getCurrentSubscriptionAccess();
+  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
   );
@@ -94,6 +98,7 @@ export default async function DashboardLayout({
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="personal"
+        subscriptionPlanCode={subscriptionPlanCode}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
@@ -104,6 +109,7 @@ export default async function DashboardLayout({
             <MobileNavigationController workspace="personal" />
       <Sidebar
         isAdmin={Boolean(admin)}
+        subscriptionPlanCode={subscriptionPlanCode}
         user={{
           displayName: String(
             user.user_metadata?.display_name ??
@@ -118,7 +124,7 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
-        <WorkspaceSwitcher current="personal" />
+        <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
           <PWAMobileDock workspace="personal" />

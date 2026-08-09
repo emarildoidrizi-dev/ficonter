@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { MonthlyPlanner } from "@/components/MonthlyPlanner";
+import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -8,6 +9,11 @@ export const revalidate = 0;
 export default async function BudgetPage() {
   const { supabase, user } = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const showAdvancedPosition =
+    await canCurrentUserAccessSubscriptionFeature(
+      "planner_left_after_everything_paid",
+    );
 
   const [{ data: transactions }, { data: bills }, { data: plans }, { data: items }, { data: goals }] = await Promise.all([
     supabase.from("transactions").select("id,user_id,description,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id", user.id).order("occurred_at", { ascending: false }),
@@ -17,5 +23,5 @@ export default async function BudgetPage() {
     supabase.from("goals").select("id,user_id,name,target_amount,current_amount,target_date,status,created_at,updated_at").eq("user_id", user.id).order("created_at", { ascending: true }),
   ]);
 
-  return <MonthlyPlanner userId={user.id} initialTransactions={transactions ?? []} initialBills={bills ?? []} initialPlans={plans ?? []} initialItems={items ?? []} initialGoals={goals ?? []} />;
+  return <MonthlyPlanner userId={user.id} initialTransactions={transactions ?? []} initialBills={bills ?? []} initialPlans={plans ?? []} initialItems={items ?? []} initialGoals={goals ?? []} showAdvancedPosition={showAdvancedPosition} />;
 }

@@ -7,6 +7,7 @@ import {
   normalizeCashFlowIntelligenceInputs,
 } from "@/lib/wealth/cashFlowIntelligence";
 
+import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -18,6 +19,7 @@ function currentMonthStartIso(): string {
 }
 
 export default async function CashFlowPage() {
+  await requireSubscriptionFeature("cash_flow_intelligence");
   const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");

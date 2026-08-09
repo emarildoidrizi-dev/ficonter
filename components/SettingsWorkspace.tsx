@@ -463,6 +463,8 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
   const [subscriptionCanceling, setSubscriptionCanceling] = useState(false);
+  const [betaActivationCode, setBetaActivationCode] = useState("");
+  const [betaActivating, setBetaActivating] = useState(false);
   const [billingHistory, setBillingHistory] = useState<BillingHistoryTransaction[]>([]);
   const [billingHistoryLoading, setBillingHistoryLoading] = useState(false);
   const [billingHistoryError, setBillingHistoryError] = useState("");
@@ -1132,6 +1134,51 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     } catch (error) {
       showError(error, "Your account could not be deleted.");
       setLoading(false);
+    }
+  }
+
+  async function activateExistingBetaAccess() {
+    if (betaActivating) return;
+
+    const code = betaActivationCode.trim();
+    if (!code) {
+      setMessage({
+        type: "error",
+        text: "Enter your private Beta invitation code first.",
+      });
+      return;
+    }
+
+    setBetaActivating(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/beta/activate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "Beta access could not be activated.",
+        );
+      }
+
+      setBetaActivationCode("");
+      showSuccess("Private Beta access activated. Reloading your account…");
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      showError(error, "Beta access could not be activated.");
+      setBetaActivating(false);
     }
   }
 
@@ -1912,6 +1959,54 @@ const showSubscriptionManagement =
 
                 <small className={styles.betaNotice}>
                   Sandbox downloads are marked as test payment receipts. A production tax invoice requires Ficonter legal seller and tax details before live billing is enabled.
+                </small>
+              </div>
+            ) : null}
+
+            {currentPlanCode !== "beta" ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <KeyRound size={19} />
+                  <div>
+                    <h3>Private Beta invitation</h3>
+                    <p>
+                      Already registered? Your account can become Beta only after you manually enter a valid invitation code. The FICONTER URL or domain never changes your plan.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.formGrid}>
+                  <label>
+                    <span>Beta invitation code</span>
+                    <input
+                      type="password"
+                      value={betaActivationCode}
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      placeholder="Enter private invitation code"
+                      onChange={(event) =>
+                        setBetaActivationCode(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    disabled={betaActivating || !betaActivationCode.trim()}
+                    onClick={() => void activateExistingBetaAccess()}
+                  >
+                    <KeyRound size={16} />
+                    {betaActivating ? "Validating…" : "Activate Beta access"}
+                  </button>
+                </div>
+
+                <small className={styles.betaNotice}>
+                  Existing and new customer accounts follow the same rule: no valid invitation code, no Beta entitlement. Active PayPal subscriptions must finish or be canceled before conversion so billing cannot continue unnoticed.
                 </small>
               </div>
             ) : null}

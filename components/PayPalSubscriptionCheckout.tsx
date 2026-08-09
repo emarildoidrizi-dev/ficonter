@@ -27,7 +27,9 @@ type PayPalNamespace = {
       data: unknown,
       actions: PayPalActions,
     ) => Promise<string>;
-    onApprove: (data: { subscriptionID?: string }) => void;
+    onApprove: (
+  data: { subscriptionID?: string },
+) => void | Promise<void>;
     onCancel: () => void;
     onError: (error: unknown) => void;
   }) => PayPalButtonsInstance;
@@ -169,19 +171,55 @@ export default function PayPalSubscriptionCheckout({
             });
           },
 
-          onApprove(data) {
-            const subscriptionId = data.subscriptionID;
+         async onApprove(data) {
+  const subscriptionId = data.subscriptionID;
 
-            if (!subscriptionId) {
-              setError(
-                "PayPal approved the checkout but returned no subscription ID.",
-              );
-              return;
-            }
+  if (!subscriptionId) {
+    setError(
+      "PayPal approved the checkout but returned no subscription ID.",
+    );
+    return;
+  }
 
-            setApprovedSubscriptionId(subscriptionId);
-            onApproved?.(subscriptionId);
-          },
+  try {
+    setError(null);
+
+    const response = await fetch("/api/paypal/confirm", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        subscriptionId,
+      }),
+    });
+
+    const result = (await response.json()) as {
+      success?: boolean;
+      error?: string;
+    };
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.error ??
+          "PayPal approved the subscription, but FICONTER could not activate the plan.",
+      );
+    }
+
+    setApprovedSubscriptionId(subscriptionId);
+    onApproved?.(subscriptionId);
+
+    window.location.reload();
+  } catch (confirmationError) {
+    setError(
+      confirmationError instanceof Error
+        ? confirmationError.message
+        : "FICONTER could not confirm the PayPal subscription.",
+    );
+  }
+},
 
           onCancel() {
             setError("PayPal checkout was cancelled.");

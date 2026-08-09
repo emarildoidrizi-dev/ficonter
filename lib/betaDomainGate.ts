@@ -1,8 +1,6 @@
 import "server-only";
 
-import { cookies, headers } from "next/headers";
-
-export const BETA_FREE_SESSION_COOKIE = "ficonter_beta_free_session";
+import { headers } from "next/headers";
 
 function normalizeHost(value: string | null) {
   return String(value ?? "")
@@ -24,24 +22,27 @@ export async function isFiconterBetaEntryEnvironment() {
   );
 }
 
+/**
+ * HARD BETA-DOMAIN GATE.
+ *
+ * Normal customers may render the Beta-domain platform only after a valid
+ * invitation has created permanent server-side verification for their user id.
+ * There is intentionally NO URL, query-string, cookie, or "continue free" bypass.
+ * Owner / Super Admin / Admin remain role-based exemptions.
+ */
 export async function shouldShowBetaDomainAccessGate({
-  userId,
   isAdminExempt,
   betaVerified,
 }: {
-  userId: string;
+  userId?: string;
   isAdminExempt: boolean;
   betaVerified: boolean;
 }) {
-  if (isAdminExempt || betaVerified) return false;
+  if (isAdminExempt) return false;
 
   if (!(await isFiconterBetaEntryEnvironment())) {
     return false;
   }
 
-  const cookieStore = await cookies();
-
-  return (
-    cookieStore.get(BETA_FREE_SESSION_COOKIE)?.value !== userId
-  );
+  return !betaVerified;
 }

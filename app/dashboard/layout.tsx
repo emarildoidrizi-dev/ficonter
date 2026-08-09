@@ -84,14 +84,13 @@ export default async function DashboardLayout({
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
-    userId: user.id,
     isAdminExempt: subscriptionAccess.isAdminExempt,
     betaVerified: subscriptionAccess.betaVerified,
   });
 
   if (showBetaGate) {
     return (
-      <BetaDomainAccessGate currentPlanCode={subscriptionPlanCode} />
+      <BetaDomainAccessGate />
     );
   }
 

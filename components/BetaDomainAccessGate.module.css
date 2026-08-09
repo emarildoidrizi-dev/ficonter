@@ -82,7 +82,7 @@
   font-size: 13px;
   line-height: 1.45;
 }
-.primary, .secondary {
+.primary {
   min-height: 50px;
   border-radius: 13px;
   font: inherit;
@@ -90,17 +90,7 @@
   cursor: pointer;
 }
 .primary { margin-top: 4px; border: 0; background: #1d2023; color: #fff; }
-.secondary { width: 100%; border: 1px solid #d7d4cc; background: transparent; color: #303235; }
-.primary:disabled, .secondary:disabled { opacity: 0.55; cursor: wait; }
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 17px 0;
-  color: #96928a;
-  font-size: 12px;
-}
-.divider::before, .divider::after { content: ""; height: 1px; flex: 1; background: #e4e1da; }
+.primary:disabled { opacity: 0.55; cursor: wait; }
 .note {
   display: block;
   margin-top: 14px;

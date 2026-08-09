@@ -143,8 +143,23 @@ export const getCurrentSubscriptionAccess = cache(
           .maybeSingle();
 
         if (betaError || !verifiedBeta) {
-          // Legacy/unverified Beta rows are treated as Free until the
-          // customer proves possession of a valid invitation code.
+          // HARD FAIL-CLOSED RULE FOR NORMAL CUSTOMERS:
+          // a legacy/unverified Beta plan is not merely hidden in the UI; it is
+          // persisted back to Free. Admin roles never reach this branch because
+          // they are exempt above before subscription rows are evaluated.
+          await service
+            .from("subscriptions")
+            .update({
+              plan_code: "free",
+              status: "active",
+              billing_interval: null,
+              provider: "internal",
+              current_period_start: null,
+              current_period_end: null,
+              cancel_at_period_end: false,
+            })
+            .eq("user_id", user.id);
+
           return {
             authenticated: true,
             isAdminExempt: false,

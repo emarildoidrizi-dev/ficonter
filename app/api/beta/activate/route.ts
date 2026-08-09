@@ -107,13 +107,6 @@ export async function POST(request: NextRequest) {
     { status: 200, headers },
   );
 
-  response.cookies.set("ficonter_beta_free_session", "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-  });
 
   return response;
 }

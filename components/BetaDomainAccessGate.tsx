@@ -5,21 +5,15 @@ import { KeyRound, ShieldCheck } from "lucide-react";
 
 import styles from "./BetaDomainAccessGate.module.css";
 
-type Props = {
-  currentPlanCode: string;
-};
-
-export function BetaDomainAccessGate({ currentPlanCode }: Props) {
+export function BetaDomainAccessGate() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState<"activate" | "free" | null>(null);
-
-  const isFree = currentPlanCode === "free";
+  const [loading, setLoading] = useState(false);
 
   async function activateBeta(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setLoading("activate");
+    setLoading(true);
 
     try {
       const response = await fetch("/api/beta/activate", {
@@ -49,39 +43,7 @@ export function BetaDomainAccessGate({ currentPlanCode }: Props) {
           ? cause.message
           : "Beta access could not be activated.",
       );
-      setLoading(null);
-    }
-  }
-
-  async function continueWithoutBeta() {
-    setError("");
-    setLoading("free");
-
-    try {
-      const response = await fetch("/api/beta/continue-free", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          typeof payload?.error === "string"
-            ? payload.error
-            : "Your normal account could not be opened.",
-        );
-      }
-
-      window.location.reload();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Your normal account could not be opened.",
-      );
-      setLoading(null);
+      setLoading(false);
     }
   }
 
@@ -97,11 +59,12 @@ export function BetaDomainAccessGate({ currentPlanCode }: Props) {
           <ShieldCheck size={28} />
         </div>
         <div className={styles.heading}>
-          <span>Private Beta Access</span>
-          <h1 id="beta-access-title">Invitation required</h1>
+          <span>FICONTER Private Beta</span>
+          <h1 id="beta-access-title">Beta invitation required</h1>
           <p>
-            This FICONTER Beta address does not upgrade your account by itself.
-            Enter a valid private invitation code to activate Beta access.
+            Access to this Beta address is blocked for normal customer accounts
+            until a valid invitation code is verified. Changing the URL to Beta
+            never grants access.
           </p>
         </div>
 
@@ -116,7 +79,7 @@ export function BetaDomainAccessGate({ currentPlanCode }: Props) {
               value={code}
               onChange={(event) => setCode(event.target.value)}
               placeholder="Enter invitation code"
-              disabled={loading !== null}
+              disabled={loading}
               autoFocus
               required
             />
@@ -127,31 +90,15 @@ export function BetaDomainAccessGate({ currentPlanCode }: Props) {
           <button
             className={styles.primary}
             type="submit"
-            disabled={loading !== null || !code.trim()}
+            disabled={loading || !code.trim()}
           >
-            {loading === "activate"
-              ? "Checking invitation…"
-              : "Activate Beta access"}
+            {loading ? "Checking invitation…" : "Verify and enter Beta"}
           </button>
         </form>
 
-        <div className={styles.divider}><span>or</span></div>
-
-        <button
-          className={styles.secondary}
-          type="button"
-          onClick={() => void continueWithoutBeta()}
-          disabled={loading !== null}
-        >
-          {loading === "free"
-            ? "Opening normal account…"
-            : isFree
-              ? "Continue with Free plan"
-              : "Continue with current plan"}
-        </button>
-
         <small className={styles.note}>
-          Without a validated invitation, FICONTER will not grant Beta privileges.
+          Without a valid invitation, your customer account remains on its normal
+          plan — Free by default — and this Beta dashboard stays blocked.
         </small>
       </section>
     </main>

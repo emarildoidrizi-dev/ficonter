@@ -80,6 +80,7 @@ import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
   SUBSCRIPTION_PLANS,
+  isSubscriptionAccessActive,
   normalizeSubscriptionPlan,
   normalizeSubscriptionStatus,
   type BillingInterval,
@@ -990,9 +991,16 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   }
 
   const activeSection = sections.find((section) => section.id === active)!;
-  const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
-  const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
-  const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
+const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
+const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
+
+const hasActiveSubscriptionAccess =
+  isSubscriptionAccessActive(currentSubscriptionStatus);
+
+const effectivePlanCode =
+  hasActiveSubscriptionAccess ? currentPlanCode : "free";
+
+const currentPlan = SUBSCRIPTION_PLANS[currentPlanCode];
   const subscriptionStatusLabel =
     currentSubscriptionStatus === "past_due"
       ? "Past due"
@@ -1451,7 +1459,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => {
                 const annual = subscriptionPreviewInterval === "annual";
                 const price = annual ? plan.annualPriceEur : plan.monthlyPriceEur;
-                const isCurrent = currentPlanCode === plan.code;
+                const isCurrent = effectivePlanCode === plan.code;
                 const highlights =
                   plan.code === "free"
                     ? ["Everyday money management", "Core planner and obligations", "Basic net worth"]

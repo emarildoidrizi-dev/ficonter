@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
   Camera,
@@ -1479,9 +1480,28 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                     </ul>
                     {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €10.88 compared with monthly billing.</small> : null}
                     {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €20.88 compared with monthly billing.</small> : null}
-                    <button type="button" className={styles.subscriptionDisabledButton} disabled>
-                     {isCurrent ? "Current plan" : "Available in PayPal Sandbox — Phase 2"}
-                    </button>
+                   {isCurrent ? (
+  <button
+    type="button"
+    className={styles.subscriptionDisabledButton}
+    disabled
+  >
+    Current plan
+  </button>
+) : plan.code === "personal_pro" || plan.code === "business_pro" ? (
+  <PayPalSubscriptionCheckout
+    planCode={plan.code}
+    billingInterval={annual ? "annual" : "monthly"}
+  />
+) : (
+  <button
+    type="button"
+    className={styles.subscriptionDisabledButton}
+    disabled
+  >
+    Free plan
+  </button>
+)}
                   </article>
                 );
               })}

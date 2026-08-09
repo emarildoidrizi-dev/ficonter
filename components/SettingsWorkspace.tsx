@@ -1053,7 +1053,6 @@ const subscriptionEndLabel = formatSubscriptionDate(
 
 const cancellationPaidThrough =
   subscription?.cancel_at_period_end === true &&
-  currentSubscriptionStatus === "canceled" &&
   Boolean(subscription?.current_period_end) &&
   Date.parse(String(subscription?.current_period_end)) > Date.now();
 
@@ -1527,9 +1526,8 @@ const showSubscriptionManagement =
                   <div>
                     <h3>Manage subscription</h3>
                     <p>
-                      {subscription?.cancel_at_period_end === true &&
-                      cancellationPaidThrough
-                        ? subscriptionEndLabel
+                      {subscription?.cancel_at_period_end === true
+                        ? cancellationPaidThrough && subscriptionEndLabel
                           ? `Your plan will not renew. Paid access remains active until ${subscriptionEndLabel}.`
                           : "Your plan will not renew."
                         : subscriptionEndLabel
@@ -1566,7 +1564,7 @@ const showSubscriptionManagement =
                 <span className={styles.eyebrow}>Plan separation</span>
                 <h3>Choose the level of Ficonter that fits the customer</h3>
                 <p>
-                  Phase 2 connects PayPal Sandbox checkout and subscription testing. No live charges are enabled.
+                  Compare the available plans and choose monthly or annual billing.
                 </p>
               </div>
               <div className={styles.billingPreviewToggle} aria-label="Preview billing interval">
@@ -1635,12 +1633,7 @@ const showSubscriptionManagement =
               })}
             </div>
 
-            <div className={styles.subscriptionFoundationGrid}>
-              <div><CreditCard size={18} /><strong>Billing</strong><small>No live charges are enabled while PayPal Sandbox testing is active.</small></div>
-              <div><ShieldCheck size={18} /><strong>Secure entitlement source</strong><small>Subscription state is read-only to customers and controlled by trusted server logic.</small></div>
-              <div><ReceiptText size={18} /><strong>Invoices</strong><small>PayPal billing history will be connected in Phase 5.</small></div>
-              <div><Check size={18} /><strong>Beta access</strong><small>Private Beta accounts retain full access for €0 while testing continues.</small></div>
-            </div>
+
           </div>
         ) : null}
 

@@ -334,7 +334,6 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
             autoCorrect="off"
             spellCheck={false}
             placeholder="Enter private invitation code"
-            required={betaEntry && entryIntent === "beta"}
           />
           <small className="muted">
             {betaEntry

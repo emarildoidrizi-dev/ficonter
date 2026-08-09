@@ -1428,7 +1428,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
               </div>
               <div className={styles.subscriptionCurrentMeta}>
                 <span className={styles.defaultBadge}>{subscriptionStatusLabel}</span>
-                <small>{subscription?.provider === "stripe" ? "Stripe" : "Internal beta access"}</small>
+                <small>{subscription?.provider === "paypal" ? "PayPal" : "Internal beta access"}</small>
               </div>
             </div>
 
@@ -1437,7 +1437,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                 <span className={styles.eyebrow}>Plan separation</span>
                 <h3>Choose the level of Ficonter that fits the customer</h3>
                 <p>
-                  Phase 1 defines plans and entitlements only. Checkout and real billing stay disabled until Stripe Test Mode is connected in Phase 2.
+                  Phase 2 connects PayPal Sandbox checkout and subscription testing. No live charges are enabled.
                 </p>
               </div>
               <div className={styles.billingPreviewToggle} aria-label="Preview billing interval">
@@ -1477,10 +1477,10 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
                         <li key={highlight}><Check size={15} /> <span>{highlight}</span></li>
                       ))}
                     </ul>
-                    {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €16.88 compared with monthly billing.</small> : null}
-                    {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €30.88 compared with monthly billing.</small> : null}
+                    {plan.code === "personal_pro" && annual ? <small className={styles.subscriptionSaving}>Save €10.88 compared with monthly billing.</small> : null}
+                    {plan.code === "business_pro" && annual ? <small className={styles.subscriptionSaving}>Save €20.88 compared with monthly billing.</small> : null}
                     <button type="button" className={styles.subscriptionDisabledButton} disabled>
-                      {isCurrent ? "Current plan" : "Available in Stripe Test Mode — Phase 2"}
+                     {isCurrent ? "Current plan" : "Available in PayPal Sandbox — Phase 2"}
                     </button>
                   </article>
                 );
@@ -1488,9 +1488,9 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
             </div>
 
             <div className={styles.subscriptionFoundationGrid}>
-              <div><CreditCard size={18} /><strong>Billing</strong><small>No live charges are enabled in Phase 1.</small></div>
+              <div><CreditCard size={18} /><strong>Billing</strong><small>No live charges are enabled while PayPal Sandbox testing is active.</small></div>
               <div><ShieldCheck size={18} /><strong>Secure entitlement source</strong><small>Subscription state is read-only to customers and controlled by trusted server logic.</small></div>
-              <div><ReceiptText size={18} /><strong>Invoices</strong><small>Stripe invoice history will be connected in Phase 5.</small></div>
+              <div><ReceiptText size={18} /><strong>Invoices</strong><small>PayPal billing history will be connected in Phase 5.</small></div>
               <div><Check size={18} /><strong>Beta access</strong><small>Private Beta accounts retain full access for €0 while testing continues.</small></div>
             </div>
           </div>

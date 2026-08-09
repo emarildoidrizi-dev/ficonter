@@ -1,77 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { BETA_FREE_COOKIE, BETA_LOGIN_COOKIE } from "@/lib/betaDomainGate";
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
-import { createServiceClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const BETA_FREE_SESSION_COOKIE = "ficonter_beta_free_session";
-
 export async function POST(request: NextRequest) {
-  const responseHeaders = noStoreHeaders();
+  const headers = noStoreHeaders();
 
   if (!isSameOriginRequest(request)) {
     return NextResponse.json(
       { error: "Invalid request origin." },
-      { status: 403, headers: responseHeaders },
+      { status: 403, headers },
     );
   }
 
-  const { user, error: userError } = await getCurrentUser();
-  if (userError || !user) {
+  const { user, error } = await getCurrentUser();
+  if (error || !user) {
     return NextResponse.json(
-      { error: "Sign in before continuing." },
-      { status: 401, headers: responseHeaders },
+      { error: "Sign in before continuing with the Free plan." },
+      { status: 401, headers },
     );
-  }
-
-  const { admin } = await requireAdmin();
-
-  if (!admin) {
-    const service = createServiceClient() as any;
-    const { data: subscription } = await service
-      .from("subscriptions")
-      .select("plan_code")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (subscription?.plan_code === "beta") {
-      const { data: entitlement } = await service
-        .from("beta_user_entitlements")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!entitlement) {
-        await service
-          .from("subscriptions")
-          .update({
-            plan_code: "free",
-            status: "active",
-            billing_interval: null,
-            provider: "internal",
-            current_period_start: null,
-            current_period_end: null,
-            cancel_at_period_end: false,
-          })
-          .eq("user_id", user.id);
-      }
-    }
   }
 
   const response = NextResponse.json(
-    { ok: true },
-    { status: 200, headers: responseHeaders },
+    { ok: true, planCode: "free" },
+    { status: 200, headers },
   );
 
-  response.cookies.set(BETA_FREE_SESSION_COOKIE, user.id, {
+  // Explicitly leave Beta mode for this browser session. This does not mutate
+  // PayPal billing or permanently rewrite an existing paid subscription.
+  response.cookies.set(BETA_LOGIN_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    maxAge: 0,
+  });
+
+  response.cookies.set(BETA_FREE_COOKIE, "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 12 * 60 * 60,
   });
 
   return response;

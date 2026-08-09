@@ -102,3 +102,34 @@
   .screen { padding: 16px; }
   .card { padding: 25px 20px; border-radius: 20px; }
 }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 10px;
+  color: #8a8c8f;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.divider::before, .divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #dedbd4;
+}
+.secondary {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #cbc7bd;
+  border-radius: 13px;
+  background: #fff;
+  color: #25282b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.secondary:hover { background: #f7f5ef; }
+.secondary:disabled { opacity: 0.55; cursor: wait; }

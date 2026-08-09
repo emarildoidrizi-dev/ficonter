@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { hasFiconterBetaFreeSession, isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 import {
@@ -95,6 +96,25 @@ export const getCurrentSubscriptionAccess = cache(
         cancelAtPeriodEnd: false,
         currentPeriodEnd: null as string | null,
         betaVerified: true,
+      };
+    }
+
+    // On the canonical Beta domain a normal customer may explicitly choose
+    // "Continue with Free plan". This is a session-only downgrade: it does not
+    // alter paid billing records or permanently change the database plan.
+    if (
+      (await isFiconterBetaEntryEnvironment()) &&
+      (await hasFiconterBetaFreeSession())
+    ) {
+      return {
+        authenticated: true,
+        isAdminExempt: false,
+        adminRole: null,
+        planCode: "free" as SubscriptionPlanCode,
+        status: "active" as SubscriptionStatus,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null as string | null,
+        betaVerified: false,
       };
     }
 

@@ -8,13 +8,41 @@ import {
   saveTrustedDevicePreference,
 } from "@/lib/supabase/client";
 
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+type AuthFormProps = {
+  mode: "login" | "register";
+  betaEntry?: boolean;
+};
+
+export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const [entryIntent, setEntryIntent] = useState<"beta" | "free">("beta");
   const [message, setMessage] = useState<{
     type: "error" | "success";
     text: string;
   } | null>(null);
+
+  async function authorizeCurrentBetaLogin(code: string) {
+    const response = await fetch("/api/beta/login-authorize", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ code }),
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(
+        payload.error || "A valid Beta invitation code is required.",
+      );
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,6 +56,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const fullName = String(form.get("fullName") ?? "").trim();
     const confirmPassword = String(form.get("confirmPassword") ?? "");
     const betaCode = String(form.get("betaCode") ?? "").trim();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as
+      | HTMLButtonElement
+      | null;
+    const requestedEntry =
+      betaEntry && submitter?.value === "free" ? "free" : "beta";
+    const betaIntent = betaEntry && requestedEntry === "beta";
+    setEntryIntent(requestedEntry);
 
     if (mode === "register" && password !== confirmPassword) {
       setMessage({ type: "error", text: "Passwords do not match." });
@@ -51,11 +86,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           throw new Error("Enter your full name.");
         }
 
-        // SECURITY: URL/path/query values never select a subscription plan.
-        // Beta is possible only when the user manually submits a valid invitation code.
+        // On the private Beta environment a normal signup cannot continue without
+        // manually entering a valid invitation code. Public/non-Beta registration
+        // still defaults to Free when this field is blank.
+        if (betaIntent && !betaCode) {
+          throw new Error(
+            "Enter the Beta invitation code, or choose Continue with Free plan.",
+          );
+        }
+
         let betaSignupToken = "";
 
-        if (betaCode) {
+        if (betaCode && (!betaEntry || betaIntent)) {
           const betaResponse = await fetch("/api/beta/prepare-signup", {
             method: "POST",
             credentials: "same-origin",
@@ -72,7 +114,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           };
 
           if (!betaResponse.ok || !betaPayload.token) {
-            throw new Error(betaPayload.error || "The Beta invitation code is invalid.");
+            throw new Error(
+              betaPayload.error || "The Beta invitation code is invalid.",
+            );
           }
 
           betaSignupToken = betaPayload.token;
@@ -95,6 +139,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         if (error) throw error;
 
         if (data.session) {
+          if (betaEntry) {
+            if (betaIntent) {
+              await authorizeCurrentBetaLogin(betaCode);
+            } else {
+              const freeResponse = await fetch("/api/beta/continue-free", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { Accept: "application/json" },
+              });
+              if (!freeResponse.ok) {
+                throw new Error("The Free plan could not be opened.");
+              }
+            }
+          }
           window.location.assign("/dashboard");
           return;
         }
@@ -105,12 +163,45 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         });
         setLoading(false);
       } else {
+        // Each explicit login attempt on the Beta environment starts with no
+        // trusted Beta-login authorization. The POST below must recreate it.
+        if (betaEntry) {
+          await fetch("/api/beta/login-authorize", {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          }).catch(() => undefined);
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
+
+        if (betaEntry) {
+          if (betaIntent) {
+            try {
+              await authorizeCurrentBetaLogin(betaCode);
+            } catch (betaError) {
+              // A failed Beta verification must not silently become Beta. The
+              // customer can explicitly choose the Free-plan button instead.
+              await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+              throw betaError;
+            }
+          } else {
+            const freeResponse = await fetch("/api/beta/continue-free", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { Accept: "application/json" },
+            });
+            if (!freeResponse.ok) {
+              await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+              throw new Error("The Free plan could not be opened.");
+            }
+          }
+        }
 
         window.location.assign("/dashboard");
       }
@@ -135,6 +226,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     alignItems: "baseline",
     gap: 12,
   } as const;
+
+  const showBetaCode = mode === "register" || betaEntry;
 
   return (
     <form
@@ -225,22 +318,30 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
       )}
 
-      {mode === "register" && (
+      {showBetaCode && (
         <div className="field">
-          <label htmlFor="beta-code">Beta invitation code (required only for Beta access)</label>
+          <label htmlFor="beta-code">
+            Beta invitation code
+            {!betaEntry && mode === "register" ? " (optional)" : ""}
+          </label>
           <input
             id="beta-code"
             className="input"
             name="betaCode"
-            type="text"
+            type="password"
             autoComplete="off"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="Only for invited Beta testers"
+            placeholder="Enter private invitation code"
+            required={betaEntry && entryIntent === "beta"}
           />
           <small className="muted">
-            A Beta-looking URL never grants Beta access. Leave this blank for a normal Ficonter Free account; only a valid invitation code can create a Beta account.
+            {betaEntry
+              ? entryIntent === "beta"
+                ? "Enter the private invitation code to use Beta access. Owner, Super Admin and Admin accounts are exempt."
+                : "You selected the Free plan. No Beta invitation code is needed, and no Beta features will be granted."
+              : "Leave this blank for a normal Ficonter Free account. Only a valid invitation code creates Beta access."}
           </small>
         </div>
       )}
@@ -288,13 +389,49 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
       )}
 
-      <button className="btn btn-primary" disabled={loading} type="submit">
-        {loading
-          ? "Please wait…"
-          : mode === "login"
-            ? "Log in"
-            : "Create account"}
-      </button>
+      {betaEntry ? (
+        <>
+          <button
+            className="btn btn-primary"
+            disabled={loading}
+            type="submit"
+            name="entryMode"
+            value="beta"
+          >
+            {loading && entryIntent === "beta"
+              ? "Please wait…"
+              : mode === "login"
+                ? "Verify invitation & log in"
+                : "Verify invitation & create Beta account"}
+          </button>
+          <button
+            className="btn"
+            disabled={loading}
+            type="submit"
+            name="entryMode"
+            value="free"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(120,110,90,.35)",
+              color: "var(--ink, #1f2326)",
+            }}
+          >
+            {loading && entryIntent === "free"
+              ? "Please wait…"
+              : mode === "login"
+                ? "Continue with Free plan"
+                : "Create Free account"}
+          </button>
+        </>
+      ) : (
+        <button className="btn btn-primary" disabled={loading} type="submit">
+          {loading
+            ? "Please wait…"
+            : mode === "login"
+              ? "Log in"
+              : "Create account"}
+        </button>
+      )}
 
       <p className="center muted">
         {mode === "login" ? (

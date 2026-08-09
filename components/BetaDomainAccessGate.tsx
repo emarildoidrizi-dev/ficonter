@@ -10,13 +10,44 @@ export function BetaDomainAccessGate() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function activateBeta(event: FormEvent<HTMLFormElement>) {
+  async function continueWithFreePlan() {
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/beta/continue-free", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === "string"
+            ? payload.error
+            : "The Free plan could not be opened.",
+        );
+      }
+
+      window.location.reload();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "The Free plan could not be opened.",
+      );
+      setLoading(false);
+    }
+  }
+
+  async function authorizeBetaSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const response = await fetch("/api/beta/activate", {
+      const response = await fetch("/api/beta/login-authorize", {
         method: "POST",
         credentials: "same-origin",
         headers: {
@@ -32,7 +63,7 @@ export function BetaDomainAccessGate() {
         throw new Error(
           typeof payload?.error === "string"
             ? payload.error
-            : "Beta access could not be activated.",
+            : "Beta access could not be authorized.",
         );
       }
 
@@ -41,7 +72,7 @@ export function BetaDomainAccessGate() {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Beta access could not be activated.",
+          : "Beta access could not be authorized.",
       );
       setLoading(false);
     }
@@ -62,13 +93,13 @@ export function BetaDomainAccessGate() {
           <span>FICONTER Private Beta</span>
           <h1 id="beta-access-title">Beta invitation required</h1>
           <p>
-            Access to this Beta address is blocked for normal customer accounts
-            until a valid invitation code is verified. Changing the URL to Beta
-            never grants access.
+            This Beta platform is blocked for normal customer accounts until a
+            valid invitation code is verified for the current Beta session.
+            Changing the URL or signing in normally cannot bypass this gate.
           </p>
         </div>
 
-        <form className={styles.form} onSubmit={activateBeta}>
+        <form className={styles.form} onSubmit={authorizeBetaSession}>
           <label htmlFor="ficonter-beta-code">Beta invitation code</label>
           <div className={styles.inputWrap}>
             <KeyRound size={18} aria-hidden="true" />
@@ -96,9 +127,21 @@ export function BetaDomainAccessGate() {
           </button>
         </form>
 
+        <div className={styles.divider}><span>or</span></div>
+
+        <button
+          className={styles.secondary}
+          type="button"
+          disabled={loading}
+          onClick={() => void continueWithFreePlan()}
+        >
+          Continue with Free plan
+        </button>
+
         <small className={styles.note}>
-          Without a valid invitation, your customer account remains on its normal
-          plan — Free by default — and this Beta dashboard stays blocked.
+          The invitation code is required only to enter Beta. Choosing Free
+          never grants Beta features. Owner, Super Admin and Admin accounts are
+          exempt from this customer gate.
         </small>
       </section>
     </main>

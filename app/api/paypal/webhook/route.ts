@@ -132,17 +132,11 @@ async function verifyPayPalWebhook(
   accessToken: string,
 ) {
   const { apiBase, webhookId } = getPayPalConfiguration();
-
-  const transmissionId =
-    headers.get("paypal-transmission-id");
-  const transmissionTime =
-    headers.get("paypal-transmission-time");
-  const transmissionSig =
-    headers.get("paypal-transmission-sig");
-  const certUrl =
-    headers.get("paypal-cert-url");
-  const authAlgo =
-    headers.get("paypal-auth-algo");
+  const transmissionId = headers.get("paypal-transmission-id");
+  const transmissionTime = headers.get("paypal-transmission-time");
+  const transmissionSig = headers.get("paypal-transmission-sig");
+  const certUrl = headers.get("paypal-cert-url");
+  const authAlgo = headers.get("paypal-auth-algo");
 
   if (
     !transmissionId ||
@@ -197,7 +191,6 @@ async function getPayPalSubscription(
   accessToken: string,
 ) {
   const { apiBase } = getPayPalConfiguration();
-
   const response = await fetch(
     `${apiBase}/v1/billing/subscriptions/${encodeURIComponent(
       subscriptionId,
@@ -213,17 +206,13 @@ async function getPayPalSubscription(
   );
 
   if (!response.ok) {
-    throw new Error(
-      "Unable to retrieve PayPal subscription.",
-    );
+    throw new Error("Unable to retrieve PayPal subscription.");
   }
 
   return (await response.json()) as PayPalSubscription;
 }
 
-function extractSubscriptionId(
-  event: PayPalWebhookEvent,
-) {
+function extractSubscriptionId(event: PayPalWebhookEvent) {
   const candidates = [
     event.resource?.id,
     event.resource?.billing_agreement_id,
@@ -242,28 +231,21 @@ function determineFiconterStatus(
   paypalStatus: string | undefined,
   eventType: string,
 ): FiconterStatus {
-  if (
-    eventType ===
-    "BILLING.SUBSCRIPTION.PAYMENT.FAILED"
-  ) {
+  if (eventType === "BILLING.SUBSCRIPTION.PAYMENT.FAILED") {
     return "past_due";
   }
 
   switch (paypalStatus) {
     case "ACTIVE":
       return "active";
-
     case "SUSPENDED":
       return "past_due";
-
     case "CANCELLED":
     case "EXPIRED":
       return "canceled";
-
     case "APPROVAL_PENDING":
     case "APPROVED":
       return "trialing";
-
     default:
       return "unpaid";
   }
@@ -299,7 +281,6 @@ export async function POST(request: Request) {
     }
 
     const accessToken = await getPayPalAccessToken();
-
     const verified = await verifyPayPalWebhook(
       rawBody,
       request.headers,
@@ -325,8 +306,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const subscriptionId =
-      extractSubscriptionId(event);
+    const subscriptionId = extractSubscriptionId(event);
 
     if (!subscriptionId) {
       return NextResponse.json({
@@ -339,16 +319,13 @@ export async function POST(request: Request) {
      * Do not trust the webhook payload alone.
      * Retrieve the subscription directly from PayPal.
      */
-    const subscription =
-      await getPayPalSubscription(
-        subscriptionId,
-        accessToken,
-      );
+    const subscription = await getPayPalSubscription(
+      subscriptionId,
+      accessToken,
+    );
 
     if (subscription.id !== subscriptionId) {
-      throw new Error(
-        "PayPal returned a different subscription ID.",
-      );
+      throw new Error("PayPal returned a different subscription ID.");
     }
 
     const configuredPlan = getConfiguredPlans().find(
@@ -397,29 +374,34 @@ export async function POST(request: Request) {
         reason: "Subscription is not linked to a FICONTER user.",
       });
     }
-const isCancellation =
-  eventType === "BILLING.SUBSCRIPTION.CANCELLED" ||
-  subscription.status === "CANCELLED";
 
-const currentPeriodEnd =
-  subscription.billing_info?.next_billing_time ??
-  (isCancellation
-    ? existingSubscription.current_period_end
-    : null);
+    /*
+     * PayPal may stop returning next_billing_time once a
+     * subscription is cancelled. Preserve the customer's
+     * already-paid-through date so FICONTER can keep access
+     * available until that date instead of erasing it.
+     */
+    const isCancellation =
+      eventType === "BILLING.SUBSCRIPTION.CANCELLED" ||
+      subscription.status === "CANCELLED";
+
+    const currentPeriodEnd =
+      subscription.billing_info?.next_billing_time ??
+      (isCancellation
+        ? existingSubscription.current_period_end
+        : null);
+
     const { error: updateError } = await admin
       .from("subscriptions")
       .update({
         plan_code: configuredPlan.planCode,
         status,
-        billing_interval:
-          configuredPlan.billingInterval,
+        billing_interval: configuredPlan.billingInterval,
         provider: "paypal",
-        paypal_payer_id:
-          subscription.subscriber?.payer_id ?? null,
-        paypal_plan_id:
-          subscription.plan_id ?? null,
-     current_period_end: currentPeriodEnd,
-cancel_at_period_end: isCancellation,
+        paypal_payer_id: subscription.subscriber?.payer_id ?? null,
+        paypal_plan_id: subscription.plan_id ?? null,
+        current_period_end: currentPeriodEnd,
+        cancel_at_period_end: isCancellation,
         updated_at: new Date().toISOString(),
       })
       .eq("paypal_subscription_id", subscriptionId);
@@ -436,10 +418,7 @@ cancel_at_period_end: isCancellation,
       status,
     });
   } catch (error) {
-    console.error(
-      "PayPal webhook processing failed:",
-      error,
-    );
+    console.error("PayPal webhook processing failed:", error);
 
     /*
      * A non-2xx response tells PayPal the event was not

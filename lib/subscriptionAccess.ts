@@ -6,8 +6,11 @@ import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
 import {
+  getRequiredSubscriptionPlan,
   hasSubscriptionFeature,
   isSubscriptionAccessActive,
+  isSubscriptionFeatureReleased,
+  type PublicSubscriptionPlanCode,
   type SubscriptionFeature,
   type SubscriptionPlanCode,
   type SubscriptionStatus,
@@ -75,6 +78,7 @@ export const getCurrentSubscriptionAccess = cache(
 
     /*
      * Owner / Super Admin / Admin subscription exemption.
+     * This is role-based and never tied to a customer email.
      */
     const { admin } = await requireAdmin();
 
@@ -103,7 +107,8 @@ export const getCurrentSubscriptionAccess = cache(
       .maybeSingle();
 
     /*
-     * Normal customers fail closed.
+     * Normal customers fail closed to the Free entitlement tier.
+     * A missing/invalid subscription row must never grant paid access.
      */
     if (
       error ||
@@ -139,33 +144,128 @@ export const getCurrentSubscriptionAccess = cache(
   },
 );
 
-export async function canCurrentUserAccessSubscriptionFeature(
-  feature: SubscriptionFeature,
+type SubscriptionAccessSnapshot =
+  Awaited<ReturnType<typeof getCurrentSubscriptionAccess>>;
+
+function paidSubscriptionIsUsable(
+  access: SubscriptionAccessSnapshot,
 ) {
-  const access =
-    await getCurrentSubscriptionAccess();
-
-  if (!access.authenticated) {
-    return false;
-  }
-
-  if (access.isAdminExempt) {
-    return true;
-  }
-
-  const subscriptionIsUsable =
+  return (
     isSubscriptionAccessActive(access.status) ||
     hasCancellationGraceAccess(
       access.status,
       access.cancelAtPeriodEnd,
       access.currentPeriodEnd,
-    );
-
-  return (
-    subscriptionIsUsable &&
-    hasSubscriptionFeature(
-      access.planCode,
-      feature,
     )
   );
+}
+
+/**
+ * A customer never loses the Free tier because a paid subscription is
+ * past-due, canceled, unpaid, missing or invalid.
+ *
+ * Active/trialing paid plans (and cancellation grace) use their paid tier.
+ * Inactive paid plans fall back to Free. Admin roles remain exempt.
+ */
+export function getEffectiveSubscriptionPlanCode(
+  access: SubscriptionAccessSnapshot,
+): SubscriptionPlanCode {
+  if (access.isAdminExempt) {
+    return "business_pro";
+  }
+
+  if (access.planCode === "free") {
+    return "free";
+  }
+
+  return paidSubscriptionIsUsable(access)
+    ? access.planCode
+    : "free";
+}
+
+export type SubscriptionFeatureAccessReason =
+  | "available"
+  | "unauthenticated"
+  | "upgrade_required"
+  | "not_released";
+
+export type CurrentSubscriptionFeatureAccess = {
+  allowed: boolean;
+  reason: SubscriptionFeatureAccessReason;
+  effectivePlanCode: SubscriptionPlanCode;
+  requiredPlanCode: PublicSubscriptionPlanCode | null;
+  isAdminExempt: boolean;
+};
+
+/**
+ * Rich server-side entitlement result for route guards and future locked UI.
+ */
+export async function getCurrentSubscriptionFeatureAccess(
+  feature: SubscriptionFeature,
+): Promise<CurrentSubscriptionFeatureAccess> {
+  const requiredPlanCode =
+    getRequiredSubscriptionPlan(feature);
+
+  if (
+    requiredPlanCode === null ||
+    !isSubscriptionFeatureReleased(feature)
+  ) {
+    return {
+      allowed: false,
+      reason: "not_released",
+      effectivePlanCode: "free",
+      requiredPlanCode,
+      isAdminExempt: false,
+    };
+  }
+
+  const access =
+    await getCurrentSubscriptionAccess();
+
+  if (!access.authenticated) {
+    return {
+      allowed: false,
+      reason: "unauthenticated",
+      effectivePlanCode: "free",
+      requiredPlanCode,
+      isAdminExempt: false,
+    };
+  }
+
+  const effectivePlanCode =
+    getEffectiveSubscriptionPlanCode(access);
+
+  if (access.isAdminExempt) {
+    return {
+      allowed: true,
+      reason: "available",
+      effectivePlanCode,
+      requiredPlanCode,
+      isAdminExempt: true,
+    };
+  }
+
+  const allowed = hasSubscriptionFeature(
+    effectivePlanCode,
+    feature,
+  );
+
+  return {
+    allowed,
+    reason: allowed
+      ? "available"
+      : "upgrade_required",
+    effectivePlanCode,
+    requiredPlanCode,
+    isAdminExempt: false,
+  };
+}
+
+export async function canCurrentUserAccessSubscriptionFeature(
+  feature: SubscriptionFeature,
+) {
+  const access =
+    await getCurrentSubscriptionFeatureAccess(feature);
+
+  return access.allowed;
 }

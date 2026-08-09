@@ -136,6 +136,24 @@ type SubscriptionSnapshot = {
   provider?: string | null;
 };
 
+type BillingHistoryTransaction = {
+  id: string;
+  status: string;
+  time: string;
+  amount: {
+    currency: string;
+    value: string;
+  };
+  fee?: {
+    currency: string;
+    value: string;
+  } | null;
+  net?: {
+    currency: string;
+    value: string;
+  } | null;
+};
+
 type Props = {
   userId: string;
   email: string;
@@ -416,12 +434,33 @@ function formatSubscriptionDate(value: string | null | undefined) {
   }).format(date);
 }
 
+function formatBillingAmount(
+  currency: string | null | undefined,
+  value: string | null | undefined,
+) {
+  const amount = Number(value ?? 0);
+  const currencyCode = String(currency || "EUR").toUpperCase();
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  } catch {
+    return `${currencyCode} ${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
+  }
+}
+
 export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
   const [subscriptionCanceling, setSubscriptionCanceling] = useState(false);
+  const [billingHistory, setBillingHistory] = useState<BillingHistoryTransaction[]>([]);
+  const [billingHistoryLoading, setBillingHistoryLoading] = useState(false);
+  const [billingHistoryError, setBillingHistoryError] = useState("");
+  const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
     isSectionId(initialSection) ? initialSection : "profile",
@@ -460,6 +499,76 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
       setMessage(null);
     }
   }, [initialSection]);
+
+  useEffect(() => {
+    if (
+      active !== "subscription" ||
+      subscription?.provider !== "paypal"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadBillingHistory() {
+      setBillingHistoryLoading(true);
+      setBillingHistoryError("");
+
+      try {
+        const response = await fetch("/api/paypal/billing-history", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          transactions?: BillingHistoryTransaction[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(
+            payload.error || "Billing history could not be loaded.",
+          );
+        }
+
+        if (!cancelled) {
+          setBillingHistory(
+            Array.isArray(payload.transactions)
+              ? payload.transactions
+              : [],
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBillingHistoryError(
+            error instanceof Error
+              ? error.message
+              : "Billing history could not be loaded.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setBillingHistoryLoading(false);
+        }
+      }
+    }
+
+    void loadBillingHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    active,
+    subscription?.provider,
+    subscription?.plan_code,
+    subscription?.billing_interval,
+    billingHistoryReloadKey,
+  ]);
 
   useEffect(() => {
     setPreferences((current) =>
@@ -1556,6 +1665,153 @@ const showSubscriptionManagement =
                     </span>
                   )}
                 </div>
+              </div>
+            ) : null}
+
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <WalletCards size={19} />
+                  <div>
+                    <h3>Billing settings</h3>
+                    <p>
+                      Review the billing details currently attached to your Ficonter subscription.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.formGrid}>
+                  <label>
+                    <span>Plan</span>
+                    <input value={currentPlan.name} disabled />
+                  </label>
+                  <label>
+                    <span>Billing cycle</span>
+                    <input
+                      value={
+                        subscription?.billing_interval === "annual"
+                          ? "Annual"
+                          : "Monthly"
+                      }
+                      disabled
+                    />
+                  </label>
+                  <label>
+                    <span>Payment provider</span>
+                    <input value="PayPal" disabled />
+                  </label>
+                  <label>
+                    <span>
+                      {subscription?.cancel_at_period_end === true
+                        ? "Paid access until"
+                        : "Next billing date"}
+                    </span>
+                    <input
+                      value={
+                        subscriptionEndLabel ||
+                        (subscription?.cancel_at_period_end === true
+                          ? "Cancellation scheduled"
+                          : "Pending from PayPal")
+                      }
+                      disabled
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
+            {showSubscriptionManagement ? (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <ReceiptText size={19} />
+                  <div>
+                    <h3>Billing history & invoices</h3>
+                    <p>
+                      View subscription payments verified directly with PayPal and download a PDF receipt for each payment.
+                    </p>
+                  </div>
+                </div>
+
+                {billingHistoryLoading ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>Loading billing history…</strong>
+                      <span>Ficonter is securely checking PayPal.</span>
+                    </div>
+                  </div>
+                ) : billingHistoryError ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>Billing history unavailable</strong>
+                      <span>{billingHistoryError}</span>
+                    </div>
+                  </div>
+                ) : billingHistory.length === 0 ? (
+                  <div className={styles.infoStrip}>
+                    <ReceiptText size={18} />
+                    <div>
+                      <strong>No completed billing transactions yet</strong>
+                      <span>
+                        New PayPal subscription payments will appear here automatically.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.stack}>
+                    {billingHistory.map((transaction) => {
+                      const paymentDate = formatSubscriptionDate(
+                        transaction.time,
+                      );
+
+                      return (
+                        <div className={styles.sessionRow} key={transaction.id}>
+                          <span className={styles.sessionIcon}>
+                            <ReceiptText size={17} />
+                          </span>
+                          <div>
+                            <strong>
+                              {formatBillingAmount(
+                                transaction.amount.currency,
+                                transaction.amount.value,
+                              )}
+                              {paymentDate ? ` · ${paymentDate}` : ""}
+                            </strong>
+                            <small>
+                              {transaction.status.replaceAll("_", " ")} · PayPal transaction {transaction.id}
+                            </small>
+                          </div>
+                          <a
+                            className={styles.textLink}
+                            href={`/api/paypal/invoice/${encodeURIComponent(
+                              transaction.id,
+                            )}`}
+                          >
+                            Download PDF
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    disabled={billingHistoryLoading}
+                    onClick={() =>
+                      setBillingHistoryReloadKey((value) => value + 1)
+                    }
+                  >
+                    {billingHistoryLoading ? "Refreshing…" : "Refresh history"}
+                  </button>
+                </div>
+
+                <small className={styles.betaNotice}>
+                  Sandbox downloads are marked as test payment receipts. A production tax invoice requires Ficonter legal seller and tax details before live billing is enabled.
+                </small>
               </div>
             ) : null}
 

@@ -115,8 +115,8 @@ export const SUBSCRIPTION_PLANS: Record<
     shortName: "Personal Pro",
     description:
       "The complete personal finance experience with advanced financial intelligence.",
-    monthlyPriceEur: 7.99,
-    annualPriceEur: 79,
+    monthlyPriceEur: 4.99,
+    annualPriceEur: 49,
     public: true,
     features: PERSONAL_PRO_FEATURES,
   },
@@ -126,8 +126,8 @@ export const SUBSCRIPTION_PLANS: Record<
     shortName: "Business Pro",
     description:
       "Everything in Personal Pro plus the complete Ficonter Business workspace.",
-    monthlyPriceEur: 14.99,
-    annualPriceEur: 149,
+    monthlyPriceEur: 9.99,
+    annualPriceEur: 99,
     public: true,
     features: BUSINESS_PRO_FEATURES,
   },

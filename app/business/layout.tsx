@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
+import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
@@ -14,6 +15,7 @@ import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
+import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
 import { getSubscriptionUpgradeHref } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
 
@@ -71,6 +73,18 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+
+  const showBetaGate = await shouldShowBetaDomainAccessGate({
+    userId: user.id,
+    isAdminExempt: subscriptionAccess.isAdminExempt,
+    betaVerified: subscriptionAccess.betaVerified,
+  });
+
+  if (showBetaGate) {
+    return (
+      <BetaDomainAccessGate currentPlanCode={subscriptionPlanCode} />
+    );
+  }
 
   if (!hasSubscriptionFeature(subscriptionPlanCode, "business_workspace")) {
     redirect(getSubscriptionUpgradeHref("business_workspace"));

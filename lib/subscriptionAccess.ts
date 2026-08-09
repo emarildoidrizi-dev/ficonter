@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 import {
   getRequiredSubscriptionPlan,
@@ -73,6 +74,7 @@ export const getCurrentSubscriptionAccess = cache(
         status: "unpaid" as SubscriptionStatus,
         cancelAtPeriodEnd: false,
         currentPeriodEnd: null as string | null,
+        betaVerified: false,
       };
     }
 
@@ -92,6 +94,7 @@ export const getCurrentSubscriptionAccess = cache(
         status: "active" as SubscriptionStatus,
         cancelAtPeriodEnd: false,
         currentPeriodEnd: null as string | null,
+        betaVerified: true,
       };
     }
 
@@ -124,7 +127,49 @@ export const getCurrentSubscriptionAccess = cache(
         status: "unpaid" as SubscriptionStatus,
         cancelAtPeriodEnd: false,
         currentPeriodEnd: null as string | null,
+        betaVerified: false,
       };
+    }
+
+    let betaVerified = false;
+
+    if (subscription.plan_code === "beta") {
+      try {
+        const service = createServiceClient() as any;
+        const { data: verifiedBeta, error: betaError } = await service
+          .from("beta_user_entitlements")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (betaError || !verifiedBeta) {
+          // Legacy/unverified Beta rows are treated as Free until the
+          // customer proves possession of a valid invitation code.
+          return {
+            authenticated: true,
+            isAdminExempt: false,
+            adminRole: null,
+            planCode: "free" as SubscriptionPlanCode,
+            status: "active" as SubscriptionStatus,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: null as string | null,
+            betaVerified: false,
+          };
+        }
+
+        betaVerified = true;
+      } catch {
+        return {
+          authenticated: true,
+          isAdminExempt: false,
+          adminRole: null,
+          planCode: "free" as SubscriptionPlanCode,
+          status: "active" as SubscriptionStatus,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null as string | null,
+          betaVerified: false,
+        };
+      }
     }
 
     return {
@@ -140,6 +185,7 @@ export const getCurrentSubscriptionAccess = cache(
         "string"
           ? subscription.current_period_end
           : null,
+      betaVerified,
     };
   },
 );

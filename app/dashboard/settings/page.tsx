@@ -5,6 +5,7 @@ import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
+import { getCurrentSubscriptionAccess } from "@/lib/subscriptionAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -78,17 +79,36 @@ export default async function SettingsPage({
   const subscriptionSnapshot =
     (subscription as SubscriptionSnapshot | null) ?? null;
 
+  const verifiedAccess = await getCurrentSubscriptionAccess();
+
+  // A legacy Beta row without a code-verified entitlement is presented as Free,
+  // matching the server-side entitlement engine and the Beta-domain gate.
+  const verifiedSubscriptionSnapshot =
+    !isSubscriptionExempt &&
+    subscriptionSnapshot?.plan_code === "beta" &&
+    verifiedAccess.planCode !== "beta"
+      ? {
+          ...subscriptionSnapshot,
+          plan_code: "free",
+          status: "active",
+          billing_interval: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          provider: "internal",
+        }
+      : subscriptionSnapshot;
+
   /*
    * The database correctly stores a PayPal cancellation as "canceled".
    * If the customer has already paid through a future date, Settings should
    * still present that paid plan as active until the date actually arrives.
    */
-  const displaySubscription = hasPaidCancellationGrace(subscriptionSnapshot)
+  const displaySubscription = hasPaidCancellationGrace(verifiedSubscriptionSnapshot)
     ? {
-        ...subscriptionSnapshot,
+        ...verifiedSubscriptionSnapshot,
         status: "active",
       }
-    : subscriptionSnapshot;
+    : verifiedSubscriptionSnapshot;
 
   return (
     <section
@@ -121,7 +141,7 @@ export default async function SettingsPage({
       </div>
 
       {!isSubscriptionExempt ? (
-        <CustomerSubscriptionManager subscription={subscriptionSnapshot} />
+        <CustomerSubscriptionManager subscription={verifiedSubscriptionSnapshot} />
       ) : null}
 
       <SettingsWorkspace

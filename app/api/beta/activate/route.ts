@@ -102,8 +102,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(
+  const response = NextResponse.json(
     { ok: true, planCode: "beta" },
     { status: 200, headers },
   );
+
+  response.cookies.set("ficonter_beta_free_session", "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+
+  return response;
 }

@@ -1,6 +1,10 @@
 import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, type AdminRole } from "@/lib/admin/access";
+import {
+  isOwnerEmail,
+  requireAdmin,
+  type AdminRole,
+} from "@/lib/admin/access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { AdminAuditRow } from "@/lib/admin/snapshot";
 import type { Json } from "@/lib/supabase/database.types";
@@ -13,7 +17,8 @@ type Action =
   | "suspend"
   | "restore"
   | "promote_admin"
-  | "demote_admin";
+  | "demote_admin"
+  | "revoke_beta";
 
 type TargetAccount = {
   user: User;
@@ -38,7 +43,7 @@ function jsonError(message: string, status: number) {
 }
 
 function isAction(value: unknown): value is Action {
-  return ["suspend", "restore", "promote_admin", "demote_admin"].includes(
+  return ["suspend", "restore", "promote_admin", "demote_admin", "revoke_beta"].includes(
     String(value),
   );
 }
@@ -187,9 +192,17 @@ async function rollbackRole(userId: string, previousRole: AdminRole | null) {
 
 function mutationPermissionError(
   actorRole: AdminRole,
+  actorIsOwner: boolean,
   targetRole: AdminRole | null,
   action: Action,
 ): string | null {
+  if (action === "revoke_beta" && !actorIsOwner) {
+    return "Only the Owner can revoke Beta access.";
+  }
+
+  if (action === "revoke_beta" && targetRole !== null) {
+    return "Administrative accounts are subscription-exempt and cannot have Beta revoked.";
+  }
   if (targetRole === "super_admin") {
     return "Protected super-admin accounts cannot be changed from this panel.";
   }
@@ -259,8 +272,10 @@ export async function PATCH(
 
     const service = createServiceClient();
     const target = await getTargetAccount(id);
+    const actorIsOwner = isOwnerEmail(auth.user.email);
     const permissionError = mutationPermissionError(
       auth.admin.role,
+      actorIsOwner,
       target.role,
       body.action,
     );
@@ -272,6 +287,79 @@ export async function PATCH(
       ...actorDetails(auth.user),
       previous_role: target.role,
     };
+
+    if (body.action === "revoke_beta") {
+      const betaService = createServiceClient() as any;
+      const { data: subscription, error: subscriptionError } = await betaService
+        .from("subscriptions")
+        .select("plan_code,status,provider")
+        .eq("user_id", id)
+        .maybeSingle();
+
+      if (subscriptionError) {
+        console.error("Owner Beta revoke subscription lookup failed", {
+          actorId: auth.user.id,
+          targetId: id,
+          code: subscriptionError.code,
+        });
+        return jsonError("The subscription state could not be verified.", 500);
+      }
+
+      if (!subscription || subscription.plan_code !== "beta") {
+        return jsonError("This account is not currently a Beta account.", 409);
+      }
+
+      const { data: auditId, error: revokeError } = await betaService.rpc(
+        "owner_revoke_ficonter_beta_access",
+        {
+          p_user_id: id,
+          p_actor_user_id: auth.user.id,
+          p_audit_details: {
+            ...auditDetails,
+            previous_plan: "beta",
+            next_plan: "free",
+            previous_status: subscription.status ?? null,
+            previous_provider: subscription.provider ?? null,
+            owner_approved: true,
+          },
+        },
+      );
+
+      if (revokeError || typeof auditId !== "string") {
+        console.error("Owner Beta revoke failed", {
+          actorId: auth.user.id,
+          targetId: id,
+          code: revokeError?.code,
+        });
+        return jsonError("Beta access could not be revoked.", 500);
+      }
+
+      const { data: audit } = await betaService
+        .from("admin_audit_logs")
+        .select("id,admin_user_id,action,target_user_id,details,created_at")
+        .eq("id", auditId)
+        .maybeSingle();
+
+      return NextResponse.json(
+        {
+          ok: true,
+          user: {
+            id,
+            bannedUntil: target.user.banned_until ?? null,
+            role: target.role,
+            planCode: "free",
+            subscriptionStatus: "active",
+            provider: "internal",
+            billingInterval: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            betaVerified: false,
+          },
+          audit: audit ?? undefined,
+        },
+        { headers: noStoreHeaders() },
+      );
+    }
 
     if (body.action === "suspend" || body.action === "restore") {
       const isCurrentlySuspended = Boolean(
@@ -443,6 +531,7 @@ export async function DELETE(
     const target = await getTargetAccount(id);
     const permissionError = mutationPermissionError(
       auth.admin.role,
+      isOwnerEmail(auth.user.email),
       target.role,
       "suspend",
     );

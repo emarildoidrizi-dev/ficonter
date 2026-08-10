@@ -1,6 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 export type AdminRole = "admin" | "super_admin";
+export type SubscriptionPlanCode =
+  | "beta"
+  | "free"
+  | "personal_pro"
+  | "business_pro";
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "unpaid";
 
 export type AdminUserRow = {
   id: string;
@@ -10,6 +22,13 @@ export type AdminUserRow = {
   bannedUntil: string | null;
   displayName: string;
   role: AdminRole | null;
+  planCode: SubscriptionPlanCode | null;
+  subscriptionStatus: SubscriptionStatus | null;
+  provider: string | null;
+  billingInterval: "monthly" | "annual" | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  betaVerified: boolean;
 };
 
 export type AdminAuditRow = {
@@ -59,6 +78,18 @@ type OverviewRpc = {
   storage_objects?: number;
 };
 
+type SubscriptionRow = {
+  user_id: string;
+  plan_code: SubscriptionPlanCode;
+  status: SubscriptionStatus;
+  provider: string | null;
+  billing_interval: "monthly" | "annual" | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean | null;
+};
+
+type BetaEntitlementRow = { user_id: string };
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -85,7 +116,10 @@ export function normalizeAdminDirectory(
   rows: DirectoryRpcRow[] | null | undefined,
 ): AdminUserRow[] {
   return (rows ?? [])
-    .filter((row) => typeof row.user_id === "string" && UUID_PATTERN.test(row.user_id))
+    .filter(
+      (row) =>
+        typeof row.user_id === "string" && UUID_PATTERN.test(row.user_id),
+    )
     .map((row) => ({
       id: row.user_id,
       email: row.email?.trim() || "Email unavailable",
@@ -97,6 +131,13 @@ export function normalizeAdminDirectory(
           : null,
       displayName: row.display_name?.trim() || "Unnamed user",
       role: row.role,
+      planCode: null,
+      subscriptionStatus: null,
+      provider: null,
+      billingInterval: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      betaVerified: false,
     }));
 }
 
@@ -118,14 +159,83 @@ export function normalizeAdminCounts(
   };
 }
 
+async function enrichSubscriptionState(users: AdminUserRow[]) {
+  if (!users.length) return users;
+
+  try {
+    const service = createServiceClient() as any;
+    const userIds = users.map((user) => user.id);
+    const [subscriptionsResult, betaResult] = await Promise.all([
+      service
+        .from("subscriptions")
+        .select(
+          "user_id,plan_code,status,provider,billing_interval,current_period_end,cancel_at_period_end",
+        )
+        .in("user_id", userIds),
+      service
+        .from("beta_user_entitlements")
+        .select("user_id")
+        .in("user_id", userIds),
+    ]);
+
+    if (subscriptionsResult.error) {
+      console.error("Admin subscription directory enrichment failed", {
+        code: subscriptionsResult.error.code,
+      });
+      return users;
+    }
+
+    if (betaResult.error) {
+      console.error("Admin Beta entitlement directory enrichment failed", {
+        code: betaResult.error.code,
+      });
+    }
+
+    const subscriptionMap = new Map<string, SubscriptionRow>(
+      ((subscriptionsResult.data ?? []) as SubscriptionRow[]).map((row) => [
+        row.user_id,
+        row,
+      ]),
+    );
+    const betaVerified = new Set(
+      ((betaResult.data ?? []) as BetaEntitlementRow[]).map((row) => row.user_id),
+    );
+
+    return users.map((user) => {
+      const subscription = subscriptionMap.get(user.id);
+      if (!subscription) return user;
+
+      return {
+        ...user,
+        planCode: subscription.plan_code,
+        subscriptionStatus: subscription.status,
+        provider: subscription.provider,
+        billingInterval: subscription.billing_interval,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
+        betaVerified: betaVerified.has(user.id),
+      };
+    });
+  } catch (error) {
+    console.error("Admin subscription directory enrichment could not initialize", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return users;
+  }
+}
+
 export async function loadAdminDirectorySnapshot(supabase: SupabaseClient) {
   const [directoryResult, overviewResult] = await Promise.all([
     supabase.rpc("admin_account_directory"),
     supabase.rpc("admin_platform_overview"),
   ]);
 
+  const normalizedUsers = normalizeAdminDirectory(
+    (directoryResult.data ?? []) as DirectoryRpcRow[],
+  );
+
   return {
-    users: normalizeAdminDirectory(directoryResult.data as DirectoryRpcRow[] | null),
+    users: await enrichSubscriptionState(normalizedUsers),
     counts: normalizeAdminCounts(overviewResult.data as OverviewRpc | null),
     errors: {
       directory: directoryResult.error,
@@ -133,4 +243,3 @@ export async function loadAdminDirectorySnapshot(supabase: SupabaseClient) {
     },
   };
 }
-

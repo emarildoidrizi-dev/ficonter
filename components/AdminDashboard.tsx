@@ -44,7 +44,8 @@ type PatchAction =
   | "suspend"
   | "restore"
   | "promote_admin"
-  | "demote_admin";
+  | "demote_admin"
+  | "revoke_beta";
 type UserAction = PatchAction | "delete_user";
 type Toast = {
   id: string;
@@ -56,6 +57,13 @@ type PendingAction = {
   action: UserAction;
   user: AdminUserRow;
 };
+type PlanFilter =
+  | "all"
+  | "free"
+  | "beta"
+  | "personal_pro"
+  | "business_pro"
+  | "exempt";
 
 type ActionCopy = {
   eyebrow: string;
@@ -93,6 +101,23 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "Never";
 }
 
+function planLabel(user: AdminUserRow) {
+  if (user.role) return "Exempt";
+  const labels: Record<string, string> = {
+    beta: "Beta",
+    free: "Free",
+    personal_pro: "Personal Pro",
+    business_pro: "Business Pro",
+  };
+  return user.planCode ? labels[user.planCode] ?? user.planCode : "Free";
+}
+
+function providerLabel(user: AdminUserRow) {
+  if (user.role) return "Role based";
+  if (!user.provider) return "Internal";
+  return user.provider === "paypal" ? "PayPal" : "Internal";
+}
+
 function formatAuditDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -116,6 +141,7 @@ function actionLabel(action: string) {
     restore: "Account restored",
     promote_admin: "Promoted to admin",
     demote_admin: "Admin role removed",
+    revoke_beta: "Beta access revoked",
     delete_user_requested: "Deletion requested",
     delete_user: "Account deleted",
     delete_user_failed: "Deletion failed",
@@ -179,6 +205,17 @@ function actionCopy(pending: PendingAction): ActionCopy {
         successMessage: `${account} is now a standard registered user.`,
         danger: true,
       };
+    case "revoke_beta":
+      return {
+        eyebrow: "OWNER ACCESS CONTROL",
+        title: `Revoke Beta access for ${account}?`,
+        description:
+          "This removes the verified Beta entitlement and every active Beta session for this normal customer. The account will immediately return to Ficonter Free and premium Beta features will lock again.",
+        confirmLabel: "Revoke Beta access",
+        successTitle: "Beta access revoked",
+        successMessage: `${account} is now on Ficonter Free.`,
+        danger: true,
+      };
     case "delete_user":
       return {
         eyebrow: "PERMANENT ACTION",
@@ -202,6 +239,7 @@ function uniqueToastId() {
 export function AdminDashboard({
   currentAdminId,
   currentRole,
+  currentIsOwner,
   initialUsers,
   initialLogs,
   initialCounts,
@@ -209,6 +247,7 @@ export function AdminDashboard({
 }: {
   currentAdminId: string;
   currentRole: AdminRole;
+  currentIsOwner: boolean;
   initialUsers: AdminUserRow[];
   initialLogs: AdminAuditRow[];
   initialCounts: AdminCounts;
@@ -219,6 +258,7 @@ export function AdminDashboard({
   const [logs, setLogs] = useState(initialLogs);
   const [counts, setCounts] = useState(initialCounts);
   const [query, setQuery] = useState("");
+  const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
   const [busy, setBusy] = useState<PendingAction | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -492,22 +532,50 @@ export function AdminDashboard({
     };
   }, [busy, pending]);
 
+  const planCounts = useMemo(
+    () => ({
+      free: users.filter((user) => user.role === null && (user.planCode ?? "free") === "free").length,
+      beta: users.filter((user) => user.role === null && user.planCode === "beta").length,
+      personal_pro: users.filter((user) => user.role === null && user.planCode === "personal_pro").length,
+      business_pro: users.filter((user) => user.role === null && user.planCode === "business_pro").length,
+      exempt: users.filter((user) => user.role !== null).length,
+    }),
+    [users],
+  );
+
   const filteredUsers = useMemo(() => {
     const value = query.trim().toLowerCase();
-    return users.filter(
-      (user) =>
+    return users.filter((user) => {
+      const matchesQuery =
         !value ||
         user.email.toLowerCase().includes(value) ||
-        user.displayName.toLowerCase().includes(value),
-    );
-  }, [query, users]);
+        user.displayName.toLowerCase().includes(value);
+      const matchesPlan =
+        planFilter === "all" ||
+        (planFilter === "exempt"
+          ? user.role !== null
+          : user.role === null && (user.planCode ?? "free") === planFilter);
+      return matchesQuery && matchesPlan;
+    });
+  }, [planFilter, query, users]);
 
   const userGroups = useMemo(
     () => [
       {
+        key: "owner",
+        label: "Owner",
+        users: currentIsOwner
+          ? filteredUsers.filter((user) => user.id === currentAdminId)
+          : [],
+      },
+      {
         key: "super-admin",
         label: "Super Admin",
-        users: filteredUsers.filter((user) => user.role === "super_admin"),
+        users: filteredUsers.filter(
+          (user) =>
+            user.role === "super_admin" &&
+            (!currentIsOwner || user.id !== currentAdminId),
+        ),
       },
       {
         key: "admins",
@@ -520,7 +588,7 @@ export function AdminDashboard({
         users: filteredUsers.filter((user) => user.role === null),
       },
     ],
-    [filteredUsers],
+    [currentAdminId, currentIsOwner, filteredUsers],
   );
 
   const userMap = useMemo(
@@ -553,12 +621,10 @@ export function AdminDashboard({
 
   function applyResponseUser(
     current: AdminUserRow[],
-    next: { id: string; bannedUntil: string | null; role: AdminRole | null },
+    next: Partial<AdminUserRow> & { id: string },
   ) {
     return current.map((user) =>
-      user.id === next.id
-        ? { ...user, bannedUntil: next.bannedUntil, role: next.role }
-        : user,
+      user.id === next.id ? { ...user, ...next } : user,
     );
   }
 
@@ -583,11 +649,7 @@ export function AdminDashboard({
       const data = (await response.json().catch(() => null)) as {
         error?: string;
         deletedUserId?: string;
-        user?: {
-          id: string;
-          bannedUntil: string | null;
-          role: AdminRole | null;
-        };
+        user?: Partial<AdminUserRow> & { id: string };
         audit?: AdminAuditRow;
       } | null;
 
@@ -716,9 +778,30 @@ export function AdminDashboard({
           </div>
 
           <div className={styles.privacyNote}>
-            Only account identity, status and role are shown. Financial balances,
+            Only account identity, status, subscription and role are shown. Financial balances,
             transactions, bills, debts, savings, goals and planner values are not
             accessible here.
+          </div>
+
+          <div className={styles.planFilters} aria-label="Filter accounts by plan">
+            {[
+              ["all", "All", users.length],
+              ["free", "Free", planCounts.free],
+              ["beta", "Beta", planCounts.beta],
+              ["personal_pro", "Personal Pro", planCounts.personal_pro],
+              ["business_pro", "Business Pro", planCounts.business_pro],
+              ["exempt", "Exempt", planCounts.exempt],
+            ].map(([value, label, count]) => (
+              <button
+                key={String(value)}
+                type="button"
+                className={planFilter === value ? styles.planFilterActive : undefined}
+                onClick={() => setPlanFilter(value as PlanFilter)}
+              >
+                <span>{String(label)}</span>
+                <strong>{Number(count)}</strong>
+              </button>
+            ))}
           </div>
 
           <div className={`${styles.table} ficonter-scroll-region`}>
@@ -727,6 +810,8 @@ export function AdminDashboard({
               <span>Created</span>
               <span>Last sign-in</span>
               <span>Status</span>
+              <span>Plan</span>
+              <span>Provider</span>
               <span>Role</span>
               <span>Actions</span>
             </div>
@@ -768,8 +853,32 @@ export function AdminDashboard({
                         </b>
                       </span>
                       <span>
+                        <b
+                          className={
+                            user.planCode === "beta"
+                              ? styles.betaPlan
+                              : user.planCode === "personal_pro" ||
+                                  user.planCode === "business_pro"
+                                ? styles.paidPlan
+                                : styles.standard
+                          }
+                        >
+                          {planLabel(user)}
+                        </b>
+                        {user.planCode === "beta" ? (
+                          <small>{user.betaVerified ? "Verified" : "Unverified"}</small>
+                        ) : user.subscriptionStatus ? (
+                          <small>{user.subscriptionStatus.replace("_", " ")}</small>
+                        ) : null}
+                      </span>
+                      <span>
+                        <b className={styles.standard}>{providerLabel(user)}</b>
+                      </span>
+                      <span>
                         <b className={user.role ? styles.role : styles.standard}>
-                          {user.role?.replace("_", " ") ?? "User"}
+                          {user.id === currentAdminId && currentIsOwner
+                            ? "Owner"
+                            : user.role?.replace("_", " ") ?? "User"}
                         </b>
                       </span>
                       <span className={styles.actions}>
@@ -828,6 +937,21 @@ export function AdminDashboard({
                                   <ShieldCheck size={15} /> Make admin
                                 </button>
                               ) : null
+                            ) : null}
+
+                            {currentIsOwner &&
+                            user.role === null &&
+                            user.planCode === "beta" ? (
+                              <button
+                                type="button"
+                                className={styles.revokeBeta}
+                                disabled={rowBusy}
+                                onClick={() =>
+                                  setPending({ user, action: "revoke_beta" })
+                                }
+                              >
+                                <XCircle size={15} /> Revoke Beta
+                              </button>
                             ) : null}
 
                             {canDelete(user) ? (

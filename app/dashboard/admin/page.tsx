@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { AdminWorkspaceNavigation } from "@/components/AdminWorkspaceNavigation";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { loadPlatformHealth } from "@/lib/admin/health";
 import {
   loadAdminDirectorySnapshot,
@@ -35,6 +35,7 @@ export default async function AdminPage() {
       <AdminDashboard
         currentAdminId={user.id}
         currentRole={admin.role}
+        currentIsOwner={isOwnerEmail(user.email)}
         initialUsers={snapshot.users}
         initialLogs={(logsResult.data ?? []) as AdminAuditRow[]}
         initialCounts={snapshot.counts}

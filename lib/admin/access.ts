@@ -21,6 +21,24 @@ export function isPrimarySuperAdminEmail(
   return email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
 }
 
+/**
+ * The Owner is the platform's final authority. Existing installations that only
+ * configured FICONTER_SUPER_ADMIN_EMAIL keep working: that protected account is
+ * treated as Owner until FICONTER_OWNER_EMAIL is explicitly configured.
+ */
+export function getOwnerEmail(): string {
+  return (
+    process.env.FICONTER_OWNER_EMAIL?.trim().toLowerCase() ||
+    getPrimarySuperAdminEmail()
+  );
+}
+
+export function isOwnerEmail(
+  email: string | null | undefined,
+): boolean {
+  return email?.trim().toLowerCase() === getOwnerEmail();
+}
+
 export const requireAdmin = cache(async () => {
   const { user, error: userError } = await getCurrentUser();
 
@@ -28,7 +46,7 @@ export const requireAdmin = cache(async () => {
     return { user: null, admin: null };
   }
 
-  if (isPrimarySuperAdminEmail(user.email)) {
+  if (isOwnerEmail(user.email) || isPrimarySuperAdminEmail(user.email)) {
     return {
       user,
       admin: {
@@ -74,7 +92,7 @@ export async function isProtectedSuperAdminAccount(
   userId: string,
   email: string | null | undefined,
 ): Promise<boolean> {
-  if (isPrimarySuperAdminEmail(email)) return true;
+  if (isOwnerEmail(email) || isPrimarySuperAdminEmail(email)) return true;
 
   try {
     const service = createServiceClient();

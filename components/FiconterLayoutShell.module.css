@@ -463,3 +463,85 @@
   .railDrawer,
   .railBackdrop { display: none; }
 }
+
+/* V27 — real Executive Command Center shell */
+.executiveShell {
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100dvh;
+  background: #171717;
+}
+
+.executiveSidebarSlot {
+  position: relative;
+  z-index: 5;
+  background: #111315;
+}
+
+.executiveSidebarSlot > :global(.sidebar) {
+  width: 264px;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 20% 3%, rgba(181, 137, 67, .12), transparent 24%),
+    linear-gradient(180deg, #121416, #0e1012 76%, #111315) !important;
+  border-right: 1px solid rgba(205, 160, 87, .16);
+  box-shadow: 16px 0 44px rgba(0,0,0,.18);
+}
+
+.executiveMain {
+  min-height: 100dvh;
+  padding: 0 !important;
+  overflow-x: clip;
+  background: #f3f0e9 !important;
+}
+
+.executiveTopbar {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 28px;
+  background:
+    radial-gradient(circle at 76% 0, rgba(173, 130, 61, .11), transparent 22%),
+    linear-gradient(90deg, #121416, #101214 72%, #171411);
+  border-bottom: 1px solid rgba(197, 153, 82, .19);
+  box-shadow: 0 12px 32px rgba(18,18,17,.12);
+}
+
+.executiveTopbar > * {
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+.executiveCanvas {
+  min-height: calc(100dvh - 66px);
+  padding: clamp(26px, 2.7vw, 44px);
+  background:
+    radial-gradient(circle at 90% 7%, rgba(183, 139, 72, .10), transparent 23%),
+    linear-gradient(135deg, rgba(255,255,255,.22), transparent 34%),
+    #f3f0e9;
+}
+
+@media (max-width: 900px) {
+  .executiveShell {
+    grid-template-columns: 1fr;
+    background: #f3f0e9;
+  }
+
+  .executiveSidebarSlot {
+    min-height: 0;
+  }
+
+  .executiveSidebarSlot > :global(.sidebar) {
+    width: 100%;
+    min-height: 0;
+  }
+
+  .executiveTopbar {
+    min-height: 58px;
+    padding-inline: 14px;
+  }
+
+  .executiveCanvas {
+    padding: 18px 14px 88px;
+  }
+}

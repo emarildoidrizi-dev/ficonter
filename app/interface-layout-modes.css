@@ -446,3 +446,132 @@ html[data-layout="split-analytics"] .grid-2 {
     display: flex !important;
   }
 }
+
+/* ========================================================================== */
+/* V27 — EXECUTIVE COMMAND CENTER, full production-grade visual treatment     */
+/* ========================================================================== */
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] {
+  --surface-canvas: #f3f0e9;
+  --surface-card: #fcfaf6;
+  --surface-subtle: #f0ebe2;
+  --surface-sidebar: #111315;
+  --border-subtle: #ddd6ca;
+  --border-strong: #c9bdab;
+  --text-primary: #1c1a17;
+  --text-secondary: #716b63;
+  --text-tertiary: #928a80;
+  --sidebar-text: #f3eee5;
+  --sidebar-muted: #aaa298;
+  --gold: #b28442;
+  --sage: #66806c;
+  --solid-bg: #b28442;
+  --solid-text: #fffaf2;
+  color-scheme: light;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .sidebar {
+  color: #f3eee5;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .sidebar :where(.side-link, a, button) {
+  color: #bdb5aa;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .sidebar :where(.side-link.active, .side-link:hover) {
+  color: #fff8ee !important;
+  background: linear-gradient(90deg, rgba(181,137,67,.24), rgba(181,137,67,.08)) !important;
+  box-shadow: inset 2px 0 0 #c79a51;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .sidebar :where(.sidebar-section-label, .nav-group-title) {
+  color: #9b875f !important;
+  letter-spacing: .16em;
+}
+
+html[data-layout="executive"] .ficonter-overview-topbar {
+  margin: 0 0 18px !important;
+  padding: 0 !important;
+  align-items: end;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-layout="executive"] .ficonter-overview-topbar .page-title {
+  max-width: 900px;
+}
+
+html[data-layout="executive"] .ficonter-overview-topbar h1 {
+  margin: 0;
+  color: #171512 !important;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(48px, 5vw, 76px) !important;
+  line-height: .93 !important;
+  font-weight: 500 !important;
+  letter-spacing: -.055em !important;
+}
+
+html[data-layout="executive"] .ficonter-overview-topbar p {
+  max-width: 880px;
+  margin-top: 12px;
+  color: #746e66 !important;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+html[data-layout="executive"] .ficonter-overview-topbar .btn-gold {
+  min-height: 46px;
+  padding-inline: 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #a87935, #c49852) !important;
+  color: #fffaf2 !important;
+  box-shadow: 0 12px 25px rgba(155,111,47,.16);
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .app-main :where(.panel, .kpi) {
+  border-color: #ddd6ca;
+  background: #fcfaf6;
+  box-shadow: 0 16px 45px rgba(29,26,22,.055);
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .app-main :where(h1,h2,h3,h4,strong,label) {
+  color: #211f1b;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] .app-main :where(p,small,.muted) {
+  color: #746e66;
+}
+
+html[data-layout="executive"] .ficonter-command-strip {
+  overflow: hidden;
+  border: 1px solid #ddd6ca !important;
+  border-radius: 16px !important;
+  background: #fcfaf6 !important;
+  box-shadow: 0 16px 45px rgba(29,26,22,.06) !important;
+}
+
+html[data-layout="executive"] .ficonter-command-strip > :last-child {
+  background: #2b2722 !important;
+  color: #fff8ee !important;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] :where(input, select, textarea) {
+  background: #fffdf9;
+  border-color: #d8d0c4;
+  color: #24211d;
+}
+
+html[data-layout="executive"] [data-ficonter-layout-shell="executive"] :where(table, .table, .data-table) {
+  background: #fcfaf6;
+  color: #25221e;
+}
+
+@media (max-width: 900px) {
+  html[data-layout="executive"] .ficonter-overview-topbar {
+    align-items: flex-start;
+  }
+
+  html[data-layout="executive"] .ficonter-overview-topbar h1 {
+    font-size: clamp(40px, 11vw, 58px) !important;
+  }
+}

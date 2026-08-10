@@ -250,3 +250,32 @@
     font-size: 38px;
   }
 }
+
+/* V27 Executive Command Center — dedicated Overview template */
+.executiveOnly {
+  display: none;
+}
+
+.nonExecutiveOverview {
+  display: block;
+}
+
+:global(html[data-layout="executive"]) .executiveOnly {
+  display: block;
+}
+
+:global(html[data-layout="executive"]) .nonExecutiveOverview {
+  display: none;
+}
+
+:global(html[data-layout="executive"]) .headerActions {
+  gap: 14px;
+}
+
+:global(html[data-layout="executive"]) .livePill {
+  min-height: 42px;
+  padding-inline: 15px;
+  background: rgba(255,255,255,.88);
+  border-color: rgba(50,45,38,.08);
+  box-shadow: 0 8px 28px rgba(24,22,19,.045);
+}

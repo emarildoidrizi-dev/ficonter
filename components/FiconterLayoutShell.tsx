@@ -101,6 +101,22 @@ export function FiconterLayoutShell({
     );
   }
 
+  if (layout === "executive") {
+    return (
+      <div
+        className={`app-shell ${styles.shell} ${styles.executiveShell}`}
+        data-ficonter-layout-shell={layout}
+      >
+        <div className={`${styles.sidebarSlot} ${styles.executiveSidebarSlot}`}>{sidebar}</div>
+        <main className={`${mainClassName} ${styles.executiveMain}`}>
+          <div className={styles.executiveTopbar}>{workspaceSwitcher}</div>
+          <div className={styles.executiveCanvas}>{children}</div>
+        </main>
+        {mobileDock}
+      </div>
+    );
+  }
+
   if (layout === "top-context") {
     return (
       <div className={`app-shell ${styles.shell} ${styles.topContextShell}`} data-ficonter-layout-shell={layout}>
@@ -201,7 +217,7 @@ export function FiconterLayoutShell({
 
   return (
     <div
-      className={`app-shell ${styles.shell} ${layout === "bento" ? styles.bentoShell : styles.executiveShell}`}
+      className={`app-shell ${styles.shell} ${styles.bentoShell}`}
       data-ficonter-layout-shell={layout}
     >
       <div className={styles.sidebarSlot}>{sidebar}</div>

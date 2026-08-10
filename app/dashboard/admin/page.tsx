@@ -35,6 +35,7 @@ export default async function AdminPage() {
       <AdminDashboard
         currentAdminId={user.id}
         currentRole={admin.role}
+        currentIsOwner={isOwnerEmail(user.email)}
         initialUsers={snapshot.users}
         initialLogs={(logsResult.data ?? []) as AdminAuditRow[]}
         initialCounts={snapshot.counts}

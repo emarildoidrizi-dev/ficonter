@@ -99,25 +99,6 @@ export const getCurrentSubscriptionAccess = cache(
       };
     }
 
-    // On the canonical Beta domain a normal customer may explicitly choose
-    // "Continue with Free plan". This is a session-only downgrade: it does not
-    // alter paid billing records or permanently change the database plan.
-    if (
-      (await isFiconterBetaEntryEnvironment()) &&
-      (await hasFiconterBetaFreeSession())
-    ) {
-      return {
-        authenticated: true,
-        isAdminExempt: false,
-        adminRole: null,
-        planCode: "free" as SubscriptionPlanCode,
-        status: "active" as SubscriptionStatus,
-        cancelAtPeriodEnd: false,
-        currentPeriodEnd: null as string | null,
-        betaVerified: false,
-      };
-    }
-
     const {
       data: subscription,
       error,
@@ -205,6 +186,29 @@ export const getCurrentSubscriptionAccess = cache(
           betaVerified: false,
         };
       }
+
+      /*
+       * The explicit "Continue with Free plan" choice is only allowed to
+       * session-downgrade a verified Beta account. It must NEVER override an
+       * active/trialing Personal Pro or Business Pro subscription, including a
+       * paid subscription that is scheduled to cancel at period end. Paid
+       * customer entitlements remain authoritative until they actually expire.
+       */
+      if (
+        (await isFiconterBetaEntryEnvironment()) &&
+        (await hasFiconterBetaFreeSession())
+      ) {
+        return {
+          authenticated: true,
+          isAdminExempt: false,
+          adminRole: null,
+          planCode: "free" as SubscriptionPlanCode,
+          status: "active" as SubscriptionStatus,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null as string | null,
+          betaVerified: false,
+        };
+      }
     }
 
     return {
@@ -245,8 +249,11 @@ function paidSubscriptionIsUsable(
  * A customer never loses the Free tier because a paid subscription is
  * past-due, canceled, unpaid, missing or invalid.
  *
- * Active/trialing paid plans (and cancellation grace) use their paid tier.
- * Inactive paid plans fall back to Free. Admin roles remain exempt.
+ * Active/trialing paid plans use their paid tier even when renewal has been
+ * canceled. If PayPal has already marked the subscription canceled, the paid
+ * tier remains usable through current_period_end when cancel_at_period_end is
+ * true. Inactive/expired paid plans fall back to Free. Admin roles remain
+ * exempt.
  */
 export function getEffectiveSubscriptionPlanCode(
   access: SubscriptionAccessSnapshot,

@@ -1,16 +1,29 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { BETA_FREE_COOKIE, BETA_LOGIN_COOKIE } from "@/lib/betaDomainGate";
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const BETA_LOGIN_TTL_SECONDS = 12 * 60 * 60;
+
 function hashCode(value: string) {
   return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function clearFreeSession(response: NextResponse) {
+  response.cookies.set(BETA_FREE_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -33,7 +46,6 @@ export async function POST(request: NextRequest) {
   }
 
   // Owner / Super Admin / Admin are permanently subscription-exempt.
-  // They never need Beta and must not be converted into customer plan records.
   const { admin } = await requireAdmin();
   if (admin) {
     return NextResponse.json(
@@ -102,11 +114,59 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // IMPORTANT: switching from Free-session mode to verified Beta must update
+  // the browser session as well as the database. Otherwise the old Free cookie
+  // continues to override the newly activated Beta entitlement after reload.
+  const rawToken = randomBytes(32).toString("base64url");
+  const tokenHash = hashCode(rawToken);
+  const expiresAt = new Date(
+    Date.now() + BETA_LOGIN_TTL_SECONDS * 1000,
+  ).toISOString();
+
+  await service
+    .from("beta_login_sessions")
+    .delete()
+    .eq("user_id", user.id)
+    .lt("expires_at", new Date().toISOString());
+
+  const { error: sessionError } = await service
+    .from("beta_login_sessions")
+    .insert({
+      token_hash: tokenHash,
+      user_id: user.id,
+      expires_at: expiresAt,
+    });
+
+  if (sessionError) {
+    console.error("Existing-account Beta session creation failed", {
+      userId: user.id,
+      code: sessionError.code,
+    });
+
+    return NextResponse.json(
+      {
+        error:
+          "Beta access was activated, but this browser session could not enter Beta. Please try again.",
+      },
+      { status: 500, headers },
+    );
+  }
+
   const response = NextResponse.json(
     { ok: true, planCode: "beta" },
     { status: 200, headers },
   );
 
+  // Beta activation explicitly replaces any previous "Continue with Free" choice.
+  clearFreeSession(response);
+
+  response.cookies.set(BETA_LOGIN_COOKIE, rawToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: BETA_LOGIN_TTL_SECONDS,
+  });
 
   return response;
 }

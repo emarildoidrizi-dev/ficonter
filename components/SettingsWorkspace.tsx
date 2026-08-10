@@ -1970,7 +1970,7 @@ const showSubscriptionManagement =
                   <div>
                     <h3>Private Beta invitation</h3>
                     <p>
-                      Already registered? Your account can become Beta only after you manually enter a valid invitation code. The FICONTER URL or domain never changes your plan.
+                      Already registered? Enter a valid invitation code to activate Beta access for this account.
                     </p>
                   </div>
                 </div>
@@ -2004,12 +2004,20 @@ const showSubscriptionManagement =
                     {betaActivating ? "Validating…" : "Activate Beta access"}
                   </button>
                 </div>
-
-                <small className={styles.betaNotice}>
-                  Existing and new customer accounts follow the same rule: no valid invitation code, no Beta entitlement. Active PayPal subscriptions must finish or be canceled before conversion so billing cannot continue unnoticed.
-                </small>
               </div>
-            ) : null}
+            ) : (
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <Check size={19} />
+                  <div>
+                    <h3>Beta invitation verified</h3>
+                    <p>
+                      This account already has verified Beta access. No invitation code needs to be entered again while Beta access remains active.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className={styles.subscriptionIntro}>
               <div>

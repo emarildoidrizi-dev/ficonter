@@ -15,10 +15,11 @@ type NavigatorWithConnection = Navigator & {
 };
 
 const personalCriticalRoutes = [
-  "/dashboard/overview",
+  "/dashboard",
   "/dashboard/transactions",
   "/dashboard/budget",
   "/dashboard/bills",
+  "/dashboard/settings",
 ];
 
 const personalSecondaryRoutes = [
@@ -34,7 +35,6 @@ const personalSecondaryRoutes = [
   "/dashboard/insights",
   "/dashboard/documents",
   "/dashboard/inbox",
-  "/dashboard/settings",
 ];
 
 const businessCriticalRoutes = [
@@ -265,7 +265,7 @@ export function NavigationSpeedBoost({
     const oppositeWorkspace =
       workspace === "personal"
         ? "/business/overview"
-        : "/dashboard/overview";
+        : "/dashboard";
 
     const scheduled: number[] = [];
 
@@ -291,17 +291,17 @@ export function NavigationSpeedBoost({
     }
 
     criticalRoutes.forEach((route, index) => {
-      schedule(route, 900 + index * 180);
+      schedule(route, 120 + index * 130);
     });
 
-    schedule(oppositeWorkspace, 1850);
+    schedule(oppositeWorkspace, 900);
 
     if (
       allowsBackgroundPrefetch() &&
       isNativePhoneApp()
     ) {
       secondaryRoutes.forEach((route, index) => {
-        schedule(route, 2400 + index * 240);
+        schedule(route, 1100 + index * 190);
       });
     }
 

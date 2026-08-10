@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, LockKeyhole, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   isFinancialDataScope,
@@ -27,7 +27,6 @@ type Item = { id:string; user_id:string; month:string; section:Section; label:st
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 
 const compactSections = new Set<Section>(["income","bills","expenses","savings","debt"]);
-const PASSIVE_RECONCILE_MS = 3 * 60_000;
 const sections: {key:Section; title:string}[] = [
   {key:"income",title:"Income"},{key:"bills",title:"Bills"},{key:"expenses",title:"Expenses"},{key:"savings",title:"Savings"},{key:"debt",title:"Debt"},
 ];
@@ -65,9 +64,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const refreshTimerRef=useRef<number|null>(null);
   const refreshInFlightRef=useRef<Promise<void>|null>(null);
   const refreshQueuedRef=useRef(false);
-  const lastFullRefreshRef=useRef(0);
 
-  useEffect(()=>{lastFullRefreshRef.current=Date.now();},[]);
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
   useEffect(()=>{
     const saved=window.localStorage.getItem("ficonter:planner-breakdown-view");
@@ -114,29 +111,29 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
           setPlans((planResult.data??[]) as Plan[]);
           setItems((itemResult.data??[]) as Item[]);
           setGoals((goalResult.data??[]) as Goal[]);
-          lastFullRefreshRef.current=Date.now();
         }
       }while(refreshQueuedRef.current);
     })();
     refreshInFlightRef.current=request;
     try{await request;}finally{refreshInFlightRef.current=null;}
   },[supabase,userId]);
-  const schedulePlannerRefresh=useCallback((force=false)=>{
-    const lastRefresh=lastFullRefreshRef.current;
-    if(!force&&lastRefresh&&Date.now()-lastRefresh<PASSIVE_RECONCILE_MS)return;
+  const schedulePlannerRefresh=useCallback(()=>{
     if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current=window.setTimeout(()=>{
       refreshTimerRef.current=null;
       void refreshPlannerData();
-    },force?80:220);
+    },80);
   },[refreshPlannerData]);
   useEffect(()=>{
     const unsubscribe=subscribeFiconterDataChanges(change=>{
-      if(isFinancialDataScope(change.scope))schedulePlannerRefresh(false);
+      if(isFinancialDataScope(change.scope))schedulePlannerRefresh();
     });
-    const handleFocus=()=>schedulePlannerRefresh(false);
-    const handleVisible=()=>{if(document.visibilityState==="visible")schedulePlannerRefresh(false);};
-    const handleOnline=()=>schedulePlannerRefresh(true);
+    const handleFocus=()=>schedulePlannerRefresh();
+    const handleVisible=()=>{if(document.visibilityState==="visible")schedulePlannerRefresh();};
+    const handleOnline=()=>schedulePlannerRefresh();
+    const safetyTimer=window.setInterval(()=>{
+      if(document.visibilityState==="visible")schedulePlannerRefresh();
+    },15_000);
     window.addEventListener("focus",handleFocus);
     window.addEventListener("online",handleOnline);
     document.addEventListener("visibilitychange",handleVisible);
@@ -145,6 +142,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       window.removeEventListener("focus",handleFocus);
       window.removeEventListener("online",handleOnline);
       document.removeEventListener("visibilitychange",handleVisible);
+      window.clearInterval(safetyTimer);
       if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
     };
   },[schedulePlannerRefresh]);
@@ -187,13 +185,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),month)).forEach(b=>{totals.bills=addMoney(totals.bills,b.amount_eur)});
     return totals;
   },[monthTx,bills,month,paidBillTxIds]);
-  const monthItems=useMemo(()=>items.filter(i=>i.month===month),[items,month]);
-  const plannedBySection=useMemo(()=>{
-    const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
-    monthItems.forEach(item=>{totals[item.section]=addMoney(totals[item.section],item.planned_amount);});
-    return totals;
-  },[monthItems]);
-  const planned=(s:Section)=>plannedBySection[s];
+  const monthItems=items.filter(i=>i.month===month);
+  const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
   const actual=(s:Section)=>actualBySection[s];
   const synchronizedCashActuals=useMemo(
     ()=>calculateMonthlyCashActuals(month,transactions,bills),

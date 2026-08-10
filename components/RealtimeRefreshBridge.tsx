@@ -9,13 +9,13 @@ import {
   type FiconterDataScope,
 } from "@/lib/ficonterRealtime";
 
-const REFRESH_DEBOUNCE_MS = 240;
-const MIN_REFRESH_INTERVAL_MS = 1_200;
-const PASSIVE_STALE_AFTER_MS = 5 * 60_000;
+const REFRESH_DEBOUNCE_MS = 180;
+const MIN_REFRESH_INTERVAL_MS = 650;
+const PASSIVE_STALE_AFTER_MS = 60_000;
 const MAX_REMEMBERED_NONCES = 160;
 
 function scopesForPath(pathname: string): Set<FiconterDataScope> {
-  if (pathname === "/dashboard" || pathname === "/dashboard/overview") {
+  if (pathname === "/dashboard") {
     return new Set([
       "transactions",
       "bills",
@@ -84,7 +84,7 @@ export function RealtimeRefreshBridge() {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const timerRef = useRef<number | null>(null);
-  const lastRefreshRef = useRef(0);
+  const lastRefreshRef = useRef(Date.now());
   const pendingWhileHiddenRef = useRef(false);
   const rememberedNoncesRef = useRef<string[]>([]);
   const rememberedNonceSetRef = useRef(new Set<string>());
@@ -92,10 +92,6 @@ export function RealtimeRefreshBridge() {
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
-
-  useEffect(() => {
-    lastRefreshRef.current = Date.now();
-  }, []);
 
   useEffect(() => {
     function rememberNonce(nonce: string): boolean {

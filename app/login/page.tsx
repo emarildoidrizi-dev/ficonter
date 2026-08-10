@@ -12,16 +12,17 @@ export default async function LoginPage() {
         <Brand />
         <div>
           <div className="eyebrow">
-            {betaEntry ? "Private Beta access" : "Welcome back"}
+            {betaEntry ? "WELCOME TO FICONTER" : "Welcome back"}
           </div>
-          <h1>{betaEntry ? "Invitation required." : "Return to clarity."}</h1>
+          <h1>
+            {betaEntry ? "A clearer view of your finances." : "Return to clarity."}
+          </h1>
           <p style={{ color: "#cbc6bd", fontSize: 18, lineHeight: 1.7 }}>
             {betaEntry
-              ? "Normal customer accounts cannot enter this Beta platform without a valid invitation code."
+              ? "Organize, understand and plan your financial life in one private workspace."
               : "Your financial command center is ready."}
           </p>
         </div>
-        <p style={{ color: "#8f8a82" }}>Private by design.</p>
       </section>
 
       <section className="auth-form-wrap">

@@ -14,10 +14,10 @@ export default async function LoginPage() {
           <div className="eyebrow">
             {betaEntry ? "Private Beta access" : "Welcome back"}
           </div>
-          <h1>{betaEntry ? "Choose how to enter." : "Return to clarity."}</h1>
+          <h1>{betaEntry ? "Invitation required." : "Return to clarity."}</h1>
           <p style={{ color: "#cbc6bd", fontSize: 18, lineHeight: 1.7 }}>
             {betaEntry
-              ? "Use a verified invitation for Beta access, or continue explicitly with the Free plan."
+              ? "Normal customer accounts cannot enter this Beta platform without a valid invitation code."
               : "Your financial command center is ready."}
           </p>
         </div>
@@ -26,15 +26,13 @@ export default async function LoginPage() {
 
       <section className="auth-form-wrap">
         <div className="auth-card">
-          <div className="eyebrow">
-            {betaEntry ? "Beta or Free login" : "Secure access"}
-          </div>
-          <h2>{betaEntry ? "Choose Beta or Free" : "Log in"}</h2>
-          <p className="muted">
-            {betaEntry
-              ? "Beta access requires the invitation code. Free access does not. Owner, Super Admin and Admin accounts are exempt from the customer gate."
-              : "Enter your Ficonter account details."}
-          </p>
+          {!betaEntry ? (
+            <>
+              <div className="eyebrow">Secure access</div>
+              <h2>Log in</h2>
+              <p className="muted">Enter your Ficonter account details.</p>
+            </>
+          ) : null}
           <AuthForm mode="login" betaEntry={betaEntry} />
           <p className="center">
             <Link href="/">← Back to homepage</Link>

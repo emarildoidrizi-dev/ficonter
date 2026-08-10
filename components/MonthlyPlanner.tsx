@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -51,7 +51,7 @@ const classify=(tx:Tx):Section=>{
   return "expenses";
 };
 
-export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[]}){
+export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];showAdvancedPosition?:boolean}){
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
   const [transactions,setTransactions]=useState(initialTransactions);
@@ -237,7 +237,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
       <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
-      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{eur(left)}</strong></div></article>
+      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?eur(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
       <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{eur(actual(s.key))}</strong></div>})}</article>
       <article className={styles.breakdown}>
         <div className={styles.breakdownHeader}>
@@ -255,7 +255,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{eur(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
       </article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?eur(left):"Personal Pro"}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);

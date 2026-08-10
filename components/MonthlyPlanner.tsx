@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, LockKeyhole, Trash2 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   isFinancialDataScope,
@@ -27,6 +27,7 @@ type Item = { id:string; user_id:string; month:string; section:Section; label:st
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 
 const compactSections = new Set<Section>(["income","bills","expenses","savings","debt"]);
+const PASSIVE_RECONCILE_MS = 3 * 60_000;
 const sections: {key:Section; title:string}[] = [
   {key:"income",title:"Income"},{key:"bills",title:"Bills"},{key:"expenses",title:"Expenses"},{key:"savings",title:"Savings"},{key:"debt",title:"Debt"},
 ];
@@ -50,7 +51,7 @@ const classify=(tx:Tx):Section=>{
   return "expenses";
 };
 
-export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];showAdvancedPosition?:boolean}){
+export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[]}){
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
   const [transactions,setTransactions]=useState(initialTransactions);
@@ -64,7 +65,9 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const refreshTimerRef=useRef<number|null>(null);
   const refreshInFlightRef=useRef<Promise<void>|null>(null);
   const refreshQueuedRef=useRef(false);
+  const lastFullRefreshRef=useRef(0);
 
+  useEffect(()=>{lastFullRefreshRef.current=Date.now();},[]);
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
   useEffect(()=>{
     const saved=window.localStorage.getItem("ficonter:planner-breakdown-view");
@@ -111,29 +114,29 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
           setPlans((planResult.data??[]) as Plan[]);
           setItems((itemResult.data??[]) as Item[]);
           setGoals((goalResult.data??[]) as Goal[]);
+          lastFullRefreshRef.current=Date.now();
         }
       }while(refreshQueuedRef.current);
     })();
     refreshInFlightRef.current=request;
     try{await request;}finally{refreshInFlightRef.current=null;}
   },[supabase,userId]);
-  const schedulePlannerRefresh=useCallback(()=>{
+  const schedulePlannerRefresh=useCallback((force=false)=>{
+    const lastRefresh=lastFullRefreshRef.current;
+    if(!force&&lastRefresh&&Date.now()-lastRefresh<PASSIVE_RECONCILE_MS)return;
     if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current=window.setTimeout(()=>{
       refreshTimerRef.current=null;
       void refreshPlannerData();
-    },80);
+    },force?80:220);
   },[refreshPlannerData]);
   useEffect(()=>{
     const unsubscribe=subscribeFiconterDataChanges(change=>{
-      if(isFinancialDataScope(change.scope))schedulePlannerRefresh();
+      if(isFinancialDataScope(change.scope))schedulePlannerRefresh(false);
     });
-    const handleFocus=()=>schedulePlannerRefresh();
-    const handleVisible=()=>{if(document.visibilityState==="visible")schedulePlannerRefresh();};
-    const handleOnline=()=>schedulePlannerRefresh();
-    const safetyTimer=window.setInterval(()=>{
-      if(document.visibilityState==="visible")schedulePlannerRefresh();
-    },15_000);
+    const handleFocus=()=>schedulePlannerRefresh(false);
+    const handleVisible=()=>{if(document.visibilityState==="visible")schedulePlannerRefresh(false);};
+    const handleOnline=()=>schedulePlannerRefresh(true);
     window.addEventListener("focus",handleFocus);
     window.addEventListener("online",handleOnline);
     document.addEventListener("visibilitychange",handleVisible);
@@ -142,7 +145,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       window.removeEventListener("focus",handleFocus);
       window.removeEventListener("online",handleOnline);
       document.removeEventListener("visibilitychange",handleVisible);
-      window.clearInterval(safetyTimer);
       if(refreshTimerRef.current)window.clearTimeout(refreshTimerRef.current);
     };
   },[schedulePlannerRefresh]);
@@ -185,8 +187,13 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),month)).forEach(b=>{totals.bills=addMoney(totals.bills,b.amount_eur)});
     return totals;
   },[monthTx,bills,month,paidBillTxIds]);
-  const monthItems=items.filter(i=>i.month===month);
-  const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
+  const monthItems=useMemo(()=>items.filter(i=>i.month===month),[items,month]);
+  const plannedBySection=useMemo(()=>{
+    const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
+    monthItems.forEach(item=>{totals[item.section]=addMoney(totals[item.section],item.planned_amount);});
+    return totals;
+  },[monthItems]);
+  const planned=(s:Section)=>plannedBySection[s];
   const actual=(s:Section)=>actualBySection[s];
   const synchronizedCashActuals=useMemo(
     ()=>calculateMonthlyCashActuals(month,transactions,bills),
@@ -230,7 +237,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
       <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
-      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?eur(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
+      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{eur(left)}</strong></div></article>
       <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{eur(actual(s.key))}</strong></div>})}</article>
       <article className={styles.breakdown}>
         <div className={styles.breakdownHeader}>
@@ -248,7 +255,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{eur(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
       </article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?eur(left):"Personal Pro"}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{eur(left)}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);

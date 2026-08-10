@@ -10,7 +10,6 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
-import { ReloadToOverviewOnRefresh } from "@/components/ReloadToOverviewOnRefresh";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
@@ -96,7 +95,6 @@ export default async function DashboardLayout({
         workspace="personal"
         cacheKey={user.id}
       />
-      <ReloadToOverviewOnRefresh />
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="personal"

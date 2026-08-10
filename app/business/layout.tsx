@@ -13,6 +13,7 @@ import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
+import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
 type StoredPreferences = {
   appearance?: string;
@@ -66,6 +67,9 @@ export default async function BusinessLayout({
 
   if (!user) redirect("/login");
 
+  const subscriptionAccess = await getCurrentSubscriptionAccess();
+  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+
   const preferences = readInterfacePreferences(user.user_metadata);
 
   return (
@@ -85,6 +89,7 @@ export default async function BusinessLayout({
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="business"
+        subscriptionPlanCode={subscriptionPlanCode}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
@@ -113,7 +118,7 @@ export default async function BusinessLayout({
         }}
       />
       <main className="app-main">
-        <WorkspaceSwitcher current="business" />
+        <WorkspaceSwitcher current="business" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
           <PWAMobileDock workspace="business" />

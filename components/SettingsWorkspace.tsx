@@ -176,6 +176,11 @@ type DialogState =
   | "retention"
   | "cancel-subscription";
 type ExportKind = null | "transactions" | "json" | "pdf";
+const FREE_APPEARANCE_THEME_VALUES = new Set<AppearancePreference>([
+  "light",
+  "dark",
+  "system",
+]);
 
 function isSectionId(value: string | undefined): value is SectionId {
   return Boolean(
@@ -1424,36 +1429,53 @@ const showSubscriptionManagement =
 
         {active === "appearance" ? (
           <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
-            {!canUseAppearanceThemes ? (
-              <SubscriptionInlineLock feature="appearance_themes" compact />
-            ) : null}
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
+            <fieldset className={styles.optionGroup}>
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
                 high-contrast text and controls for reliable readability.
               </p>
               <div className={styles.optionGrid}>
-                {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => (
-                  <label className={styles.optionCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.appearance === value}
-                      onChange={() => {
-                        const next = { ...preferences, appearance: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.optionPreview}
-                      data-theme={value}
-                      aria-hidden="true"
-                    />
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
+                {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => {
+                  const isLockedTheme =
+                    !canUseAppearanceThemes &&
+                    !FREE_APPEARANCE_THEME_VALUES.has(value);
+
+                  return (
+                    <label
+                      className={styles.optionCard}
+                      key={value}
+                      aria-disabled={isLockedTheme}
+                      style={
+                        isLockedTheme
+                          ? { opacity: 0.55, cursor: "not-allowed" }
+                          : undefined
+                      }
+                    >
+                      <input
+                        type="radio"
+                        checked={preferences.appearance === value}
+                        disabled={isLockedTheme}
+                        onChange={() => {
+                          if (isLockedTheme) return;
+                          const next = { ...preferences, appearance: value };
+                          setPreferences(next);
+                          applyInterface(next);
+                        }}
+                      />
+                      <span
+                        className={styles.optionPreview}
+                        data-theme={value}
+                        aria-hidden="true"
+                      />
+                      <strong>{label}</strong>
+                      <small>
+                        {description}
+                        {isLockedTheme ? " · Personal Pro" : ""}
+                      </small>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
             <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>

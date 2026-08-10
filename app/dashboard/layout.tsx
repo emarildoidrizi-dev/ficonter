@@ -8,9 +8,11 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
+import { FiconterLayoutShell } from "@/components/FiconterLayoutShell";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
+import { normalizeInterfaceLayout } from "@/lib/interfaceLayout";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
 type StoredPreferences = {
@@ -85,11 +87,14 @@ export default async function DashboardLayout({
     user.user_metadata,
   );
 
+  const allowInternalLayouts = isOwnerEmail(user.email);
+  const initialLayout = normalizeInterfaceLayout(interfacePreferences.layout);
+
   return (
-    <div className="app-shell">
+    <>
       <InterfacePreferencesBootstrap
         {...interfacePreferences}
-        allowInternalLayouts={isOwnerEmail(user.email)}
+        allowInternalLayouts={allowInternalLayouts}
       />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <LivingThemeBackdrop />
@@ -109,28 +114,38 @@ export default async function DashboardLayout({
             "",
         )}
       />
-            <MobileNavigationController workspace="personal" />
-      <Sidebar
-        isAdmin={Boolean(admin)}
-        subscriptionPlanCode={subscriptionPlanCode}
-        user={{
-          displayName: String(
-            user.user_metadata?.display_name ??
-              user.user_metadata?.full_name ??
-              user.user_metadata?.name ??
-              "",
-          ),
-          email: user.email ?? "",
-          avatarPath: String(
-            user.user_metadata?.avatar_path ?? "",
-          ),
-        }}
-      />
-      <main className="app-main">
-        <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
+      <MobileNavigationController workspace="personal" />
+      <FiconterLayoutShell
+        initialLayout={initialLayout}
+        allowInternalLayouts={allowInternalLayouts}
+        workspace="personal"
+        sidebar={
+          <Sidebar
+            isAdmin={Boolean(admin)}
+            subscriptionPlanCode={subscriptionPlanCode}
+            user={{
+              displayName: String(
+                user.user_metadata?.display_name ??
+                  user.user_metadata?.full_name ??
+                  user.user_metadata?.name ??
+                  "",
+              ),
+              email: user.email ?? "",
+              avatarPath: String(user.user_metadata?.avatar_path ?? ""),
+            }}
+          />
+        }
+        workspaceSwitcher={
+          <WorkspaceSwitcher
+            current="personal"
+            subscriptionPlanCode={subscriptionPlanCode}
+          />
+        }
+        mobileDock={<PWAMobileDock workspace="personal" />}
+      >
         {children}
-      </main>
-          <PWAMobileDock workspace="personal" />
-      </div>
+      </FiconterLayoutShell>
+    </>
   );
+
 }

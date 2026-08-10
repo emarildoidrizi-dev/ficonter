@@ -72,7 +72,7 @@ type NavigationGroup = {
 };
 
 const primaryLinks = [
-  ["/dashboard", LayoutDashboard, "Overview"],
+  ["/dashboard/overview", LayoutDashboard, "Overview"],
 ] as const satisfies readonly NavigationLink[];
 
 const standardGroups = [
@@ -119,7 +119,7 @@ const standardGroups = [
 ] as const satisfies readonly NavigationGroup[];
 
 function isRouteActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard" || href === "/dashboard/admin") {
+  if (href === "/dashboard/overview" || href === "/dashboard/admin") {
     return pathname === href;
   }
 
@@ -342,7 +342,7 @@ export function Sidebar({
     <aside className={`sidebar ${styles.sidebarRoot}`}>
       <div className={styles.sidebarHeader}>
         <span className={styles.headerGlow} aria-hidden="true" />
-        <Brand href="/dashboard" />
+        <Brand href="/dashboard/overview" />
         <div className={styles.headerIdentity}>
           <span className={styles.headerAvatar} aria-hidden="true">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : avatarText}

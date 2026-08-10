@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminWorkspaceNavigation } from "@/components/AdminWorkspaceNavigation";
 import { PlatformUsageDirectory } from "@/components/PlatformUsageDirectory";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { loadPlatformUsageSnapshot } from "@/lib/admin/usage";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
@@ -22,7 +22,7 @@ export default async function PersonalUsageAdminPage() {
 
   return (
     <>
-      <AdminWorkspaceNavigation />
+      <AdminWorkspaceNavigation showUiLab={isOwnerEmail(user.email)} />
       <PlatformUsageDirectory
         scope="personal"
         initialRows={snapshot.rows}

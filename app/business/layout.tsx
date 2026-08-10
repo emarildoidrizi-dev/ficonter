@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
-import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
@@ -13,11 +12,7 @@ import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
-import { requireAdmin } from "@/lib/admin/access";
-import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
-import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
-import { getSubscriptionUpgradeHref } from "@/lib/subscriptionNavigation";
-import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
   appearance?: string;
@@ -71,30 +66,14 @@ export default async function BusinessLayout({
 
   if (!user) redirect("/login");
 
-  const subscriptionAccess = await getCurrentSubscriptionAccess();
-  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-
-  const showBetaGate = await shouldShowBetaDomainAccessGate({
-    userId: user.id,
-    isAdminExempt: subscriptionAccess.isAdminExempt,
-    betaVerified: subscriptionAccess.betaVerified,
-  });
-
-  if (showBetaGate) {
-    return (
-      <BetaDomainAccessGate />
-    );
-  }
-
-  if (!hasSubscriptionFeature(subscriptionPlanCode, "business_workspace")) {
-    redirect(getSubscriptionUpgradeHref("business_workspace"));
-  }
-
   const preferences = readInterfacePreferences(user.user_metadata);
 
   return (
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...preferences} />
+      <InterfacePreferencesBootstrap
+        {...preferences}
+        allowInternalLayouts={isOwnerEmail(user.email)}
+      />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
@@ -106,7 +85,6 @@ export default async function BusinessLayout({
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="business"
-        subscriptionPlanCode={subscriptionPlanCode}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
@@ -135,7 +113,7 @@ export default async function BusinessLayout({
         }}
       />
       <main className="app-main">
-        <WorkspaceSwitcher current="business" subscriptionPlanCode={subscriptionPlanCode} />
+        <WorkspaceSwitcher current="business" />
         {children}
       </main>
           <PWAMobileDock workspace="business" />

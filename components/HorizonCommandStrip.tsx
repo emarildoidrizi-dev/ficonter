@@ -81,7 +81,7 @@ export function HorizonCommandStrip({ gps }: Props) {
   }
 
   return (
-    <section className={styles.strip} aria-label="Financial command strip">
+    <section className={`ficonter-command-strip ${styles.strip}`} aria-label="Financial command strip">
       <div className={`${styles.item} ${styles[cashFlow.tone]}`}>
         <span className={styles.icon}><CashFlowIcon size={17} aria-hidden="true" /></span>
         <div>

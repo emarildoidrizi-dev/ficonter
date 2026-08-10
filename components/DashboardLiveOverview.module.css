@@ -209,8 +209,8 @@
 .horizonOnly { display: none; }
 .classicOnly { display: block; }
 
-:global(html[data-layout="horizon"]) .horizonOnly { display: block; }
-:global(html[data-layout="horizon"]) .classicOnly { display: none; }
+:global(html:not([data-layout="classic"])) .horizonOnly { display: block; }
+:global(html:not([data-layout="classic"])) .classicOnly { display: none; }
 
 :global(html[data-layout="horizon"]) .headerActions {
   position: relative;

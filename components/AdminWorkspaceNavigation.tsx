@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Building2,
-  FlaskConical,
   ShieldCheck,
 } from "lucide-react";
 import styles from "./AdminWorkspaceNavigation.module.css";
@@ -23,13 +22,11 @@ export function AdminWorkspaceNavigation({
   showUiLab = false,
 }: AdminWorkspaceNavigationProps) {
   const pathname = usePathname();
+  void showUiLab;
   const links = [
     ["/dashboard/admin", ShieldCheck, "Personal Admin"],
     ["/dashboard/admin/usage", Activity, "Personal Live & Usage"],
     ["/business/admin", Building2, "Business Admin"],
-    ...(showUiLab
-      ? [["/dashboard/admin/ui-lab", FlaskConical, "UI Lab"]] as const
-      : []),
   ] as const;
 
   return (

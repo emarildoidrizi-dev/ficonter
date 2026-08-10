@@ -10,7 +10,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
 type StoredPreferences = {
@@ -87,7 +87,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...interfacePreferences} />
+      <InterfacePreferencesBootstrap
+        {...interfacePreferences}
+        allowInternalLayouts={isOwnerEmail(user.email)}
+      />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />

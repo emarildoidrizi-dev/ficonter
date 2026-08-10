@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
 import { getCurrentSubscriptionAccess } from "@/lib/subscriptionAccess";
@@ -152,6 +152,7 @@ export default async function SettingsPage({
         subscription={isSubscriptionExempt ? null : displaySubscription}
         requiredFeature={requiredFeature}
         isSubscriptionExempt={isSubscriptionExempt}
+        canUseInternalLayouts={isOwnerEmail(user.email)}
       />
     </section>
   );

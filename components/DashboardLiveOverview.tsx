@@ -544,7 +544,7 @@ export function DashboardLiveOverview({
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar ficonter-overview-topbar">
         <div className="page-title">
           <h1>{greeting}, {name}.</h1>
           <p>Completed financial activity through today, normalized in euros. Scheduled entries remain visible but are excluded until their date.</p>

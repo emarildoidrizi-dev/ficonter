@@ -6,6 +6,7 @@ import "./native-mobile-app.css";
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
 import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";
+import { ThemeContrastGuard } from "@/components/ThemeContrastGuard";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import {
   DEFAULT_LANGUAGE,
@@ -154,6 +155,7 @@ export default function RootLayout({
       <body>
         <LanguageProvider initialLanguage={DEFAULT_LANGUAGE}>
           <KeyboardInteractionBridge />
+          <ThemeContrastGuard />
         <PWARegister />
           <GlobalLanguageControl />
           {children}

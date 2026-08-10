@@ -166,7 +166,6 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
   isSubscriptionExempt?: boolean;
-  canUseInternalLayouts?: boolean;
 };
 
 type DialogState =
@@ -204,27 +203,6 @@ const sections = [
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
   { id: "language", label: "Language", description: "Change the interface language", icon: Globe2 },
 ] as const;
-
-const STABLE_LAYOUT_OPTIONS: ReadonlyArray<
-  readonly [InterfaceLayoutPreference, string, string]
-> = [
-  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
-  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
-];
-
-const OWNER_LAYOUT_OPTIONS: ReadonlyArray<
-  readonly [InterfaceLayoutPreference, string, string]
-> = [
-  ["executive", "Executive Command Center", "Premium command-centre hierarchy with a dominant Financial GPS focus."],
-  ["rail", "Ultra-Minimal Rail", "A narrow navigation rail that gives the financial workspace maximum room."],
-  ["bento", "Bento Dashboard", "Dense modular financial cards arranged as a modern bento workspace."],
-  ["floating", "Floating Workspace", "Detached glass-like panels over the selected living background."],
-  ["top-context", "Top Navigation + Context", "A wider horizontal command feel with compact contextual navigation."],
-  ["adaptive", "Adaptive Financial OS", "A task-focused operating-system layout with stronger guidance and quick actions."],
-  ["horizontal", "Horizontal Data Focus", "Wide low-profile financial panels optimized for large displays and dense data."],
-  ["card-stack", "Card Stack / Tabs", "Layered workspace cards that feel like switching between financial workspaces."],
-  ["split-analytics", "Split-Screen Analytics", "Financial guidance on one side and analytics-heavy information on the other."],
-];
 
 const defaultPreferences: Preferences = {
   currency: "EUR",
@@ -479,9 +457,7 @@ function formatBillingAmount(
   }
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false,
-  canUseInternalLayouts = false,
-}: Props) {
+export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false }: Props) {
   const { language } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
@@ -568,7 +544,6 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
 
         const payload = (await response.json().catch(() => ({}))) as {
           transactions?: BillingHistoryTransaction[];
-
           error?: string;
         };
 
@@ -1668,10 +1643,14 @@ const showSubscriptionManagement =
             <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Dashboard layout</legend>
               <p className={styles.themeHelp}>
-                This changes the real FICONTER workspace immediately. Your selected layout is saved to your account and remains active when you return.
+                Choose the visual structure of the Overview. Horizon adds a live command strip,
+                Financial GPS board and journey rail. Classic preserves the original dashboard.
               </p>
               <div className={styles.layoutGrid}>
-                {STABLE_LAYOUT_OPTIONS.map(([value, label, description]) => (
+                {([
+                  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
+                  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
+                ] as const).map(([value, label, description]) => (
                   <label className={styles.layoutCard} key={value}>
                     <input
                       type="radio"
@@ -1693,39 +1672,6 @@ const showSubscriptionManagement =
                   </label>
                 ))}
               </div>
-
-              {canUseInternalLayouts ? (
-                <>
-                  <div className={styles.internalLayoutHeading}>
-                    <span>Owner workspace collection</span>
-                    <strong>Live experimental layouts</strong>
-                    <small>These are functional layouts, not previews. Selecting one immediately changes your actual FICONTER workspace.</small>
-                  </div>
-                  <div className={styles.layoutGrid}>
-                    {OWNER_LAYOUT_OPTIONS.map(([value, label, description]) => (
-                      <label className={`${styles.layoutCard} ${styles.internalLayoutCard}`} key={value}>
-                        <input
-                          type="radio"
-                          checked={preferences.layout === value}
-                          onChange={() => {
-                            const next = { ...preferences, layout: value };
-                            setPreferences(next);
-                            applyInterface(next);
-                          }}
-                        />
-                        <span className={styles.layoutPreview} data-layout={value} aria-hidden="true">
-                          <i />
-                          <b />
-                          <b />
-                          <b />
-                        </span>
-                        <strong>{label}</strong>
-                        <small>{description}</small>
-                      </label>
-                    ))}
-                  </div>
-                </>
-              ) : null}
             </fieldset>
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>

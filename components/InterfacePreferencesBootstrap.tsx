@@ -25,7 +25,6 @@ import {
 type DensityPreference = "comfortable" | "compact";
 
 type Props = {
-  allowInternalLayouts?: boolean;
   appearance?: string | null;
   density?: string | null;
   layout?: string | null;
@@ -96,7 +95,6 @@ function applyPreferences(
 }
 
 export function InterfacePreferencesBootstrap({
-  allowInternalLayouts = false,
   appearance,
   density,
   layout,
@@ -115,21 +113,13 @@ export function InterfacePreferencesBootstrap({
       }
     }
 
-    const normalizeLayoutForAccess = (value: string | null | undefined) => {
-      const normalized = normalizeInterfaceLayout(value);
-      if (allowInternalLayouts) return normalized;
-      return normalized === "classic" || normalized === "horizon"
-        ? normalized
-        : "horizon";
-    };
-
     let currentAppearance = normalizeAppearance(
       readStorage("ficonter-appearance") ?? appearance,
     );
     let currentDensity = normalizeDensity(
       readStorage("ficonter-density") ?? density,
     );
-    let currentLayout = normalizeLayoutForAccess(
+    let currentLayout = normalizeInterfaceLayout(
       readStorage("ficonter-layout") ?? layout,
     );
     let currentBackgroundMotion = normalizeBackgroundMotion(
@@ -177,7 +167,7 @@ export function InterfacePreferencesBootstrap({
         currentDensity = normalizeDensity(event.newValue);
       }
       if (event.key === "ficonter-layout") {
-        currentLayout = normalizeLayoutForAccess(event.newValue);
+        currentLayout = normalizeInterfaceLayout(event.newValue);
       }
       if (event.key === "ficonter-background-motion") {
         currentBackgroundMotion = normalizeBackgroundMotion(event.newValue);
@@ -233,7 +223,7 @@ export function InterfacePreferencesBootstrap({
         detail?.appearance ?? currentAppearance,
       );
       currentDensity = normalizeDensity(detail?.density ?? currentDensity);
-      currentLayout = normalizeLayoutForAccess(
+      currentLayout = normalizeInterfaceLayout(
         detail?.layout ?? currentLayout,
       );
       currentBackgroundMotion = normalizeBackgroundMotion(
@@ -270,7 +260,6 @@ export function InterfacePreferencesBootstrap({
       );
     };
   }, [
-    allowInternalLayouts,
     appearance,
     backgroundMotion,
     density,

@@ -9,32 +9,32 @@ import {
 } from "lucide-react";
 import styles from "./AdminWorkspaceNavigation.module.css";
 
-type AdminWorkspaceNavigationProps = {
-  showUiLab?: boolean;
-};
+const links = [
+  ["/dashboard/admin", ShieldCheck, "Personal Admin"],
+  ["/dashboard/admin/usage", Activity, "Personal Live & Usage"],
+  ["/business/admin", Building2, "Business Admin"],
+] as const;
 
 function activeRoute(pathname: string, href: string) {
-  if (href === "/dashboard/admin") return pathname === href;
+  if (href === "/dashboard/admin") {
+    return pathname === href;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminWorkspaceNavigation({
-  showUiLab = false,
-}: AdminWorkspaceNavigationProps) {
+export function AdminWorkspaceNavigation() {
   const pathname = usePathname();
-  void showUiLab;
-  const links = [
-    ["/dashboard/admin", ShieldCheck, "Personal Admin"],
-    ["/dashboard/admin/usage", Activity, "Personal Live & Usage"],
-    ["/business/admin", Building2, "Business Admin"],
-  ] as const;
 
   return (
-    <nav className={styles.navigation} aria-label="FICONTER administration workspaces">
+    <nav
+      className={styles.navigation}
+      aria-label="FICONTER administration workspaces"
+    >
       <div>
         <span>PLATFORM ADMINISTRATION</span>
         <strong>Personal and Business remain separate</strong>
       </div>
+
       <div className={styles.links}>
         {links.map(([href, Icon, label]) => {
           const active = activeRoute(pathname, href);

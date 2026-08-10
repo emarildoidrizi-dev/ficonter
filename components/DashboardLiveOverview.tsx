@@ -33,7 +33,6 @@ import { FinancialSetupSummary } from "@/components/FinancialSetupSummary";
 import { FinancialGpsSummary } from "@/components/FinancialGpsSummary";
 import { HorizonCommandStrip } from "@/components/HorizonCommandStrip";
 import { HorizonOverviewBoard } from "@/components/HorizonOverviewBoard";
-import { ExecutiveCommandOverview } from "@/components/ExecutiveCommandOverview";
 import { FinancialJourneyRail } from "@/components/FinancialJourneyRail";
 import type { SetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 import {
@@ -545,7 +544,7 @@ export function DashboardLiveOverview({
 
   return (
     <>
-      <header className="topbar ficonter-overview-topbar">
+      <header className="topbar">
         <div className="page-title">
           <h1>{greeting}, {name}.</h1>
           <p>Completed financial activity through today, normalized in euros. Scheduled entries remain visible but are excluded until their date.</p>
@@ -575,20 +574,6 @@ export function DashboardLiveOverview({
 
       {initialError ? <div className="alert alert-error">{initialError}</div> : null}
 
-      <div className={styles.executiveOnly}>
-        <ExecutiveCommandOverview
-          gps={financialGps}
-          income={metrics.totalIncome}
-          expenses={metrics.totalExpenses}
-          savings={metrics.totalSavings}
-          cashFlow={metrics.netCashFlow}
-          savingsRate={metrics.savingsRate * 100}
-          activity={horizonActivity}
-          bills={bills}
-        />
-      </div>
-
-      <div className={styles.nonExecutiveOverview}>
       <div className={styles.horizonOnly}>
         <HorizonCommandStrip gps={financialGps} />
         {gpsError ? (
@@ -777,7 +762,6 @@ export function DashboardLiveOverview({
           </div>
         </div>
       </section>
-      </div>
     </>
   );
 }

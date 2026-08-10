@@ -31,7 +31,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <AdminWorkspaceNavigation showUiLab={isOwnerEmail(user.email)} />
+      <AdminWorkspaceNavigation />
       <AdminDashboard
         currentAdminId={user.id}
         currentRole={admin.role}

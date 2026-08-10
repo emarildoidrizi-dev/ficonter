@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
-import { FiconterLayoutShell } from "@/components/FiconterLayoutShell";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
@@ -13,9 +12,7 @@ import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { getBusinessContext } from "@/lib/business/server";
-import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
-import { normalizeInterfaceLayout } from "@/lib/interfaceLayout";
-import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
+import { requireAdmin } from "@/lib/admin/access";
 
 type StoredPreferences = {
   appearance?: string;
@@ -69,20 +66,11 @@ export default async function BusinessLayout({
 
   if (!user) redirect("/login");
 
-  const subscriptionAccess = await getCurrentSubscriptionAccess();
-  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-
   const preferences = readInterfacePreferences(user.user_metadata);
 
-  const allowInternalLayouts = isOwnerEmail(user.email);
-  const initialLayout = normalizeInterfaceLayout(preferences.layout);
-
   return (
-    <>
-      <InterfacePreferencesBootstrap
-        {...preferences}
-        allowInternalLayouts={allowInternalLayouts}
-      />
+    <div className="app-shell">
+      <InterfacePreferencesBootstrap {...preferences} />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
@@ -94,7 +82,6 @@ export default async function BusinessLayout({
       <CommandPalette />
       <FiconterNativeAppChrome
         workspace="business"
-        subscriptionPlanCode={subscriptionPlanCode}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
@@ -103,42 +90,30 @@ export default async function BusinessLayout({
         )}
         businessName={business?.name ?? "Business workspace"}
       />
-      <MobileNavigationController workspace="business" />
-      <FiconterLayoutShell
-        initialLayout={initialLayout}
-        allowInternalLayouts={allowInternalLayouts}
-        workspace="business"
-        sidebar={
-          <BusinessSidebar
-            businesses={businesses}
-            business={business}
-            canManage={
-              membership?.role === "owner" ||
-              membership?.role === "admin"
-            }
-            isPlatformAdmin={Boolean(admin)}
-            user={{
-              displayName: String(
-                user.user_metadata?.display_name ??
-                  user.user_metadata?.full_name ??
-                  user.user_metadata?.name ??
-                  "",
-              ),
-              email: user.email ?? "",
-            }}
-          />
+            <MobileNavigationController workspace="business" />
+      <BusinessSidebar
+        businesses={businesses}
+        business={business}
+        canManage={
+          membership?.role === "owner" ||
+          membership?.role === "admin"
         }
-        workspaceSwitcher={
-          <WorkspaceSwitcher
-            current="business"
-            subscriptionPlanCode={subscriptionPlanCode}
-          />
-        }
-        mobileDock={<PWAMobileDock workspace="business" />}
-      >
+        isPlatformAdmin={Boolean(admin)}
+        user={{
+          displayName: String(
+            user.user_metadata?.display_name ??
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              "",
+          ),
+          email: user.email ?? "",
+        }}
+      />
+      <main className="app-main">
+        <WorkspaceSwitcher current="business" />
         {children}
-      </FiconterLayoutShell>
-    </>
+      </main>
+          <PWAMobileDock workspace="business" />
+      </div>
   );
-
 }

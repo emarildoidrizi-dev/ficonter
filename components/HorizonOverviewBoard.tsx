@@ -76,8 +76,8 @@ export function HorizonOverviewBoard({
   const positive = cashFlow >= 0;
 
   return (
-    <section className={`ficonter-overview-board ${styles.board}`} data-stage={gps.stage.id} aria-label="FICONTER financial overview">
-      <article className={`${styles.card} ${styles.cashFlowCard}`} data-overview-card="cash">
+    <section className={styles.board} data-stage={gps.stage.id} aria-label="Horizon financial overview">
+      <article className={`${styles.card} ${styles.cashFlowCard}`}>
         <div className={styles.cardTopline}>
           <span>Recorded cash position</span>
           <span className={positive ? styles.positiveBadge : styles.negativeBadge}>
@@ -87,7 +87,7 @@ export function HorizonOverviewBoard({
         </div>
         <strong className={styles.heroNumber}>{formatCurrency(cashFlow, "EUR")}</strong>
         <p>Income minus all completed outflows recorded to date.</p>
-        <div className={`ficonter-cash-sparkline ${styles.sparkline}`} aria-hidden="true">
+        <div className={styles.sparkline} aria-hidden="true">
           <svg viewBox="0 0 100 60" preserveAspectRatio="none">
             <defs>
               <linearGradient id="horizon-line" x1="0" y1="0" x2="1" y2="0">
@@ -109,7 +109,7 @@ export function HorizonOverviewBoard({
         </div>
       </article>
 
-      <article className={`${styles.card} ${styles.allocationCard}`} data-overview-card="allocation">
+      <article className={`${styles.card} ${styles.allocationCard}`}>
         <div className={styles.cardTopline}>
           <span>Income allocation</span>
           <Sparkles size={17} aria-hidden="true" />
@@ -133,7 +133,7 @@ export function HorizonOverviewBoard({
         </p>
       </article>
 
-      <article className={`${styles.card} ${styles.gpsCard}`} data-overview-card="gps">
+      <article className={`${styles.card} ${styles.gpsCard}`}>
         <div className={styles.gpsOrbit} aria-hidden="true">
           <span className={styles.orbitOne} />
           <span className={styles.orbitTwo} />

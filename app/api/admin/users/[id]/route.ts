@@ -18,6 +18,8 @@ type Action =
   | "restore"
   | "promote_admin"
   | "demote_admin"
+  | "promote_super_admin"
+  | "demote_super_admin"
   | "revoke_beta";
 
 type TargetAccount = {
@@ -43,9 +45,15 @@ function jsonError(message: string, status: number) {
 }
 
 function isAction(value: unknown): value is Action {
-  return ["suspend", "restore", "promote_admin", "demote_admin", "revoke_beta"].includes(
-    String(value),
-  );
+  return [
+    "suspend",
+    "restore",
+    "promote_admin",
+    "demote_admin",
+    "promote_super_admin",
+    "demote_super_admin",
+    "revoke_beta",
+  ].includes(String(value));
 }
 
 async function authorize(request: NextRequest) {
@@ -194,8 +202,13 @@ function mutationPermissionError(
   actorRole: AdminRole,
   actorIsOwner: boolean,
   targetRole: AdminRole | null,
+  targetIsOwner: boolean,
   action: Action,
 ): string | null {
+  if (targetIsOwner) {
+    return "The Owner account is protected and cannot be changed by another account.";
+  }
+
   if (action === "revoke_beta" && !actorIsOwner) {
     return "Only the Owner can revoke Beta access.";
   }
@@ -203,14 +216,19 @@ function mutationPermissionError(
   if (action === "revoke_beta" && targetRole !== null) {
     return "Administrative accounts are subscription-exempt and cannot have Beta revoked.";
   }
-  if (targetRole === "super_admin") {
-    return "Protected super-admin accounts cannot be changed from this panel.";
-  }
 
   if (
-    actorRole !== "super_admin" &&
-    targetRole !== null
+    (action === "promote_super_admin" || action === "demote_super_admin") &&
+    !actorIsOwner
   ) {
+    return "Only the Owner can assign or remove Super Admin authority.";
+  }
+
+  if (targetRole === "super_admin" && !actorIsOwner) {
+    return "Only the Owner can change a Super Admin account.";
+  }
+
+  if (actorRole !== "super_admin" && targetRole !== null) {
     return "Administrators cannot change another administrator account.";
   }
 
@@ -218,15 +236,27 @@ function mutationPermissionError(
     (action === "promote_admin" || action === "demote_admin") &&
     actorRole !== "super_admin"
   ) {
-    return "Only a super admin can change admin roles.";
+    return "Only the Owner or a Super Admin can change Admin roles.";
   }
 
   if (action === "promote_admin" && targetRole !== null) {
-    return "This account already has an administrative role.";
+    return "Only a standard user can be promoted to Admin with this action.";
   }
 
   if (action === "demote_admin" && targetRole !== "admin") {
-    return "This account is not an administrator.";
+    return "This account is not an Admin.";
+  }
+
+  if (
+    action === "promote_super_admin" &&
+    targetRole !== null &&
+    targetRole !== "admin"
+  ) {
+    return "This account already has Super Admin authority.";
+  }
+
+  if (action === "demote_super_admin" && targetRole !== "super_admin") {
+    return "This account is not a Super Admin.";
   }
 
   return null;
@@ -277,6 +307,7 @@ export async function PATCH(
       auth.admin.role,
       actorIsOwner,
       target.role,
+      isOwnerEmail(target.user.email),
       body.action,
     );
 
@@ -414,6 +445,88 @@ export async function PATCH(
       );
     }
 
+    if (body.action === "promote_super_admin") {
+      const { error } = await service.from("admin_users").upsert(
+        { user_id: id, role: "super_admin" },
+        { onConflict: "user_id" },
+      );
+
+      if (error) {
+        console.error("Super Admin promotion failed", {
+          actorId: auth.user.id,
+          targetId: id,
+          code: error.code,
+        });
+        return jsonError("Super Admin authority could not be assigned.", 500);
+      }
+
+      let audit: AdminAuditRow;
+      try {
+        audit = await writeAuditLog(auth.user.id, body.action, id, {
+          ...auditDetails,
+          next_role: "super_admin",
+          owner_approved: true,
+        });
+      } catch (auditError) {
+        await rollbackRole(id, target.role);
+        throw auditError;
+      }
+
+      return NextResponse.json(
+        {
+          ok: true,
+          user: {
+            id,
+            bannedUntil: target.user.banned_until ?? null,
+            role: "super_admin" as const,
+          },
+          audit,
+        },
+        { headers: noStoreHeaders() },
+      );
+    }
+
+    if (body.action === "demote_super_admin") {
+      const { error } = await service.from("admin_users").upsert(
+        { user_id: id, role: "admin" },
+        { onConflict: "user_id" },
+      );
+
+      if (error) {
+        console.error("Super Admin demotion failed", {
+          actorId: auth.user.id,
+          targetId: id,
+          code: error.code,
+        });
+        return jsonError("Super Admin authority could not be removed.", 500);
+      }
+
+      let audit: AdminAuditRow;
+      try {
+        audit = await writeAuditLog(auth.user.id, body.action, id, {
+          ...auditDetails,
+          next_role: "admin",
+          owner_approved: true,
+        });
+      } catch (auditError) {
+        await rollbackRole(id, target.role);
+        throw auditError;
+      }
+
+      return NextResponse.json(
+        {
+          ok: true,
+          user: {
+            id,
+            bannedUntil: target.user.banned_until ?? null,
+            role: "admin" as const,
+          },
+          audit,
+        },
+        { headers: noStoreHeaders() },
+      );
+    }
+
     if (body.action === "demote_admin") {
       const { error } = await service
         .from("admin_users")
@@ -529,14 +642,18 @@ export async function DELETE(
     }
 
     const target = await getTargetAccount(id);
-    const permissionError = mutationPermissionError(
-      auth.admin.role,
-      isOwnerEmail(auth.user.email),
-      target.role,
-      "suspend",
-    );
+    const actorIsOwner = isOwnerEmail(auth.user.email);
 
-    if (permissionError) return jsonError(permissionError, 403);
+    if (!actorIsOwner) {
+      return jsonError(
+        "Permanent account deletion requires Owner authority.",
+        403,
+      );
+    }
+
+    if (isOwnerEmail(target.user.email)) {
+      return jsonError("The Owner account cannot be permanently deleted.", 403);
+    }
 
     const baseDetails = {
       ...target.identity,

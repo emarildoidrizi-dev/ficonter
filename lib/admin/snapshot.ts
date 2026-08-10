@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { isOwnerEmail } from "@/lib/admin/access";
 
 export type AdminRole = "admin" | "super_admin";
 export type SubscriptionPlanCode =
@@ -22,6 +23,7 @@ export type AdminUserRow = {
   bannedUntil: string | null;
   displayName: string;
   role: AdminRole | null;
+  isOwner: boolean;
   planCode: SubscriptionPlanCode | null;
   subscriptionStatus: SubscriptionStatus | null;
   provider: string | null;
@@ -131,6 +133,7 @@ export function normalizeAdminDirectory(
           : null,
       displayName: row.display_name?.trim() || "Unnamed user",
       role: row.role,
+      isOwner: isOwnerEmail(row.email),
       planCode: null,
       subscriptionStatus: null,
       provider: null,

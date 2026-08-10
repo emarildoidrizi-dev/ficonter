@@ -45,6 +45,8 @@ type PatchAction =
   | "restore"
   | "promote_admin"
   | "demote_admin"
+  | "promote_super_admin"
+  | "demote_super_admin"
   | "revoke_beta";
 type UserAction = PatchAction | "delete_user";
 type Toast = {
@@ -102,7 +104,7 @@ function formatDate(value: string | null) {
 }
 
 function planLabel(user: AdminUserRow) {
-  if (user.role) return "Exempt";
+  if (user.isOwner || user.role) return "Exempt";
   const labels: Record<string, string> = {
     beta: "Beta",
     free: "Free",
@@ -113,7 +115,7 @@ function planLabel(user: AdminUserRow) {
 }
 
 function providerLabel(user: AdminUserRow) {
-  if (user.role) return "Role based";
+  if (user.isOwner || user.role) return "Role based";
   if (!user.provider) return "Internal";
   return user.provider === "paypal" ? "PayPal" : "Internal";
 }
@@ -139,8 +141,10 @@ function actionLabel(action: string) {
   const labels: Record<string, string> = {
     suspend: "Account suspended",
     restore: "Account restored",
-    promote_admin: "Promoted to admin",
+    promote_admin: "Promoted to Admin",
     demote_admin: "Admin role removed",
+    promote_super_admin: "Promoted to Super Admin",
+    demote_super_admin: "Super Admin demoted",
     revoke_beta: "Beta access revoked",
     delete_user_requested: "Deletion requested",
     delete_user: "Account deleted",
@@ -203,6 +207,28 @@ function actionCopy(pending: PendingAction): ActionCopy {
         confirmLabel: "Remove admin",
         successTitle: "Admin access removed",
         successMessage: `${account} is now a standard registered user.`,
+        danger: true,
+      };
+    case "promote_super_admin":
+      return {
+        eyebrow: "OWNER ROLE CONTROL",
+        title: `Make ${account} a Super Admin?`,
+        description:
+          "This grants senior platform administration authority. Super Admins can manage normal users and ordinary Admins, but cannot override the Owner, create another Super Admin, revoke Beta, or permanently delete accounts.",
+        confirmLabel: "Make Super Admin",
+        successTitle: "Super Admin authority granted",
+        successMessage: `${account} is now a Super Admin.`,
+        danger: false,
+      };
+    case "demote_super_admin":
+      return {
+        eyebrow: "OWNER ROLE CONTROL",
+        title: `Demote ${account} to Admin?`,
+        description:
+          "This removes Super Admin authority and keeps the account as an ordinary Admin with the lower operational permission set.",
+        confirmLabel: "Demote to Admin",
+        successTitle: "Super Admin authority removed",
+        successMessage: `${account} is now an Admin.`,
         danger: true,
       };
     case "revoke_beta":
@@ -538,7 +564,7 @@ export function AdminDashboard({
       beta: users.filter((user) => user.role === null && user.planCode === "beta").length,
       personal_pro: users.filter((user) => user.role === null && user.planCode === "personal_pro").length,
       business_pro: users.filter((user) => user.role === null && user.planCode === "business_pro").length,
-      exempt: users.filter((user) => user.role !== null).length,
+      exempt: users.filter((user) => user.isOwner || user.role !== null).length,
     }),
     [users],
   );
@@ -553,8 +579,8 @@ export function AdminDashboard({
       const matchesPlan =
         planFilter === "all" ||
         (planFilter === "exempt"
-          ? user.role !== null
-          : user.role === null && (user.planCode ?? "free") === planFilter);
+          ? user.isOwner || user.role !== null
+          : !user.isOwner && user.role === null && (user.planCode ?? "free") === planFilter);
       return matchesQuery && matchesPlan;
     });
   }, [planFilter, query, users]);
@@ -564,9 +590,7 @@ export function AdminDashboard({
       {
         key: "owner",
         label: "Owner",
-        users: currentIsOwner
-          ? filteredUsers.filter((user) => user.id === currentAdminId)
-          : [],
+        users: filteredUsers.filter((user) => user.isOwner),
       },
       {
         key: "super-admin",
@@ -585,7 +609,7 @@ export function AdminDashboard({
       {
         key: "registered-users",
         label: "Registered Users",
-        users: filteredUsers.filter((user) => user.role === null),
+        users: filteredUsers.filter((user) => !user.isOwner && user.role === null),
       },
     ],
     [currentAdminId, currentIsOwner, filteredUsers],
@@ -606,17 +630,21 @@ export function AdminDashboard({
   );
 
   function isProtected(user: AdminUserRow) {
-    return user.id === currentAdminId || user.role === "super_admin";
+    if (user.isOwner || user.id === currentAdminId) return true;
+    if (user.role === "super_admin" && !currentIsOwner) return true;
+    return false;
   }
 
   function canManageStatus(user: AdminUserRow) {
     if (isProtected(user)) return false;
-    return currentRole === "super_admin" || user.role === null;
+    if (currentIsOwner) return true;
+    if (currentRole === "super_admin") return user.role !== "super_admin";
+    return user.role === null;
   }
 
   function canDelete(user: AdminUserRow) {
     if (isProtected(user)) return false;
-    return currentRole === "super_admin" || user.role === null;
+    return currentIsOwner;
   }
 
   function applyResponseUser(
@@ -876,9 +904,13 @@ export function AdminDashboard({
                       </span>
                       <span>
                         <b className={user.role ? styles.role : styles.standard}>
-                          {user.id === currentAdminId && currentIsOwner
+                          {user.isOwner
                             ? "Owner"
-                            : user.role?.replace("_", " ") ?? "User"}
+                            : user.role === "super_admin"
+                              ? "Super Admin"
+                              : user.role === "admin"
+                                ? "Admin"
+                                : "User"}
                         </b>
                       </span>
                       <span className={styles.actions}>
@@ -916,30 +948,64 @@ export function AdminDashboard({
                             ) : null}
 
                             {currentRole === "super_admin" ? (
-                              user.role === "admin" ? (
-                                <button
-                                  type="button"
-                                  disabled={rowBusy}
-                                  onClick={() =>
-                                    setPending({ user, action: "demote_admin" })
-                                  }
-                                >
-                                  <UserCog size={15} /> Remove admin
-                                </button>
-                              ) : user.role === null ? (
-                                <button
-                                  type="button"
-                                  disabled={rowBusy}
-                                  onClick={() =>
-                                    setPending({ user, action: "promote_admin" })
-                                  }
-                                >
-                                  <ShieldCheck size={15} /> Make admin
-                                </button>
-                              ) : null
+                              <>
+                                {user.role === "admin" ? (
+                                  <button
+                                    type="button"
+                                    disabled={rowBusy}
+                                    onClick={() =>
+                                      setPending({ user, action: "demote_admin" })
+                                    }
+                                  >
+                                    <UserCog size={15} /> Remove Admin
+                                  </button>
+                                ) : user.role === null ? (
+                                  <button
+                                    type="button"
+                                    disabled={rowBusy}
+                                    onClick={() =>
+                                      setPending({ user, action: "promote_admin" })
+                                    }
+                                  >
+                                    <ShieldCheck size={15} /> Make Admin
+                                  </button>
+                                ) : null}
+
+                                {currentIsOwner &&
+                                (user.role === null || user.role === "admin") ? (
+                                  <button
+                                    type="button"
+                                    disabled={rowBusy}
+                                    onClick={() =>
+                                      setPending({
+                                        user,
+                                        action: "promote_super_admin",
+                                      })
+                                    }
+                                  >
+                                    <ShieldAlert size={15} /> Make Super Admin
+                                  </button>
+                                ) : null}
+
+                                {currentIsOwner && user.role === "super_admin" ? (
+                                  <button
+                                    type="button"
+                                    disabled={rowBusy}
+                                    onClick={() =>
+                                      setPending({
+                                        user,
+                                        action: "demote_super_admin",
+                                      })
+                                    }
+                                  >
+                                    <UserCog size={15} /> Demote to Admin
+                                  </button>
+                                ) : null}
+                              </>
                             ) : null}
 
                             {currentIsOwner &&
+                            !user.isOwner &&
                             user.role === null &&
                             user.planCode === "beta" ? (
                               <button

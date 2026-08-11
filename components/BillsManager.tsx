@@ -22,6 +22,7 @@ import { localDateKey, oneCalendarMonthEndKey } from "@/lib/finance/commitmentWi
 import { currencySymbol, formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import styles from "./BillsManager.module.css";
 
 type BillStatus = "pending" | "paid" | "cancelled";
@@ -454,7 +455,7 @@ export function BillsManager({
       company: bill.company ?? "",
       category: bill.category,
       amount: String(bill.amount),
-      currency: bill.currency,
+      currency: normalizeCurrency(bill.currency, baseCurrency),
       due_date: bill.due_date,
       recurrence: bill.recurrence === "none" ? "monthly" : bill.recurrence,
       payment_method: bill.payment_method ?? "Other",
@@ -801,7 +802,7 @@ export function BillsManager({
             <label>Bill name<input value={form.name} onChange={(e) => setForm({...form, name:e.target.value})} placeholder="e.g. Electricity" required /></label>
             <label>Company<input value={form.company} onChange={(e) => setForm({...form, company:e.target.value})} placeholder="Optional" /></label>
             <label>Category<select value={form.category} onChange={(e) => setForm({...form, category:e.target.value})}>{CATEGORIES.map((item)=><option key={item}>{item}</option>)}</select></label>
-            <label>Amount<div className={styles.amountField}><input type="number" min="0.01" step="0.01" value={form.amount} onChange={(e)=>setForm({...form, amount:e.target.value})} required /><select value={form.currency} onChange={(e)=>setForm({...form, currency:e.target.value})}>{CURRENCIES.map((item)=><option key={item}>{item}</option>)}</select></div></label>
+            <label>Amount<div className={styles.amountField}><input type="number" min="0.01" step="0.01" value={form.amount} onChange={(e)=>setForm({...form, amount:e.target.value})} required /><select value={form.currency} onChange={(e)=>setForm({...form, currency:normalizeCurrency(e.target.value, baseCurrency)})}>{CURRENCIES.map((item)=><option key={item}>{item}</option>)}</select></div></label>
             <label>Due date<input type="date" value={form.due_date} onChange={(e)=>setForm({...form, due_date:e.target.value})} required /></label>
             <label>Repeats<select value={form.recurrence} onChange={(e)=>setForm({...form, recurrence:e.target.value as RecurringSchedule})}><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="yearly">Yearly</option></select></label>
             <label>Payment method<select value={form.payment_method} onChange={(e)=>setForm({...form, payment_method:e.target.value})}>{PAYMENT_METHODS.map((item)=><option key={item}>{item}</option>)}</select></label>

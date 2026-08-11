@@ -7,6 +7,7 @@ import { MobileNavigationController } from "@/components/MobileNavigationControl
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
+import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
@@ -96,6 +97,10 @@ export default async function BusinessLayout({
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...preferences} />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
+      <BaseCurrencyBootstrap
+        workspace="business"
+        currency={business?.base_currency ?? "EUR"}
+      />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <UsageHeartbeat workspace="business" />

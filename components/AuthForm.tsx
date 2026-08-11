@@ -1,8 +1,15 @@
 "use client";
 
 import { PasswordInput } from "./PasswordInput";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  CURRENCY_CODES,
+  currencyName,
+  type CurrencyCode,
+} from "@/lib/financialOptions";
+import { normalizeCurrency } from "@/lib/finance/currencyEngine";
+import { useLanguage } from "./LanguageProvider";
 import {
   createClient,
   saveTrustedDevicePreference,
@@ -14,8 +21,20 @@ type AuthFormProps = {
 };
 
 export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
+  const { language, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>("EUR");
+  const currencyOptions = useMemo(
+    () =>
+      CURRENCY_CODES.map((code) => ({
+        code,
+        name: currencyName(code, locale),
+      })).sort((a, b) =>
+        a.name.localeCompare(b.name, locale, { sensitivity: "base" }),
+      ),
+    [locale],
+  );
   const [entryIntent, setEntryIntent] = useState<"beta" | "free">("beta");
   const [message, setMessage] = useState<{
     type: "error" | "success";
@@ -56,6 +75,9 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
     const fullName = String(form.get("fullName") ?? "").trim();
     const confirmPassword = String(form.get("confirmPassword") ?? "");
     const betaCode = String(form.get("betaCode") ?? "").trim();
+    const selectedBaseCurrency = normalizeCurrency(
+      form.get("baseCurrency") ?? baseCurrency,
+    );
     const submitter = (event.nativeEvent as SubmitEvent).submitter as
       | HTMLButtonElement
       | null;
@@ -129,6 +151,11 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
             emailRedirectTo: redirectTo,
             data: {
               full_name: fullName,
+              ficonter_base_currency: selectedBaseCurrency,
+              ficonter_preferences: {
+                currency: selectedBaseCurrency,
+                language,
+              },
               ...(betaSignupToken
                 ? { ficonter_beta_token: betaSignupToken }
                 : {}),
@@ -277,6 +304,31 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
           required
         />
       </div>
+
+      {mode === "register" && (
+        <div className="field">
+          <label htmlFor="base-currency">Base currency</label>
+          <select
+            id="base-currency"
+            className="input"
+            name="baseCurrency"
+            value={baseCurrency}
+            onChange={(event) =>
+              setBaseCurrency(normalizeCurrency(event.target.value))
+            }
+            required
+          >
+            {currencyOptions.map(({ code, name }) => (
+              <option value={code} key={code}>
+                {code} — {name}
+              </option>
+            ))}
+          </select>
+          <small className="muted">
+            Choose the currency you normally use. You can change it later without changing your original transactions.
+          </small>
+        </div>
+      )}
 
       <div className="field">
         <div style={fieldHeaderStyle}>

@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
+import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
@@ -11,6 +12,7 @@ import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
 type StoredPreferences = {
@@ -75,10 +77,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, admin } = await requireAdmin();
+  const [{ user, admin }, { supabase }] = await Promise.all([
+    requireAdmin(),
+    getCurrentUser(),
+  ]);
   if (!user) redirect("/login");
 
-  const subscriptionAccess = await getCurrentSubscriptionAccess();
+  const [{ data: profile }, subscriptionAccess] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("base_currency")
+      .eq("id", user.id)
+      .maybeSingle(),
+    getCurrentSubscriptionAccess(),
+  ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
 
   const interfacePreferences = readInterfacePreferences(
@@ -89,6 +101,10 @@ export default async function DashboardLayout({
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
+      <BaseCurrencyBootstrap
+        workspace="personal"
+        currency={profile?.base_currency ?? "EUR"}
+      />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <NavigationSpeedBoost

@@ -73,6 +73,16 @@ import {
   type InterfaceLayoutPreference,
 } from "@/lib/interfaceLayout";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
+import {
+  CURRENCY_CODES,
+  currencyName,
+  type CurrencyCode,
+} from "@/lib/financialOptions";
+import {
+  DEFAULT_BASE_CURRENCY,
+  normalizeCurrency,
+} from "@/lib/finance/currencyEngine";
+import { BASE_CURRENCY_CHANGED_EVENT } from "./BaseCurrencyBootstrap";
 import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
@@ -158,6 +168,7 @@ type Props = {
   userId: string;
   email: string;
   metadata: Metadata;
+  initialBaseCurrency?: string;
   initialSection?: string;
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
@@ -456,8 +467,17 @@ function formatBillingAmount(
   }
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false }: Props) {
-  const { language } = useLanguage();
+export function SettingsWorkspace({
+  userId,
+  email,
+  metadata,
+  initialBaseCurrency = DEFAULT_BASE_CURRENCY,
+  initialSection,
+  subscription,
+  requiredFeature = null,
+  isSubscriptionExempt = false,
+}: Props) {
+  const { language, locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
@@ -493,6 +513,25 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrency(
+      initialBaseCurrency || readPreferences(metadata).currency,
+      DEFAULT_BASE_CURRENCY,
+    ),
+  );
+  const currencyOptions = useMemo<[string, string][]>(
+    () =>
+      CURRENCY_CODES.map(
+        (code) =>
+          [
+            code,
+            `${code} — ${currencyName(code, locale)}`,
+          ] as [string, string],
+      ).sort((a, b) =>
+        a[1].localeCompare(b[1], locale, { sensitivity: "base" }),
+      ),
+    [locale],
+  );
   const [rememberDevice, setRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -592,6 +631,12 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
       current.language === language ? current : { ...current, language },
     );
   }, [language]);
+
+  useEffect(() => {
+    setBaseCurrency(
+      normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY),
+    );
+  }, [initialBaseCurrency]);
 
   useEffect(() => {
     let active = true;
@@ -887,6 +932,71 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
       showSuccess(text);
     } catch (error) {
       showError(error, "Your preferences could not be saved.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveBaseCurrency(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const normalized = normalizeCurrency(
+        baseCurrency,
+        DEFAULT_BASE_CURRENCY,
+      );
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ base_currency: normalized })
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+
+      const nextPreferences: Preferences = {
+        ...preferences,
+        currency: normalized,
+      };
+
+      await saveMetadata({
+        ficonter_base_currency: normalized,
+        ficonter_preferences: nextPreferences,
+      });
+
+      setBaseCurrency(normalized);
+      setPreferences(nextPreferences);
+
+      try {
+        localStorage.setItem(
+          "ficonter-personal-base-currency",
+          normalized,
+        );
+      } catch {
+        // The profile remains the source of truth.
+      }
+
+      document.documentElement.dataset.baseCurrency = normalized;
+
+      window.dispatchEvent(
+        new CustomEvent(BASE_CURRENCY_CHANGED_EVENT, {
+          detail: {
+            currency: normalized,
+            workspace: "personal",
+          },
+        }),
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("ficonter:preferences-updated", {
+          detail: nextPreferences,
+        }),
+      );
+
+      showSuccess("Your base currency has been saved.");
+    } catch (error) {
+      showError(error, "Your base currency could not be saved.");
     } finally {
       setLoading(false);
     }
@@ -1387,21 +1497,137 @@ const showSubscriptionManagement =
         ) : null}
 
         {active === "financial" ? (
-          canUseFinancialPreferences ? (
-            <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
-              <div className={styles.formGrid}>
-                <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
-                <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
-                <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
-                <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
+          <div className={styles.stack}>
+            <form className={styles.form} onSubmit={saveBaseCurrency}>
+              <div className={styles.cardHeading}>
+                <WalletCards size={19} />
+                <div>
+                  <h3>Base currency</h3>
+                  <p>
+                    Choose the currency you normally use. Your original financial records never change when you choose another base currency.
+                  </p>
+                </div>
               </div>
-              <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
-              <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
-              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
+
+              <Select
+                label="Base currency"
+                value={baseCurrency}
+                onChange={(value) =>
+                  setBaseCurrency(normalizeCurrency(value))
+                }
+                options={currencyOptions}
+              />
+
+              <div className={styles.infoStrip}>
+                <ShieldCheck size={18} />
+                <div>
+                  <strong>Original amounts stay unchanged</strong>
+                  <span>
+                    Phase 2 saves your preferred currency. Live conversion of existing balances and historical records is activated in Phase 3.
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.actions}>
+                <button
+                  className={styles.primaryButton}
+                  disabled={loading}
+                >
+                  <Save size={16} />
+                  Save base currency
+                </button>
+              </div>
             </form>
-          ) : (
-            <SubscriptionInlineLock feature="financial_preferences" />
-          )
+
+            {canUseFinancialPreferences ? (
+              <form
+                className={styles.form}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void savePreferences(
+                    preferences,
+                    "Financial preferences saved.",
+                  );
+                }}
+              >
+                <div className={styles.formGrid}>
+                  <Select
+                    label="Number format"
+                    value={preferences.numberFormat}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        numberFormat: value,
+                      }))
+                    }
+                    options={[
+                      ["de-DE", "1.234,56"],
+                      ["en-US", "1,234.56"],
+                      ["fr-FR", "1 234,56"],
+                    ]}
+                  />
+                  <Select
+                    label="Date format"
+                    value={preferences.dateFormat}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        dateFormat: value,
+                      }))
+                    }
+                    options={[
+                      ["DD/MM/YYYY", "DD/MM/YYYY"],
+                      ["MM/DD/YYYY", "MM/DD/YYYY"],
+                      ["YYYY-MM-DD", "YYYY-MM-DD"],
+                    ]}
+                  />
+                  <Select
+                    label="First day of the week"
+                    value={preferences.weekStart}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        weekStart: value,
+                      }))
+                    }
+                    options={[
+                      ["monday", "Monday"],
+                      ["sunday", "Sunday"],
+                    ]}
+                  />
+                </div>
+                <Select
+                  label="Monthly planner start balance behavior"
+                  value={preferences.plannerStartBalance}
+                  onChange={(value) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      plannerStartBalance: value,
+                    }))
+                  }
+                  options={[
+                    ["manual", "Manual entry"],
+                    [
+                      "carry-forward",
+                      "Carry forward the previous month’s remaining balance",
+                    ],
+                    ["zero", "Start every new month at €0"],
+                  ]}
+                />
+                <div className={styles.actions}>
+                  <button
+                    className={styles.primaryButton}
+                    disabled={loading}
+                  >
+                    <Save size={16} />
+                    Save preferences
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <SubscriptionInlineLock feature="financial_preferences" />
+            )}
+          </div>
         ) : null}
 
         {active === "notifications" ? (

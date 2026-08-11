@@ -63,10 +63,16 @@ export const CURRENCY_CODES = [
 
 export type CurrencyCode = (typeof CURRENCY_CODES)[number];
 
-export function currencyName(code: string): string {
+export function currencyName(
+  code: string,
+  locale: string | string[] = "en",
+): string {
   try {
     const DisplayNames = Intl.DisplayNames;
-    return new DisplayNames(["en"], { type: "currency" }).of(code) ?? code;
+    return new DisplayNames(
+      Array.isArray(locale) ? locale : [locale],
+      { type: "currency" },
+    ).of(code) ?? code;
   } catch {
     return code;
   }

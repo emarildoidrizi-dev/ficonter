@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "./LanguageProvider";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate } from "@/lib/finance/money";
@@ -19,6 +20,10 @@ import {
   currencySymbol,
   formatCurrency,
 } from "@/lib/financialOptions";
+import {
+  BASE_CURRENCY_CHANGED_EVENT,
+  readBrowserBaseCurrency,
+} from "@/components/BaseCurrencyBootstrap";
 
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
@@ -95,6 +100,7 @@ export function TransactionForm({
   const defaultCategory =
     preset?.category ?? initialCategory ?? categoryForType(defaultType);
 
+  const { locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(false);
@@ -102,7 +108,10 @@ export function TransactionForm({
   const [notice, setNotice] = useState("");
   const [type, setType] = useState<TransactionKind>(defaultType);
   const [description, setDescription] = useState(preset?.description ?? "");
-  const [currency, setCurrency] = useState(allowMultiCurrency ? preset?.currency ?? "EUR" : "EUR");
+  const [currency, setCurrency] = useState(
+    allowMultiCurrency ? preset?.currency ?? "EUR" : "EUR",
+  );
+  const currencyWasChosenRef = useRef(Boolean(preset?.currency));
   const [amount, setAmount] = useState(
     preset?.amount ? String(preset.amount) : "",
   );
@@ -133,10 +142,40 @@ export function TransactionForm({
       (allowMultiCurrency ? CURRENCY_CODES : ["EUR"]).map((code) => ({
         code,
         symbol: currencySymbol(code),
-        name: currencyName(code),
-      })).sort((a, b) => a.name.localeCompare(b.name)),
-    [allowMultiCurrency],
+        name: currencyName(code, locale),
+      })).sort((a, b) =>
+        a.name.localeCompare(b.name, locale, { sensitivity: "base" }),
+      ),
+    [allowMultiCurrency, locale],
   );
+
+  useEffect(() => {
+    if (!allowMultiCurrency || preset?.currency) return;
+
+    const applyBaseCurrency = () => {
+      if (currencyWasChosenRef.current) return;
+      const workspace =
+        document.documentElement.dataset.currencyWorkspace === "business"
+          ? "business"
+          : "personal";
+      setCurrency(readBrowserBaseCurrency(workspace));
+    };
+
+    applyBaseCurrency();
+
+    const handleBaseCurrencyChange = () => applyBaseCurrency();
+    window.addEventListener(
+      BASE_CURRENCY_CHANGED_EVENT,
+      handleBaseCurrencyChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        BASE_CURRENCY_CHANGED_EVENT,
+        handleBaseCurrencyChange,
+      );
+    };
+  }, [allowMultiCurrency, preset?.currency]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -391,7 +430,16 @@ export function TransactionForm({
       );
       setAmount("");
       setDescription("");
-      setCurrency("EUR");
+      currencyWasChosenRef.current = false;
+      const workspace =
+        document.documentElement.dataset.currencyWorkspace === "business"
+          ? "business"
+          : "personal";
+      setCurrency(
+        allowMultiCurrency
+          ? readBrowserBaseCurrency(workspace)
+          : "EUR",
+      );
       setType(initialType);
       setCategory(initialCategory ?? categoryForType(initialType));
       setCustomCategory("");
@@ -869,9 +917,10 @@ export function TransactionForm({
                   name="currency"
                   value={currency}
                   title={allowMultiCurrency ? undefined : "Personal Pro unlocks additional currencies"}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                    setCurrency(event.target.value)
-                  }
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                    currencyWasChosenRef.current = true;
+                    setCurrency(event.target.value);
+                  }}
                 >
                   {currencyOptions.map((option) => (
                     <option key={option.code} value={option.code}>
@@ -998,9 +1047,10 @@ export function TransactionForm({
             name="currency"
             value={currency}
             title={allowMultiCurrency ? undefined : "Personal Pro unlocks additional currencies"}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-              setCurrency(event.target.value)
-            }
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+              currencyWasChosenRef.current = true;
+              setCurrency(event.target.value);
+            }}
           >
             {currencyOptions.map((option) => (
               <option key={option.code} value={option.code}>

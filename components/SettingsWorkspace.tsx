@@ -24,9 +24,7 @@ import {
   FileJson,
   FileText,
   FileType2,
-  Globe2,
   KeyRound,
-  Languages,
   LayoutTemplate,
   LockKeyhole,
   LogOut,
@@ -75,7 +73,6 @@ import {
   type InterfaceLayoutPreference,
 } from "@/lib/interfaceLayout";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
-import { LanguageSelector } from "./LanguageSelector";
 import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
@@ -104,8 +101,7 @@ type SectionId =
   | "notifications"
   | "appearance"
   | "privacy"
-  | "subscription"
-  | "language";
+  | "subscription";
 
 type Preferences = {
   currency: string;
@@ -193,7 +189,6 @@ function isSectionId(value: string | undefined): value is SectionId {
         "appearance",
         "privacy",
         "subscription",
-        "language",
       ].includes(value),
   );
 }
@@ -206,7 +201,6 @@ const sections = [
   { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
-  { id: "language", label: "Language", description: "Change the interface language", icon: Globe2 },
 ] as const;
 
 const defaultPreferences: Preferences = {
@@ -2119,19 +2113,6 @@ const showSubscriptionManagement =
           </div>
         ) : null}
 
-        {active === "language" ? (
-          <div className={styles.stack}>
-            <LanguageSelector variant="settings" showDetails />
-            <div className={styles.languageCard}>
-              <span className={styles.languageIcon}><Languages size={25} /></span>
-              <div>
-                <h3>Language available everywhere</h3>
-                <p>Use the globe selector in the top bar or this Settings section. Your choice changes the interface immediately and remains saved to your account.</p>
-              </div>
-              <span className={styles.defaultBadge}>Active</span>
-            </div>
-          </div>
-        ) : null}
       </main>
 
       {dialog ? <Modal title={dialog === "cancel-subscription" ? "Cancel your subscription?" : dialog === "delete-records" ? "Delete financial records?" : dialog === "delete-account" ? "Delete your Ficonter account?" : dialog === "privacy" ? "Privacy information" : "Data retention information"} onClose={() => { if (!loading) { setDialog(null); setConfirmation(""); } }}>

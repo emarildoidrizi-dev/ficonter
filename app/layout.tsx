@@ -10,7 +10,6 @@ import { PWARegister } from "@/components/PWARegister";
 import { GlobalLanguageControl } from "@/components/GlobalLanguageControl";
 import { ThemeContrastGuard } from "@/components/ThemeContrastGuard";
 import { LanguageProvider } from "@/components/LanguageProvider";
-import { SettingsLanguageCleanup } from "@/components/SettingsLanguageCleanup";
 
 import {
   DEFAULT_LANGUAGE,
@@ -226,7 +225,6 @@ export default function RootLayout({
           <ThemeContrastGuard />
           <PWARegister />
           <GlobalLanguageControl />
-          <SettingsLanguageCleanup />
           {children}
         </LanguageProvider>
       </body>

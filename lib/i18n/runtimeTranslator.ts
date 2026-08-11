@@ -1,5 +1,6 @@
 import type { FiconterLanguage } from "./config";
 import { PHRASE_TRANSLATIONS, translatePhrase } from "./phrases";
+import { FULL_UI_TRANSLATIONS } from "./fullUiCatalog";
 
 type NonEnglishLanguage = Exclude<FiconterLanguage, "en">;
 type TranslationRow = Record<NonEnglishLanguage, string>;
@@ -704,12 +705,67 @@ Object.assign(RUNTIME_TRANSLATIONS, {
   )
 });
 
-const SOURCE_ENTRIES = Object.entries({
-  ...PHRASE_TRANSLATIONS,
-  ...RUNTIME_TRANSLATIONS,
-})
-  .filter(([source]) => source.length >= 3)
-  .sort((a, b) => b[0].length - a[0].length);
+
+// V32: smallest visible interface fragments and enum labels. These entries
+// prevent lowercase/status fragments from leaking English into localized UI.
+Object.assign(RUNTIME_TRANSLATIONS, {
+  "error": row("Fehler", "error", "gabim", "خطأ", "erro", "errore", "ошибка"),
+  "success": row("Erfolg", "éxito", "sukses", "نجاح", "sucesso", "successo", "успех"),
+  "restore": row("wiederherstellen", "restaurar", "rikthe", "استعادة", "restaurar", "ripristina", "восстановить"),
+  "suspend": row("sperren", "suspender", "pezullo", "تعليق", "suspender", "sospendi", "приостановить"),
+  "page": row("Seite", "página", "faqe", "صفحة", "página", "pagina", "страница"),
+  "current-password": row("aktuelles Passwort", "contraseña actual", "fjalëkalimi aktual", "كلمة المرور الحالية", "palavra-passe atual", "password attuale", "текущий пароль"),
+  "new-password": row("neues Passwort", "nueva contraseña", "fjalëkalimi i ri", "كلمة المرور الجديدة", "nova palavra-passe", "nuova password", "новый пароль"),
+  "or": row("oder", "o", "ose", "أو", "ou", "o", "или"),
+  "at": row("um", "a las", "në", "في", "às", "alle", "в"),
+  "ACCOUNTABILITY": row("VERANTWORTLICHKEIT", "RESPONSABILIDAD", "PËRGJEGJSHMËRIA", "المساءلة", "RESPONSABILIDADE", "RESPONSABILITÀ", "ОТВЕТСТВЕННОСТЬ"),
+  "variable": row("variabel", "variable", "e ndryshueshme", "متغير", "variável", "variabile", "переменные"),
+  "SUPPLIERS": row("LIEFERANTEN", "PROVEEDORES", "FURNIZUESIT", "الموردون", "FORNECEDORES", "FORNITORI", "ПОСТАВЩИКИ"),
+  "PROFITABILITY": row("RENTABILITÄT", "RENTABILIDAD", "FITIMPRURJA", "الربحية", "RENTABILIDADE", "REDDITIVITÀ", "РЕНТАБЕЛЬНОСТЬ"),
+  "cost": row("Kosten", "coste", "kosto", "تكلفة", "custo", "costo", "затраты"),
+  "converted": row("umgerechnet", "convertido", "konvertuar", "محوّل", "convertido", "convertito", "конвертировано"),
+  "RESPONSIBILITY": row("VERANTWORTUNG", "RESPONSABILIDAD", "PËRGJEGJËSIA", "المسؤولية", "RESPONSABILIDADE", "RESPONSABILITÀ", "ОТВЕТСТВЕННОСТЬ"),
+  "reversed": row("storniert", "revertido", "përmbysur", "معكوس", "revertido", "stornato", "отменено"),
+  "button": row("Schaltfläche", "botón", "buton", "زر", "botão", "pulsante", "кнопка"),
+  "income": row("Einnahmen", "ingresos", "të ardhura", "الدخل", "rendimento", "entrate", "доходы"),
+  "gross": row("Brutto", "bruto", "bruto", "إجمالي", "bruto", "lordo", "валовая"),
+  "operating": row("Betrieb", "operativo", "operativ", "تشغيلي", "operacional", "operativo", "операционная"),
+  "transactions": row("Transaktionen", "transacciones", "transaksione", "المعاملات", "transações", "transazioni", "транзакции"),
+  "overdue": row("überfällig", "vencido", "me vonesë", "متأخر", "em atraso", "scaduto", "просрочено"),
+  "available": row("verfügbar", "disponible", "në dispozicion", "متاح", "disponível", "disponibile", "доступно"),
+  "line": row("Position", "línea", "rresht", "بند", "linha", "riga", "строка"),
+  "archived": row("archiviert", "archivado", "arkivuar", "مؤرشف", "arquivado", "archiviato", "в архиве"),
+  "activity": row("Aktivität", "actividad", "aktivitet", "النشاط", "atividade", "attività", "активность"),
+  "amount_eur": row("Betrag (EUR)", "importe (EUR)", "shuma (EUR)", "المبلغ (EUR)", "montante (EUR)", "importo (EUR)", "сумма (EUR)"),
+  "active": row("aktiv", "activo", "aktiv", "نشط", "ativo", "attivo", "активно"),
+  "card": row("Karte", "tarjeta", "kartë", "بطاقة", "cartão", "carta", "карта"),
+  "cards": row("Karten", "tarjetas", "karta", "بطاقات", "cartões", "carte", "карты"),
+  "original": row("ursprünglich", "original", "origjinal", "أصلي", "original", "originale", "исходное"),
+  "paid": row("bezahlt", "pagado", "paguar", "مدفوع", "pago", "pagato", "оплачено"),
+  "optional": row("optional", "opcional", "opsionale", "اختياري", "opcional", "facoltativo", "необязательно"),
+  "assumption.": row("Annahme.", "supuesto.", "supozim.", "افتراض.", "pressuposto.", "ipotesi.", "предположение."),
+  "step": row("Schritt", "paso", "hap", "خطوة", "passo", "passaggio", "шаг"),
+  "GOALS": row("ZIELE", "OBJETIVOS", "OBJEKTIVAT", "الأهداف", "OBJETIVOS", "OBIETTIVI", "ЦЕЛИ"),
+  "/ 3 required": row("/ 3 erforderlich", "/ 3 requeridos", "/ 3 të kërkuara", "/ 3 مطلوبة", "/ 3 necessários", "/ 3 richiesti", "/ 3 требуется"),
+  "repaid": row("zurückgezahlt", "reembolsado", "shlyer", "مسدد", "reembolsado", "rimborsato", "погашено"),
+  "text": row("Text", "texto", "tekst", "نص", "texto", "testo", "текст"),
+  "password": row("Passwort", "contraseña", "fjalëkalim", "كلمة المرور", "palavra-passe", "password", "пароль"),
+  "users": row("Benutzer", "usuarios", "përdorues", "المستخدمون", "utilizadores", "utenti", "пользователи"),
+  "total": row("gesamt", "total", "totali", "الإجمالي", "total", "totale", "итого"),
+  "session": row("Sitzung", "sesión", "sesion", "جلسة", "sessão", "sessione", "сеанс"),
+  "sessions": row("Sitzungen", "sesiones", "sesione", "جلسات", "sessões", "sessioni", "сеансы"),
+  "contributions": row("Beiträge", "aportaciones", "kontribute", "المساهمات", "contribuições", "contributi", "взносы"),
+  "annual": row("jährlich", "anual", "vjetore", "سنوي", "anual", "annuale", "ежегодно"),
+  "monthly": row("monatlich", "mensual", "mujore", "شهري", "mensal", "mensile", "ежемесячно"),
+  "forever": row("dauerhaft", "para siempre", "përgjithmonë", "دائمًا", "para sempre", "per sempre", "навсегда"),
+  "/ year": row("/ Jahr", "/ año", "/ vit", "/ سنة", "/ ano", "/ anno", "/ год"),
+  "/ month": row("/ Monat", "/ mes", "/ muaj", "/ شهر", "/ mês", "/ mese", "/ месяц"),
+  "mixed": row("gemischt", "mixto", "e përzier", "مختلط", "misto", "misto", "смешанный"),
+  "selected": row("ausgewählt", "seleccionado", "zgjedhur", "محدد", "selecionado", "selezionato", "выбрано"),
+  "not_released": row("nicht veröffentlicht", "no publicado", "i papublikuar", "غير متاح بعد", "não lançado", "non rilasciato", "не выпущено"),
+  "unauthenticated": row("nicht angemeldet", "sin autenticar", "i paautentikuar", "غير مسجل الدخول", "não autenticado", "non autenticato", "не авторизован"),
+  "upgrade_required": row("Upgrade erforderlich", "se requiere mejora de plan", "kërkohet përmirësim", "يلزم ترقية الخطة", "é necessário atualizar o plano", "upgrade richiesto", "требуется повышение тарифа")
+});
 
 const cache = new Map<string, string>();
 const MAX_CACHE = 3000;
@@ -720,10 +776,6 @@ function cacheSet(key: string, value: string) {
     if (first) cache.delete(first);
   }
   cache.set(key, value);
-}
-
-function letterCount(value: string): number {
-  return (value.match(/\p{L}/gu) ?? []).length;
 }
 
 function dynamicTranslation(
@@ -912,77 +964,6 @@ function dynamicTranslation(
   return null;
 }
 
-function composedTranslation(
-  language: NonEnglishLanguage,
-  source: string,
-): string {
-  if (source.length > 260 || letterCount(source) < 4) return source;
-
-  const lower = source.toLocaleLowerCase("en");
-  const occupied = new Array(source.length).fill(false);
-  const matches: Array<{ start: number; end: number; translated: string; letters: number }> = [];
-
-  for (const [key, translations] of SOURCE_ENTRIES) {
-    const keyLower = key.toLocaleLowerCase("en");
-    let from = 0;
-
-    while (from < lower.length) {
-      const index = lower.indexOf(keyLower, from);
-      if (index < 0) break;
-      const end = index + key.length;
-
-      const before = index > 0 ? source[index - 1] : "";
-      const after = end < source.length ? source[end] : "";
-      const beforeWord = before ? /[\p{L}\p{N}]/u.test(before) : false;
-      const afterWord = after ? /[\p{L}\p{N}]/u.test(after) : false;
-
-      if (!beforeWord && !afterWord) {
-        let free = true;
-        for (let i = index; i < end; i += 1) {
-          if (occupied[i]) {
-            free = false;
-            break;
-          }
-        }
-
-        if (free) {
-          for (let i = index; i < end; i += 1) occupied[i] = true;
-          matches.push({
-            start: index,
-            end,
-            translated: translations[language],
-            letters: letterCount(key),
-          });
-        }
-      }
-
-      from = index + Math.max(1, key.length);
-    }
-  }
-
-  if (!matches.length) return source;
-
-  const sourceLetters = letterCount(source);
-  const matchedLetters = matches.reduce((sum, item) => sum + item.letters, 0);
-
-  // Avoid ugly half-English / half-translated sentences. A composed fallback
-  // is used only when most of the meaningful source can be translated.
-  if (!sourceLetters || matchedLetters / sourceLetters < 0.58) return source;
-
-  matches.sort((a, b) => a.start - b.start);
-
-  let result = "";
-  let cursor = 0;
-  for (const match of matches) {
-    result += source.slice(cursor, match.start);
-    result += match.translated;
-    cursor = match.end;
-  }
-  result += source.slice(cursor);
-
-  return result;
-}
-
 export function translateRuntimePhrase(
   language: FiconterLanguage,
   source: string,
@@ -995,7 +976,8 @@ export function translateRuntimePhrase(
 
   const exact =
     PHRASE_TRANSLATIONS[source]?.[language] ??
-    RUNTIME_TRANSLATIONS[source]?.[language];
+    RUNTIME_TRANSLATIONS[source]?.[language] ??
+    FULL_UI_TRANSLATIONS[source]?.[language];
 
   if (exact) {
     cacheSet(cacheKey, exact);

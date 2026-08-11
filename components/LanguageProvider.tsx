@@ -22,7 +22,7 @@ import {
   type FiconterLanguage,
 } from "@/lib/i18n/config";
 import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
-import { translatePhrase } from "@/lib/i18n/phrases";
+import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
 
 type LanguageContextValue = {
   language: FiconterLanguage;
@@ -34,8 +34,22 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-const TRANSLATABLE_ATTRIBUTES = ["aria-label", "placeholder", "title"] as const;
-const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "CODE", "PRE", "TEXTAREA", "NOSCRIPT"]);
+const TRANSLATABLE_ATTRIBUTES = [
+  "aria-label",
+  "aria-description",
+  "placeholder",
+  "title",
+  "alt",
+] as const;
+
+const SKIP_TAGS = new Set([
+  "SCRIPT",
+  "STYLE",
+  "CODE",
+  "PRE",
+  "TEXTAREA",
+  "NOSCRIPT",
+]);
 
 type TextTranslationState = {
   source: string;
@@ -48,13 +62,20 @@ function normalizeSource(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function renderTranslatedText(source: string, language: FiconterLanguage): string {
+function renderTranslatedText(
+  source: string,
+  language: FiconterLanguage,
+): string {
   if (!source.trim()) return source;
+
   const leading = source.match(/^\s*/)?.[0] ?? "";
   const trailing = source.match(/\s*$/)?.[0] ?? "";
   const normalized = normalizeSource(source);
-  const translated = translatePhrase(language, normalized);
-  return translated === normalized ? source : `${leading}${translated}${trailing}`;
+  const translated = translateRuntimePhrase(language, normalized);
+
+  return translated === normalized
+    ? source
+    : `${leading}${translated}${trailing}`;
 }
 
 function shouldSkipElement(element: Element | null): boolean {
@@ -63,7 +84,9 @@ function shouldSkipElement(element: Element | null): boolean {
   return Boolean(element.closest("[data-no-translate='true']"));
 }
 
-function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
+function createDocumentTranslator(
+  getLanguage: () => FiconterLanguage,
+) {
   const textState = new WeakMap<Text, TextTranslationState>();
   const attributeState = new WeakMap<Element, AttributeTranslationState>();
   let applying = false;
@@ -81,7 +104,11 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
       state.source = current;
     }
 
-    const rendered = renderTranslatedText(state.source, getLanguage());
+    const rendered = renderTranslatedText(
+      state.source,
+      getLanguage(),
+    );
+
     state.rendered = rendered;
     textState.set(node, state);
 
@@ -95,7 +122,7 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
   function processElement(element: Element) {
     if (shouldSkipElement(element)) return;
 
-    let state = attributeState.get(element) ?? {};
+    const state = attributeState.get(element) ?? {};
 
     for (const attribute of TRANSLATABLE_ATTRIBUTES) {
       const current = element.getAttribute(attribute);
@@ -109,7 +136,11 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
       }
 
       const attributeEntry = state[attribute];
-      const rendered = renderTranslatedText(attributeEntry.source, getLanguage());
+      const rendered = renderTranslatedText(
+        attributeEntry.source,
+        getLanguage(),
+      );
+
       attributeEntry.rendered = rendered;
 
       if (current !== rendered) {
@@ -129,6 +160,7 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
     }
 
     if (node.nodeType !== Node.ELEMENT_NODE) return;
+
     const element = node as Element;
     processElement(element);
 
@@ -139,8 +171,11 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
 
     let child = walker.nextNode();
     while (child) {
-      if (child.nodeType === Node.TEXT_NODE) processTextNode(child as Text);
-      else processElement(child as Element);
+      if (child.nodeType === Node.TEXT_NODE) {
+        processTextNode(child as Text);
+      } else {
+        processElement(child as Element);
+      }
       child = walker.nextNode();
     }
   }
@@ -158,7 +193,9 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
       } else if (mutation.type === "attributes") {
         processElement(mutation.target as Element);
       } else {
-        for (const added of mutation.addedNodes) processNode(added);
+        for (const added of mutation.addedNodes) {
+          processNode(added);
+        }
       }
     }
   });
@@ -166,6 +203,7 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
   return {
     start() {
       translateDocument();
+
       if (document.body) {
         observer.observe(document.body, {
           subtree: true,
@@ -188,6 +226,7 @@ function createDocumentTranslator(getLanguage: () => FiconterLanguage) {
 function persistBrowserLanguage(language: FiconterLanguage) {
   const option = getLanguageOption(language);
   const root = document.documentElement;
+
   root.lang = option.locale;
   root.dir = option.direction;
   root.dataset.language = language;
@@ -199,7 +238,8 @@ function persistBrowserLanguage(language: FiconterLanguage) {
     // The cookie and current session still keep the selected language.
   }
 
-  document.cookie = `${LANGUAGE_COOKIE_NAME}=${language}; path=/; max-age=31536000; samesite=lax`;
+  document.cookie =
+    `${LANGUAGE_COOKIE_NAME}=${language}; path=/; max-age=31536000; samesite=lax`;
 }
 
 export function LanguageProvider({
@@ -212,9 +252,12 @@ export function LanguageProvider({
   const [language, setLanguage] = useState<FiconterLanguage>(() =>
     normalizeLanguage(initialLanguage),
   );
+
   const supabase = useMemo(() => createClient(), []);
   const languageRef = useRef(language);
-  const translatorRef = useRef<ReturnType<typeof createDocumentTranslator> | null>(null);
+  const translatorRef = useRef<
+    ReturnType<typeof createDocumentTranslator> | null
+  >(null);
 
   useEffect(() => {
     languageRef.current = language;
@@ -223,7 +266,10 @@ export function LanguageProvider({
   }, [language]);
 
   useEffect(() => {
-    const translator = createDocumentTranslator(() => languageRef.current);
+    const translator = createDocumentTranslator(
+      () => languageRef.current,
+    );
+
     translatorRef.current = translator;
     translator.start();
 
@@ -232,9 +278,15 @@ export function LanguageProvider({
       const cookieMatch = document.cookie.match(
         new RegExp(`(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)`),
       );
+
       const browserPreference = isFiconterLanguage(stored)
         ? stored
-        : normalizeLanguage(cookieMatch ? decodeURIComponent(cookieMatch[1]) : undefined);
+        : normalizeLanguage(
+            cookieMatch
+              ? decodeURIComponent(cookieMatch[1])
+              : undefined,
+          );
+
       if (browserPreference !== languageRef.current) {
         setLanguage(browserPreference);
       }
@@ -249,8 +301,12 @@ export function LanguageProvider({
   }, []);
 
   const changeLanguage = useCallback(
-    async (nextLanguage: FiconterLanguage, persistAccount = true) => {
+    async (
+      nextLanguage: FiconterLanguage,
+      persistAccount = true,
+    ) => {
       const normalized = normalizeLanguage(nextLanguage);
+
       setLanguage(normalized);
       persistBrowserLanguage(normalized);
 
@@ -292,6 +348,7 @@ export function LanguageProvider({
   );
 
   const option = getLanguageOption(language);
+
   const value = useMemo<LanguageContextValue>(
     () => ({
       language,
@@ -300,16 +357,29 @@ export function LanguageProvider({
       changeLanguage,
       t: (key) => translateMessage(language, key),
     }),
-    [changeLanguage, language, option.direction, option.locale],
+    [
+      changeLanguage,
+      language,
+      option.direction,
+      option.locale,
+    ],
   );
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
 export function useLanguage(): LanguageContextValue {
   const context = useContext(LanguageContext);
+
   if (!context) {
-    throw new Error("useLanguage must be used inside LanguageProvider.");
+    throw new Error(
+      "useLanguage must be used inside LanguageProvider.",
+    );
   }
+
   return context;
 }

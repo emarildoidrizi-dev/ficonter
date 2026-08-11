@@ -165,6 +165,18 @@ type BillingHistoryTransaction = {
   } | null;
 };
 
+type SaveFeedback = {
+  type: "success" | "error";
+  text: string;
+};
+
+type SaveFeedbackKey =
+  | "profile"
+  | "baseCurrency"
+  | "financialPreferences"
+  | "notifications"
+  | "appearance";
+
 type Props = {
   userId: string;
   email: string;
@@ -543,6 +555,12 @@ export function SettingsWorkspace({
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<ExportKind>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<
+    Partial<Record<SaveFeedbackKey, SaveFeedback>>
+  >({});
+  const saveFeedbackTimers = useRef<
+    Partial<Record<SaveFeedbackKey, number>>
+  >({});
 
   useEffect(() => {
     if (!isSectionId(initialSection)) return;
@@ -555,7 +573,16 @@ export function SettingsWorkspace({
         : initialSection,
     );
     setMessage(null);
+    setSaveFeedback({});
   }, [initialSection, isSubscriptionExempt]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(saveFeedbackTimers.current).forEach((timer) => {
+        if (timer) window.clearTimeout(timer);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -714,6 +741,64 @@ export function SettingsWorkspace({
     setMessage({ type: "error", text: error instanceof Error ? error.message : fallback });
   }
 
+  function clearSaveFeedback(key: SaveFeedbackKey) {
+    const currentTimer = saveFeedbackTimers.current[key];
+    if (currentTimer) {
+      window.clearTimeout(currentTimer);
+      delete saveFeedbackTimers.current[key];
+    }
+
+    setSaveFeedback((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function showLocalSaveFeedback(
+    key: SaveFeedbackKey,
+    type: SaveFeedback["type"],
+    text: string,
+  ) {
+    const currentTimer = saveFeedbackTimers.current[key];
+    if (currentTimer) window.clearTimeout(currentTimer);
+
+    setSaveFeedback((current) => ({
+      ...current,
+      [key]: { type, text },
+    }));
+
+    saveFeedbackTimers.current[key] = window.setTimeout(() => {
+      setSaveFeedback((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+      delete saveFeedbackTimers.current[key];
+    }, 4200);
+  }
+
+  function localSaveFeedback(key: SaveFeedbackKey) {
+    const feedback = saveFeedback[key];
+    if (!feedback) return null;
+
+    return (
+      <span
+        className={`${styles.actionFeedback} ${
+          feedback.type === "error"
+            ? styles.actionFeedbackError
+            : styles.actionFeedbackSuccess
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {feedback.type === "success" ? <Check size={15} /> : null}
+        {feedback.text}
+      </span>
+    );
+  }
+
   async function saveMetadata(nextData: Metadata) {
     const {
       data: { user },
@@ -737,6 +822,7 @@ export function SettingsWorkspace({
     event.preventDefault();
     setLoading(true);
     setMessage(null);
+    clearSaveFeedback("profile");
 
     try {
       let nextPhotoPath = profilePhotoPath;
@@ -797,9 +883,13 @@ export function SettingsWorkspace({
         }),
       );
 
-      showSuccess("Profile changes saved.");
+      showLocalSaveFeedback("profile", "success", "Profile changes saved.");
     } catch (error) {
-      showError(error, "Your profile could not be updated.");
+      showLocalSaveFeedback(
+        "profile",
+        "error",
+        error instanceof Error ? error.message : "Your profile could not be updated.",
+      );
     } finally {
       setLoading(false);
     }
@@ -922,17 +1012,29 @@ export function SettingsWorkspace({
     }
   }
 
-  async function savePreferences(next: Preferences, text: string) {
+  async function savePreferences(
+    next: Preferences,
+    text: string,
+    feedbackKey: Extract<
+      SaveFeedbackKey,
+      "financialPreferences" | "notifications" | "appearance"
+    >,
+  ) {
     setLoading(true);
     setMessage(null);
+    clearSaveFeedback(feedbackKey);
     try {
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
       applyInterface(next);
       window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
-      showSuccess(text);
+      showLocalSaveFeedback(feedbackKey, "success", text);
     } catch (error) {
-      showError(error, "Your preferences could not be saved.");
+      showLocalSaveFeedback(
+        feedbackKey,
+        "error",
+        error instanceof Error ? error.message : "Your preferences could not be saved.",
+      );
     } finally {
       setLoading(false);
     }
@@ -942,6 +1044,7 @@ export function SettingsWorkspace({
     event.preventDefault();
     setLoading(true);
     setMessage(null);
+    clearSaveFeedback("baseCurrency");
 
     try {
       const normalized = normalizeCurrency(
@@ -1001,9 +1104,17 @@ export function SettingsWorkspace({
         }),
       );
 
-      showSuccess("Your base currency has been saved.");
+      showLocalSaveFeedback(
+        "baseCurrency",
+        "success",
+        "Your base currency has been saved.",
+      );
     } catch (error) {
-      showError(error, "Your base currency could not be saved.");
+      showLocalSaveFeedback(
+        "baseCurrency",
+        "error",
+        error instanceof Error ? error.message : "Your base currency could not be saved.",
+      );
     } finally {
       setLoading(false);
     }
@@ -1429,7 +1540,7 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); }}>
+            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
@@ -1462,7 +1573,7 @@ const showSubscriptionManagement =
                 <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={120} /></label>
                 <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="nickname" maxLength={80} /></label>
               </div>
-              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save profile"}</button></div>
+              <div className={styles.actions}>{localSaveFeedback("profile")}<button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save profile"}</button></div>
             </form>
 
             <form className={styles.formCard} onSubmit={updateEmail}>
@@ -1536,6 +1647,7 @@ const showSubscriptionManagement =
               </div>
 
               <div className={styles.actions}>
+                {localSaveFeedback("baseCurrency")}
                 <button
                   className={styles.primaryButton}
                   disabled={loading}
@@ -1554,6 +1666,7 @@ const showSubscriptionManagement =
                   void savePreferences(
                     preferences,
                     "Financial preferences saved.",
+                    "financialPreferences",
                   );
                 }}
               >
@@ -1622,6 +1735,7 @@ const showSubscriptionManagement =
                   ]}
                 />
                 <div className={styles.actions}>
+                  {localSaveFeedback("financialPreferences")}
                   <button
                     className={styles.primaryButton}
                     disabled={loading}
@@ -1646,7 +1760,7 @@ const showSubscriptionManagement =
               <Toggle checked={preferences.notifications.upcomingPayments} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, upcomingPayments: value } }))} label="Upcoming payment alerts" disabled={!preferences.notifications.emailEnabled} />
               <Toggle checked={preferences.notifications.goalProgress} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, goalProgress: value } }))} label="Goal progress alerts" disabled={!preferences.notifications.emailEnabled} />
               <Toggle checked={preferences.notifications.monthlySummary} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, monthlySummary: value } }))} label="Monthly financial summary" disabled={!preferences.notifications.emailEnabled} />
-              <div className={styles.actions}><button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.")}><Save size={16} />Save notifications</button></div>
+              <div className={styles.actions}>{localSaveFeedback("notifications")}<button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.", "notifications")}><Save size={16} />Save notifications</button></div>
             </div>
           </div>
           ) : (
@@ -1655,7 +1769,7 @@ const showSubscriptionManagement =
         ) : null}
 
         {active === "appearance" ? (
-          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
+          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved.", "appearance"); }}>
             <fieldset className={styles.optionGroup}>
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
@@ -1950,7 +2064,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
+            <div className={styles.actions}>{localSaveFeedback("appearance")}<button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
           </form>
         ) : null}
 

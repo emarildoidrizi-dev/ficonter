@@ -86,6 +86,198 @@ function findFullCatalogRows() {
   return rows;
 }
 
+
+function findCatalogRows(path, variableName) {
+  const sf = sourceFile(path);
+  const rows = new Map();
+  function visit(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.name.getText(sf) === variableName &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      for (const property of node.initializer.properties) {
+        if (!ts.isPropertyAssignment(property)) continue;
+        const source = stringValue(property.name);
+        if (!source) continue;
+
+        const values = {};
+        if (ts.isCallExpression(property.initializer)) {
+          const args = property.initializer.arguments.map(stringValue);
+          if (args.length === 7 && args.every((value) => value !== null)) {
+            [values.de, values.es, values.sq, values.ar, values.pt, values.it, values.ru] = args;
+          }
+        } else if (ts.isObjectLiteralExpression(property.initializer)) {
+          for (const entry of property.initializer.properties) {
+            if (!ts.isPropertyAssignment(entry)) continue;
+            const language = entry.name.getText(sf).replace(/["']/g, "");
+            const value = stringValue(entry.initializer);
+            if (value !== null) values[language] = value;
+          }
+        }
+
+        rows.set(normalizeUiText(source), values);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sf);
+  return rows;
+}
+
+function humanRuntimeString(value) {
+  const text = normalizeUiText(value);
+  if (!hasHumanText(text)) return false;
+  if (
+    text.startsWith("@/") ||
+    text.startsWith("./") ||
+    text.startsWith("../") ||
+    text.startsWith("/dashboard")
+  ) return false;
+  if (/^[a-z0-9_:@./?-]+$/i.test(text) && !text.includes(" ")) return false;
+  if (/[{}<>]|=>|\$\{|\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|FROM|WHERE|JOIN)\b/i.test(text)) return false;
+  return true;
+}
+
+function collectWealthRuntimeStrings() {
+  const directory = join(ROOT, "lib/wealth");
+  const results = new Map();
+
+  for (const fullPath of walkSourceFiles(directory)) {
+    const file = relative(ROOT, fullPath).replaceAll("\\", "/");
+    const text = readFileSync(fullPath, "utf8");
+    const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+    function visit(node) {
+      if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+        const source = normalizeUiText(node.text);
+        if (humanRuntimeString(source)) {
+          // Property names, imports, routes and internal ids are implementation data.
+          if (ts.isImportDeclaration(node.parent) || ts.isExportDeclaration(node.parent)) return;
+          if (ts.isPropertyAssignment(node.parent) && node.parent.name === node) return;
+          if (ts.isElementAccessExpression(node.parent) && node.parent.argumentExpression === node) return;
+
+          if (!results.has(source)) results.set(source, []);
+          const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+          results.get(source).push({ file, line });
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(sf);
+  }
+
+  return results;
+}
+
+const RUNTIME_UI_PROPERTY_NAMES = new Set([
+  "label",
+  "description",
+  "title",
+  "name",
+  "text",
+  "eyebrow",
+  "message",
+  "reason",
+  "detail",
+  "action",
+  "summary",
+  "headline",
+  "subtitle",
+  "body",
+  "helper",
+  "hint",
+  "statusText",
+  "emptyText",
+]);
+
+function templateSkeleton(node) {
+  let value = node.head.text;
+  node.templateSpans.forEach((span, index) => {
+    value += `{${index}}${span.literal.text}`;
+  });
+  return normalizeUiText(value);
+}
+
+function templateIsUiFacing(node, sf, file) {
+  if (file.startsWith("lib/wealth/")) return true;
+
+  let current = node.parent;
+  for (let depth = 0; current && depth < 8; depth += 1, current = current.parent) {
+    if (ts.isJsxExpression(current)) {
+      const parent = current.parent;
+      if (ts.isJsxAttribute(parent)) {
+        const attribute = parent.name.getText(sf);
+        if (["className", "style", "key", "id", "href", "src"].includes(attribute) || attribute.startsWith("data-")) return false;
+      }
+      return true;
+    }
+    if (ts.isJsxAttribute(current)) {
+      const attribute = current.name.getText(sf);
+      if (UI_ATTRIBUTE_NAMES.has(attribute)) return true;
+    }
+    if (ts.isPropertyAssignment(current)) {
+      const name = current.name.getText(sf).replace(/["']/g, "");
+      if (RUNTIME_UI_PROPERTY_NAMES.has(name)) return true;
+    }
+    if (ts.isCallExpression(current) && UI_CALL_NAMES.has(expressionName(current.expression))) return true;
+  }
+
+  return false;
+}
+
+function runtimeTemplateIsImplementationId(source) {
+  if (/^[a-z0-9-]+-\{\d+\}(?:-\{\d+\})?$/.test(source)) return true;
+  if (source.includes("ficonter-scroll-region")) return true;
+  if (source.includes("conic-gradient") || source.includes("rgb(")) return true;
+  if (source.includes("#quick-add")) return true;
+  if (source.startsWith("/")) return true;
+  if (/^\{\d+\}(?:-\d+)?T\d{2}:\d{2}:\d{2}$/.test(source)) return true;
+  if (/^\{\d+\} L \d+/.test(source)) return true;
+  return false;
+}
+
+
+function humanRuntimeTemplateString(value) {
+  const text = normalizeUiText(value);
+  if (!hasHumanText(text)) return false;
+  const withoutPlaceholders = text.replace(/\{\d+\}/g, "");
+  if (/[<>]|=>|\$\{|\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|FROM|WHERE|JOIN)\b/i.test(withoutPlaceholders)) return false;
+  return true;
+}
+
+function collectRuntimeUiTemplates() {
+  const sources = [
+    ...walkSourceFiles(join(ROOT, "app")),
+    ...walkSourceFiles(join(ROOT, "components")),
+    ...walkSourceFiles(join(ROOT, "lib/wealth")),
+  ];
+  const results = new Map();
+
+  for (const fullPath of sources) {
+    const file = relative(ROOT, fullPath).replaceAll("\\", "/");
+    if (file === "app/layout.tsx") continue;
+    const text = readFileSync(fullPath, "utf8");
+    const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+
+    function visit(node) {
+      if (ts.isTemplateExpression(node) && templateIsUiFacing(node, sf, file)) {
+        const source = templateSkeleton(node);
+        if (humanRuntimeTemplateString(source) && !runtimeTemplateIsImplementationId(source)) {
+          if (!results.has(source)) results.set(source, []);
+          const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+          results.get(source).push({ file, line });
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(sf);
+  }
+
+  return results;
+}
+
 function walkSourceFiles(directory, output = []) {
   for (const entry of readdirSync(directory)) {
     const full = join(directory, entry);
@@ -245,10 +437,35 @@ assert(runtimeTranslator.includes("FULL_UI_TRANSLATIONS[source]?.[language]"), "
 assert(!runtimeTranslator.includes("composedTranslation("), "Mixed-language composed translation fallback must not exist.");
 
 const fullRows = findFullCatalogRows();
+const wealthRows = findCatalogRows(
+  "lib/i18n/wealthUiCatalog.ts",
+  "WEALTH_UI_TRANSLATIONS",
+);
+const wealthTemplateRows = findCatalogRows(
+  "lib/i18n/wealthRuntimeTemplates.ts",
+  "WEALTH_RUNTIME_TEMPLATES",
+);
+const globalTemplateRows = findCatalogRows(
+  "lib/i18n/globalRuntimeTemplates.ts",
+  "GLOBAL_RUNTIME_TEMPLATES",
+);
+
 assert(fullRows.size >= 2400, `Full UI catalog is unexpectedly small (${fullRows.size}).`);
-for (const [source, row] of fullRows) {
-  for (const language of NON_ENGLISH) {
-    assert(typeof row[language] === "string" && row[language].trim().length > 0, `Missing ${language} translation for: ${source}`);
+assert(wealthRows.size >= 188, `Wealth runtime catalog is unexpectedly small (${wealthRows.size}).`);
+assert(wealthTemplateRows.size >= 60, `Wealth runtime template catalog is unexpectedly small (${wealthTemplateRows.size}).`);
+assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);
+assert(runtimeTranslator.includes("WEALTH_UI_TRANSLATIONS[source]?.[language]"), "Wealth runtime catalog is not wired into runtime translation.");
+assert(runtimeTranslator.includes("translateWealthTemplate"), "Wealth runtime templates are not wired into runtime translation.");
+assert(runtimeTranslator.includes("translateGlobalTemplate"), "Global runtime templates are not wired into runtime translation.");
+
+for (const catalog of [fullRows, wealthRows, wealthTemplateRows, globalTemplateRows]) {
+  for (const [source, row] of catalog) {
+    for (const language of NON_ENGLISH) {
+      assert(
+        typeof row[language] === "string" && row[language].trim().length > 0,
+        `Missing ${language} translation for: ${source}`,
+      );
+    }
   }
 }
 
@@ -256,29 +473,59 @@ const covered = new Set([
   ...collectStringPropertyKeys("lib/i18n/phrases.ts"),
   ...collectStringPropertyKeys("lib/i18n/runtimeTranslator.ts"),
   ...fullRows.keys(),
+  ...wealthRows.keys(),
 ]);
-const uiStrings = collectStaticUiStrings();
-const uncovered = [];
-for (const [source, uses] of uiStrings) {
-  if (!covered.has(source)) uncovered.push({ source, uses });
-}
 
-if (uncovered.length) {
+function failCoverage(kind, uncovered) {
+  if (!uncovered.length) return;
   if (process.env.LOCALIZATION_DEBUG === "1") {
-    console.log(JSON.stringify(uncovered, null, 2));
+    console.log(JSON.stringify({ kind, uncovered }, null, 2));
     process.exit(2);
   }
-  const preview = uncovered.slice(0, 40).map(({ source, uses }) => {
+  const preview = uncovered.slice(0, 50).map(({ source, uses }) => {
     const use = uses[0];
-    return `- ${JSON.stringify(source)} (${use.file}:${use.line}, ${use.kind}${use.context ? `:${use.context}` : ""})`;
+    return `- ${JSON.stringify(source)} (${use.file}:${use.line})`;
   }).join("\n");
-  throw new Error(`Localization coverage failed: ${uncovered.length} static interface strings are not translated.\n${preview}`);
+  throw new Error(`${kind} localization coverage failed: ${uncovered.length} interface strings/templates are not translated.\n${preview}`);
 }
+
+const uiStrings = collectStaticUiStrings();
+const uncoveredStatic = [];
+for (const [source, uses] of uiStrings) {
+  if (!covered.has(source)) uncoveredStatic.push({ source, uses });
+}
+failCoverage("Static UI", uncoveredStatic);
+
+// V33 closes the gap that V32 missed: human-readable strings emitted by the
+// Wealth Engine business logic rather than written directly in JSX.
+const wealthRuntimeStrings = collectWealthRuntimeStrings();
+const uncoveredWealthRuntime = [];
+for (const [source, uses] of wealthRuntimeStrings) {
+  if (!covered.has(source)) uncoveredWealthRuntime.push({ source, uses });
+}
+failCoverage("Wealth Engine runtime", uncoveredWealthRuntime);
+
+const runtimeTemplateCoverage = new Set([
+  ...wealthTemplateRows.keys(),
+  ...globalTemplateRows.keys(),
+]);
+const runtimeUiTemplates = collectRuntimeUiTemplates();
+const uncoveredTemplates = [];
+for (const [source, uses] of runtimeUiTemplates) {
+  if (!runtimeTemplateCoverage.has(source)) uncoveredTemplates.push({ source, uses });
+}
+failCoverage("Dynamic UI template", uncoveredTemplates);
 
 console.log(`Localization verification passed.`);
 console.log(`- Languages: ${LANGUAGES.join(", ")}`);
-console.log(`- Full UI catalog entries: ${fullRows.size}`);
+console.log(`- Full static UI catalog entries: ${fullRows.size}`);
+console.log(`- Wealth runtime catalog entries: ${wealthRows.size}`);
+console.log(`- Runtime template entries: ${runtimeTemplateCoverage.size}`);
 console.log(`- Static interface strings scanned: ${uiStrings.size}`);
+console.log(`- Wealth Engine runtime strings scanned: ${wealthRuntimeStrings.size}`);
+console.log(`- Dynamic interface templates scanned: ${runtimeUiTemplates.size}`);
 console.log(`- Uncovered static interface strings: 0`);
+console.log(`- Uncovered Wealth Engine runtime strings: 0`);
+console.log(`- Uncovered dynamic interface templates: 0`);
 console.log(`- Duplicate Settings language section: removed`);
 console.log(`- Arabic RTL: configured`);

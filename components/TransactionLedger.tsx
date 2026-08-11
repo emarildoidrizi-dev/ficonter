@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   CalendarRange,
   Download,
@@ -21,6 +21,7 @@ import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
+import { originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
 import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
 import { CATEGORY_GROUPS, CURRENCY_CODES, TRANSACTION_TYPES, TYPE_BY_VALUE, currencyName, currencySymbol, formatCurrency, type FlowDirection, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./TransactionLedger.module.css";
@@ -90,8 +91,20 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
   const { baseCurrency } = useCurrencyDisplay();
-  const { formatHistoricalReportingAmount } = useHistoricalReportingRates(
+  const { rateForDate } = useHistoricalReportingRates(
     transactions.map((transaction) => transaction.transaction_date),
+  );
+
+  const displayedAmountFor = useCallback(
+    (transaction: Transaction) =>
+      originalAmountInBaseCurrency({
+        originalAmount: transaction.amount,
+        originalCurrency: transaction.currency,
+        amountEur: transaction.amount_eur,
+        baseCurrency,
+        euroToBaseRate: rateForDate(transaction.transaction_date),
+      }),
+    [baseCurrency, rateForDate],
   );
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -286,21 +299,28 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
     const outflowValues: unknown[] = [];
     const netValues: unknown[] = [];
     let neutralCount = 0;
+
     visible.forEach((item) => {
       const direction = directionOf(item.type);
-      const euro = finiteNumber(item.amount_eur ?? item.amount);
-      if (direction === "inflow") inflowValues.push(euro);
-      else if (direction === "outflow") outflowValues.push(euro);
+      const amount = displayedAmountFor(item);
+      if (amount === null) return;
+
+      if (direction === "inflow") inflowValues.push(amount);
+      else if (direction === "outflow") outflowValues.push(amount);
       else neutralCount += 1;
-      netValues.push(signedEuroValue(item));
+
+      const sign =
+        direction === "inflow" ? 1 : direction === "outflow" ? -1 : 0;
+      netValues.push(amount * sign);
     });
+
     return {
       inflow: sumMoney(inflowValues),
       outflow: sumMoney(outflowValues),
       net: sumMoney(netValues),
       neutralCount,
     };
-  }, [visible]);
+  }, [displayedAmountFor, visible]);
 
 
   function clearFilters() {
@@ -648,9 +668,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       </div>
 
       <div className={styles.summary}>
-        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatReportingCurrency(totals.inflow)}</strong></div>
-        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatReportingCurrency(totals.outflow)}</strong></div>
-        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatReportingCurrency(totals.net)}</strong></div>
+        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatCurrency(totals.inflow, baseCurrency)}</strong></div>
+        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatCurrency(totals.outflow, baseCurrency)}</strong></div>
+        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatCurrency(totals.net, baseCurrency)}</strong></div>
       </div>
 
       {notice && <div className={styles.notice}>{notice}</div>}
@@ -699,13 +719,15 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
               <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
-                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{baseCurrency === transaction.currency
-                  ? formatCurrency(finiteNumber(transaction.amount), transaction.currency)
-                  : formatHistoricalReportingAmount(
-                      finiteNumber(transaction.amount_eur ?? transaction.amount),
-                      transaction.transaction_date,
-                    )}</strong>
-                <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${finiteNumber(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
+                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{(() => {
+                  const displayedAmount = displayedAmountFor(transaction);
+                  return displayedAmount === null
+                    ? `— ${baseCurrency}`
+                    : formatCurrency(displayedAmount, baseCurrency);
+                })()}</strong>
+                {baseCurrency !== transaction.currency ? (
+                  <span>Original: {formatCurrency(finiteNumber(transaction.amount), transaction.currency)}</span>
+                ) : null}
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>
             </article>
@@ -746,7 +768,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
+              {editCurrency !== baseCurrency ? (
+                <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
+              ) : null}
               {error && <div className={styles.error}>{error}</div>}
               <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
             </form>

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       .order("occurred_at", { ascending: false }),
     supabase
       .from("bills")
-      .select("id,status,amount_eur,due_date,paid_at,transaction_id")
+      .select("id,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
       .eq("user_id", user.id),
     supabase.rpc("get_financial_health_inputs"),
     supabase.rpc("get_ai_insights_inputs"),

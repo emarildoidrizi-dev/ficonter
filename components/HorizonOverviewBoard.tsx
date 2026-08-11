@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight, Compass, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonOverviewBoard.module.css";
 
@@ -19,6 +20,7 @@ type Props = {
   savingsRate: number;
   activity: ActivityPoint[];
   gps: FinancialGpsResult;
+  valuesAlreadyInBaseCurrency?: boolean;
 };
 
 function sparklinePath(activity: ActivityPoint[]) {
@@ -68,7 +70,13 @@ export function HorizonOverviewBoard({
   savingsRate,
   activity,
   gps,
+  valuesAlreadyInBaseCurrency = false,
 }: Props) {
+  const { baseCurrency } = useCurrencyDisplay();
+  const formatBoardCurrency = (value: number) =>
+    valuesAlreadyInBaseCurrency
+      ? formatCurrency(value, baseCurrency)
+      : formatReportingCurrency(value);
   const path = sparklinePath(activity);
   const expenseShare = allocationPercent(expenses, income);
   const savingsShare = allocationPercent(savings, income);
@@ -85,7 +93,7 @@ export function HorizonOverviewBoard({
             {positive ? "Positive" : "Needs attention"}
           </span>
         </div>
-        <strong className={styles.heroNumber}>{formatReportingCurrency(cashFlow)}</strong>
+        <strong className={styles.heroNumber}>{formatBoardCurrency(cashFlow)}</strong>
         <p>Income minus all completed outflows recorded to date.</p>
         <div className={styles.sparkline} aria-hidden="true">
           <svg viewBox="0 0 100 60" preserveAspectRatio="none">
@@ -104,8 +112,8 @@ export function HorizonOverviewBoard({
           </svg>
         </div>
         <div className={styles.miniStats}>
-          <span><small>Recorded income</small><strong>{formatReportingCurrency(income)}</strong></span>
-          <span><small>Recorded expenses</small><strong>{formatReportingCurrency(expenses)}</strong></span>
+          <span><small>Recorded income</small><strong>{formatBoardCurrency(income)}</strong></span>
+          <span><small>Recorded expenses</small><strong>{formatBoardCurrency(expenses)}</strong></span>
         </div>
       </article>
 

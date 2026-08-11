@@ -23,6 +23,7 @@ import {
 import { formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { finiteNumber } from "@/lib/finance/money";
+import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
 import {
   calculateFinancialHealth,
   normalizeFinancialHealthInputs,
@@ -60,6 +61,8 @@ type Transaction = {
 type Bill = {
   id: string;
   status: string;
+  amount: number | string;
+  currency: string | null;
   amount_eur: number | string;
   due_date: string;
   paid_at: string | null;
@@ -155,10 +158,15 @@ export function DashboardLiveOverview({
     [...initialTransactions].sort(newestFirst),
   );
   const { baseCurrency } = useCurrencyDisplay();
-  const { formatHistoricalReportingAmount } = useHistoricalReportingRates(
-    transactions.map((transaction) => transaction.transaction_date),
-  );
   const [bills, setBills] = useState(initialBills);
+  const historicalDates = useMemo(
+    () => [
+      ...transactions.map((transaction) => transaction.transaction_date),
+      ...bills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
+    ],
+    [bills, transactions],
+  );
+  const { rateForDate } = useHistoricalReportingRates(historicalDates);
   const [healthInputs, setHealthInputs] = useState(initialHealthInputs);
   const [healthError, setHealthError] = useState(initialHealthError);
   const [gpsInputs, setGpsInputs] = useState(initialGpsInputs);
@@ -228,7 +236,7 @@ export function DashboardLiveOverview({
             .order("occurred_at", { ascending: false }),
           supabase
             .from("bills")
-            .select("id,status,amount_eur,due_date,paid_at,transaction_id")
+            .select("id,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
             .eq("user_id", userId),
           supabase.rpc("get_financial_health_inputs"),
           supabase.rpc("get_ai_insights_inputs"),
@@ -487,6 +495,34 @@ export function DashboardLiveOverview({
     [recent, todayKey],
   );
   const { metrics } = financialHealth;
+  const displayActuals = useMemo(
+    () =>
+      calculateBaseCurrencyCashActuals({
+        transactions,
+        bills,
+        baseCurrency,
+        throughDate: todayKey || localDateKey(),
+        rateForDate,
+      }),
+    [baseCurrency, bills, rateForDate, todayKey, transactions],
+  );
+  const displaySavingsRate =
+    displayActuals.totalIncome > 0
+      ? (displayActuals.totalSavings / displayActuals.totalIncome) * 100
+      : 0;
+
+  const displayedTransactionAmount = useCallback(
+    (transaction: Transaction) =>
+      originalAmountInBaseCurrency({
+        originalAmount: transaction.amount,
+        originalCurrency: transaction.currency,
+        amountEur: transaction.amount_eur,
+        baseCurrency,
+        euroToBaseRate: rateForDate(transaction.transaction_date),
+      }),
+    [baseCurrency, rateForDate],
+  );
+
   const synchronizedGpsInputs = useMemo<AiInsightsInputs>(() => {
     const sourceMonths = gpsInputs.cashFlow.monthly;
     const sourceCurrentMonth = sourceMonths.at(-1);
@@ -540,10 +576,10 @@ export function DashboardLiveOverview({
   );
   const horizonActivity = useMemo(
     () => recordedActivity.slice(0, 24).map((transaction) => ({
-      amount: euroValue(transaction),
+      amount: displayedTransactionAmount(transaction) ?? 0,
       income: isIncome(transaction),
     })),
-    [recordedActivity],
+    [displayedTransactionAmount, recordedActivity],
   );
 
   return (
@@ -595,13 +631,14 @@ export function DashboardLiveOverview({
           />
         ) : null}
         <HorizonOverviewBoard
-          income={metrics.totalIncome}
-          expenses={metrics.totalExpenses}
-          savings={metrics.totalSavings}
-          cashFlow={metrics.netCashFlow}
-          savingsRate={metrics.savingsRate * 100}
+          income={displayActuals.totalIncome}
+          expenses={displayActuals.totalExpenses}
+          savings={displayActuals.totalSavings}
+          cashFlow={displayActuals.netCashFlow}
+          savingsRate={displaySavingsRate}
           activity={horizonActivity}
           gps={financialGps}
+          valuesAlreadyInBaseCurrency
         />
         <FinancialJourneyRail gps={financialGps} />
       </div>
@@ -620,22 +657,22 @@ export function DashboardLiveOverview({
         <section className="kpis">
           <div className="kpi">
             <span>Income recorded</span>
-            <strong>{formatReportingCurrency(metrics.totalIncome)}</strong>
+            <strong>{formatCurrency(displayActuals.totalIncome, baseCurrency)}</strong>
             <small className={styles.kpiNote}>Displayed in your selected base currency</small>
           </div>
           <div className="kpi">
             <span>Expenses recorded</span>
-            <strong>{formatReportingCurrency(metrics.totalExpenses)}</strong>
+            <strong>{formatCurrency(displayActuals.totalExpenses, baseCurrency)}</strong>
             <small className={styles.kpiNote}>Saving transfers are shown separately</small>
           </div>
           <div className="kpi">
             <span>Recorded cash position</span>
             <strong
               className={
-                metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
+                displayActuals.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
               }
             >
-              {formatReportingCurrency(metrics.netCashFlow)}
+              {formatCurrency(displayActuals.netCashFlow, baseCurrency)}
             </strong>
             <small className={styles.kpiNote}>Completed income minus completed outflows through today</small>
           </div>
@@ -669,9 +706,7 @@ export function DashboardLiveOverview({
                 {recent.map((transaction) => {
                   const currency = transaction.currency || "EUR";
                   const originalAmount = finiteNumber(transaction.amount);
-                  const converted = euroValue(transaction);
                   const income = isIncome(transaction);
-                  const foreign = currency !== "EUR";
                   const scheduled = Boolean(
                     todayKey && transaction.transaction_date > todayKey,
                   );
@@ -704,20 +739,18 @@ export function DashboardLiveOverview({
                           }
                         >
                           {income ? "+" : "-"}
-                          {baseCurrency === currency
-                            ? formatCurrency(originalAmount, currency)
-                            : formatHistoricalReportingAmount(
-                                converted,
-                                transaction.transaction_date,
-                              )}
+                          {(() => {
+                            const displayedAmount = displayedTransactionAmount(transaction);
+                            return displayedAmount === null
+                              ? `— ${baseCurrency}`
+                              : formatCurrency(displayedAmount, baseCurrency);
+                          })()}
                         </strong>
-                        {foreign ? (
+                        {baseCurrency !== currency ? (
                           <span>
                             Original: {formatCurrency(originalAmount, currency)}
                           </span>
-                        ) : (
-                          <span>Original currency: EUR</span>
-                        )}
+                        ) : null}
                       </div>
                     </article>
                   );

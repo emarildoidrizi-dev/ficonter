@@ -2346,16 +2346,22 @@ export type Database = {
       }
       profiles: {
         Row: {
+          base_currency: string
+          base_currency_updated_at: string
           created_at: string
           full_name: string | null
           id: string
         }
         Insert: {
+          base_currency?: string
+          base_currency_updated_at?: string
           created_at?: string
           full_name?: string | null
           id: string
         }
         Update: {
+          base_currency?: string
+          base_currency_updated_at?: string
           created_at?: string
           full_name?: string | null
           id?: string

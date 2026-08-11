@@ -28,7 +28,9 @@ import {
   type FormEvent,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileAiInsightsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   calculateAiInsightsContext,
   normalizeAiInsightSnapshot,
@@ -74,13 +76,13 @@ function dateTimeLabel(value: string): string {
   }).format(parsed);
 }
 
-function evidenceValue(metric: AiEvidenceMetric): string {
+function evidenceValue(metric: AiEvidenceMetric, displayCurrency: CurrencyCode): string {
   if (metric.value === null) return "Not available";
   if (typeof metric.value === "string") return metric.value;
 
   switch (metric.format) {
     case "currency":
-      return formatReportingCurrency(metric.value);
+      return formatCurrency(metric.value, displayCurrency);
     case "percent":
       return `${metric.value.toFixed(1)}%`;
     case "ratio":
@@ -114,9 +116,11 @@ function domainIcon(domain: AiInsightDomain) {
 function EvidenceChips({
   item,
   evidence,
+  displayCurrency,
 }: {
   item: Pick<AiInsightItem, "evidenceKeys">;
   evidence: ReturnType<typeof calculateAiInsightsContext>["evidence"];
+  displayCurrency: CurrencyCode;
 }) {
   if (!item.evidenceKeys.length) return null;
 
@@ -127,7 +131,7 @@ function EvidenceChips({
         return (
           <span className={styles.evidenceChip} key={key}>
             <small>{metric.label}</small>
-            <strong>{evidenceValue(metric)}</strong>
+            <strong>{evidenceValue(metric, displayCurrency)}</strong>
           </span>
         );
       })}
@@ -138,9 +142,11 @@ function EvidenceChips({
 function InsightCard({
   item,
   evidence,
+  displayCurrency,
 }: {
   item: AiInsightItem;
   evidence: ReturnType<typeof calculateAiInsightsContext>["evidence"];
+  displayCurrency: CurrencyCode;
 }) {
   const Icon = domainIcon(item.domain);
   const route = DOMAIN_ROUTES[item.domain];
@@ -162,7 +168,7 @@ function InsightCard({
         <span>Recommended action</span>
         <strong>{item.action}</strong>
       </div>
-      <EvidenceChips item={item} evidence={evidence} />
+      <EvidenceChips item={item} evidence={evidence} displayCurrency={displayCurrency} />
       {route ? (
         <Link className={styles.moduleLink} href={route} prefetch={false}>
           Open {item.domain}
@@ -178,12 +184,14 @@ function InsightSection({
   title,
   items,
   evidence,
+  displayCurrency,
   emptyMessage,
 }: {
   eyebrow: string;
   title: string;
   items: AiInsightItem[];
   evidence: ReturnType<typeof calculateAiInsightsContext>["evidence"];
+  displayCurrency: CurrencyCode;
   emptyMessage: string;
 }) {
   return (
@@ -200,6 +208,7 @@ function InsightSection({
             <InsightCard
               item={item}
               evidence={evidence}
+              displayCurrency={displayCurrency}
               key={`${item.domain}-${item.title}-${index}`}
             />
           ))}
@@ -219,6 +228,11 @@ export function AiInsights({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: currencySource,
+    context: currencyContext,
+    baseCurrency,
+  } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const noticeTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
@@ -251,7 +265,14 @@ export function AiInsights({
     noticeTimerRef.current = window.setTimeout(() => setNotice(""), 5000);
   }, []);
 
-  const context = useMemo(() => calculateAiInsightsContext(inputs), [inputs]);
+  const reconciledInputs = useMemo(
+    () => reconcileAiInsightsToBaseCurrency(inputs, currencySource, currencyContext),
+    [currencyContext, currencySource, inputs],
+  );
+  const context = useMemo(
+    () => calculateAiInsightsContext(reconciledInputs),
+    [reconciledInputs],
+  );
   const stale = Boolean(snapshot && snapshot.dataFingerprint !== fingerprint);
 
   const refresh = useCallback(async () => {
@@ -651,6 +672,7 @@ export function AiInsights({
             title="What deserves attention first"
             items={report.priorities}
             evidence={context.evidence}
+              displayCurrency={baseCurrency}
             emptyMessage="No priority was identified from the available data."
           />
 
@@ -660,6 +682,7 @@ export function AiInsights({
               title="Where momentum can improve"
               items={report.opportunities}
               evidence={context.evidence}
+              displayCurrency={baseCurrency}
               emptyMessage="More history is needed to identify reliable opportunities."
             />
             <InsightSection
@@ -667,6 +690,7 @@ export function AiInsights({
               title="Signals to keep visible"
               items={report.watchlist}
               evidence={context.evidence}
+              displayCurrency={baseCurrency}
               emptyMessage="No additional watch item was identified."
             />
           </div>
@@ -688,7 +712,7 @@ export function AiInsights({
                       <h3>{step.title}</h3>
                     </div>
                     <p>{step.action}</p>
-                    <EvidenceChips item={step} evidence={context.evidence} />
+                    <EvidenceChips item={step} evidence={context.evidence} displayCurrency={baseCurrency} />
                   </div>
                 </li>
               ))}

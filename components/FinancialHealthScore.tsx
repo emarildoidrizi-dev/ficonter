@@ -12,7 +12,8 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import type {
   FinancialHealthFactor,
   FinancialHealthFactorId,
@@ -30,11 +31,11 @@ const FACTOR_ICONS = {
   planning: CalendarCheck2,
 } satisfies Record<FinancialHealthFactorId, typeof TrendingUp>;
 
-function factorMetric(factor: FinancialHealthFactor): string {
+function factorMetric(factor: FinancialHealthFactor, baseCurrency: CurrencyCode): string {
   if (factor.metricLabel) return factor.metricLabel;
 
   if (factor.metricUnit === "currency") {
-    return formatReportingCurrency(factor.metricValue);
+    return formatCurrency(factor.metricValue, baseCurrency);
   }
   if (factor.metricUnit === "percent") {
     return `${factor.metricValue.toFixed(1)}%`;
@@ -55,6 +56,7 @@ export function FinancialHealthScore({
   result: FinancialHealthResult;
   error?: string;
 }) {
+  const { baseCurrency } = useCurrencyDisplay();
   const [expanded, setExpanded] = useState(false);
   const circumference = 2 * Math.PI * 46;
   const displayedScore = result.scoreAvailable ? result.score : 0;
@@ -170,7 +172,7 @@ export function FinancialHealthScore({
                     <div className={styles.factorTop}>
                       <div>
                         <strong>{factor.name}</strong>
-                        <span>{factorMetric(factor)}</span>
+                        <span>{factorMetric(factor, baseCurrency)}</span>
                       </div>
                       <b>
                         {factor.assessed ? (

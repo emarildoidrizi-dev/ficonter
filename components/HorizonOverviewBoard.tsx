@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Compass, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency, formatReportingCurrency, type CurrencyCode } from "@/lib/financialOptions";
 import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonOverviewBoard.module.css";
@@ -46,10 +46,10 @@ function sparklinePath(activity: ActivityPoint[]) {
     .join(" ");
 }
 
-function evidenceValue(item: FinancialGpsResult["primaryAction"]["evidence"][number]) {
+function evidenceValue(item: FinancialGpsResult["primaryAction"]["evidence"][number], displayCurrency: CurrencyCode) {
   if (item.value === null) return "Pending";
   if (typeof item.value === "string") return item.value;
-  if (item.format === "currency") return formatReportingCurrency(item.value);
+  if (item.format === "currency") return formatCurrency(item.value, displayCurrency);
   if (item.format === "percent") return `${item.value.toFixed(1)}%`;
   if (item.format === "months") return `${item.value.toFixed(1)} months`;
   if (item.format === "ratio") return `${item.value.toFixed(2)}×`;
@@ -164,7 +164,7 @@ export function HorizonOverviewBoard({
                 {gps.primaryAction.evidence.slice(0, 3).map((item) => (
                   <span key={item.label}>
                     <small>{item.label}</small>
-                    <strong>{evidenceValue(item)}</strong>
+                    <strong>{evidenceValue(item, baseCurrency)}</strong>
                   </span>
                 ))}
               </div>

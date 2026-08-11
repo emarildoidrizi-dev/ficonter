@@ -27,7 +27,12 @@ import {
   subscribeFiconterDataChanges,
 } from "@/lib/ficonterRealtime";
 import { finiteNumber, roundMoney } from "@/lib/finance/money";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { canonicalAmountInBaseCurrency, reconcileEmergencyFundToBaseCurrency, reconcileNetWorthGrowthToBaseCurrency, reconcileSavingsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import type { NetWorthGrowthInputs } from "@/lib/wealth/netWorthGrowth";
+import type { SavingsIntelligenceInputs } from "@/lib/wealth/savingsIntelligence";
+import type { EmergencyFundInputs } from "@/lib/wealth/emergencyFund";
 import styles from "./FinancialIndependence.module.css";
 
 type PlanningStyle = "safer" | "balanced" | "flexible";
@@ -101,7 +106,6 @@ const GROWTH_OPTIONS: GrowthOption[] = [
   },
 ];
 
-const money = (value: number) => formatReportingCurrency(roundMoney(value));
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -313,6 +317,11 @@ function readableError(error: unknown, fallback: string): string {
 
 export function FinancialIndependence({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const { source: currencySource, context: currencyContext, baseCurrency } = useBaseCurrencySourceData(userId);
+  const money = useCallback(
+    (value: number) => formatCurrency(roundMoney(value), baseCurrency),
+    [baseCurrency],
+  );
   const [payload, setPayload] = useState<FinancialIndependencePayload | null>(null);
   const [lifestyleNeed, setLifestyleNeed] = useState("");
   const [planningStyle, setPlanningStyle] = useState<PlanningStyle>("balanced");
@@ -388,6 +397,45 @@ export function FinancialIndependence({ userId }: { userId: string }) {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  const reconciledPayload = useMemo<FinancialIndependencePayload | null>(() => {
+    if (!payload) return null;
+    const next: FinancialIndependencePayload = { ...payload };
+    if (payload.netWorthGrowth) {
+      next.netWorthGrowth = reconcileNetWorthGrowthToBaseCurrency(
+        payload.netWorthGrowth as NetWorthGrowthInputs,
+        currencySource,
+        currencyContext,
+      ) as unknown as Record<string, unknown>;
+    }
+    if (payload.savingsIntelligence) {
+      next.savingsIntelligence = reconcileSavingsToBaseCurrency(
+        payload.savingsIntelligence as SavingsIntelligenceInputs,
+        currencySource,
+        currencyContext,
+      ) as unknown as Record<string, unknown>;
+    }
+    if (payload.emergencyFund) {
+      next.emergencyFund = reconcileEmergencyFundToBaseCurrency(
+        payload.emergencyFund as EmergencyFundInputs,
+        currencySource,
+        currencyContext,
+      ) as unknown as Record<string, unknown>;
+    }
+    if (payload.settings) {
+      next.settings = {
+        ...payload.settings,
+        targetMonthlySpending:
+          payload.settings.targetMonthlySpending == null
+            ? null
+            : canonicalAmountInBaseCurrency(
+                payload.settings.targetMonthlySpending,
+                currencyContext,
+              ),
+      };
+    }
+    return next;
+  }, [currencyContext, currencySource, payload]);
+
   const selectedPlan = PLANS.find((option) => option.id === planningStyle) ?? PLANS[1];
   const selectedGrowth =
     GROWTH_OPTIONS.find((option) => option.id === growthStyle) ?? GROWTH_OPTIONS[1];
@@ -398,21 +446,21 @@ export function FinancialIndependence({ userId }: { userId: string }) {
   const selectedTarget =
     selectedPlan.rate > 0 ? annualInvestmentNeed / (selectedPlan.rate / 100) : 0;
 
-  const currentCapital = payload ? deriveCurrentCapital(payload) : 0;
-  const currentNetWorth = payload ? deriveCurrentNetWorth(payload) : 0;
-  const monthlyContribution = payload ? deriveMonthlyContribution(payload) : 0;
-  const consistency = payload
-    ? deriveSavingConsistency(payload)
+  const currentCapital = reconciledPayload ? deriveCurrentCapital(reconciledPayload) : 0;
+  const currentNetWorth = reconciledPayload ? deriveCurrentNetWorth(reconciledPayload) : 0;
+  const monthlyContribution = reconciledPayload ? deriveMonthlyContribution(reconciledPayload) : 0;
+  const consistency = reconciledPayload
+    ? deriveSavingConsistency(reconciledPayload)
     : { contributingMonths: 0, observedMonths: 0 };
-  const cashFlowMargin = payload ? deriveCashFlowMargin(payload) : 0;
-  const reserveAmount = payload
+  const cashFlowMargin = reconciledPayload ? deriveCashFlowMargin(reconciledPayload) : 0;
+  const reserveAmount = reconciledPayload
     ? numericPath(
-        payload,
+        reconciledPayload,
         ["emergencyFund", "financialHealth", "transactions", "emergencyFundSavings"],
       )
     : 0;
-  const overdueBills = payload
-    ? numericPath(payload, ["emergencyFund", "financialHealth", "bills", "overdueCount"])
+  const overdueBills = reconciledPayload
+    ? numericPath(reconciledPayload, ["emergencyFund", "financialHealth", "bills", "overdueCount"])
     : 0;
 
   const progress = selectedTarget > 0

@@ -20,7 +20,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import {
@@ -33,7 +33,9 @@ import {
   roundRate,
   sumMoney,
 } from "@/lib/finance/money";
-import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
+import { currentRecordAmountInBaseCurrency, historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import styles from "./CreditCardsManager.module.css";
 
 type CreditCardDebt = {
@@ -267,10 +269,6 @@ function money(value: unknown, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
 }
 
-function reportingMoney(value: unknown) {
-  return formatReportingCurrency(finiteNumber(value));
-}
-
 function readableDate(value: string | null) {
   if (!value) return "Not set";
   const date = new Date(`${value}T12:00:00`);
@@ -352,10 +350,44 @@ export function CreditCardsManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency, latestRate } = useCurrencyDisplay();
   const [cards, setCards] = useState(initialCards);
   const [activities, setActivities] = useState(initialActivities);
   const [payments, setPayments] = useState(initialPayments);
   const [monthlyRecords, setMonthlyRecords] = useState(initialMonthlyRecords);
+  const currencyDates = useMemo(
+    () => [
+      ...activities.map((activity) => activity.occurred_at.slice(0, 10)),
+      ...payments.map((payment) => payment.paid_at.slice(0, 10)),
+      ...monthlyRecords.map((record) => record.statement_date),
+    ],
+    [activities, monthlyRecords, payments],
+  );
+  const { rateForDate } = useHistoricalReportingRates(currencyDates);
+  const currencyContext = useMemo(
+    () => ({ baseCurrency, latestRate, rateForDate }),
+    [baseCurrency, latestRate, rateForDate],
+  );
+  const currentField = useCallback(
+    (native: unknown, currency: unknown, eur: unknown) =>
+      currentRecordAmountInBaseCurrency({ originalAmount: native, originalCurrency: currency, amountEur: eur, context: currencyContext }),
+    [currencyContext],
+  );
+  const historicalField = useCallback(
+    (native: unknown, currency: unknown, eur: unknown, date: string | null | undefined) =>
+      historicalRecordAmountInBaseCurrency({ originalAmount: native, originalCurrency: currency, amountEur: eur, date: date?.slice(0, 10), context: currencyContext }),
+    [currencyContext],
+  );
+  const displayMoney = useCallback(
+    (value: unknown) => formatCurrency(finiteNumber(value), baseCurrency),
+    [baseCurrency],
+  );
+  const cardCurrent = useCallback((card: CreditCardDebt) => currentField(card.current_balance, card.currency, card.current_balance_eur), [currentField]);
+  const cardLimit = useCallback((card: CreditCardDebt) => card.credit_limit == null || card.credit_limit_eur == null ? 0 : currentField(card.credit_limit, card.currency, card.credit_limit_eur), [currentField]);
+  const paymentBase = useCallback((payment: DebtPayment) => historicalField(payment.amount, payment.currency, payment.amount_eur, payment.paid_at), [historicalField]);
+  const activityAmountBase = useCallback((activity: CreditCardActivity) => historicalField(activity.amount, activity.currency, activity.amount_eur, activity.occurred_at), [historicalField]);
+  const activityEffectBase = useCallback((activity: CreditCardActivity) => historicalField(activity.balance_effect, activity.currency, activity.balance_effect_eur, activity.occurred_at), [historicalField]);
+  const recordFieldBase = useCallback((record: CreditCardMonthlyRecord, native: unknown, eur: unknown) => historicalField(native, record.currency, eur, record.statement_date), [historicalField]);
   const [selectedMonth, setSelectedMonth] = useState(monthKey());
   const [cardForm, setCardForm] = useState<CardForm>(EMPTY_CARD);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -401,9 +433,7 @@ export function CreditCardsManager({
               return current.filter((card) => card.id !== next.id);
             }
             return upsertById(current, next).sort(
-              (a, b) =>
-                finiteNumber(b.current_balance_eur) -
-                finiteNumber(a.current_balance_eur),
+              (a, b) => cardCurrent(b) - cardCurrent(a),
             );
           });
           notifyFiconterDataChange("all");
@@ -481,25 +511,14 @@ export function CreditCardsManager({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [supabase, userId]);
+  }, [cardCurrent, supabase, userId]);
 
   const totals = useMemo(() => {
     const activeCards = cards.filter((card) => card.status !== "paused");
-    const outstanding = sumMoney(
-      activeCards.map((card) => card.current_balance_eur),
-    );
-    const availableCredit = sumMoney(
-      activeCards.map((card) =>
-        Math.max(
-          0,
-          finiteNumber(card.credit_limit_eur) -
-            finiteNumber(card.current_balance_eur),
-        ),
-      ),
-    );
-
+    const outstanding = sumMoney(activeCards.map(cardCurrent));
+    const availableCredit = sumMoney(activeCards.map((card) => Math.max(0, cardLimit(card) - cardCurrent(card))));
     return { outstanding, availableCredit };
-  }, [cards]);
+  }, [cardCurrent, cardLimit, cards]);
 
   function shiftMonth(offset: number) {
     const next = new Date(`${selectedMonth}-01T12:00:00`);
@@ -551,7 +570,7 @@ export function CreditCardsManager({
           const paidAt = new Date(payment.paid_at).getTime();
           return paidAt >= start && paidAt < end;
         })
-        .map((payment) => payment.amount),
+        .map(paymentBase),
     );
   }
 
@@ -567,12 +586,10 @@ export function CreditCardsManager({
         payment.debt_id === card.id &&
         inMonth(payment.paid_at, selectedMonth),
     );
-    const paidThisMonth = sumMoney(
-      monthPayments.map((payment) => payment.amount),
-    );
+    const paidThisMonth = sumMoney(monthPayments.map(paymentBase));
     const paidTowardStatement = paymentsTowardStatement(card, record);
-    const minimumPayment = finiteNumber(record?.minimum_payment);
-    const statementBalance = finiteNumber(record?.statement_balance);
+    const minimumPayment = record ? recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur) : 0;
+    const statementBalance = record ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur) : 0;
     const minimumRemaining = Math.max(
       0,
       roundMoney(minimumPayment - paidTowardStatement),
@@ -584,25 +601,25 @@ export function CreditCardsManager({
     const purchases = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "purchase")
-        .map((activity) => activity.amount),
+        .map(activityAmountBase),
     );
     const fees = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "fee")
-        .map((activity) => activity.amount),
+        .map(activityAmountBase),
     );
     const refunds = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "refund")
-        .map((activity) => activity.amount),
+        .map(activityAmountBase),
     );
     const activityInterest = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "interest")
-        .map((activity) => activity.amount),
+        .map(activityAmountBase),
     );
     const interest = record
-      ? finiteNumber(record.interest_charged)
+      ? recordFieldBase(record, record.interest_charged, record.interest_charged_eur)
       : activityInterest;
 
     return {
@@ -636,14 +653,14 @@ export function CreditCardsManager({
             cardIds.has(payment.debt_id) &&
             inMonth(payment.paid_at, selectedMonth),
         )
-        .map((payment) => payment.amount_eur),
+        .map(paymentBase),
     );
     const interest = sumMoney(
       cards.map((card) => {
         const record = monthRecords.find(
           (item) => item.debt_id === card.id,
         );
-        if (record) return record.interest_charged_eur;
+        if (record) return recordFieldBase(record, record.interest_charged, record.interest_charged_eur);
         return sumMoney(
           activities
             .filter(
@@ -652,12 +669,12 @@ export function CreditCardsManager({
                 activity.activity_type === "interest" &&
                 inMonth(activity.occurred_at, selectedMonth),
             )
-            .map((activity) => activity.amount_eur),
+            .map(activityAmountBase),
         );
       }),
     );
     const statementBalances = sumMoney(
-      monthRecords.map((record) => record.statement_balance_eur),
+      monthRecords.map((record) => recordFieldBase(record, record.statement_balance, record.statement_balance_eur)),
     );
     const remainingByCard = cards.map((card) => {
       const record = monthRecords.find(
@@ -685,27 +702,27 @@ export function CreditCardsManager({
             `${nextRecord.statement_date}T00:00:00`,
           ).getTime()
         : Number.POSITIVE_INFINITY;
-      const paidEur = sumMoney(
+      const paidBase = sumMoney(
         payments
           .filter((payment) => {
             if (payment.debt_id !== card.id) return false;
             const paidAt = new Date(payment.paid_at).getTime();
             return paidAt >= start && paidAt < end;
           })
-          .map((payment) => payment.amount_eur),
+          .map(paymentBase),
       );
 
       return {
         minimumRemaining: Math.max(
           0,
           roundMoney(
-            finiteNumber(record.minimum_payment_eur) - paidEur,
+            recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur) - paidBase,
           ),
         ),
         statementRemaining: Math.max(
           0,
           roundMoney(
-            finiteNumber(record.statement_balance_eur) - paidEur,
+            recordFieldBase(record, record.statement_balance, record.statement_balance_eur) - paidBase,
           ),
         ),
       };
@@ -724,7 +741,7 @@ export function CreditCardsManager({
       statementRemaining,
       interest,
     };
-  }, [activities, cards, monthlyRecords, payments, selectedMonth]);
+  }, [activities, activityAmountBase, cards, monthlyRecords, paymentBase, payments, recordFieldBase, selectedMonth]);
 
   function resetCardForm() {
     setCardForm({ ...EMPTY_CARD, start_date: localDateKey() });
@@ -1343,31 +1360,31 @@ export function CreditCardsManager({
           <article>
             <ReceiptText />
             <span>Statement balances</span>
-            <strong>{reportingMoney(monthlyTotals.statementBalances)}</strong>
+            <strong>{displayMoney(monthlyTotals.statementBalances)}</strong>
           </article>
           <article>
             <ArrowDownLeft />
             <span>Paid this month</span>
-            <strong>{reportingMoney(monthlyTotals.paidThisMonth)}</strong>
+            <strong>{displayMoney(monthlyTotals.paidThisMonth)}</strong>
           </article>
           <article>
             <WalletCards />
             <span>Balance left to pay</span>
-            <strong>{reportingMoney(monthlyTotals.statementRemaining)}</strong>
+            <strong>{displayMoney(monthlyTotals.statementRemaining)}</strong>
           </article>
           <article>
             <Gauge />
             <span>Interest charged</span>
-            <strong>{reportingMoney(monthlyTotals.interest)}</strong>
+            <strong>{displayMoney(monthlyTotals.interest)}</strong>
           </article>
         </div>
         <div className={styles.currentPosition}>
           <span>Current total card debt</span>
-          <strong>{reportingMoney(totals.outstanding)}</strong>
+          <strong>{displayMoney(totals.outstanding)}</strong>
           <span>Current available credit</span>
-          <strong>{reportingMoney(totals.availableCredit)}</strong>
+          <strong>{displayMoney(totals.availableCredit)}</strong>
           <span>Minimum still due</span>
-          <strong>{reportingMoney(monthlyTotals.minimumRemaining)}</strong>
+          <strong>{displayMoney(monthlyTotals.minimumRemaining)}</strong>
         </div>
       </section>
 
@@ -1535,8 +1552,8 @@ export function CreditCardsManager({
       <div className={styles.cardGrid}>
         {cards.length ? (
           cards.map((card) => {
-            const current = finiteNumber(card.current_balance);
-            const limit = finiteNumber(card.credit_limit);
+            const current = cardCurrent(card);
+            const limit = cardLimit(card);
             const available = Math.max(0, limit - current);
             const utilization = limit > 0 ? (current / limit) * 100 : 0;
             const metrics = monthlyMetrics(card);
@@ -1580,18 +1597,18 @@ export function CreditCardsManager({
                 <div className={styles.balancePanel}>
                   <div className={styles.mainBalance}>
                     <span>Current balance</span>
-                    <strong>{money(card.current_balance, card.currency)}</strong>
-                    {card.currency !== "EUR" ? (
-                      <small>{reportingMoney(card.current_balance_eur)} reporting value</small>
+                    <strong>{displayMoney(current)}</strong>
+                    {card.currency !== baseCurrency ? (
+                      <small>Original card balance: {money(card.current_balance, card.currency)}</small>
                     ) : null}
                   </div>
                   <div>
                     <span>Available credit</span>
-                    <strong>{money(available, card.currency)}</strong>
+                    <strong>{displayMoney(available)}</strong>
                   </div>
                   <div>
                     <span>Credit limit</span>
-                    <strong>{limit > 0 ? money(limit, card.currency) : "Not set"}</strong>
+                    <strong>{limit > 0 ? displayMoney(limit) : "Not set"}</strong>
                   </div>
                 </div>
 
@@ -1608,7 +1625,7 @@ export function CreditCardsManager({
                     <span>Statement balance</span>
                     <strong>
                       {metrics.record
-                        ? money(metrics.statementBalance, card.currency)
+                        ? displayMoney(metrics.statementBalance)
                         : "Not recorded"}
                     </strong>
                     <small>
@@ -1619,7 +1636,7 @@ export function CreditCardsManager({
                   </div>
                   <div>
                     <span>Paid this month</span>
-                    <strong>{money(metrics.paidThisMonth, card.currency)}</strong>
+                    <strong>{displayMoney(metrics.paidThisMonth)}</strong>
                     <small>
                       Confirmed payments dated in {monthTitle(selectedMonth)}
                     </small>
@@ -1628,7 +1645,7 @@ export function CreditCardsManager({
                     <span>Balance left to pay</span>
                     <strong>
                       {metrics.record
-                        ? money(metrics.statementRemaining, card.currency)
+                        ? displayMoney(metrics.statementRemaining)
                         : "No statement"}
                     </strong>
                     <small>Remaining from the selected statement balance</small>
@@ -1637,15 +1654,12 @@ export function CreditCardsManager({
                     <span>Minimum payment due</span>
                     <strong>
                       {metrics.record
-                        ? money(metrics.minimumPayment, card.currency)
+                        ? displayMoney(metrics.minimumPayment)
                         : "Not recorded"}
                     </strong>
                     <small>
                       {metrics.record
-                        ? `Automatic 3% · ${money(
-                            minimumRemaining,
-                            card.currency,
-                          )} still to pay · ${paymentStatus(
+                        ? `Automatic 3% · ${displayMoney(minimumRemaining)} still to pay · ${paymentStatus(
                             metrics.record,
                             metrics.paidTowardStatement,
                           )}`
@@ -1654,24 +1668,21 @@ export function CreditCardsManager({
                   </div>
                   <div>
                     <span>Interest charged</span>
-                    <strong>{money(metrics.interest, card.currency)}</strong>
+                    <strong>{displayMoney(metrics.interest)}</strong>
                     <small>
                       {finiteNumber(card.annual_interest_rate).toFixed(2)}% APR · ~
-                      {money(estimatedInterest, card.currency)} estimated monthly
+                      {displayMoney(estimatedInterest)} estimated monthly
                     </small>
                   </div>
                   <div>
                     <span>Monthly activity</span>
                     <strong>
-                      {money(
-                        metrics.purchases + metrics.fees - metrics.refunds,
-                        card.currency,
-                      )}
+                      {displayMoney(metrics.purchases + metrics.fees - metrics.refunds)}
                     </strong>
                     <small>
-                      Purchases {money(metrics.purchases, card.currency)} · Fees{" "}
-                      {money(metrics.fees, card.currency)} · Refunds{" "}
-                      {money(metrics.refunds, card.currency)}
+                      Purchases {displayMoney(metrics.purchases)} · Fees{" "}
+                      {displayMoney(metrics.fees)} · Refunds{" "}
+                      {displayMoney(metrics.refunds)}
                     </small>
                   </div>
                   <div>
@@ -1682,7 +1693,7 @@ export function CreditCardsManager({
                         : "Not set"}
                     </strong>
                     <small>
-                      {money(metrics.paidTowardStatement, card.currency)} paid
+                      {displayMoney(metrics.paidTowardStatement)} paid
                       toward this statement
                     </small>
                   </div>
@@ -1738,7 +1749,7 @@ export function CreditCardsManager({
                             </div>
                             <div className={styles.timelineAmount}>
                               <strong className={styles.negativeEffect}>
-                                −{money(item.payment.amount, card.currency)}
+                                −{displayMoney(paymentBase(item.payment))}
                               </strong>
                               <button
                                 type="button"
@@ -1752,7 +1763,7 @@ export function CreditCardsManager({
                         );
                       }
 
-                      const effect = finiteNumber(item.activity.balance_effect);
+                      const effect = activityEffectBase(item.activity);
                       return (
                         <div className={styles.timelineRow} key={`activity-${item.activity.id}`}>
                           <span
@@ -1776,7 +1787,7 @@ export function CreditCardsManager({
                           <div className={styles.timelineAmount}>
                             <strong className={effect < 0 ? styles.negativeEffect : styles.positiveEffect}>
                               {effect < 0 ? "−" : "+"}
-                              {money(Math.abs(effect), card.currency)}
+                              {displayMoney(Math.abs(effect))}
                             </strong>
                             {item.activity.activity_type !== "statement_adjustment" ? (
                               <button

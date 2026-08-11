@@ -15,13 +15,15 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate, getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
-import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
+import { currentRecordAmountInBaseCurrency, historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import styles from "./DebtManager.module.css";
 
 type DebtStatus = "active" | "paid_off" | "paused";
@@ -170,10 +172,6 @@ function money(value: number | string, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
 }
 
-function reportingMoney(value: number | string) {
-  return formatReportingCurrency(finiteNumber(value));
-}
-
 async function convertToEur(amount: number, currency: string) {
   if (amount === 0) {
     const rateResult = await getExchangeRate(currency, "EUR");
@@ -219,8 +217,63 @@ export function DebtManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency, latestRate } = useCurrencyDisplay();
   const [debts, setDebts] = useState<Debt[]>(initialDebts);
   const [payments, setPayments] = useState<DebtPayment[]>(initialPayments);
+  const paymentDates = useMemo(
+    () => payments.map((payment) => payment.paid_at?.slice(0, 10)),
+    [payments],
+  );
+  const { rateForDate } = useHistoricalReportingRates(paymentDates);
+  const currencyContext = useMemo(
+    () => ({ baseCurrency, latestRate, rateForDate }),
+    [baseCurrency, latestRate, rateForDate],
+  );
+  const currentDebtValue = useCallback(
+    (debt: Debt) =>
+      currentRecordAmountInBaseCurrency({
+        originalAmount: debt.current_balance,
+        originalCurrency: debt.currency,
+        amountEur: debt.current_balance_eur,
+        context: currencyContext,
+      }),
+    [currencyContext],
+  );
+  const originalDebtValue = useCallback(
+    (debt: Debt) =>
+      currentRecordAmountInBaseCurrency({
+        originalAmount: debt.original_balance,
+        originalCurrency: debt.currency,
+        amountEur: debt.original_balance_eur,
+        context: currencyContext,
+      }),
+    [currencyContext],
+  );
+  const minimumDebtValue = useCallback(
+    (debt: Debt) =>
+      currentRecordAmountInBaseCurrency({
+        originalAmount: debt.minimum_payment,
+        originalCurrency: debt.currency,
+        amountEur: debt.minimum_payment_eur,
+        context: currencyContext,
+      }),
+    [currencyContext],
+  );
+  const paymentValue = useCallback(
+    (payment: DebtPayment) =>
+      historicalRecordAmountInBaseCurrency({
+        originalAmount: payment.amount,
+        originalCurrency: payment.currency,
+        amountEur: payment.amount_eur,
+        date: payment.paid_at?.slice(0, 10),
+        context: currencyContext,
+      }),
+    [currencyContext],
+  );
+  const reportingMoney = useCallback(
+    (value: number | string) => formatCurrency(finiteNumber(value), baseCurrency),
+    [baseCurrency],
+  );
   const [form, setForm] = useState(() => ({
     ...EMPTY_DEBT,
     autopay_timezone: browserTimezone(),
@@ -312,17 +365,17 @@ export function DebtManager({
   const standardDebts = debts.filter((debt) => debt.category !== "Credit card");
   const totals = useMemo(() => {
     const outstanding = sumMoney(
-      activeDebts.map((debt) => debt.current_balance_eur),
+      activeDebts.map(currentDebtValue),
     );
     const minimum = sumMoney(
-      activeDebts.map((debt) => debt.minimum_payment_eur),
+      activeDebts.map(minimumDebtValue),
     );
-    const paid = sumMoney(payments.map((payment) => payment.amount_eur));
+    const paid = sumMoney(payments.map(paymentValue));
     const creditCardOutstanding = sumMoney(
-      creditCardDebts.map((debt) => debt.current_balance_eur),
+      creditCardDebts.map(currentDebtValue),
     );
     const creditCardMinimum = sumMoney(
-      creditCardDebts.map((debt) => debt.minimum_payment_eur),
+      creditCardDebts.map(minimumDebtValue),
     );
     return {
       outstanding,
@@ -331,7 +384,7 @@ export function DebtManager({
       creditCardOutstanding,
       creditCardMinimum,
     };
-  }, [activeDebts, creditCardDebts, payments]);
+  }, [activeDebts, creditCardDebts, currentDebtValue, minimumDebtValue, paymentValue, payments]);
 
   const filteredDebts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -347,8 +400,8 @@ export function DebtManager({
           (statusFilter === "all" || debt.status === statusFilter)
         );
       })
-      .sort((a, b) => finiteNumber(b.current_balance_eur) - finiteNumber(a.current_balance_eur));
-  }, [standardDebts, search, categoryFilter, statusFilter]);
+      .sort((a, b) => currentDebtValue(b) - currentDebtValue(a));
+  }, [categoryFilter, currentDebtValue, search, standardDebts, statusFilter]);
 
   function resetDebtForm() {
     setForm({
@@ -959,8 +1012,8 @@ export function DebtManager({
         {filteredDebts.length ? (
           filteredDebts.map((debt) => {
             const Icon = categoryIcon(debt.category);
-            const original = finiteNumber(debt.original_balance_eur);
-            const current = finiteNumber(debt.current_balance_eur);
+            const original = originalDebtValue(debt);
+            const current = currentDebtValue(debt);
             const repaidPercentage = original
               ? Math.max(0, Math.min(100, ((original - current) / original) * 100))
               : 0;
@@ -996,11 +1049,11 @@ export function DebtManager({
                                   sameLocalMonth(payment.paid_at),
                               );
                               const paidThisMonth = sumMoney(
-                                monthPayments.map((payment) => payment.amount_eur),
+                                monthPayments.map(paymentValue),
                               );
                               const monthlyMinimum = Math.min(
-                                finiteNumber(debt.current_balance_eur),
-                                finiteNumber(debt.minimum_payment_eur),
+                                currentDebtValue(debt),
+                                minimumDebtValue(debt),
                               );
                               const remaining = Math.max(
                                 0,
@@ -1058,7 +1111,7 @@ export function DebtManager({
                 <div className={styles.balanceRow}>
                   <div>
                     <span>Outstanding</span>
-                    <strong>{reportingMoney(debt.current_balance_eur)}</strong>
+                    <strong>{reportingMoney(currentDebtValue(debt))}</strong>
                     {debt.currency !== "EUR" ? (
                       <small>
                         {money(debt.current_balance, debt.currency)} original
@@ -1067,7 +1120,7 @@ export function DebtManager({
                   </div>
                   <div>
                     <span>Minimum payment</span>
-                    <strong>{reportingMoney(debt.minimum_payment_eur)}</strong>
+                    <strong>{reportingMoney(minimumDebtValue(debt))}</strong>
                     <small>
                       {debt.payment_due_day
                         ? `Due day ${debt.payment_due_day}`
@@ -1111,7 +1164,7 @@ export function DebtManager({
                     debtPayments.map((payment) => (
                       <div className={styles.paymentRow} key={payment.id}>
                         <div>
-                          <strong>{reportingMoney(payment.amount_eur)}</strong>
+                          <strong>{reportingMoney(paymentValue(payment))}</strong>
                           <span>
                             {new Date(payment.paid_at).toLocaleString("en-GB", {
                               dateStyle: "medium",

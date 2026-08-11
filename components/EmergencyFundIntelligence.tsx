@@ -23,7 +23,9 @@ import {
   AVERAGE_PERIODS,
   type AveragePeriod,
 } from "@/lib/wealth/averagePeriods";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileEmergencyFundToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   calculateEmergencyFund,
   normalizeEmergencyFundInputs,
@@ -86,6 +88,11 @@ export function EmergencyFundIntelligence({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: currencySource,
+    context: currencyContext,
+    baseCurrency,
+  } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const historyScrollRef = useRef<HTMLDivElement | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
@@ -163,7 +170,18 @@ export function EmergencyFundIntelligence({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
-  const result = useMemo(() => calculateEmergencyFund(inputs), [inputs]);
+  const reconciledInputs = useMemo(
+    () => reconcileEmergencyFundToBaseCurrency(inputs, currencySource, currencyContext),
+    [currencyContext, currencySource, inputs],
+  );
+  const result = useMemo(
+    () => calculateEmergencyFund(reconciledInputs),
+    [reconciledInputs],
+  );
+  const money = useCallback(
+    (value: number) => formatCurrency(value, baseCurrency),
+    [baseCurrency],
+  );
   const statusSlug = result.status.toLowerCase().replaceAll(" ", "-");
   const maxMonthlyContribution = Math.max(
     1,
@@ -236,7 +254,7 @@ export function EmergencyFundIntelligence({
         <article>
           <Umbrella aria-hidden="true" />
           <span>Current reserve</span>
-          <strong>{formatReportingCurrency(result.metrics.currentBalance)}</strong>
+          <strong>{money(result.metrics.currentBalance)}</strong>
           <small>Recorded Emergency fund saving transactions</small>
         </article>
         <article>
@@ -248,13 +266,13 @@ export function EmergencyFundIntelligence({
         <article>
           <Target aria-hidden="true" />
           <span>Recommended reserve</span>
-          <strong>{formatReportingCurrency(result.metrics.recommendedTarget)}</strong>
+          <strong>{money(result.metrics.recommendedTarget)}</strong>
           <small>{result.recommendedTargetMonths}-month protection target</small>
         </article>
         <article>
           <WalletCards aria-hidden="true" />
           <span>Remaining gap</span>
-          <strong>{formatReportingCurrency(result.metrics.recommendedGap)}</strong>
+          <strong>{money(result.metrics.recommendedGap)}</strong>
           <small>Amount remaining to the recommended target</small>
         </article>
       </div>
@@ -302,7 +320,7 @@ export function EmergencyFundIntelligence({
             <span>
               <small>Monthly protection baseline</small>
               <strong>
-                {formatReportingCurrency(result.metrics.protectionBaseline)}
+                {money(result.metrics.protectionBaseline)}
               </strong>
               <span className={styles.periodMetricNote}>
                 Higher of recorded average expenses and known one-month commitments.
@@ -315,7 +333,7 @@ export function EmergencyFundIntelligence({
             <span>
               <small>This month contributed</small>
               <strong>
-                {formatReportingCurrency(result.metrics.currentMonthContribution)}
+                {money(result.metrics.currentMonthContribution)}
               </strong>
             </span>
             <div className={styles.periodMetric}>
@@ -338,9 +356,9 @@ export function EmergencyFundIntelligence({
                   ))}
                 </div>
               </div>
-              <strong>{formatReportingCurrency(selectedAverageContribution)}</strong>
+              <strong>{money(selectedAverageContribution)}</strong>
               <span className={styles.periodMetricNote}>
-                {formatReportingCurrency(selectedPeriodTotal)} contributed over the
+                {money(selectedPeriodTotal)} contributed over the
                 last {averagePeriod} calendar months. Months without a contribution
                 count as €0.
               </span>
@@ -382,7 +400,7 @@ export function EmergencyFundIntelligence({
                       <strong>{milestone.label}</strong>
                       <span>{milestone.months} months of expenses</span>
                     </div>
-                    <b>{formatReportingCurrency(milestone.target)}</b>
+                    <b>{money(milestone.target)}</b>
                   </div>
                   <div className={styles.miniTrack} aria-hidden="true">
                     <span style={{ width: `${milestone.progress * 100}%` }} />
@@ -390,7 +408,7 @@ export function EmergencyFundIntelligence({
                   <small>
                     {milestone.reached
                       ? "Milestone reached"
-                      : `${formatReportingCurrency(milestone.remaining)} remaining`}
+                      : `${money(milestone.remaining)} remaining`}
                   </small>
                 </div>
               </div>
@@ -411,7 +429,7 @@ export function EmergencyFundIntelligence({
             <div>
               <span>Suggested monthly contribution</span>
               <strong>
-                {formatReportingCurrency(result.metrics.suggestedMonthlyContribution)}
+                {money(result.metrics.suggestedMonthlyContribution)}
               </strong>
             </div>
           </div>
@@ -438,7 +456,7 @@ export function EmergencyFundIntelligence({
             <div>
               <span>Six-month contribution average</span>
               <strong>
-                {formatReportingCurrency(result.metrics.averageContribution6Months)}
+                {money(result.metrics.averageContribution6Months)}
               </strong>
             </div>
           </div>
@@ -507,7 +525,7 @@ export function EmergencyFundIntelligence({
                     <span
                       className={styles.bar}
                       style={{ height: `${height}%` }}
-                      title={`${label.month}${label.year ? ` ${label.year}` : ""}: ${formatReportingCurrency(month.contribution)}`}
+                      title={`${label.month}${label.year ? ` ${label.year}` : ""}: ${money(month.contribution)}`}
                     />
                   </div>
                   <strong>{label.month}</strong>
@@ -516,7 +534,7 @@ export function EmergencyFundIntelligence({
                   ) : null}
                   <small>
                     {month.contribution > 0
-                      ? formatReportingCurrency(month.contribution)
+                      ? money(month.contribution)
                       : "—"}
                   </small>
                 </div>
@@ -542,7 +560,7 @@ export function EmergencyFundIntelligence({
                     <strong>{contribution.description}</strong>
                     <span>{dateTimeLabel(contribution.occurredAt)}</span>
                   </div>
-                  <b>{formatReportingCurrency(contribution.amount)}</b>
+                  <b>{money(contribution.amount)}</b>
                 </div>
               ))
             ) : (

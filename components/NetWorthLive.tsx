@@ -8,7 +8,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileNetWorthGrowthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { calculateWealthScore } from "@/lib/wealth/wealthScore";
 import {
   normalizeNetWorthGrowthInputs,
@@ -28,6 +30,11 @@ export function NetWorthLive({
   initialError?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: currencySource,
+    context: currencyContext,
+    baseCurrency,
+  } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialGrowthInputs);
   const [error, setError] = useState(initialError);
@@ -136,11 +143,19 @@ export function NetWorthLive({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
-  const result = useMemo(
-    () => calculateWealthScore(inputs.wealthScore),
-    [inputs.wealthScore],
+  const reconciledInputs = useMemo(
+    () => reconcileNetWorthGrowthToBaseCurrency(inputs, currencySource, currencyContext),
+    [currencyContext, currencySource, inputs],
   );
-  const liabilities = inputs.wealthScore.liabilities;
+  const result = useMemo(
+    () => calculateWealthScore(reconciledInputs.wealthScore),
+    [reconciledInputs.wealthScore],
+  );
+  const liabilities = reconciledInputs.wealthScore.liabilities;
+  const money = useCallback(
+    (value: number) => formatCurrency(value, baseCurrency),
+    [baseCurrency],
+  );
 
   return (
     <section className={styles.shell}>
@@ -174,18 +189,18 @@ export function NetWorthLive({
               result.metrics.availableCash >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatReportingCurrency(result.metrics.availableCash)}
+            {money(result.metrics.availableCash)}
           </strong>
         </article>
         <article>
           <PiggyBank />
           <span>Recorded savings</span>
-          <strong>{formatReportingCurrency(result.metrics.recordedSavings)}</strong>
+          <strong>{money(result.metrics.recordedSavings)}</strong>
         </article>
         <article>
           <TrendingDown />
           <span>Total liabilities</span>
-          <strong>{formatReportingCurrency(result.metrics.currentDebt)}</strong>
+          <strong>{money(result.metrics.currentDebt)}</strong>
         </article>
         <article>
           <Landmark />
@@ -195,14 +210,14 @@ export function NetWorthLive({
               result.metrics.netWorth >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatReportingCurrency(result.metrics.netWorth)}
+            {money(result.metrics.netWorth)}
           </strong>
         </article>
       </div>
 
-      <WealthScore result={result} error={error} />
+      <WealthScore result={result} error={error} displayCurrency={baseCurrency} />
 
-      <NetWorthGrowth inputs={inputs} />
+      <NetWorthGrowth inputs={reconciledInputs} displayCurrency={baseCurrency} />
 
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
@@ -237,7 +252,7 @@ export function NetWorthLive({
                     repaid
                   </small>
                 </div>
-                <strong>{formatReportingCurrency(debt.currentBalance)}</strong>
+                <strong>{money(debt.currentBalance)}</strong>
               </div>
             ))}
           </div>

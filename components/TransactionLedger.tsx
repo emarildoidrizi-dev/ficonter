@@ -725,9 +725,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                     ? `— ${baseCurrency}`
                     : formatCurrency(displayedAmount, baseCurrency);
                 })()}</strong>
-                {baseCurrency !== transaction.currency ? (
-                  <span>Original: {formatCurrency(finiteNumber(transaction.amount), transaction.currency)}</span>
-                ) : null}
+                <span>
+                  Original: {formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 {transaction.currency} = {finiteNumber(transaction.exchange_rate_to_eur || 1).toFixed(6)} EUR
+                </span>
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>
             </article>
@@ -768,9 +768,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              {editCurrency !== baseCurrency ? (
-                <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
-              ) : null}
+              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : editCurrency === baseCurrency ? `Base currency equivalent: ${formatCurrency(finiteNumber(editAmount), baseCurrency)} · no conversion required` : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
               {error && <div className={styles.error}>{error}</div>}
               <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
             </form>

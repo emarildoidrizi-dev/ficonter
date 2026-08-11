@@ -526,7 +526,7 @@ export function TransactionForm({
         <>
           <div>
             <span>Base currency equivalent</span>
-            <strong>{formatReportingCurrency(euroAmount)}</strong>
+            <strong>{currency === baseCurrency ? formatCurrency(numericAmount, baseCurrency) : formatReportingCurrency(euroAmount)}</strong>
           </div>
           <small>
             {currency === baseCurrency

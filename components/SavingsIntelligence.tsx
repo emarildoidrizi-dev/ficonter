@@ -29,8 +29,10 @@ import {
   roundMoney,
   roundRate,
 } from "@/lib/finance/money";
-import { CURRENCY_CODES, currencyName, currencySymbol, formatReportingCurrency } from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileSavingsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   calculateSavingsIntelligence,
   normalizeSavingsIntelligenceInputs,
@@ -134,7 +136,8 @@ export function SavingsIntelligence({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const { baseCurrency } = useCurrencyDisplay();
+  const { baseCurrency, formatReportingAmount } = useCurrencyDisplay();
+  const { source: currencySource, context: currencyContext } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
@@ -510,7 +513,18 @@ export function SavingsIntelligence({
     setActionLoading(false);
   }, [actionLoading, announceNotice, deleteTarget, refresh, supabase]);
 
-  const result = useMemo(() => calculateSavingsIntelligence(inputs), [inputs]);
+  const reconciledInputs = useMemo(
+    () => reconcileSavingsToBaseCurrency(inputs, currencySource, currencyContext),
+    [currencyContext, currencySource, inputs],
+  );
+  const result = useMemo(
+    () => calculateSavingsIntelligence(reconciledInputs),
+    [reconciledInputs],
+  );
+  const money = useCallback(
+    (value: number) => formatCurrency(value, baseCurrency),
+    [baseCurrency],
+  );
   const statusSlug = result.status.toLowerCase().replaceAll(" ", "-");
   const maxMonthlySaving = Math.max(
     1,
@@ -569,7 +583,7 @@ export function SavingsIntelligence({
         <article>
           <PiggyBank aria-hidden="true" />
           <span>Non-emergency savings</span>
-          <strong>{formatReportingCurrency(result.metrics.totalSaved)}</strong>
+          <strong>{money(result.metrics.totalSaved)}</strong>
           <small>Emergency Fund contributions are tracked separately</small>
         </article>
         <article>
@@ -604,15 +618,15 @@ export function SavingsIntelligence({
           </div>
           <div className={styles.periodValues} aria-live="polite">
             <div>
-              <strong>{formatReportingCurrency(selectedMonthlyAverage)}</strong>
+              <strong>{money(selectedMonthlyAverage)}</strong>
               <small>
                 Total saved in the last {averagePeriod} calendar months divided
-                by {averagePeriod}. Months without savings count as €0.
+                by {averagePeriod}. Months without savings count as zero in your selected base currency.
               </small>
             </div>
             <div className={styles.annualizedPace}>
               <span>Annualized pace</span>
-              <b>{formatReportingCurrency(selectedAnnualizedPace)}</b>
+              <b>{money(selectedAnnualizedPace)}</b>
               <small>Selected monthly average × 12</small>
             </div>
           </div>
@@ -656,12 +670,12 @@ export function SavingsIntelligence({
             <span>
               <small>Recommended monthly target</small>
               <strong>
-                {formatReportingCurrency(result.metrics.recommendedMonthlyTarget)}
+                {money(result.metrics.recommendedMonthlyTarget)}
               </strong>
             </span>
             <span>
               <small>Monthly gap</small>
-              <strong>{formatReportingCurrency(result.metrics.monthlyGap)}</strong>
+              <strong>{money(result.metrics.monthlyGap)}</strong>
             </span>
             <span>
               <small>Saving consistency</small>
@@ -734,11 +748,11 @@ export function SavingsIntelligence({
                         (month.savings / maxMonthlySaving) * 100,
                       )}%`,
                     }}
-                    title={`${monthLabel(month.month)}: ${formatReportingCurrency(month.savings)}`}
+                    title={`${monthLabel(month.month)}: ${money(month.savings)}`}
                   />
                 </div>
                 <strong>{monthLabel(month.month).split(" ")[0]}</strong>
-                <small>{formatReportingCurrency(month.savings)}</small>
+                <small>{money(month.savings)}</small>
               </div>
             ))}
           </div>
@@ -767,7 +781,7 @@ export function SavingsIntelligence({
                       <span>{category.contributionCount} contributions</span>
                     </div>
                     <div>
-                      <b>{formatReportingCurrency(category.amount)}</b>
+                      <b>{money(category.amount)}</b>
                       <span>{(category.share * 100).toFixed(1)}%</span>
                     </div>
                   </div>
@@ -812,7 +826,7 @@ export function SavingsIntelligence({
               </strong>
               <small>
                 {result.bestMonth
-                  ? formatReportingCurrency(result.bestMonth.amount)
+                  ? money(result.bestMonth.amount)
                   : "Build saving history"}
               </small>
             </div>
@@ -826,7 +840,7 @@ export function SavingsIntelligence({
               </strong>
               <small>
                 {result.weakestMonth
-                  ? formatReportingCurrency(result.weakestMonth.amount)
+                  ? money(result.weakestMonth.amount)
                   : "Build saving history"}
               </small>
             </div>
@@ -842,7 +856,7 @@ export function SavingsIntelligence({
               <WalletCards size={19} aria-hidden="true" />
               <span>Planning baseline</span>
               <strong>
-                {formatReportingCurrency(result.metrics.baselineMonthlySavings)}
+                {money(result.metrics.baselineMonthlySavings)}
               </strong>
               <small>
                 Six-month calendar average used for target progress and planning
@@ -875,7 +889,7 @@ export function SavingsIntelligence({
                       </span>
                     </div>
                     <div className={styles.recentRight}>
-                      <b>{formatReportingCurrency(saving.amount)}</b>
+                      <b>{money(saving.amount)}</b>
                       {managedInGoals ? (
                         <Link className={styles.inlineLink} href="/dashboard/goals">
                           Managed in Goals
@@ -1016,7 +1030,7 @@ export function SavingsIntelligence({
                   ? "Retrieving reference rate…"
                   : editRateError
                     ? editRateError
-                    : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}
+                    : `Base currency equivalent: ${formatReportingAmount(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}
               </div>
               {actionError ? <div className={styles.error}>{actionError}</div> : null}
               <div className={styles.modalActions}>

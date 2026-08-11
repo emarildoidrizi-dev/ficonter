@@ -20,10 +20,12 @@ import {
   reconcileAiInsightsInputs,
   reconcileFinancialHealthInputs,
 } from "@/lib/finance/monthlyCashActuals";
-import { formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { finiteNumber } from "@/lib/finance/money";
 import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   calculateFinancialHealth,
   normalizeFinancialHealthInputs,
@@ -81,15 +83,6 @@ type Props = {
   initialHealthError?: string;
   initialGpsError?: string;
 };
-
-function euroValue(transaction: Transaction) {
-  if (transaction.amount_eur !== null && transaction.amount_eur !== undefined) {
-    return finiteNumber(transaction.amount_eur);
-  }
-  return transaction.currency === "EUR" || !transaction.currency
-    ? finiteNumber(transaction.amount)
-    : 0;
-}
 
 function isIncome(transaction: Transaction) {
   return transaction.type === "income";
@@ -151,6 +144,10 @@ export function DashboardLiveOverview({
   initialGpsError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: globalCurrencySource,
+    context: globalCurrencyContext,
+  } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const refreshInFlightRef = useRef<Promise<void> | null>(null);
   const refreshQueuedRef = useRef(false);
@@ -485,9 +482,27 @@ export function DashboardLiveOverview({
     [],
   );
 
+  const reconciledHealthInputs = useMemo(
+    () =>
+      reconcileFinancialHealthToBaseCurrency(
+        healthInputs,
+        globalCurrencySource,
+        globalCurrencyContext,
+      ),
+    [globalCurrencyContext, globalCurrencySource, healthInputs],
+  );
+  const reconciledGpsInputs = useMemo(
+    () =>
+      reconcileAiInsightsToBaseCurrency(
+        gpsInputs,
+        globalCurrencySource,
+        globalCurrencyContext,
+      ),
+    [globalCurrencyContext, globalCurrencySource, gpsInputs],
+  );
   const financialHealth = useMemo(
-    () => calculateFinancialHealth(healthInputs),
-    [healthInputs],
+    () => calculateFinancialHealth(reconciledHealthInputs),
+    [reconciledHealthInputs],
   );
   const recent = useMemo(() => transactions.slice(0, 120), [transactions]);
   const recordedActivity = useMemo(
@@ -524,7 +539,7 @@ export function DashboardLiveOverview({
   );
 
   const synchronizedGpsInputs = useMemo<AiInsightsInputs>(() => {
-    const sourceMonths = gpsInputs.cashFlow.monthly;
+    const sourceMonths = reconciledGpsInputs.cashFlow.monthly;
     const sourceCurrentMonth = sourceMonths.at(-1);
     const hasRecordedPosition =
       Math.abs(metrics.totalIncome) > 0.005 ||
@@ -534,7 +549,7 @@ export function DashboardLiveOverview({
     const synchronizedCurrentMonth = {
       month:
         sourceCurrentMonth?.month ||
-        gpsInputs.generatedAt.slice(0, 7) ||
+        reconciledGpsInputs.generatedAt.slice(0, 7) ||
         new Date().toISOString().slice(0, 7),
       transactionCount: Math.max(
         sourceCurrentMonth?.transactionCount ?? 0,
@@ -551,16 +566,16 @@ export function DashboardLiveOverview({
       : [synchronizedCurrentMonth];
 
     return {
-      ...gpsInputs,
+      ...reconciledGpsInputs,
       cashFlow: {
-        ...gpsInputs.cashFlow,
-        financialHealth: healthInputs,
+        ...reconciledGpsInputs.cashFlow,
+        financialHealth: reconciledHealthInputs,
         monthly: synchronizedMonths,
       },
     };
   }, [
-    gpsInputs,
-    healthInputs,
+    reconciledGpsInputs,
+    reconciledHealthInputs,
     metrics.netCashFlow,
     metrics.totalExpenses,
     metrics.totalIncome,
@@ -626,7 +641,7 @@ export function DashboardLiveOverview({
       <div className={styles.horizonOnly}>
         {!financialGps.active || financialGps.setupCompletion < 100 ? (
           <FinancialSetupSummary
-            inputs={healthInputs}
+            inputs={reconciledHealthInputs}
             acknowledgements={setupAcknowledgements}
           />
         ) : null}
@@ -645,11 +660,11 @@ export function DashboardLiveOverview({
 
       <div className={styles.classicOnly}>
         <FinancialSetupSummary
-          inputs={healthInputs}
+          inputs={reconciledHealthInputs}
           acknowledgements={setupAcknowledgements}
         />
         <FinancialGpsSummary
-          inputs={gpsInputs}
+          inputs={reconciledGpsInputs}
           acknowledgements={setupAcknowledgements}
           error={gpsError}
         />

@@ -382,19 +382,24 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
 
   function exportCsv(items: Transaction[], scope: "view" | "selected") {
     if (!items.length) return;
-    const header = ["Description", "Category", "Occurred at", "Transaction type", "Direction", "Currency", "Original amount", "EUR amount", "Rate to EUR", "Rate date"];
-    const rows = items.map((item) => [
-      item.description,
-      item.category,
-      item.occurred_at ?? item.transaction_date,
-      typeLabel(item.type),
-      directionOf(item.type),
-      item.currency,
-      finiteNumber(item.amount).toFixed(2),
-      finiteNumber(item.amount_eur ?? item.amount).toFixed(2),
-      finiteNumber(item.exchange_rate_to_eur ?? 1).toFixed(8),
-      item.exchange_rate_date ?? "",
-    ]);
+    const header = ["Description", "Category", "Occurred at", "Transaction type", "Direction", "Original currency", "Original amount", "Display currency", "Display amount", "Canonical EUR amount", "Rate to EUR", "Rate date"];
+    const rows = items.map((item) => {
+      const displayed = displayedAmountFor(item);
+      return [
+        item.description,
+        item.category,
+        item.occurred_at ?? item.transaction_date,
+        typeLabel(item.type),
+        directionOf(item.type),
+        item.currency,
+        finiteNumber(item.amount).toFixed(2),
+        baseCurrency,
+        displayed === null ? "" : displayed.toFixed(2),
+        finiteNumber(item.amount_eur ?? item.amount).toFixed(2),
+        finiteNumber(item.exchange_rate_to_eur ?? 1).toFixed(8),
+        item.exchange_rate_date ?? "",
+      ];
+    });
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -421,8 +426,15 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         metadata?.display_name ?? metadata?.full_name ?? user.email ?? "FICONTER account holder",
       );
       const exportedAt = new Date().toISOString();
-      const pdf = await createTransactionsPdf(
-        items.map((transaction) => ({
+      const pdfRecords = items.map((transaction) => {
+        const displayed = displayedAmountFor(transaction);
+        if (displayed === null) {
+          throw new Error(
+            "Currency conversion is still loading. Try the PDF export again in a moment.",
+          );
+        }
+
+        return {
           description: transaction.description,
           category: transaction.category,
           type: typeLabel(transaction.type),
@@ -430,9 +442,21 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
           currency: transaction.currency || "EUR",
           amount: finiteNumber(transaction.amount),
           amount_eur: finiteNumber(transaction.amount_eur ?? transaction.amount),
+          display_amount: displayed,
+          display_currency: baseCurrency,
           occurred_at: transaction.occurred_at ?? `${transaction.transaction_date}T00:00:00`,
-        })),
-        { ownerName, email: user.email ?? "", locale: "en-US", exportedAt },
+        };
+      });
+
+      const pdf = await createTransactionsPdf(
+        pdfRecords,
+        {
+          ownerName,
+          email: user.email ?? "",
+          locale: "en-US",
+          exportedAt,
+          baseCurrency,
+        },
       );
 
       triggerDownload(`ficonter-transactions-${scope}-${exportDateSuffix}.pdf`, pdf);

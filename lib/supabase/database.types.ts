@@ -3296,10 +3296,14 @@ export type Database = {
       }
       record_goal_investment: {
         Args: {
-          p_amount: number
+          p_amount_eur: number
+          p_currency: string
+          p_exchange_rate: number
+          p_exchange_rate_date: string
           p_goal_id: string
           p_invested_at: string
           p_notes: string
+          p_original_amount: number
         }
         Returns: Json
       }

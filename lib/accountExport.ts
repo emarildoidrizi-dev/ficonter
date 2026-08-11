@@ -42,6 +42,8 @@ export type TransactionPdfRecord = {
   currency: string;
   amount: number;
   amount_eur: number;
+  display_amount: number;
+  display_currency: string;
   occurred_at: string;
 };
 
@@ -50,6 +52,7 @@ export type TransactionPdfMetadata = {
   email?: string;
   locale?: string;
   exportedAt?: string;
+  baseCurrency?: string;
 };
 
 type PdfColumn = {
@@ -570,10 +573,10 @@ function reportSummary(payload: AccountExportPayload): { label: string; value: s
   const cash = income - outflow;
 
   return [
-    { label: "Recorded cash position", value: currency(cash, "EUR") },
-    { label: "Outstanding liabilities", value: currency(liabilities, "EUR") },
-    { label: "Net financial position", value: currency(cash - liabilities, "EUR") },
-    { label: "Pending bills", value: currency(pendingBills, "EUR") },
+    { label: "Canonical EUR cash position", value: currency(cash, "EUR") },
+    { label: "Canonical EUR liabilities", value: currency(liabilities, "EUR") },
+    { label: "Canonical EUR net position", value: currency(cash - liabilities, "EUR") },
+    { label: "Canonical EUR pending bills", value: currency(pendingBills, "EUR") },
     { label: "Goal progress", value: goalTarget ? `${Math.min(100, (goalSaved / goalTarget) * 100).toFixed(1)}%` : "No active target" },
     { label: "Financial records", value: String(Object.values(payload.data).reduce((total, rows) => total + rows.length, 0)) },
   ];
@@ -817,17 +820,21 @@ export async function createTransactionsPdf(
   const exportedAt = metadata.exportedAt ?? new Date().toISOString();
   const ownerName = metadata.ownerName?.trim() || "FICONTER account holder";
   const locale = metadata.locale || "en-US";
+  const baseCurrency =
+    metadata.baseCurrency ||
+    transactions[0]?.display_currency ||
+    "EUR";
   const report = new CanvasReport(ownerName, exportedAt, "Private transaction export");
 
   const totals = transactions.reduce(
     (summary, transaction) => {
-      if (transaction.direction === "inflow") summary.inflow += transaction.amount_eur;
-      else if (transaction.direction === "outflow") summary.outflow += transaction.amount_eur;
+      if (transaction.direction === "inflow") summary.inflow += transaction.display_amount;
+      else if (transaction.direction === "outflow") summary.outflow += transaction.display_amount;
       summary.net +=
         transaction.direction === "inflow"
-          ? transaction.amount_eur
+          ? transaction.display_amount
           : transaction.direction === "outflow"
-            ? -transaction.amount_eur
+            ? -transaction.display_amount
             : 0;
       summary.currencies.add(transaction.currency || "EUR");
       return summary;
@@ -838,10 +845,10 @@ export async function createTransactionsPdf(
   report.cover(
     [
       { label: "Exported transactions", value: String(transactions.length) },
-      { label: "Money received", value: currency(totals.inflow, "EUR", locale) },
-      { label: "Money spent", value: currency(totals.outflow, "EUR", locale) },
-      { label: "Net movement", value: currency(totals.net, "EUR", locale) },
-      { label: "Reporting currency", value: "EUR" },
+      { label: "Money received", value: currency(totals.inflow, baseCurrency, locale) },
+      { label: "Money spent", value: currency(totals.outflow, baseCurrency, locale) },
+      { label: "Net movement", value: currency(totals.net, baseCurrency, locale) },
+      { label: "Display currency", value: baseCurrency },
       { label: "Original currencies", value: totals.currencies.size ? [...totals.currencies].sort().join(", ") : "-" },
     ],
     metadata.email?.trim() || "",
@@ -850,33 +857,34 @@ export async function createTransactionsPdf(
       heading: ["Transaction", "Ledger"],
       aboutTitle: "About this ledger",
       aboutText:
-        "This PDF contains the transactions currently included by your ledger filters and sort order. It belongs only to the signed-in account and never includes passwords, authentication tokens or administrator secrets.",
+        "This PDF preserves each transaction's original amount and also shows the value in the Base Currency active when the export was created.",
     },
   );
 
   report.table(
     "Transaction ledger",
-    `${transactions.length} exported transactions - values normalized to EUR`,
+    `${transactions.length} exported transactions · display currency ${baseCurrency}`,
     [
       { label: "Date & time", width: 175 },
-      { label: "Description", width: 270 },
-      { label: "Type", width: 145 },
-      { label: "Category", width: 190 },
-      { label: "Original", width: 145, align: "right" },
-      { label: "EUR value", width: 163, align: "right" },
+      { label: "Description", width: 245 },
+      { label: "Type", width: 125 },
+      { label: "Category", width: 175 },
+      { label: "Original", width: 155, align: "right" },
+      { label: `${baseCurrency} value`, width: 188, align: "right" },
     ],
     transactions.map((transaction) => {
       const sign =
         transaction.direction === "inflow" ? 1 : transaction.direction === "outflow" ? -1 : 0;
       const signedOriginal = sign === 0 ? transaction.amount : transaction.amount * sign;
-      const signedEuro = sign === 0 ? transaction.amount_eur : transaction.amount_eur * sign;
+      const signedDisplay =
+        sign === 0 ? transaction.display_amount : transaction.display_amount * sign;
       return [
         dateLabel(transaction.occurred_at, true),
         transaction.description,
         titleCase(transaction.type),
         transaction.category,
         currency(signedOriginal, transaction.currency || "EUR", locale),
-        currency(signedEuro, "EUR", locale),
+        currency(signedDisplay, baseCurrency, locale),
       ];
     }),
   );

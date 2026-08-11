@@ -149,6 +149,24 @@ export function canonicalAmountInBaseCurrency(
   return roundConvertedAmount(amount * rate);
 }
 
+export function baseCurrencyAmountToCanonicalEur(
+  value: unknown,
+  context: BaseCurrencyReconciliationContext,
+): number | null {
+  const amount = finiteNumber(value);
+
+  if (context.baseCurrency === "EUR") {
+    return roundMoney(amount);
+  }
+
+  const rate = context.latestRate;
+  if (!rate || !Number.isFinite(rate) || rate <= 0) {
+    return null;
+  }
+
+  return roundConvertedAmount(amount / rate);
+}
+
 export function currentRecordAmountInBaseCurrency({
   originalAmount,
   originalCurrency,

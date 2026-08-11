@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
   }
 
   let service: ReturnType<typeof createServiceClient> | null = null;
+  let staleCached: CachedRate | null = null;
   try {
     service = createServiceClient();
   } catch {
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
       .order("rate_date", { ascending: false })
       .limit(1);
     const cached = (cachedRows?.[0] ?? null) as CachedRate | null;
+    staleCached = cached;
     const cacheFresh = requestedDate
       ? Boolean(cached)
       : Boolean(
@@ -123,6 +125,27 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const staleFallback = () => {
+    if (!staleCached) return null;
+    const rate = roundRate(staleCached.rate);
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+
+    return NextResponse.json(
+      {
+        base: from,
+        quote: to,
+        rate,
+        convertedAmount:
+          amount === null ? null : roundConvertedAmount(amount * rate),
+        date: staleCached.rate_date,
+        source: `${staleCached.source} · cached fallback`,
+        cached: true,
+        stale: true,
+      },
+      { headers: noStoreHeaders() },
+    );
+  };
+
   try {
     const dateQuery = requestedDate
       ? `?date=${encodeURIComponent(requestedDate)}`
@@ -137,6 +160,9 @@ export async function GET(request: NextRequest) {
     );
 
     if (!response.ok) {
+      const fallback = staleFallback();
+      if (fallback) return fallback;
+
       return jsonError(
         `No exchange rate is available for ${from}/${to}${requestedDate ? ` on ${requestedDate}` : ""}.`,
         response.status === 404 ? 404 : 502,
@@ -181,6 +207,8 @@ export async function GET(request: NextRequest) {
       { headers: noStoreHeaders() },
     );
   } catch {
+    const fallback = staleFallback();
+    if (fallback) return fallback;
     return jsonError("The exchange-rate service is temporarily unavailable.", 503);
   }
 }

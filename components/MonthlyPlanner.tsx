@@ -16,7 +16,7 @@ import {
 } from "@/lib/finance/monthlyCashActuals";
 import { formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
-import { mapBillsToBaseCurrency, mapTransactionsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { baseCurrencyAmountToCanonicalEur, canonicalAmountInBaseCurrency, mapBillsToBaseCurrency, mapTransactionsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import styles from "./MonthlyPlanner.module.css";
 
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
@@ -182,9 +182,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     previousActual[classify(t)]=addMoney(previousActual[classify(t)],t.amount_eur);
   });
   financeBills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),previousMonth)).forEach(b=>{previousActual.bills=addMoney(previousActual.bills,b.amount_eur)});
-  const previousLeft=subtractMoney(addMoney(previousPlan?.start_balance??0,previousActual.income),previousActual.bills,previousActual.expenses,previousActual.savings,previousActual.debt,previousGoalInvestments);
+  const previousStartBalance=previousPlan
+    ? canonicalAmountInBaseCurrency(previousPlan.start_balance,currencyContext)
+    : 0;
+  const previousLeft=subtractMoney(addMoney(previousStartBalance,previousActual.income),previousActual.bills,previousActual.expenses,previousActual.savings,previousActual.debt,previousGoalInvestments);
   const derivedStartBalance=startBalanceBehavior==="carry-forward"?previousLeft:0;
-  const startBalance=roundMoney(plan?.start_balance??derivedStartBalance);
+  const startBalance=plan
+    ? canonicalAmountInBaseCurrency(plan.start_balance,currencyContext)
+    : roundMoney(derivedStartBalance);
   const paidBillTxIds=useMemo(()=>new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[financeBills]);
   const monthTx=useMemo(()=>financeTransactions.filter(t=>inMonth(transactionActivityDate(t),month)),[financeTransactions,month]);
   const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
@@ -198,7 +203,11 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     return totals;
   },[monthTx,financeBills,month,paidBillTxIds]);
   const monthItems=items.filter(i=>i.month===month);
-  const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
+  const planned=(s:Section)=>sumMoney(
+    monthItems
+      .filter(i=>i.section===s)
+      .map(i=>canonicalAmountInBaseCurrency(i.planned_amount,currencyContext)),
+  );
   const actual=(s:Section)=>actualBySection[s];
   const synchronizedCashActuals=useMemo(
     ()=>calculateMonthlyCashActuals(month,financeTransactions,financeBills),
@@ -234,7 +243,22 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses").reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
-  async function saveStartBalance(v:string){const value=roundMoney(v); const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.");notifyFiconterDataChange("all")}}
+  async function saveStartBalance(v:string){
+    const entered=roundMoney(v);
+    const canonical=baseCurrencyAmountToCanonicalEur(entered,currencyContext);
+    if(canonical===null){
+      setNotice("Currency conversion is still loading. Try again in a moment.");
+      return;
+    }
+    const payload={user_id:userId,month,start_balance:canonical,updated_at:new Date().toISOString()};
+    const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single();
+    if(error)setNotice(error.message);
+    else{
+      setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);
+      setNotice("Starting balance updated.");
+      notifyFiconterDataChange("all");
+    }
+  }
   async function deleteItem(id:string){const {error}=await supabase.from("monthly_budget_items").delete().eq("id",id).eq("user_id",userId);if(error)setNotice(error.message);else {setItems(c=>c.filter(i=>i.id!==id));notifyFiconterDataChange("all")}}
 
   return <section className={styles.planner}>
@@ -434,10 +458,10 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                   return (
                     <div className={styles.row} key={item.id}>
                       <span>{item.label}</span>
-                      <span>{money(Number(item.planned_amount))}</span>
+                      <span>{money(canonicalAmountInBaseCurrency(item.planned_amount,currencyContext))}</span>
                       <span>{matchingActual ? money(matchingActual) : "—"}</span>
                       <span>
-                        {money(Number(item.planned_amount) - matchingActual)}
+                        {money(canonicalAmountInBaseCurrency(item.planned_amount,currencyContext) - matchingActual)}
                       </span>
                       <button onClick={() => deleteItem(item.id)}>
                         <Trash2 size={14} />
@@ -461,8 +485,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
       <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
       {(() => {
-        const invested = sumMoney(goals.map(goal=>goal.current_amount));
-        const target = sumMoney(goals.map(goal=>goal.target_amount));
+        const invested = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.current_amount,currencyContext)));
+        const target = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.target_amount,currencyContext)));
         const progress = target ? Math.min(100, invested / target * 100) : 0;
         return <div className={styles.goalSummaryBody}>
           <div className={styles.goalSummaryAmounts}>

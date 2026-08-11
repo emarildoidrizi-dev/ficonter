@@ -29,6 +29,10 @@ requireText("components/GoalsManager.tsx", "p_currency: baseCurrency");
 
 requireText("components/TransactionLedger.tsx", '"Display currency"');
 requireText("components/TransactionLedger.tsx", "display_amount: displayed");
+requireText("components/TransactionLedger.tsx", "conversionRateFor");
+requireText("components/TransactionLedger.tsx", "originalCurrency !== baseCurrency && conversionRate");
+requireText("components/TransactionLedger.tsx", "{baseCurrency}</>");
+forbidText("components/TransactionLedger.tsx", "exchange_rate_to_eur || 1).toFixed(6)} EUR");
 requireText("lib/accountExport.ts", "display_currency: string");
 
 requireText("app/api/exchange-rate/route.ts", "cached fallback");
@@ -72,6 +76,7 @@ console.log("- Same-currency original amount invariant retained");
 console.log("- Planner inputs are canonicalized before storage");
 console.log("- Goals use Base Currency display and preserve original investment transactions");
 console.log("- Transaction CSV/PDF exports include original + Base Currency values");
+console.log("- Transaction conversion detail follows the selected Base Currency instead of hardcoded EUR");
 console.log("- FX provider uses stale cache fallback before failing");
 console.log("- Business currency remains isolated from Personal currency");
 console.log("- Phase 4 SQL does not rewrite existing transactions");

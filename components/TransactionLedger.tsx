@@ -22,6 +22,7 @@ import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import { originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
+import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
 import { CATEGORY_GROUPS, CURRENCY_CODES, TRANSACTION_TYPES, TYPE_BY_VALUE, currencyName, currencySymbol, formatCurrency, type FlowDirection, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./TransactionLedger.module.css";
@@ -104,6 +105,34 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         baseCurrency,
         euroToBaseRate: rateForDate(transaction.transaction_date),
       }),
+    [baseCurrency, rateForDate],
+  );
+
+  const conversionRateFor = useCallback(
+    (transaction: Transaction): number | null => {
+      const originalCurrency = normalizeCurrency(transaction.currency);
+      if (originalCurrency === baseCurrency) return null;
+
+      const originalToEur =
+        originalCurrency === "EUR"
+          ? 1
+          : finiteNumber(transaction.exchange_rate_to_eur);
+
+      if (!Number.isFinite(originalToEur) || originalToEur <= 0) {
+        return null;
+      }
+
+      const eurToBase =
+        baseCurrency === "EUR"
+          ? 1
+          : rateForDate(transaction.transaction_date);
+
+      if (!eurToBase || !Number.isFinite(eurToBase) || eurToBase <= 0) {
+        return null;
+      }
+
+      return roundRate(originalToEur * eurToBase);
+    },
     [baseCurrency, rateForDate],
   );
   const [search, setSearch] = useState("");
@@ -750,7 +779,19 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                     : formatCurrency(displayedAmount, baseCurrency);
                 })()}</strong>
                 <span>
-                  Original: {formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 {transaction.currency} = {finiteNumber(transaction.exchange_rate_to_eur || 1).toFixed(6)} EUR
+                  {(() => {
+                    const originalCurrency = normalizeCurrency(transaction.currency);
+                    const conversionRate = conversionRateFor(transaction);
+
+                    return (
+                      <>
+                        Original: {formatCurrency(finiteNumber(transaction.amount), originalCurrency)}
+                        {originalCurrency !== baseCurrency && conversionRate ? (
+                          <> · 1 {originalCurrency} = {conversionRate.toFixed(6)} {baseCurrency}</>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </span>
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>

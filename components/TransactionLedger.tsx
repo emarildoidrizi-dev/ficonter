@@ -19,18 +19,10 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
-import {
-  CATEGORY_GROUPS,
-  CURRENCY_CODES,
-  TRANSACTION_TYPES,
-  TYPE_BY_VALUE,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-  type FlowDirection,
-} from "@/lib/financialOptions";
+import { CATEGORY_GROUPS, CURRENCY_CODES, TRANSACTION_TYPES, TYPE_BY_VALUE, currencyName, currencySymbol, formatCurrency, type FlowDirection, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./TransactionLedger.module.css";
 
 type Transaction = {
@@ -97,6 +89,10 @@ function signedEuroValue(item: Transaction) {
 export function TransactionLedger({ transactions: initialTransactions, allowMultiCurrency = true, allowPdfExport = true }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
+  const { baseCurrency } = useCurrencyDisplay();
+  const { formatHistoricalReportingAmount } = useHistoricalReportingRates(
+    transactions.map((transaction) => transaction.transaction_date),
+  );
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [visibleLimit, setVisibleLimit] = useState(120);
@@ -652,9 +648,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       </div>
 
       <div className={styles.summary}>
-        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatCurrency(totals.inflow, "EUR")}</strong></div>
-        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatCurrency(totals.outflow, "EUR")}</strong></div>
-        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatCurrency(totals.net, "EUR")}</strong></div>
+        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatReportingCurrency(totals.inflow)}</strong></div>
+        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatReportingCurrency(totals.outflow)}</strong></div>
+        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatReportingCurrency(totals.net)}</strong></div>
       </div>
 
       {notice && <div className={styles.notice}>{notice}</div>}
@@ -703,7 +699,12 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
               <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
-                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{formatCurrency(finiteNumber(transaction.amount_eur ?? transaction.amount), "EUR")}</strong>
+                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{baseCurrency === transaction.currency
+                  ? formatCurrency(finiteNumber(transaction.amount), transaction.currency)
+                  : formatHistoricalReportingAmount(
+                      finiteNumber(transaction.amount_eur ?? transaction.amount),
+                      transaction.transaction_date,
+                    )}</strong>
                 <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${finiteNumber(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>
@@ -745,7 +746,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving EUR rate…" : editRateError ? editRateError : `EUR equivalent: ${formatCurrency(convertToReportingCurrency(editAmount, editRate.rate), "EUR")} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}</div>
+              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
               {error && <div className={styles.error}>{error}</div>}
               <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
             </form>

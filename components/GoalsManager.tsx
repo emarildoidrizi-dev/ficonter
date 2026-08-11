@@ -15,7 +15,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import {
   AVERAGE_PERIODS,
   summarizeDatedAmounts,
@@ -49,7 +49,7 @@ type GoalInvestment = {
 };
 
 const money = (value: number | string) =>
-  formatCurrency(finiteNumber(value), "EUR");
+  formatReportingCurrency(finiteNumber(value));
 
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -658,7 +658,7 @@ export function GoalsManager({
             </p>
 
             <label>
-              Investment amount (EUR)
+              Investment amount
               <input
                 name="amount"
                 type="number"

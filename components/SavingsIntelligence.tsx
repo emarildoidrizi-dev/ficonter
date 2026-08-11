@@ -29,12 +29,8 @@ import {
   roundMoney,
   roundRate,
 } from "@/lib/finance/money";
-import {
-  CURRENCY_CODES,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-} from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import {
   calculateSavingsIntelligence,
   normalizeSavingsIntelligenceInputs,
@@ -138,6 +134,7 @@ export function SavingsIntelligence({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency } = useCurrencyDisplay();
   const refreshTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [error, setError] = useState(initialError);
@@ -572,7 +569,7 @@ export function SavingsIntelligence({
         <article>
           <PiggyBank aria-hidden="true" />
           <span>Non-emergency savings</span>
-          <strong>{formatCurrency(result.metrics.totalSaved, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.totalSaved)}</strong>
           <small>Emergency Fund contributions are tracked separately</small>
         </article>
         <article>
@@ -607,7 +604,7 @@ export function SavingsIntelligence({
           </div>
           <div className={styles.periodValues} aria-live="polite">
             <div>
-              <strong>{formatCurrency(selectedMonthlyAverage, "EUR")}</strong>
+              <strong>{formatReportingCurrency(selectedMonthlyAverage)}</strong>
               <small>
                 Total saved in the last {averagePeriod} calendar months divided
                 by {averagePeriod}. Months without savings count as €0.
@@ -615,7 +612,7 @@ export function SavingsIntelligence({
             </div>
             <div className={styles.annualizedPace}>
               <span>Annualized pace</span>
-              <b>{formatCurrency(selectedAnnualizedPace, "EUR")}</b>
+              <b>{formatReportingCurrency(selectedAnnualizedPace)}</b>
               <small>Selected monthly average × 12</small>
             </div>
           </div>
@@ -659,12 +656,12 @@ export function SavingsIntelligence({
             <span>
               <small>Recommended monthly target</small>
               <strong>
-                {formatCurrency(result.metrics.recommendedMonthlyTarget, "EUR")}
+                {formatReportingCurrency(result.metrics.recommendedMonthlyTarget)}
               </strong>
             </span>
             <span>
               <small>Monthly gap</small>
-              <strong>{formatCurrency(result.metrics.monthlyGap, "EUR")}</strong>
+              <strong>{formatReportingCurrency(result.metrics.monthlyGap)}</strong>
             </span>
             <span>
               <small>Saving consistency</small>
@@ -737,11 +734,11 @@ export function SavingsIntelligence({
                         (month.savings / maxMonthlySaving) * 100,
                       )}%`,
                     }}
-                    title={`${monthLabel(month.month)}: ${formatCurrency(month.savings, "EUR")}`}
+                    title={`${monthLabel(month.month)}: ${formatReportingCurrency(month.savings)}`}
                   />
                 </div>
                 <strong>{monthLabel(month.month).split(" ")[0]}</strong>
-                <small>{formatCurrency(month.savings, "EUR")}</small>
+                <small>{formatReportingCurrency(month.savings)}</small>
               </div>
             ))}
           </div>
@@ -770,7 +767,7 @@ export function SavingsIntelligence({
                       <span>{category.contributionCount} contributions</span>
                     </div>
                     <div>
-                      <b>{formatCurrency(category.amount, "EUR")}</b>
+                      <b>{formatReportingCurrency(category.amount)}</b>
                       <span>{(category.share * 100).toFixed(1)}%</span>
                     </div>
                   </div>
@@ -815,7 +812,7 @@ export function SavingsIntelligence({
               </strong>
               <small>
                 {result.bestMonth
-                  ? formatCurrency(result.bestMonth.amount, "EUR")
+                  ? formatReportingCurrency(result.bestMonth.amount)
                   : "Build saving history"}
               </small>
             </div>
@@ -829,7 +826,7 @@ export function SavingsIntelligence({
               </strong>
               <small>
                 {result.weakestMonth
-                  ? formatCurrency(result.weakestMonth.amount, "EUR")
+                  ? formatReportingCurrency(result.weakestMonth.amount)
                   : "Build saving history"}
               </small>
             </div>
@@ -845,7 +842,7 @@ export function SavingsIntelligence({
               <WalletCards size={19} aria-hidden="true" />
               <span>Planning baseline</span>
               <strong>
-                {formatCurrency(result.metrics.baselineMonthlySavings, "EUR")}
+                {formatReportingCurrency(result.metrics.baselineMonthlySavings)}
               </strong>
               <small>
                 Six-month calendar average used for target progress and planning
@@ -878,7 +875,7 @@ export function SavingsIntelligence({
                       </span>
                     </div>
                     <div className={styles.recentRight}>
-                      <b>{formatCurrency(saving.amount, "EUR")}</b>
+                      <b>{formatReportingCurrency(saving.amount)}</b>
                       {managedInGoals ? (
                         <Link className={styles.inlineLink} href="/dashboard/goals">
                           Managed in Goals
@@ -1016,13 +1013,10 @@ export function SavingsIntelligence({
               ) : null}
               <div className={styles.fxPreview}>
                 {editRateLoading
-                  ? "Retrieving EUR rate…"
+                  ? "Retrieving reference rate…"
                   : editRateError
                     ? editRateError
-                    : `EUR equivalent: ${formatCurrency(
-                        convertToReportingCurrency(editAmount, editRate.rate),
-                        "EUR",
-                      )} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}
+                    : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}
               </div>
               {actionError ? <div className={styles.error}>{actionError}</div> : null}
               <div className={styles.modalActions}>

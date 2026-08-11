@@ -83,6 +83,7 @@ import {
   normalizeCurrency,
 } from "@/lib/finance/currencyEngine";
 import { BASE_CURRENCY_CHANGED_EVENT } from "./BaseCurrencyBootstrap";
+import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
@@ -948,6 +949,12 @@ export function SettingsWorkspace({
         DEFAULT_BASE_CURRENCY,
       );
 
+      if (normalized !== DEFAULT_BASE_CURRENCY) {
+        await getExchangeRate(DEFAULT_BASE_CURRENCY, normalized, {
+          forceRefresh: true,
+        });
+      }
+
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ base_currency: normalized })
@@ -1523,7 +1530,7 @@ const showSubscriptionManagement =
                 <div>
                   <strong>Original amounts stay unchanged</strong>
                   <span>
-                    Phase 2 saves your preferred currency. Live conversion of existing balances and historical records is activated in Phase 3.
+                    FICONTER now converts the reporting view into your selected base currency while preserving every original transaction amount and currency.
                   </span>
                 </div>
               </div>

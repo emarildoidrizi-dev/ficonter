@@ -16,7 +16,7 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import {
   NET_WORTH_GROWTH_PERIODS,
   calculateNetWorthGrowth,
@@ -50,8 +50,8 @@ function fullMonthLabel(month: string): string {
 }
 
 function signedCurrency(value: number): string {
-  if (Math.abs(value) < 0.005) return formatCurrency(0, "EUR");
-  return `${value > 0 ? "+" : ""}${formatCurrency(value, "EUR")}`;
+  if (Math.abs(value) < 0.005) return formatReportingCurrency(0);
+  return `${value > 0 ? "+" : ""}${formatReportingCurrency(value)}`;
 }
 
 function percentage(value: number | null): string {
@@ -143,7 +143,7 @@ export function NetWorthGrowth({ inputs }: Props) {
   const comparableCurrency = (value: number) =>
     result.hasHistory ? signedCurrency(value) : "Not available";
   const comparableAmount = (value: number) =>
-    result.hasHistory ? formatCurrency(value, "EUR") : "Not available";
+    result.hasHistory ? formatReportingCurrency(value) : "Not available";
 
   return (
     <section className={styles.module}>
@@ -215,7 +215,7 @@ export function NetWorthGrowth({ inputs }: Props) {
         <article>
           <WalletCards aria-hidden="true" />
           <span>Opening net worth</span>
-          <strong>{formatCurrency(result.metrics.openingNetWorth, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.openingNetWorth)}</strong>
           <small>Position before the selected period</small>
         </article>
         <article>
@@ -228,7 +228,7 @@ export function NetWorthGrowth({ inputs }: Props) {
                 : styles.negative
             }
           >
-            {formatCurrency(result.metrics.currentNetWorth, "EUR")}
+            {formatReportingCurrency(result.metrics.currentNetWorth)}
           </strong>
           <small>Same live value used by Net Worth and Wealth Score</small>
         </article>
@@ -381,7 +381,7 @@ export function NetWorthGrowth({ inputs }: Props) {
               <b>
                 {result.bestMonth
                   ? signedCurrency(result.bestMonth.netWorthChange)
-                  : formatCurrency(0, "EUR")}
+                  : formatReportingCurrency(0)}
               </b>
             </div>
             <div className={styles.weakMonth}>
@@ -395,7 +395,7 @@ export function NetWorthGrowth({ inputs }: Props) {
               <b>
                 {result.weakestMonth
                   ? signedCurrency(result.weakestMonth.netWorthChange)
-                  : formatCurrency(0, "EUR")}
+                  : formatReportingCurrency(0)}
               </b>
             </div>
           </div>
@@ -469,10 +469,7 @@ export function NetWorthGrowth({ inputs }: Props) {
           result.metrics.trailingSixMonthGrowth !== null ? (
             <>
               <h3>
-                {formatCurrency(
-                  result.metrics.projectedTwelveMonthNetWorth,
-                  "EUR",
-                )}
+                {formatReportingCurrency(result.metrics.projectedTwelveMonthNetWorth)}
               </h3>
               <p>
                 Based only on completed month-to-month net-worth changes from

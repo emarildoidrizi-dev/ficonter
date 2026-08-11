@@ -18,7 +18,7 @@ import {
   isFinancialDataScope,
   subscribeFiconterDataChanges,
 } from "@/lib/ficonterRealtime";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import { reconcileCashFlowMonthlyInputs } from "@/lib/finance/monthlyCashActuals";
 import {
   calculateCashFlowIntelligence,
@@ -348,7 +348,7 @@ export function CashFlowIntelligence({
               <ArrowUpRight aria-hidden="true" />
               <span>All-time income</span>
               <strong className={styles.positive}>
-                {formatCurrency(allTimeSummary.income, "EUR")}
+                {formatReportingCurrency(allTimeSummary.income)}
               </strong>
               <small>
                 Recorded income across the complete transaction history. Opening
@@ -358,7 +358,7 @@ export function CashFlowIntelligence({
             <article>
               <ArrowDownRight aria-hidden="true" />
               <span>All-time outflow</span>
-              <strong>{formatCurrency(allTimeSummary.outflow, "EUR")}</strong>
+              <strong>{formatReportingCurrency(allTimeSummary.outflow)}</strong>
               <small>
                 Every recorded expense and saving contribution, including paid
                 bills and debt payments recorded as expenses.
@@ -377,7 +377,7 @@ export function CashFlowIntelligence({
                     : styles.negative
                 }
               >
-                {formatCurrency(allTimeSummary.netMovement, "EUR")}
+                {formatReportingCurrency(allTimeSummary.netMovement)}
               </strong>
               <small>
                 All-time income minus all-time outflow. This is historical
@@ -400,13 +400,13 @@ export function CashFlowIntelligence({
         <article>
           <ArrowUpRight aria-hidden="true" />
           <span>Income + start balance</span>
-          <strong>{formatCurrency(result.metrics.currentMonthIncome, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.currentMonthIncome)}</strong>
           <small>Mirrors Monthly Planner start balance plus recorded income.</small>
         </article>
         <article>
           <ArrowDownRight aria-hidden="true" />
           <span>Outflow recorded this month</span>
-          <strong>{formatCurrency(result.metrics.currentMonthOutflow, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.currentMonthOutflow)}</strong>
           <small>Expenses, paid bills, debt payments and savings already recorded.</small>
         </article>
         <article className={styles.availableCard}>
@@ -417,7 +417,7 @@ export function CashFlowIntelligence({
               result.metrics.availableNow >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatCurrency(result.metrics.availableNow, "EUR")}
+            {formatReportingCurrency(result.metrics.availableNow)}
           </strong>
           <small>The current amount after all recorded activity.</small>
         </article>
@@ -448,19 +448,19 @@ export function CashFlowIntelligence({
             leftIsPositive ? styles.positive : styles.negative
           }`}
         >
-          {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+          {formatReportingCurrency(Math.abs(result.metrics.leftAfterPayments))}
         </strong>
         <p>{result.summary}</p>
 
         <div className={styles.balanceEquation} aria-label="Balance calculation">
           <span>
             <small>Available now</small>
-            <strong>{formatCurrency(result.metrics.availableNow, "EUR")}</strong>
+            <strong>{formatReportingCurrency(result.metrics.availableNow)}</strong>
           </span>
           <b aria-hidden="true">−</b>
           <span>
             <small>Still to pay</small>
-            <strong>{formatCurrency(result.metrics.stillToPay, "EUR")}</strong>
+            <strong>{formatReportingCurrency(result.metrics.stillToPay)}</strong>
           </span>
           <b aria-hidden="true">=</b>
           <span className={styles.equationResult}>
@@ -468,7 +468,7 @@ export function CashFlowIntelligence({
             <strong
               className={leftIsPositive ? styles.positive : styles.negative}
             >
-              {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+              {formatReportingCurrency(Math.abs(result.metrics.leftAfterPayments))}
             </strong>
           </span>
         </div>
@@ -480,10 +480,7 @@ export function CashFlowIntelligence({
           </button>
           {result.metrics.paidDebtMinimumsThisMonth > 0 ? (
             <small>
-              {formatCurrency(
-                result.metrics.paidDebtMinimumsThisMonth,
-                "EUR",
-              )}{" "}
+              {formatReportingCurrency(result.metrics.paidDebtMinimumsThisMonth)}{" "}
               of recorded debt payments was removed from Still to pay to prevent
               double counting.
             </small>
@@ -520,14 +517,14 @@ export function CashFlowIntelligence({
                     style={{
                       height: `${Math.max(2, (month.income / maxChartValue) * 100)}%`,
                     }}
-                    title={`Income ${formatCurrency(month.income, "EUR")}`}
+                    title={`Income ${formatReportingCurrency(month.income)}`}
                   />
                   <span
                     className={styles.outflowBar}
                     style={{
                       height: `${Math.max(2, (month.outflow / maxChartValue) * 100)}%`,
                     }}
-                    title={`Outflow ${formatCurrency(month.outflow, "EUR")}`}
+                    title={`Outflow ${formatReportingCurrency(month.outflow)}`}
                   />
                 </div>
                 <small>{monthLabel(month.month)}</small>
@@ -537,7 +534,7 @@ export function CashFlowIntelligence({
           <div className={styles.trendSummary}>
             <span>
               <small>Recent three-month net average</small>
-              <strong>{formatCurrency(result.metrics.recentNetAverage, "EUR")}</strong>
+              <strong>{formatReportingCurrency(result.metrics.recentNetAverage)}</strong>
             </span>
             <span>
               <small>Change vs previous three months</small>
@@ -547,7 +544,7 @@ export function CashFlowIntelligence({
                 }
               >
                 {result.metrics.trendChange >= 0 ? "+" : ""}
-                {formatCurrency(result.metrics.trendChange, "EUR")}
+                {formatReportingCurrency(result.metrics.trendChange)}
               </strong>
             </span>
             <span>
@@ -564,19 +561,19 @@ export function CashFlowIntelligence({
               <h2>Still to pay</h2>
             </div>
             <strong className={styles.commitmentTotal}>
-              {formatCurrency(result.metrics.stillToPay, "EUR")}
+              {formatReportingCurrency(result.metrics.stillToPay)}
             </strong>
           </header>
           <div className={styles.commitmentSplit}>
             <span>
               <ReceiptText aria-hidden="true" />
               <small>Unpaid bills</small>
-              <strong>{formatCurrency(result.commitments.billsTotal, "EUR")}</strong>
+              <strong>{formatReportingCurrency(result.commitments.billsTotal)}</strong>
             </span>
             <span>
               <ShieldCheck aria-hidden="true" />
               <small>Remaining debt minimums</small>
-              <strong>{formatCurrency(result.commitments.debtMinimums, "EUR")}</strong>
+              <strong>{formatReportingCurrency(result.commitments.debtMinimums)}</strong>
             </span>
           </div>
           <div className={`${styles.commitmentList} ficonter-scroll-region`}>
@@ -590,12 +587,12 @@ export function CashFlowIntelligence({
                     </small>
                     {item.kind === "debt" && (item.paidThisMonth ?? 0) > 0 ? (
                       <em>
-                        {formatCurrency(item.paidThisMonth ?? 0, "EUR")} already
+                        {formatReportingCurrency(item.paidThisMonth ?? 0)} already
                         recorded this month
                       </em>
                     ) : null}
                   </div>
-                  <b>{formatCurrency(item.amount, "EUR")}</b>
+                  <b>{formatReportingCurrency(item.amount)}</b>
                 </div>
               ))
             ) : (
@@ -625,7 +622,7 @@ export function CashFlowIntelligence({
                       <small>{percentage(category.share)} of recent expenses</small>
                     </div>
                     <div>
-                      <b>{formatCurrency(category.recentAmount, "EUR")}</b>
+                      <b>{formatReportingCurrency(category.recentAmount)}</b>
                       <small
                         className={
                           category.changePercent !== null &&

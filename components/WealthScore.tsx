@@ -12,7 +12,7 @@ import {
   Target,
   TrendingDown,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import type {
   WealthScoreFactor,
   WealthScoreFactorId,
@@ -32,7 +32,7 @@ const FACTOR_ICONS = {
 
 function factorMetric(factor: WealthScoreFactor): string {
   if (factor.metricLabel) return factor.metricLabel;
-  if (factor.metricUnit === "currency") return formatCurrency(factor.metricValue, "EUR");
+  if (factor.metricUnit === "currency") return formatReportingCurrency(factor.metricValue);
   if (factor.metricUnit === "percent") return `${factor.metricValue.toFixed(1)}%`;
   if (factor.metricUnit === "months") return `${factor.metricValue.toFixed(1)} months`;
   if (factor.metricUnit === "ratio") return `${factor.metricValue.toFixed(2)}×`;
@@ -97,7 +97,7 @@ export function WealthScore({
           <div className={styles.quickMetrics}>
             <span>
               <small>Net wealth</small>
-              <strong>{formatCurrency(result.metrics.netWorth, "EUR")}</strong>
+              <strong>{formatReportingCurrency(result.metrics.netWorth)}</strong>
             </span>
             <span>
               <small>Capital / debt</small>

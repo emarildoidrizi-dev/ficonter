@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import {
   normalizeAiInsightsInputs,
   type AiInsightDomain,
@@ -68,7 +68,7 @@ function evidenceValue(
 
   switch (item.format) {
     case "currency":
-      return formatCurrency(item.value, "EUR");
+      return formatReportingCurrency(item.value);
     case "percent":
       return `${item.value.toFixed(1)}%`;
     case "ratio":
@@ -86,7 +86,7 @@ function evidenceValue(
 
 function metricValue(metric: FinancialGpsMetric): string {
   if (metric.value === null) return "Pending";
-  if (metric.format === "currency") return formatCurrency(metric.value, "EUR");
+  if (metric.format === "currency") return formatReportingCurrency(metric.value);
   if (metric.format === "months") return `${metric.value.toFixed(1)} months`;
   return `${metric.value.toFixed(1)}%`;
 }

@@ -27,7 +27,7 @@ import {
   subscribeFiconterDataChanges,
 } from "@/lib/ficonterRealtime";
 import { finiteNumber, roundMoney } from "@/lib/finance/money";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./FinancialIndependence.module.css";
 
 type PlanningStyle = "safer" | "balanced" | "flexible";
@@ -101,7 +101,7 @@ const GROWTH_OPTIONS: GrowthOption[] = [
   },
 ];
 
-const money = (value: number) => formatCurrency(roundMoney(value), "EUR");
+const money = (value: number) => formatReportingCurrency(roundMoney(value));
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)

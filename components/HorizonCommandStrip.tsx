@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { AlertTriangle, Command, Route, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonCommandStrip.module.css";
 
@@ -24,7 +24,7 @@ function cashFlowSummary(gps: FinancialGpsResult) {
   if (cashFlow.value < 0) {
     return {
       label: "Negative cash flow",
-      value: formatCurrency(cashFlow.value, "EUR"),
+      value: formatReportingCurrency(cashFlow.value),
       tone: "critical" as const,
       icon: TrendingDown,
     };
@@ -32,7 +32,7 @@ function cashFlowSummary(gps: FinancialGpsResult) {
 
   return {
     label: cashFlow.value > 0 ? "Positive cash flow" : "Cash flow balanced",
-    value: formatCurrency(cashFlow.value, "EUR"),
+    value: formatReportingCurrency(cashFlow.value),
     tone: cashFlow.value > 0 ? ("positive" as const) : ("warning" as const),
     icon: TrendingUp,
   };

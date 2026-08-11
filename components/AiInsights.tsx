@@ -28,7 +28,7 @@ import {
   type FormEvent,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import {
   calculateAiInsightsContext,
   normalizeAiInsightSnapshot,
@@ -80,7 +80,7 @@ function evidenceValue(metric: AiEvidenceMetric): string {
 
   switch (metric.format) {
     case "currency":
-      return formatCurrency(metric.value, "EUR");
+      return formatReportingCurrency(metric.value);
     case "percent":
       return `${metric.value.toFixed(1)}%`;
     case "ratio":

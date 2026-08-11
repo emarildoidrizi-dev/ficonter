@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Compass, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonOverviewBoard.module.css";
 
@@ -47,7 +47,7 @@ function sparklinePath(activity: ActivityPoint[]) {
 function evidenceValue(item: FinancialGpsResult["primaryAction"]["evidence"][number]) {
   if (item.value === null) return "Pending";
   if (typeof item.value === "string") return item.value;
-  if (item.format === "currency") return formatCurrency(item.value, "EUR");
+  if (item.format === "currency") return formatReportingCurrency(item.value);
   if (item.format === "percent") return `${item.value.toFixed(1)}%`;
   if (item.format === "months") return `${item.value.toFixed(1)} months`;
   if (item.format === "ratio") return `${item.value.toFixed(2)}×`;
@@ -85,7 +85,7 @@ export function HorizonOverviewBoard({
             {positive ? "Positive" : "Needs attention"}
           </span>
         </div>
-        <strong className={styles.heroNumber}>{formatCurrency(cashFlow, "EUR")}</strong>
+        <strong className={styles.heroNumber}>{formatReportingCurrency(cashFlow)}</strong>
         <p>Income minus all completed outflows recorded to date.</p>
         <div className={styles.sparkline} aria-hidden="true">
           <svg viewBox="0 0 100 60" preserveAspectRatio="none">
@@ -104,8 +104,8 @@ export function HorizonOverviewBoard({
           </svg>
         </div>
         <div className={styles.miniStats}>
-          <span><small>Recorded income</small><strong>{formatCurrency(income, "EUR")}</strong></span>
-          <span><small>Recorded expenses</small><strong>{formatCurrency(expenses, "EUR")}</strong></span>
+          <span><small>Recorded income</small><strong>{formatReportingCurrency(income)}</strong></span>
+          <span><small>Recorded expenses</small><strong>{formatReportingCurrency(expenses)}</strong></span>
         </div>
       </article>
 

@@ -21,12 +21,7 @@ import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate, getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
-import {
-  CURRENCY_CODES,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-} from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./DebtManager.module.css";
 
 type DebtStatus = "active" | "paid_off" | "paused";
@@ -173,6 +168,10 @@ const EMPTY_PAYMENT = {
 
 function money(value: number | string, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
+}
+
+function reportingMoney(value: number | string) {
+  return formatReportingCurrency(finiteNumber(value));
 }
 
 async function convertToEur(amount: number, currency: string) {
@@ -690,17 +689,17 @@ export function DebtManager({
         <article>
           <TrendingDown />
           <span>Total outstanding</span>
-          <strong>{money(totals.outstanding)}</strong>
+          <strong>{reportingMoney(totals.outstanding)}</strong>
         </article>
         <article>
           <CheckCircle2 />
           <span>Total repaid</span>
-          <strong>{money(totals.paid)}</strong>
+          <strong>{reportingMoney(totals.paid)}</strong>
         </article>
         <article>
           <Banknote />
           <span>Monthly minimums</span>
-          <strong>{money(totals.minimum)}</strong>
+          <strong>{reportingMoney(totals.minimum)}</strong>
         </article>
         <article>
           <CreditCard />
@@ -715,11 +714,11 @@ export function DebtManager({
         </span>
         <span className={styles.bridgeCopy}>
           <small>CREDIT-CARD DEBT</small>
-          <strong>{money(totals.creditCardOutstanding)}</strong>
+          <strong>{reportingMoney(totals.creditCardOutstanding)}</strong>
           <span>
             {creditCardDebts.length} active {creditCardDebts.length === 1 ? "card" : "cards"}
             {totals.creditCardMinimum > 0
-              ? ` · ${money(totals.creditCardMinimum)} minimum due`
+              ? ` · ${reportingMoney(totals.creditCardMinimum)} minimum due`
               : ""}
           </span>
         </span>
@@ -1012,10 +1011,10 @@ export function DebtManager({
                                 return "No payment is currently due";
                               }
                               if (remaining === 0) {
-                                return `${money(paidThisMonth)} confirmed this month`;
+                                return `${reportingMoney(paidThisMonth)} confirmed this month`;
                               }
                               if (paidThisMonth > 0) {
-                                return `${money(remaining)} still due this month · ${money(
+                                return `${reportingMoney(remaining)} still due this month · ${reportingMoney(
                                   paidThisMonth,
                                 )} confirmed`;
                               }
@@ -1059,7 +1058,7 @@ export function DebtManager({
                 <div className={styles.balanceRow}>
                   <div>
                     <span>Outstanding</span>
-                    <strong>{money(debt.current_balance_eur, "EUR")}</strong>
+                    <strong>{reportingMoney(debt.current_balance_eur)}</strong>
                     {debt.currency !== "EUR" ? (
                       <small>
                         {money(debt.current_balance, debt.currency)} original
@@ -1068,7 +1067,7 @@ export function DebtManager({
                   </div>
                   <div>
                     <span>Minimum payment</span>
-                    <strong>{money(debt.minimum_payment_eur, "EUR")}</strong>
+                    <strong>{reportingMoney(debt.minimum_payment_eur)}</strong>
                     <small>
                       {debt.payment_due_day
                         ? `Due day ${debt.payment_due_day}`
@@ -1085,7 +1084,7 @@ export function DebtManager({
                 <div className={styles.progressMeta}>
                   <span>{repaidPercentage.toFixed(1)}% repaid</span>
                   <span>
-                    {money(Math.max(0, original - current), "EUR")} paid
+                    {reportingMoney(Math.max(0, original - current))} paid
                   </span>
                 </div>
                 <div className={styles.progressTrack}>
@@ -1112,7 +1111,7 @@ export function DebtManager({
                     debtPayments.map((payment) => (
                       <div className={styles.paymentRow} key={payment.id}>
                         <div>
-                          <strong>{money(payment.amount_eur, "EUR")}</strong>
+                          <strong>{reportingMoney(payment.amount_eur)}</strong>
                           <span>
                             {new Date(payment.paid_at).toLocaleString("en-GB", {
                               dateStyle: "medium",

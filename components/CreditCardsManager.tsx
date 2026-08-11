@@ -33,12 +33,7 @@ import {
   roundRate,
   sumMoney,
 } from "@/lib/finance/money";
-import {
-  CURRENCY_CODES,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-} from "@/lib/financialOptions";
+import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./CreditCardsManager.module.css";
 
 type CreditCardDebt = {
@@ -270,6 +265,10 @@ function automaticMinimumPayment(statementBalance: unknown) {
 
 function money(value: unknown, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
+}
+
+function reportingMoney(value: unknown) {
+  return formatReportingCurrency(finiteNumber(value));
 }
 
 function readableDate(value: string | null) {
@@ -1344,31 +1343,31 @@ export function CreditCardsManager({
           <article>
             <ReceiptText />
             <span>Statement balances</span>
-            <strong>{money(monthlyTotals.statementBalances)}</strong>
+            <strong>{reportingMoney(monthlyTotals.statementBalances)}</strong>
           </article>
           <article>
             <ArrowDownLeft />
             <span>Paid this month</span>
-            <strong>{money(monthlyTotals.paidThisMonth)}</strong>
+            <strong>{reportingMoney(monthlyTotals.paidThisMonth)}</strong>
           </article>
           <article>
             <WalletCards />
             <span>Balance left to pay</span>
-            <strong>{money(monthlyTotals.statementRemaining)}</strong>
+            <strong>{reportingMoney(monthlyTotals.statementRemaining)}</strong>
           </article>
           <article>
             <Gauge />
             <span>Interest charged</span>
-            <strong>{money(monthlyTotals.interest)}</strong>
+            <strong>{reportingMoney(monthlyTotals.interest)}</strong>
           </article>
         </div>
         <div className={styles.currentPosition}>
           <span>Current total card debt</span>
-          <strong>{money(totals.outstanding)}</strong>
+          <strong>{reportingMoney(totals.outstanding)}</strong>
           <span>Current available credit</span>
-          <strong>{money(totals.availableCredit)}</strong>
+          <strong>{reportingMoney(totals.availableCredit)}</strong>
           <span>Minimum still due</span>
-          <strong>{money(monthlyTotals.minimumRemaining)}</strong>
+          <strong>{reportingMoney(monthlyTotals.minimumRemaining)}</strong>
         </div>
       </section>
 
@@ -1583,7 +1582,7 @@ export function CreditCardsManager({
                     <span>Current balance</span>
                     <strong>{money(card.current_balance, card.currency)}</strong>
                     {card.currency !== "EUR" ? (
-                      <small>{money(card.current_balance_eur)} reporting value</small>
+                      <small>{reportingMoney(card.current_balance_eur)} reporting value</small>
                     ) : null}
                   </div>
                   <div>

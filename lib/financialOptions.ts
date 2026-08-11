@@ -119,3 +119,63 @@ export function formatCurrency(value: number, currency: string): string {
     return `${normalized} ${numeric.toFixed(2)}`;
   }
 }
+
+export type ReportingCurrencyRuntime = Readonly<{
+  workspace: "personal" | "business";
+  reportingCurrency: string;
+  baseCurrency: string;
+  rate: number;
+}>;
+
+let reportingCurrencyRuntime: ReportingCurrencyRuntime = {
+  workspace: "personal",
+  reportingCurrency: "EUR",
+  baseCurrency: "EUR",
+  rate: 1,
+};
+
+export function setReportingCurrencyRuntime(
+  next: ReportingCurrencyRuntime,
+): void {
+  const reportingCurrency = String(next.reportingCurrency || "EUR").toUpperCase();
+  const baseCurrency = String(next.baseCurrency || reportingCurrency).toUpperCase();
+  const rate = Number(next.rate);
+
+  reportingCurrencyRuntime = {
+    workspace: next.workspace,
+    reportingCurrency,
+    baseCurrency,
+    rate: Number.isFinite(rate) && rate > 0 ? rate : 1,
+  };
+}
+
+export function getReportingCurrencyRuntime(): ReportingCurrencyRuntime {
+  return reportingCurrencyRuntime;
+}
+
+/**
+ * Formats a value that is already expressed in FICONTER's internal personal
+ * reporting currency (currently EUR). The original financial record is never
+ * changed; only the displayed value is converted through the active base-
+ * currency lens.
+ */
+export function formatReportingCurrency(
+  value: number,
+  reportingCurrency = "EUR",
+): string {
+  const numeric = Number.isFinite(value) ? value : 0;
+  const source = reportingCurrency.toUpperCase();
+  const runtime = reportingCurrencyRuntime;
+
+  if (
+    runtime.workspace === "personal" &&
+    source === runtime.reportingCurrency &&
+    runtime.baseCurrency !== runtime.reportingCurrency &&
+    Number.isFinite(runtime.rate) &&
+    runtime.rate > 0
+  ) {
+    return formatCurrency(numeric * runtime.rate, runtime.baseCurrency);
+  }
+
+  return formatCurrency(numeric, source);
+}

@@ -14,7 +14,8 @@ import {
   calculateMonthlyCashActuals,
   transactionActivityDate,
 } from "@/lib/finance/monthlyCashActuals";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import styles from "./MonthlyPlanner.module.css";
 
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
@@ -32,7 +33,7 @@ const sections: {key:Section; title:string}[] = [
 ];
 const debtWords=["debt","loan","credit-card","credit card","mortgage principal","student-loan","personal-loan"];
 const savingWords=["savings","emergency fund","retirement","stocks","etfs","bonds","crypto","investment","house deposit","education fund"];
-const eur=(v:number)=>formatCurrency(finiteNumber(v),"EUR");
+const eur=(v:number)=>formatReportingCurrency(finiteNumber(v));
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
@@ -51,6 +52,7 @@ const classify=(tx:Tx):Section=>{
 };
 
 export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];showAdvancedPosition?:boolean}){
+  const { baseCurrency } = useCurrencyDisplay();
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
   const [transactions,setTransactions]=useState(initialTransactions);
@@ -229,7 +231,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your complete monthly activity and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
-      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
+      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>{baseCurrency}</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
       <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?eur(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
       <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{eur(actual(s.key))}</strong></div>})}</article>
       <article className={styles.breakdown}>

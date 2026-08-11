@@ -19,7 +19,8 @@ import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import { localDateKey, oneCalendarMonthEndKey } from "@/lib/finance/commitmentWindow";
-import { formatCurrency } from "@/lib/financialOptions";
+import { currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import styles from "./BillsManager.module.css";
 
 type BillStatus = "pending" | "paid" | "cancelled";
@@ -116,6 +117,10 @@ function money(value: number | string, currency = "EUR") {
   return formatCurrency(finiteNumber(value), currency);
 }
 
+function reportingMoney(value: number | string) {
+  return formatReportingCurrency(finiteNumber(value));
+}
+
 function effectiveStatus(
   bill: Bill,
   today = localDateKey(),
@@ -197,6 +202,7 @@ export function BillsManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency } = useCurrencyDisplay();
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
@@ -752,7 +758,7 @@ export function BillsManager({
         <article><Clock3 /><span>Upcoming</span><strong>{summary.upcoming}</strong></article>
         <article><CalendarDays /><span>Due this week</span><strong>{summary.dueThisWeek}</strong></article>
         <article className={summary.overdue ? styles.warningCard : ""}><CircleAlert /><span>Overdue</span><strong>{summary.overdue}</strong></article>
-        <article><span className={styles.euro}>€</span><span>One-month commitments</span><strong>{money(summary.oneMonthTotal)}</strong></article>
+        <article><span className={styles.euro}>{currencySymbol(baseCurrency)}</span><span>One-month commitments</span><strong>{reportingMoney(summary.oneMonthTotal)}</strong></article>
       </div>
 
       <div className={styles.actionRow}>
@@ -910,7 +916,7 @@ export function BillsManager({
                 ) : null}
               </div>
               <div className={styles.amount}>
-                <strong>{money(bill.amount_eur, "EUR")}</strong>
+                <strong>{reportingMoney(bill.amount_eur)}</strong>
                 {bill.currency !== "EUR" && <span>{money(bill.amount, bill.currency)}</span>}
               </div>
               <div className={styles.cardActions}>
@@ -980,8 +986,8 @@ export function BillsManager({
                 <strong>{billPendingDeletion.name}</strong>
               </div>
               <div>
-                <span>EUR value</span>
-                <strong>{money(billPendingDeletion.amount_eur, "EUR")}</strong>
+                <span>Base currency value</span>
+                <strong>{reportingMoney(billPendingDeletion.amount_eur)}</strong>
               </div>
             </div>
 

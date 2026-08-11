@@ -4,6 +4,7 @@ import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
+import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
@@ -97,13 +98,20 @@ export default async function DashboardLayout({
     user.user_metadata,
   );
 
+  const baseCurrency = profile?.base_currency ?? "EUR";
+
   return (
+    <CurrencyDisplayProvider
+      workspace="personal"
+      baseCurrency={baseCurrency}
+      reportingCurrency="EUR"
+    >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <BaseCurrencyBootstrap
         workspace="personal"
-        currency={profile?.base_currency ?? "EUR"}
+        currency={baseCurrency}
       />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
@@ -145,5 +153,6 @@ export default async function DashboardLayout({
       </main>
           <PWAMobileDock workspace="personal" />
       </div>
+    </CurrencyDisplayProvider>
   );
 }

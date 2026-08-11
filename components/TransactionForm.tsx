@@ -12,14 +12,8 @@ import type {
   TransactionPreset,
   TransactionTemplate,
 } from "@/lib/effortlessEntry";
-import {
-  CATEGORY_GROUPS,
-  CURRENCY_CODES,
-  TRANSACTION_TYPES,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-} from "@/lib/financialOptions";
+import { CATEGORY_GROUPS, CURRENCY_CODES, TRANSACTION_TYPES, currencyName, currencySymbol, formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import {
   BASE_CURRENCY_CHANGED_EVENT,
   readBrowserBaseCurrency,
@@ -102,6 +96,7 @@ export function TransactionForm({
 
   const { locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency } = useCurrencyDisplay();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -524,19 +519,19 @@ export function TransactionForm({
   const exchangePreview = (
     <div className="fx-preview" aria-live="polite">
       {rateLoading ? (
-        <span>Retrieving the latest EUR reference rate…</span>
+        <span>Retrieving the latest reference rate…</span>
       ) : rateError ? (
         <span className="fx-preview-error">{rateError}</span>
       ) : (
         <>
           <div>
-            <span>EUR equivalent</span>
-            <strong>{formatCurrency(euroAmount, "EUR")}</strong>
+            <span>Base currency equivalent</span>
+            <strong>{formatReportingCurrency(euroAmount)}</strong>
           </div>
           <small>
-            {currency === "EUR"
-              ? "No conversion required."
-              : `1 ${currency} = ${rate.rate.toFixed(6)} EUR · rate date ${rate.date}`}
+            {currency === baseCurrency
+              ? "No display conversion required."
+              : `Displayed in ${baseCurrency} · reference date ${rate.date}`}
           </small>
         </>
       )}
@@ -727,7 +722,7 @@ export function TransactionForm({
 
         {currency !== "EUR" && (
           <div className="effortless-simple-fx-note">
-            This shortcut uses {currency}. The current EUR conversion is reviewed automatically.
+            This shortcut uses {currency}. The base-currency conversion is reviewed automatically.
             {exchangePreview}
           </div>
         )}

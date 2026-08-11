@@ -6,7 +6,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Clock3,
-  Euro,
   RefreshCw,
   WalletCards,
 } from "lucide-react";
@@ -21,7 +20,8 @@ import {
   reconcileAiInsightsInputs,
   reconcileFinancialHealthInputs,
 } from "@/lib/finance/monthlyCashActuals";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatCurrency, formatReportingCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { finiteNumber } from "@/lib/finance/money";
 import {
   calculateFinancialHealth,
@@ -153,6 +153,10 @@ export function DashboardLiveOverview({
   const refreshQueuedRef = useRef(false);
   const [transactions, setTransactions] = useState(
     [...initialTransactions].sort(newestFirst),
+  );
+  const { baseCurrency } = useCurrencyDisplay();
+  const { formatHistoricalReportingAmount } = useHistoricalReportingRates(
+    transactions.map((transaction) => transaction.transaction_date),
   );
   const [bills, setBills] = useState(initialBills);
   const [healthInputs, setHealthInputs] = useState(initialHealthInputs);
@@ -547,7 +551,7 @@ export function DashboardLiveOverview({
       <header className="topbar">
         <div className="page-title">
           <h1>{greeting}, {name}.</h1>
-          <p>Completed financial activity through today, normalized in euros. Scheduled entries remain visible but are excluded until their date.</p>
+          <p>Completed financial activity through today, displayed in your selected base currency. Scheduled entries remain visible but are excluded until their date.</p>
         </div>
         <div className={styles.headerActions}>
           <div
@@ -616,12 +620,12 @@ export function DashboardLiveOverview({
         <section className="kpis">
           <div className="kpi">
             <span>Income recorded</span>
-            <strong>{formatCurrency(metrics.totalIncome, "EUR")}</strong>
-            <small className={styles.kpiNote}>All currencies converted to EUR</small>
+            <strong>{formatReportingCurrency(metrics.totalIncome)}</strong>
+            <small className={styles.kpiNote}>Displayed in your selected base currency</small>
           </div>
           <div className="kpi">
             <span>Expenses recorded</span>
-            <strong>{formatCurrency(metrics.totalExpenses, "EUR")}</strong>
+            <strong>{formatReportingCurrency(metrics.totalExpenses)}</strong>
             <small className={styles.kpiNote}>Saving transfers are shown separately</small>
           </div>
           <div className="kpi">
@@ -631,7 +635,7 @@ export function DashboardLiveOverview({
                 metrics.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
               }
             >
-              {formatCurrency(metrics.netCashFlow, "EUR")}
+              {formatReportingCurrency(metrics.netCashFlow)}
             </strong>
             <small className={styles.kpiNote}>Completed income minus completed outflows through today</small>
           </div>
@@ -700,7 +704,12 @@ export function DashboardLiveOverview({
                           }
                         >
                           {income ? "+" : "-"}
-                          {formatCurrency(converted, "EUR")}
+                          {baseCurrency === currency
+                            ? formatCurrency(originalAmount, currency)
+                            : formatHistoricalReportingAmount(
+                                converted,
+                                transaction.transaction_date,
+                              )}
                         </strong>
                         {foreign ? (
                           <span>
@@ -729,16 +738,15 @@ export function DashboardLiveOverview({
 
         <div className="panel">
           <div className="panel-head">
-            <h3>EUR reporting standard</h3>
-            <Euro size={21} />
+            <h3>Base currency view</h3>
+            <WalletCards size={21} />
           </div>
           <div className={styles.infoCard}>
             <WalletCards size={22} />
             <div>
               <strong>One clear reporting currency</strong>
               <p>
-                Overview totals always use <b>amount_eur</b>. Original currencies
-                remain visible only as supporting information.
+                FICONTER preserves original currencies and converts the reporting view into <b>{baseCurrency}</b> without rewriting the original records.
               </p>
             </div>
           </div>
@@ -757,8 +765,8 @@ export function DashboardLiveOverview({
             <strong>{healthInputs.transactions.count}</strong>
           </div>
           <div className="stat-row">
-            <span>Reporting currency</span>
-            <strong>EUR</strong>
+            <span>Base currency</span>
+            <strong>{baseCurrency}</strong>
           </div>
         </div>
       </section>

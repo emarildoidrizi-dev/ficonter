@@ -8,7 +8,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import { calculateWealthScore } from "@/lib/wealth/wealthScore";
 import {
   normalizeNetWorthGrowthInputs,
@@ -174,18 +174,18 @@ export function NetWorthLive({
               result.metrics.availableCash >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatCurrency(result.metrics.availableCash, "EUR")}
+            {formatReportingCurrency(result.metrics.availableCash)}
           </strong>
         </article>
         <article>
           <PiggyBank />
           <span>Recorded savings</span>
-          <strong>{formatCurrency(result.metrics.recordedSavings, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.recordedSavings)}</strong>
         </article>
         <article>
           <TrendingDown />
           <span>Total liabilities</span>
-          <strong>{formatCurrency(result.metrics.currentDebt, "EUR")}</strong>
+          <strong>{formatReportingCurrency(result.metrics.currentDebt)}</strong>
         </article>
         <article>
           <Landmark />
@@ -195,7 +195,7 @@ export function NetWorthLive({
               result.metrics.netWorth >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatCurrency(result.metrics.netWorth, "EUR")}
+            {formatReportingCurrency(result.metrics.netWorth)}
           </strong>
         </article>
       </div>
@@ -237,7 +237,7 @@ export function NetWorthLive({
                     repaid
                   </small>
                 </div>
-                <strong>{formatCurrency(debt.currentBalance, "EUR")}</strong>
+                <strong>{formatReportingCurrency(debt.currentBalance)}</strong>
               </div>
             ))}
           </div>

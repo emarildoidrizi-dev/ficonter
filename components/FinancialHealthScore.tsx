@@ -12,7 +12,7 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatReportingCurrency } from "@/lib/financialOptions";
 import type {
   FinancialHealthFactor,
   FinancialHealthFactorId,
@@ -34,7 +34,7 @@ function factorMetric(factor: FinancialHealthFactor): string {
   if (factor.metricLabel) return factor.metricLabel;
 
   if (factor.metricUnit === "currency") {
-    return formatCurrency(factor.metricValue, "EUR");
+    return formatReportingCurrency(factor.metricValue);
   }
   if (factor.metricUnit === "percent") {
     return `${factor.metricValue.toFixed(1)}%`;

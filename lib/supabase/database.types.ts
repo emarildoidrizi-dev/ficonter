@@ -2158,6 +2158,42 @@ export type Database = {
           },
         ]
       }
+      fx_rate_cache: {
+        Row: {
+          base_currency: string
+          created_at: string
+          fetched_at: string
+          id: number
+          quote_currency: string
+          rate: number
+          rate_date: string
+          requested_date: string
+          source: string
+        }
+        Insert: {
+          base_currency: string
+          created_at?: string
+          fetched_at?: string
+          id?: number
+          quote_currency: string
+          rate: number
+          rate_date: string
+          requested_date: string
+          source?: string
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          fetched_at?: string
+          id?: number
+          quote_currency?: string
+          rate?: number
+          rate_date?: string
+          requested_date?: string
+          source?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string

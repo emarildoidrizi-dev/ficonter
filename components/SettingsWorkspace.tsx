@@ -73,6 +73,17 @@ import {
   type InterfaceLayoutPreference,
 } from "@/lib/interfaceLayout";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
+import {
+  CURRENCY_CODES,
+  currencyName,
+  type CurrencyCode,
+} from "@/lib/financialOptions";
+import {
+  DEFAULT_BASE_CURRENCY,
+  normalizeCurrency,
+} from "@/lib/finance/currencyEngine";
+import { BASE_CURRENCY_CHANGED_EVENT } from "./BaseCurrencyBootstrap";
+import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useLanguage } from "./LanguageProvider";
 import {
   PUBLIC_SUBSCRIPTION_PLANS,
@@ -154,10 +165,23 @@ type BillingHistoryTransaction = {
   } | null;
 };
 
+type SaveFeedback = {
+  type: "success" | "error";
+  text: string;
+};
+
+type SaveFeedbackKey =
+  | "profile"
+  | "baseCurrency"
+  | "financialPreferences"
+  | "notifications"
+  | "appearance";
+
 type Props = {
   userId: string;
   email: string;
   metadata: Metadata;
+  initialBaseCurrency?: string;
   initialSection?: string;
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
@@ -456,8 +480,17 @@ function formatBillingAmount(
   }
 }
 
-export function SettingsWorkspace({ userId, email, metadata, initialSection, subscription, requiredFeature = null, isSubscriptionExempt = false }: Props) {
-  const { language } = useLanguage();
+export function SettingsWorkspace({
+  userId,
+  email,
+  metadata,
+  initialBaseCurrency = DEFAULT_BASE_CURRENCY,
+  initialSection,
+  subscription,
+  requiredFeature = null,
+  isSubscriptionExempt = false,
+}: Props) {
+  const { language, locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
@@ -493,6 +526,25 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrency(
+      initialBaseCurrency || readPreferences(metadata).currency,
+      DEFAULT_BASE_CURRENCY,
+    ),
+  );
+  const currencyOptions = useMemo<[string, string][]>(
+    () =>
+      CURRENCY_CODES.map(
+        (code) =>
+          [
+            code,
+            `${code} — ${currencyName(code, locale)}`,
+          ] as [string, string],
+      ).sort((a, b) =>
+        a[1].localeCompare(b[1], locale, { sensitivity: "base" }),
+      ),
+    [locale],
+  );
   const [rememberDevice, setRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -503,6 +555,12 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<ExportKind>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<
+    Partial<Record<SaveFeedbackKey, SaveFeedback>>
+  >({});
+  const saveFeedbackTimers = useRef<
+    Partial<Record<SaveFeedbackKey, number>>
+  >({});
 
   useEffect(() => {
     if (!isSectionId(initialSection)) return;
@@ -515,7 +573,16 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
         : initialSection,
     );
     setMessage(null);
+    setSaveFeedback({});
   }, [initialSection, isSubscriptionExempt]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(saveFeedbackTimers.current).forEach((timer) => {
+        if (timer) window.clearTimeout(timer);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -594,6 +661,12 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
   }, [language]);
 
   useEffect(() => {
+    setBaseCurrency(
+      normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY),
+    );
+  }, [initialBaseCurrency]);
+
+  useEffect(() => {
     let active = true;
 
     function syncIdentity(user: AuthIdentityUser | null | undefined) {
@@ -668,6 +741,64 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     setMessage({ type: "error", text: error instanceof Error ? error.message : fallback });
   }
 
+  function clearSaveFeedback(key: SaveFeedbackKey) {
+    const currentTimer = saveFeedbackTimers.current[key];
+    if (currentTimer) {
+      window.clearTimeout(currentTimer);
+      delete saveFeedbackTimers.current[key];
+    }
+
+    setSaveFeedback((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function showLocalSaveFeedback(
+    key: SaveFeedbackKey,
+    type: SaveFeedback["type"],
+    text: string,
+  ) {
+    const currentTimer = saveFeedbackTimers.current[key];
+    if (currentTimer) window.clearTimeout(currentTimer);
+
+    setSaveFeedback((current) => ({
+      ...current,
+      [key]: { type, text },
+    }));
+
+    saveFeedbackTimers.current[key] = window.setTimeout(() => {
+      setSaveFeedback((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+      delete saveFeedbackTimers.current[key];
+    }, 4200);
+  }
+
+  function localSaveFeedback(key: SaveFeedbackKey) {
+    const feedback = saveFeedback[key];
+    if (!feedback) return null;
+
+    return (
+      <span
+        className={`${styles.actionFeedback} ${
+          feedback.type === "error"
+            ? styles.actionFeedbackError
+            : styles.actionFeedbackSuccess
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {feedback.type === "success" ? <Check size={15} /> : null}
+        {feedback.text}
+      </span>
+    );
+  }
+
   async function saveMetadata(nextData: Metadata) {
     const {
       data: { user },
@@ -691,6 +822,7 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     event.preventDefault();
     setLoading(true);
     setMessage(null);
+    clearSaveFeedback("profile");
 
     try {
       let nextPhotoPath = profilePhotoPath;
@@ -751,9 +883,13 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
         }),
       );
 
-      showSuccess("Profile changes saved.");
+      showLocalSaveFeedback("profile", "success", "Profile changes saved.");
     } catch (error) {
-      showError(error, "Your profile could not be updated.");
+      showLocalSaveFeedback(
+        "profile",
+        "error",
+        error instanceof Error ? error.message : "Your profile could not be updated.",
+      );
     } finally {
       setLoading(false);
     }
@@ -876,17 +1012,109 @@ export function SettingsWorkspace({ userId, email, metadata, initialSection, sub
     }
   }
 
-  async function savePreferences(next: Preferences, text: string) {
+  async function savePreferences(
+    next: Preferences,
+    text: string,
+    feedbackKey: Extract<
+      SaveFeedbackKey,
+      "financialPreferences" | "notifications" | "appearance"
+    >,
+  ) {
     setLoading(true);
     setMessage(null);
+    clearSaveFeedback(feedbackKey);
     try {
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
       applyInterface(next);
       window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
-      showSuccess(text);
+      showLocalSaveFeedback(feedbackKey, "success", text);
     } catch (error) {
-      showError(error, "Your preferences could not be saved.");
+      showLocalSaveFeedback(
+        feedbackKey,
+        "error",
+        error instanceof Error ? error.message : "Your preferences could not be saved.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveBaseCurrency(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    clearSaveFeedback("baseCurrency");
+
+    try {
+      const normalized = normalizeCurrency(
+        baseCurrency,
+        DEFAULT_BASE_CURRENCY,
+      );
+
+      if (normalized !== DEFAULT_BASE_CURRENCY) {
+        await getExchangeRate(DEFAULT_BASE_CURRENCY, normalized, {
+          forceRefresh: true,
+        });
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ base_currency: normalized })
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+
+      const nextPreferences: Preferences = {
+        ...preferences,
+        currency: normalized,
+      };
+
+      await saveMetadata({
+        ficonter_base_currency: normalized,
+        ficonter_preferences: nextPreferences,
+      });
+
+      setBaseCurrency(normalized);
+      setPreferences(nextPreferences);
+
+      try {
+        localStorage.setItem(
+          "ficonter-personal-base-currency",
+          normalized,
+        );
+      } catch {
+        // The profile remains the source of truth.
+      }
+
+      document.documentElement.dataset.baseCurrency = normalized;
+
+      window.dispatchEvent(
+        new CustomEvent(BASE_CURRENCY_CHANGED_EVENT, {
+          detail: {
+            currency: normalized,
+            workspace: "personal",
+          },
+        }),
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("ficonter:preferences-updated", {
+          detail: nextPreferences,
+        }),
+      );
+
+      showLocalSaveFeedback(
+        "baseCurrency",
+        "success",
+        "Your base currency has been saved.",
+      );
+    } catch (error) {
+      showLocalSaveFeedback(
+        "baseCurrency",
+        "error",
+        error instanceof Error ? error.message : "Your base currency could not be saved.",
+      );
     } finally {
       setLoading(false);
     }
@@ -1312,7 +1540,7 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); }}>
+            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
@@ -1345,7 +1573,7 @@ const showSubscriptionManagement =
                 <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={120} /></label>
                 <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="nickname" maxLength={80} /></label>
               </div>
-              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save profile"}</button></div>
+              <div className={styles.actions}>{localSaveFeedback("profile")}<button className={styles.primaryButton} disabled={loading}><Save size={16} />{loading ? "Saving…" : "Save profile"}</button></div>
             </form>
 
             <form className={styles.formCard} onSubmit={updateEmail}>
@@ -1387,21 +1615,140 @@ const showSubscriptionManagement =
         ) : null}
 
         {active === "financial" ? (
-          canUseFinancialPreferences ? (
-            <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Financial preferences saved."); }}>
-              <div className={styles.formGrid}>
-                <Select label="Default currency" value={preferences.currency} onChange={(value) => setPreferences((current) => ({ ...current, currency: value }))} options={[['EUR','EUR — Euro'],['USD','USD — US Dollar'],['GBP','GBP — British Pound'],['CHF','CHF — Swiss Franc'],['ALL','ALL — Albanian Lek']]} />
-                <Select label="Number format" value={preferences.numberFormat} onChange={(value) => setPreferences((current) => ({ ...current, numberFormat: value }))} options={[['de-DE','1.234,56'],['en-US','1,234.56'],['fr-FR','1 234,56']]} />
-                <Select label="Date format" value={preferences.dateFormat} onChange={(value) => setPreferences((current) => ({ ...current, dateFormat: value }))} options={[['DD/MM/YYYY','DD/MM/YYYY'],['MM/DD/YYYY','MM/DD/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']]} />
-                <Select label="First day of the week" value={preferences.weekStart} onChange={(value) => setPreferences((current) => ({ ...current, weekStart: value }))} options={[['monday','Monday'],['sunday','Sunday']]} />
+          <div className={styles.stack}>
+            <form className={styles.form} onSubmit={saveBaseCurrency}>
+              <div className={styles.cardHeading}>
+                <WalletCards size={19} />
+                <div>
+                  <h3>Base currency</h3>
+                  <p>
+                    Choose the currency you normally use. Your original financial records never change when you choose another base currency.
+                  </p>
+                </div>
               </div>
-              <Select label="Monthly planner start balance behavior" value={preferences.plannerStartBalance} onChange={(value) => setPreferences((current) => ({ ...current, plannerStartBalance: value }))} options={[['manual','Manual entry'],['carry-forward','Carry forward the previous month’s remaining balance'],['zero','Start every new month at €0']]} />
-              <div className={styles.infoStrip}><LayoutTemplate size={18} /><div><strong>EUR remains the calculation currency</strong><span>Original currencies and historical exchange rates remain preserved.</span></div></div>
-              <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save preferences</button></div>
+
+              <Select
+                label="Base currency"
+                value={baseCurrency}
+                onChange={(value) =>
+                  setBaseCurrency(normalizeCurrency(value))
+                }
+                options={currencyOptions}
+              />
+
+              <div className={styles.infoStrip}>
+                <ShieldCheck size={18} />
+                <div>
+                  <strong>Original amounts stay unchanged</strong>
+                  <span>
+                    FICONTER now converts the reporting view into your selected base currency while preserving every original transaction amount and currency.
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.actions}>
+                {localSaveFeedback("baseCurrency")}
+                <button
+                  className={styles.primaryButton}
+                  disabled={loading}
+                >
+                  <Save size={16} />
+                  Save base currency
+                </button>
+              </div>
             </form>
-          ) : (
-            <SubscriptionInlineLock feature="financial_preferences" />
-          )
+
+            {canUseFinancialPreferences ? (
+              <form
+                className={styles.form}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void savePreferences(
+                    preferences,
+                    "Financial preferences saved.",
+                    "financialPreferences",
+                  );
+                }}
+              >
+                <div className={styles.formGrid}>
+                  <Select
+                    label="Number format"
+                    value={preferences.numberFormat}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        numberFormat: value,
+                      }))
+                    }
+                    options={[
+                      ["de-DE", "1.234,56"],
+                      ["en-US", "1,234.56"],
+                      ["fr-FR", "1 234,56"],
+                    ]}
+                  />
+                  <Select
+                    label="Date format"
+                    value={preferences.dateFormat}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        dateFormat: value,
+                      }))
+                    }
+                    options={[
+                      ["DD/MM/YYYY", "DD/MM/YYYY"],
+                      ["MM/DD/YYYY", "MM/DD/YYYY"],
+                      ["YYYY-MM-DD", "YYYY-MM-DD"],
+                    ]}
+                  />
+                  <Select
+                    label="First day of the week"
+                    value={preferences.weekStart}
+                    onChange={(value) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        weekStart: value,
+                      }))
+                    }
+                    options={[
+                      ["monday", "Monday"],
+                      ["sunday", "Sunday"],
+                    ]}
+                  />
+                </div>
+                <Select
+                  label="Monthly planner start balance behavior"
+                  value={preferences.plannerStartBalance}
+                  onChange={(value) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      plannerStartBalance: value,
+                    }))
+                  }
+                  options={[
+                    ["manual", "Manual entry"],
+                    [
+                      "carry-forward",
+                      "Carry forward the previous month’s remaining balance",
+                    ],
+                    ["zero", "Start every new month at €0"],
+                  ]}
+                />
+                <div className={styles.actions}>
+                  {localSaveFeedback("financialPreferences")}
+                  <button
+                    className={styles.primaryButton}
+                    disabled={loading}
+                  >
+                    <Save size={16} />
+                    Save preferences
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <SubscriptionInlineLock feature="financial_preferences" />
+            )}
+          </div>
         ) : null}
 
         {active === "notifications" ? (
@@ -1413,7 +1760,7 @@ const showSubscriptionManagement =
               <Toggle checked={preferences.notifications.upcomingPayments} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, upcomingPayments: value } }))} label="Upcoming payment alerts" disabled={!preferences.notifications.emailEnabled} />
               <Toggle checked={preferences.notifications.goalProgress} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, goalProgress: value } }))} label="Goal progress alerts" disabled={!preferences.notifications.emailEnabled} />
               <Toggle checked={preferences.notifications.monthlySummary} onChange={(value) => setPreferences((current) => ({ ...current, notifications: { ...current.notifications, monthlySummary: value } }))} label="Monthly financial summary" disabled={!preferences.notifications.emailEnabled} />
-              <div className={styles.actions}><button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.")}><Save size={16} />Save notifications</button></div>
+              <div className={styles.actions}>{localSaveFeedback("notifications")}<button type="button" className={styles.primaryButton} disabled={loading} onClick={() => void savePreferences(preferences, "Notification preferences saved.", "notifications")}><Save size={16} />Save notifications</button></div>
             </div>
           </div>
           ) : (
@@ -1422,7 +1769,7 @@ const showSubscriptionManagement =
         ) : null}
 
         {active === "appearance" ? (
-          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved."); }}>
+          <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void savePreferences(preferences, "Appearance preferences saved.", "appearance"); }}>
             <fieldset className={styles.optionGroup}>
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
@@ -1717,7 +2064,7 @@ const showSubscriptionManagement =
                 ))}
               </div>
             </fieldset>
-            <div className={styles.actions}><button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
+            <div className={styles.actions}>{localSaveFeedback("appearance")}<button className={styles.primaryButton} disabled={loading}><Save size={16} />Save appearance</button></div>
           </form>
         ) : null}
 

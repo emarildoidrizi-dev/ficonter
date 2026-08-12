@@ -2158,6 +2158,42 @@ export type Database = {
           },
         ]
       }
+      fx_rate_cache: {
+        Row: {
+          base_currency: string
+          created_at: string
+          fetched_at: string
+          id: number
+          quote_currency: string
+          rate: number
+          rate_date: string
+          requested_date: string
+          source: string
+        }
+        Insert: {
+          base_currency: string
+          created_at?: string
+          fetched_at?: string
+          id?: number
+          quote_currency: string
+          rate: number
+          rate_date: string
+          requested_date: string
+          source?: string
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          fetched_at?: string
+          id?: number
+          quote_currency?: string
+          rate?: number
+          rate_date?: string
+          requested_date?: string
+          source?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
@@ -2346,16 +2382,22 @@ export type Database = {
       }
       profiles: {
         Row: {
+          base_currency: string
+          base_currency_updated_at: string
           created_at: string
           full_name: string | null
           id: string
         }
         Insert: {
+          base_currency?: string
+          base_currency_updated_at?: string
           created_at?: string
           full_name?: string | null
           id: string
         }
         Update: {
+          base_currency?: string
+          base_currency_updated_at?: string
           created_at?: string
           full_name?: string | null
           id?: string
@@ -3254,10 +3296,14 @@ export type Database = {
       }
       record_goal_investment: {
         Args: {
-          p_amount: number
+          p_amount_eur: number
+          p_currency: string
+          p_exchange_rate: number
+          p_exchange_rate_date: string
           p_goal_id: string
           p_invested_at: string
           p_notes: string
+          p_original_amount: number
         }
         Returns: Json
       }

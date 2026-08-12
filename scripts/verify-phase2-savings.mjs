@@ -53,7 +53,7 @@ check("component subscribes to planner", component.includes('table: "monthly_bud
 check("component renders 12-month trend", component.includes("Saving momentum"));
 check("component renders period selector", component.includes("Choose savings average period") && component.includes("SAVINGS_AVERAGE_PERIODS.map"));
 check("component defaults period selector to six months", component.includes("useState<SavingsAveragePeriod>(6)"));
-check("component explains calendar average", component.includes("Months without savings count as €0"));
+check("component explains calendar average", component.includes("Months without savings count as €0") || component.includes("Months without savings count as zero in your selected base currency"));
 check("component renders savings allocation", component.includes("Where savings are going"));
 check("component explains Emergency Fund separation", component.includes("Emergency Fund") && component.includes("dedicated module"));
 check("component renders recent contributions", component.includes("Latest saving activity"));

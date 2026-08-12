@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   CalendarRange,
   Download,
@@ -19,18 +19,12 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
+import { originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
+import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import { createTransactionsPdf, triggerDownload } from "@/lib/accountExport";
-import {
-  CATEGORY_GROUPS,
-  CURRENCY_CODES,
-  TRANSACTION_TYPES,
-  TYPE_BY_VALUE,
-  currencyName,
-  currencySymbol,
-  formatCurrency,
-  type FlowDirection,
-} from "@/lib/financialOptions";
+import { CATEGORY_GROUPS, CURRENCY_CODES, TRANSACTION_TYPES, TYPE_BY_VALUE, currencyName, currencySymbol, formatCurrency, type FlowDirection, formatReportingCurrency } from "@/lib/financialOptions";
 import styles from "./TransactionLedger.module.css";
 
 type Transaction = {
@@ -97,6 +91,50 @@ function signedEuroValue(item: Transaction) {
 export function TransactionLedger({ transactions: initialTransactions, allowMultiCurrency = true, allowPdfExport = true }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
+  const { baseCurrency } = useCurrencyDisplay();
+  const { rateForDate } = useHistoricalReportingRates(
+    transactions.map((transaction) => transaction.transaction_date),
+  );
+
+  const displayedAmountFor = useCallback(
+    (transaction: Transaction) =>
+      originalAmountInBaseCurrency({
+        originalAmount: transaction.amount,
+        originalCurrency: transaction.currency,
+        amountEur: transaction.amount_eur,
+        baseCurrency,
+        euroToBaseRate: rateForDate(transaction.transaction_date),
+      }),
+    [baseCurrency, rateForDate],
+  );
+
+  const conversionRateFor = useCallback(
+    (transaction: Transaction): number | null => {
+      const originalCurrency = normalizeCurrency(transaction.currency);
+      if (originalCurrency === baseCurrency) return null;
+
+      const originalToEur =
+        originalCurrency === "EUR"
+          ? 1
+          : finiteNumber(transaction.exchange_rate_to_eur);
+
+      if (!Number.isFinite(originalToEur) || originalToEur <= 0) {
+        return null;
+      }
+
+      const eurToBase =
+        baseCurrency === "EUR"
+          ? 1
+          : rateForDate(transaction.transaction_date);
+
+      if (!eurToBase || !Number.isFinite(eurToBase) || eurToBase <= 0) {
+        return null;
+      }
+
+      return roundRate(originalToEur * eurToBase);
+    },
+    [baseCurrency, rateForDate],
+  );
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [visibleLimit, setVisibleLimit] = useState(120);
@@ -290,21 +328,28 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
     const outflowValues: unknown[] = [];
     const netValues: unknown[] = [];
     let neutralCount = 0;
+
     visible.forEach((item) => {
       const direction = directionOf(item.type);
-      const euro = finiteNumber(item.amount_eur ?? item.amount);
-      if (direction === "inflow") inflowValues.push(euro);
-      else if (direction === "outflow") outflowValues.push(euro);
+      const amount = displayedAmountFor(item);
+      if (amount === null) return;
+
+      if (direction === "inflow") inflowValues.push(amount);
+      else if (direction === "outflow") outflowValues.push(amount);
       else neutralCount += 1;
-      netValues.push(signedEuroValue(item));
+
+      const sign =
+        direction === "inflow" ? 1 : direction === "outflow" ? -1 : 0;
+      netValues.push(amount * sign);
     });
+
     return {
       inflow: sumMoney(inflowValues),
       outflow: sumMoney(outflowValues),
       net: sumMoney(netValues),
       neutralCount,
     };
-  }, [visible]);
+  }, [displayedAmountFor, visible]);
 
 
   function clearFilters() {
@@ -366,19 +411,24 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
 
   function exportCsv(items: Transaction[], scope: "view" | "selected") {
     if (!items.length) return;
-    const header = ["Description", "Category", "Occurred at", "Transaction type", "Direction", "Currency", "Original amount", "EUR amount", "Rate to EUR", "Rate date"];
-    const rows = items.map((item) => [
-      item.description,
-      item.category,
-      item.occurred_at ?? item.transaction_date,
-      typeLabel(item.type),
-      directionOf(item.type),
-      item.currency,
-      finiteNumber(item.amount).toFixed(2),
-      finiteNumber(item.amount_eur ?? item.amount).toFixed(2),
-      finiteNumber(item.exchange_rate_to_eur ?? 1).toFixed(8),
-      item.exchange_rate_date ?? "",
-    ]);
+    const header = ["Description", "Category", "Occurred at", "Transaction type", "Direction", "Original currency", "Original amount", "Display currency", "Display amount", "Canonical EUR amount", "Rate to EUR", "Rate date"];
+    const rows = items.map((item) => {
+      const displayed = displayedAmountFor(item);
+      return [
+        item.description,
+        item.category,
+        item.occurred_at ?? item.transaction_date,
+        typeLabel(item.type),
+        directionOf(item.type),
+        item.currency,
+        finiteNumber(item.amount).toFixed(2),
+        baseCurrency,
+        displayed === null ? "" : displayed.toFixed(2),
+        finiteNumber(item.amount_eur ?? item.amount).toFixed(2),
+        finiteNumber(item.exchange_rate_to_eur ?? 1).toFixed(8),
+        item.exchange_rate_date ?? "",
+      ];
+    });
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -405,8 +455,15 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         metadata?.display_name ?? metadata?.full_name ?? user.email ?? "FICONTER account holder",
       );
       const exportedAt = new Date().toISOString();
-      const pdf = await createTransactionsPdf(
-        items.map((transaction) => ({
+      const pdfRecords = items.map((transaction) => {
+        const displayed = displayedAmountFor(transaction);
+        if (displayed === null) {
+          throw new Error(
+            "Currency conversion is still loading. Try the PDF export again in a moment.",
+          );
+        }
+
+        return {
           description: transaction.description,
           category: transaction.category,
           type: typeLabel(transaction.type),
@@ -414,9 +471,21 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
           currency: transaction.currency || "EUR",
           amount: finiteNumber(transaction.amount),
           amount_eur: finiteNumber(transaction.amount_eur ?? transaction.amount),
+          display_amount: displayed,
+          display_currency: baseCurrency,
           occurred_at: transaction.occurred_at ?? `${transaction.transaction_date}T00:00:00`,
-        })),
-        { ownerName, email: user.email ?? "", locale: "en-US", exportedAt },
+        };
+      });
+
+      const pdf = await createTransactionsPdf(
+        pdfRecords,
+        {
+          ownerName,
+          email: user.email ?? "",
+          locale: "en-US",
+          exportedAt,
+          baseCurrency,
+        },
       );
 
       triggerDownload(`ficonter-transactions-${scope}-${exportDateSuffix}.pdf`, pdf);
@@ -652,9 +721,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       </div>
 
       <div className={styles.summary}>
-        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatCurrency(totals.inflow, "EUR")}</strong></div>
-        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatCurrency(totals.outflow, "EUR")}</strong></div>
-        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatCurrency(totals.net, "EUR")}</strong></div>
+        <div><TrendingUp size={18} /><span>Money received</span><strong className={styles.positive}>{formatCurrency(totals.inflow, baseCurrency)}</strong></div>
+        <div><TrendingDown size={18} /><span>Money spent</span><strong className={styles.negative}>{formatCurrency(totals.outflow, baseCurrency)}</strong></div>
+        <div><WalletCards size={18} /><span>Net movement by currency</span><strong>{formatCurrency(totals.net, baseCurrency)}</strong></div>
       </div>
 
       {notice && <div className={styles.notice}>{notice}</div>}
@@ -703,8 +772,27 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
               <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
-                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{formatCurrency(finiteNumber(transaction.amount_eur ?? transaction.amount), "EUR")}</strong>
-                <span>{transaction.currency === "EUR" ? "Original currency EUR" : `${formatCurrency(finiteNumber(transaction.amount), transaction.currency)} · 1 ${transaction.currency} = ${finiteNumber(transaction.exchange_rate_to_eur).toFixed(6)} EUR`}</span>
+                <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{(() => {
+                  const displayedAmount = displayedAmountFor(transaction);
+                  return displayedAmount === null
+                    ? `— ${baseCurrency}`
+                    : formatCurrency(displayedAmount, baseCurrency);
+                })()}</strong>
+                <span>
+                  {(() => {
+                    const originalCurrency = normalizeCurrency(transaction.currency);
+                    const conversionRate = conversionRateFor(transaction);
+
+                    return (
+                      <>
+                        Original: {formatCurrency(finiteNumber(transaction.amount), originalCurrency)}
+                        {originalCurrency !== baseCurrency && conversionRate ? (
+                          <> · 1 {originalCurrency} = {conversionRate.toFixed(6)} {baseCurrency}</>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </span>
               </div>
               <div className={styles.actions}><button type="button" onClick={() => openEdit(transaction)} aria-label="Edit transaction"><Pencil size={17} /><span>Edit</span></button><button className={styles.deleteButton} type="button" onClick={() => { setError(""); setDeleteTarget(transaction); }} aria-label="Delete transaction"><Trash2 size={17} /><span>Delete</span></button></div>
             </article>
@@ -745,7 +833,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving EUR rate…" : editRateError ? editRateError : `EUR equivalent: ${formatCurrency(convertToReportingCurrency(editAmount, editRate.rate), "EUR")} · 1 ${editCurrency} = ${editRate.rate.toFixed(6)} EUR`}</div>
+              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : editCurrency === baseCurrency ? `Base currency equivalent: ${formatCurrency(finiteNumber(editAmount), baseCurrency)} · no conversion required` : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
               {error && <div className={styles.error}>{error}</div>}
               <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
             </form>

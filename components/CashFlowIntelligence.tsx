@@ -19,6 +19,8 @@ import {
   subscribeFiconterDataChanges,
 } from "@/lib/ficonterRealtime";
 import { formatCurrency } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { canonicalAmountInBaseCurrency, mapDebtPaymentsToBaseCurrency, reconcileCashFlowToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { reconcileCashFlowMonthlyInputs } from "@/lib/finance/monthlyCashActuals";
 import {
   calculateCashFlowIntelligence,
@@ -82,6 +84,11 @@ export function CashFlowIntelligence({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: currencySource,
+    context: currencyContext,
+    baseCurrency,
+  } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const commitmentPanelRef = useRef<HTMLElement | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
@@ -276,14 +283,31 @@ export function CashFlowIntelligence({
     };
   }, [scheduleRefresh]);
 
+  const reconciledInputs = useMemo(
+    () =>
+      reconcileCashFlowToBaseCurrency(
+        inputs,
+        currencySource,
+        currencyContext,
+      ),
+    [currencyContext, currencySource, inputs],
+  );
+  const reconciledDebtPayments = useMemo(
+    () => mapDebtPaymentsToBaseCurrency(currencySource.debtPayments, currencyContext),
+    [currencyContext, currencySource.debtPayments],
+  );
+  const reconciledOpeningBalance = useMemo(
+    () => canonicalAmountInBaseCurrency(openingBalance, currencyContext),
+    [currencyContext, openingBalance],
+  );
   const result = useMemo(
     () =>
       calculateCashFlowIntelligence(
-        inputs,
-        debtPayments,
-        openingBalance,
+        reconciledInputs,
+        reconciledDebtPayments,
+        reconciledOpeningBalance,
       ),
-    [debtPayments, inputs, openingBalance],
+    [reconciledDebtPayments, reconciledInputs, reconciledOpeningBalance],
   );
   const maxChartValue = Math.max(
     1,
@@ -291,14 +315,14 @@ export function CashFlowIntelligence({
   );
   const leftIsPositive = result.metrics.leftAfterPayments >= 0;
   const allTimeSummary = {
-    income: inputs.financialHealth.transactions.totalIncome,
+    income: reconciledInputs.financialHealth.transactions.totalIncome,
     outflow:
-      inputs.financialHealth.transactions.totalExpenses +
-      inputs.financialHealth.transactions.totalSavings,
+      reconciledInputs.financialHealth.transactions.totalExpenses +
+      reconciledInputs.financialHealth.transactions.totalSavings,
     netMovement:
-      inputs.financialHealth.transactions.totalIncome -
-      inputs.financialHealth.transactions.totalExpenses -
-      inputs.financialHealth.transactions.totalSavings,
+      reconciledInputs.financialHealth.transactions.totalIncome -
+      reconciledInputs.financialHealth.transactions.totalExpenses -
+      reconciledInputs.financialHealth.transactions.totalSavings,
   };
 
   function showCommitmentBreakdown() {
@@ -348,7 +372,7 @@ export function CashFlowIntelligence({
               <ArrowUpRight aria-hidden="true" />
               <span>All-time income</span>
               <strong className={styles.positive}>
-                {formatCurrency(allTimeSummary.income, "EUR")}
+                {formatCurrency(allTimeSummary.income, baseCurrency)}
               </strong>
               <small>
                 Recorded income across the complete transaction history. Opening
@@ -358,7 +382,7 @@ export function CashFlowIntelligence({
             <article>
               <ArrowDownRight aria-hidden="true" />
               <span>All-time outflow</span>
-              <strong>{formatCurrency(allTimeSummary.outflow, "EUR")}</strong>
+              <strong>{formatCurrency(allTimeSummary.outflow, baseCurrency)}</strong>
               <small>
                 Every recorded expense and saving contribution, including paid
                 bills and debt payments recorded as expenses.
@@ -377,7 +401,7 @@ export function CashFlowIntelligence({
                     : styles.negative
                 }
               >
-                {formatCurrency(allTimeSummary.netMovement, "EUR")}
+                {formatCurrency(allTimeSummary.netMovement, baseCurrency)}
               </strong>
               <small>
                 All-time income minus all-time outflow. This is historical
@@ -400,13 +424,13 @@ export function CashFlowIntelligence({
         <article>
           <ArrowUpRight aria-hidden="true" />
           <span>Income + start balance</span>
-          <strong>{formatCurrency(result.metrics.currentMonthIncome, "EUR")}</strong>
+          <strong>{formatCurrency(result.metrics.currentMonthIncome, baseCurrency)}</strong>
           <small>Mirrors Monthly Planner start balance plus recorded income.</small>
         </article>
         <article>
           <ArrowDownRight aria-hidden="true" />
           <span>Outflow recorded this month</span>
-          <strong>{formatCurrency(result.metrics.currentMonthOutflow, "EUR")}</strong>
+          <strong>{formatCurrency(result.metrics.currentMonthOutflow, baseCurrency)}</strong>
           <small>Expenses, paid bills, debt payments and savings already recorded.</small>
         </article>
         <article className={styles.availableCard}>
@@ -417,7 +441,7 @@ export function CashFlowIntelligence({
               result.metrics.availableNow >= 0 ? styles.positive : styles.negative
             }
           >
-            {formatCurrency(result.metrics.availableNow, "EUR")}
+            {formatCurrency(result.metrics.availableNow, baseCurrency)}
           </strong>
           <small>The current amount after all recorded activity.</small>
         </article>
@@ -448,19 +472,19 @@ export function CashFlowIntelligence({
             leftIsPositive ? styles.positive : styles.negative
           }`}
         >
-          {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+          {formatCurrency(Math.abs(result.metrics.leftAfterPayments), baseCurrency)}
         </strong>
         <p>{result.summary}</p>
 
         <div className={styles.balanceEquation} aria-label="Balance calculation">
           <span>
             <small>Available now</small>
-            <strong>{formatCurrency(result.metrics.availableNow, "EUR")}</strong>
+            <strong>{formatCurrency(result.metrics.availableNow, baseCurrency)}</strong>
           </span>
           <b aria-hidden="true">−</b>
           <span>
             <small>Still to pay</small>
-            <strong>{formatCurrency(result.metrics.stillToPay, "EUR")}</strong>
+            <strong>{formatCurrency(result.metrics.stillToPay, baseCurrency)}</strong>
           </span>
           <b aria-hidden="true">=</b>
           <span className={styles.equationResult}>
@@ -468,7 +492,7 @@ export function CashFlowIntelligence({
             <strong
               className={leftIsPositive ? styles.positive : styles.negative}
             >
-              {formatCurrency(Math.abs(result.metrics.leftAfterPayments), "EUR")}
+              {formatCurrency(Math.abs(result.metrics.leftAfterPayments), baseCurrency)}
             </strong>
           </span>
         </div>
@@ -480,10 +504,7 @@ export function CashFlowIntelligence({
           </button>
           {result.metrics.paidDebtMinimumsThisMonth > 0 ? (
             <small>
-              {formatCurrency(
-                result.metrics.paidDebtMinimumsThisMonth,
-                "EUR",
-              )}{" "}
+              {formatCurrency(result.metrics.paidDebtMinimumsThisMonth, baseCurrency)}{" "}
               of recorded debt payments was removed from Still to pay to prevent
               double counting.
             </small>
@@ -520,14 +541,14 @@ export function CashFlowIntelligence({
                     style={{
                       height: `${Math.max(2, (month.income / maxChartValue) * 100)}%`,
                     }}
-                    title={`Income ${formatCurrency(month.income, "EUR")}`}
+                    title={`Income ${formatCurrency(month.income, baseCurrency)}`}
                   />
                   <span
                     className={styles.outflowBar}
                     style={{
                       height: `${Math.max(2, (month.outflow / maxChartValue) * 100)}%`,
                     }}
-                    title={`Outflow ${formatCurrency(month.outflow, "EUR")}`}
+                    title={`Outflow ${formatCurrency(month.outflow, baseCurrency)}`}
                   />
                 </div>
                 <small>{monthLabel(month.month)}</small>
@@ -537,7 +558,7 @@ export function CashFlowIntelligence({
           <div className={styles.trendSummary}>
             <span>
               <small>Recent three-month net average</small>
-              <strong>{formatCurrency(result.metrics.recentNetAverage, "EUR")}</strong>
+              <strong>{formatCurrency(result.metrics.recentNetAverage, baseCurrency)}</strong>
             </span>
             <span>
               <small>Change vs previous three months</small>
@@ -547,7 +568,7 @@ export function CashFlowIntelligence({
                 }
               >
                 {result.metrics.trendChange >= 0 ? "+" : ""}
-                {formatCurrency(result.metrics.trendChange, "EUR")}
+                {formatCurrency(result.metrics.trendChange, baseCurrency)}
               </strong>
             </span>
             <span>
@@ -564,19 +585,19 @@ export function CashFlowIntelligence({
               <h2>Still to pay</h2>
             </div>
             <strong className={styles.commitmentTotal}>
-              {formatCurrency(result.metrics.stillToPay, "EUR")}
+              {formatCurrency(result.metrics.stillToPay, baseCurrency)}
             </strong>
           </header>
           <div className={styles.commitmentSplit}>
             <span>
               <ReceiptText aria-hidden="true" />
               <small>Unpaid bills</small>
-              <strong>{formatCurrency(result.commitments.billsTotal, "EUR")}</strong>
+              <strong>{formatCurrency(result.commitments.billsTotal, baseCurrency)}</strong>
             </span>
             <span>
               <ShieldCheck aria-hidden="true" />
               <small>Remaining debt minimums</small>
-              <strong>{formatCurrency(result.commitments.debtMinimums, "EUR")}</strong>
+              <strong>{formatCurrency(result.commitments.debtMinimums, baseCurrency)}</strong>
             </span>
           </div>
           <div className={`${styles.commitmentList} ficonter-scroll-region`}>
@@ -590,12 +611,12 @@ export function CashFlowIntelligence({
                     </small>
                     {item.kind === "debt" && (item.paidThisMonth ?? 0) > 0 ? (
                       <em>
-                        {formatCurrency(item.paidThisMonth ?? 0, "EUR")} already
+                        {formatCurrency(item.paidThisMonth ?? 0, baseCurrency)} already
                         recorded this month
                       </em>
                     ) : null}
                   </div>
-                  <b>{formatCurrency(item.amount, "EUR")}</b>
+                  <b>{formatCurrency(item.amount, baseCurrency)}</b>
                 </div>
               ))
             ) : (
@@ -625,7 +646,7 @@ export function CashFlowIntelligence({
                       <small>{percentage(category.share)} of recent expenses</small>
                     </div>
                     <div>
-                      <b>{formatCurrency(category.recentAmount, "EUR")}</b>
+                      <b>{formatCurrency(category.recentAmount, baseCurrency)}</b>
                       <small
                         className={
                           category.changePercent !== null &&

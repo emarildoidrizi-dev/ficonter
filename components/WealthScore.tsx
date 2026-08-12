@@ -12,7 +12,7 @@ import {
   Target,
   TrendingDown,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
 import type {
   WealthScoreFactor,
   WealthScoreFactorId,
@@ -30,9 +30,9 @@ const FACTOR_ICONS = {
   resilience: ShieldCheck,
 } satisfies Record<WealthScoreFactorId, typeof Landmark>;
 
-function factorMetric(factor: WealthScoreFactor): string {
+function factorMetric(factor: WealthScoreFactor, displayCurrency: CurrencyCode): string {
   if (factor.metricLabel) return factor.metricLabel;
-  if (factor.metricUnit === "currency") return formatCurrency(factor.metricValue, "EUR");
+  if (factor.metricUnit === "currency") return formatCurrency(factor.metricValue, displayCurrency);
   if (factor.metricUnit === "percent") return `${factor.metricValue.toFixed(1)}%`;
   if (factor.metricUnit === "months") return `${factor.metricValue.toFixed(1)} months`;
   if (factor.metricUnit === "ratio") return `${factor.metricValue.toFixed(2)}×`;
@@ -43,9 +43,11 @@ function factorMetric(factor: WealthScoreFactor): string {
 export function WealthScore({
   result,
   error = "",
+  displayCurrency = "EUR",
 }: {
   result: WealthScoreResult;
   error?: string;
+  displayCurrency?: CurrencyCode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const circumference = 2 * Math.PI * 46;
@@ -97,7 +99,7 @@ export function WealthScore({
           <div className={styles.quickMetrics}>
             <span>
               <small>Net wealth</small>
-              <strong>{formatCurrency(result.metrics.netWorth, "EUR")}</strong>
+              <strong>{formatCurrency(result.metrics.netWorth, displayCurrency)}</strong>
             </span>
             <span>
               <small>Capital / debt</small>
@@ -168,7 +170,7 @@ export function WealthScore({
                     <div className={styles.factorTop}>
                       <div>
                         <strong>{factor.name}</strong>
-                        <span>{factorMetric(factor)}</span>
+                        <span>{factorMetric(factor, displayCurrency)}</span>
                       </div>
                       <b>
                         {factor.assessed ? (

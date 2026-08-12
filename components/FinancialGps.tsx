@@ -25,7 +25,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileAiInsightsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   normalizeAiInsightsInputs,
   type AiInsightDomain,
@@ -62,13 +64,14 @@ type Props = {
 
 function evidenceValue(
   item: FinancialGpsAction["evidence"][number],
+  displayCurrency: CurrencyCode,
 ): string {
   if (item.value === null) return "Not available";
   if (typeof item.value === "string") return item.value;
 
   switch (item.format) {
     case "currency":
-      return formatCurrency(item.value, "EUR");
+      return formatCurrency(item.value, displayCurrency);
     case "percent":
       return `${item.value.toFixed(1)}%`;
     case "ratio":
@@ -84,9 +87,9 @@ function evidenceValue(
   }
 }
 
-function metricValue(metric: FinancialGpsMetric): string {
+function metricValue(metric: FinancialGpsMetric, displayCurrency: CurrencyCode): string {
   if (metric.value === null) return "Pending";
-  if (metric.format === "currency") return formatCurrency(metric.value, "EUR");
+  if (metric.format === "currency") return formatCurrency(metric.value, displayCurrency);
   if (metric.format === "months") return `${metric.value.toFixed(1)} months`;
   return `${metric.value.toFixed(1)}%`;
 }
@@ -103,6 +106,11 @@ export function FinancialGps({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const {
+    source: currencySource,
+    context: currencyContext,
+    baseCurrency,
+  } = useBaseCurrencySourceData(userId);
   const timerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [acknowledgements, setAcknowledgements] = useState(
@@ -114,9 +122,13 @@ export function FinancialGps({
     "connecting" | "live" | "offline"
   >("connecting");
 
+  const reconciledInputs = useMemo(
+    () => reconcileAiInsightsToBaseCurrency(inputs, currencySource, currencyContext),
+    [currencyContext, currencySource, inputs],
+  );
   const gps = useMemo(
-    () => calculateFinancialGps(inputs, acknowledgements),
-    [acknowledgements, inputs],
+    () => calculateFinancialGps(reconciledInputs, acknowledgements),
+    [acknowledgements, reconciledInputs],
   );
 
   const refreshInputs = useCallback(
@@ -372,7 +384,7 @@ export function FinancialGps({
                 {gps.primaryAction.evidence.map((evidence) => (
                   <span key={`${evidence.label}-${String(evidence.value)}`}>
                     <small>{evidence.label}</small>
-                    <strong>{evidenceValue(evidence)}</strong>
+                    <strong>{evidenceValue(evidence, baseCurrency)}</strong>
                   </span>
                 ))}
               </div>
@@ -414,7 +426,7 @@ export function FinancialGps({
         {gps.metrics.map((metric) => (
           <article className={styles.metricCard} data-tone={metric.tone} key={metric.id}>
             <span>{metric.label}</span>
-            <strong>{metricValue(metric)}</strong>
+            <strong>{metricValue(metric, baseCurrency)}</strong>
             <small>{metric.caption}</small>
           </article>
         ))}

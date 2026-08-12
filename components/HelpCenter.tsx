@@ -24,7 +24,7 @@ const guides = [
     icon: ArrowLeftRight,
     title: "Transactions",
     description:
-      "Record income and expenses, edit details, remove entries and understand EUR conversion.",
+      "Record income and expenses, edit details, remove entries and understand base-currency conversion.",
     points: [
       "Use General Income or General Expenses for every entry.",
       "The original currency and local transaction time remain attached to the record.",

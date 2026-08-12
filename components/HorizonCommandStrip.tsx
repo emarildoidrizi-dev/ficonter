@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react";
 import { AlertTriangle, Command, Route, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonCommandStrip.module.css";
 
@@ -10,7 +11,7 @@ type Props = {
   gps: FinancialGpsResult;
 };
 
-function cashFlowSummary(gps: FinancialGpsResult) {
+function cashFlowSummary(gps: FinancialGpsResult, displayCurrency: CurrencyCode) {
   const cashFlow = gps.metrics.find((metric) => metric.id === "cash-flow");
   if (cashFlow?.value === null || cashFlow?.value === undefined) {
     return {
@@ -24,7 +25,7 @@ function cashFlowSummary(gps: FinancialGpsResult) {
   if (cashFlow.value < 0) {
     return {
       label: "Negative cash flow",
-      value: formatCurrency(cashFlow.value, "EUR"),
+      value: formatCurrency(cashFlow.value, displayCurrency),
       tone: "critical" as const,
       icon: TrendingDown,
     };
@@ -32,7 +33,7 @@ function cashFlowSummary(gps: FinancialGpsResult) {
 
   return {
     label: cashFlow.value > 0 ? "Positive cash flow" : "Cash flow balanced",
-    value: formatCurrency(cashFlow.value, "EUR"),
+    value: formatCurrency(cashFlow.value, displayCurrency),
     tone: cashFlow.value > 0 ? ("positive" as const) : ("warning" as const),
     icon: TrendingUp,
   };
@@ -71,7 +72,8 @@ function riskSummary(gps: FinancialGpsResult) {
 }
 
 export function HorizonCommandStrip({ gps }: Props) {
-  const cashFlow = cashFlowSummary(gps);
+  const { baseCurrency } = useCurrencyDisplay();
+  const cashFlow = cashFlowSummary(gps, baseCurrency);
   const risk = riskSummary(gps);
   const CashFlowIcon = cashFlow.icon;
   const journeyProgress = Math.round(((gps.stageIndex + 1) / gps.stages.length) * 100);

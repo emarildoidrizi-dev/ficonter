@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight, Compass, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency } from "@/lib/financialOptions";
+import { formatCurrency, formatReportingCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
 import styles from "./HorizonOverviewBoard.module.css";
 
@@ -19,6 +20,7 @@ type Props = {
   savingsRate: number;
   activity: ActivityPoint[];
   gps: FinancialGpsResult;
+  valuesAlreadyInBaseCurrency?: boolean;
 };
 
 function sparklinePath(activity: ActivityPoint[]) {
@@ -44,10 +46,10 @@ function sparklinePath(activity: ActivityPoint[]) {
     .join(" ");
 }
 
-function evidenceValue(item: FinancialGpsResult["primaryAction"]["evidence"][number]) {
+function evidenceValue(item: FinancialGpsResult["primaryAction"]["evidence"][number], displayCurrency: CurrencyCode) {
   if (item.value === null) return "Pending";
   if (typeof item.value === "string") return item.value;
-  if (item.format === "currency") return formatCurrency(item.value, "EUR");
+  if (item.format === "currency") return formatCurrency(item.value, displayCurrency);
   if (item.format === "percent") return `${item.value.toFixed(1)}%`;
   if (item.format === "months") return `${item.value.toFixed(1)} months`;
   if (item.format === "ratio") return `${item.value.toFixed(2)}×`;
@@ -68,7 +70,13 @@ export function HorizonOverviewBoard({
   savingsRate,
   activity,
   gps,
+  valuesAlreadyInBaseCurrency = false,
 }: Props) {
+  const { baseCurrency } = useCurrencyDisplay();
+  const formatBoardCurrency = (value: number) =>
+    valuesAlreadyInBaseCurrency
+      ? formatCurrency(value, baseCurrency)
+      : formatReportingCurrency(value);
   const path = sparklinePath(activity);
   const expenseShare = allocationPercent(expenses, income);
   const savingsShare = allocationPercent(savings, income);
@@ -85,7 +93,7 @@ export function HorizonOverviewBoard({
             {positive ? "Positive" : "Needs attention"}
           </span>
         </div>
-        <strong className={styles.heroNumber}>{formatCurrency(cashFlow, "EUR")}</strong>
+        <strong className={styles.heroNumber}>{formatBoardCurrency(cashFlow)}</strong>
         <p>Income minus all completed outflows recorded to date.</p>
         <div className={styles.sparkline} aria-hidden="true">
           <svg viewBox="0 0 100 60" preserveAspectRatio="none">
@@ -104,8 +112,8 @@ export function HorizonOverviewBoard({
           </svg>
         </div>
         <div className={styles.miniStats}>
-          <span><small>Recorded income</small><strong>{formatCurrency(income, "EUR")}</strong></span>
-          <span><small>Recorded expenses</small><strong>{formatCurrency(expenses, "EUR")}</strong></span>
+          <span><small>Recorded income</small><strong>{formatBoardCurrency(income)}</strong></span>
+          <span><small>Recorded expenses</small><strong>{formatBoardCurrency(expenses)}</strong></span>
         </div>
       </article>
 
@@ -156,7 +164,7 @@ export function HorizonOverviewBoard({
                 {gps.primaryAction.evidence.slice(0, 3).map((item) => (
                   <span key={item.label}>
                     <small>{item.label}</small>
-                    <strong>{evidenceValue(item)}</strong>
+                    <strong>{evidenceValue(item, baseCurrency)}</strong>
                   </span>
                 ))}
               </div>

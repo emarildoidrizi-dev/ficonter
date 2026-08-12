@@ -33,8 +33,8 @@ expect(component.includes("Directional 12-month outlook"), "Forecast panel is pr
 expect(component.includes("Outlook unavailable"), "Insufficient history state is visible");
 expect(component.includes("current net-worth balance is never"), "UI explains baseline protection");
 expect(!component.includes(".from(\"transactions\")"), "Growth UI does not query transactions directly");
-expect(live.includes("calculateWealthScore(inputs.wealthScore)"), "Existing Wealth Score reuses the combined input source");
-expect(live.includes("<NetWorthGrowth inputs={inputs}"), "Growth module is integrated into Net Worth");
+expect(live.includes("calculateWealthScore(inputs.wealthScore)") || live.includes("calculateWealthScore(reconciledInputs.wealthScore)"), "Existing Wealth Score reuses the combined input source");
+expect(live.includes("<NetWorthGrowth inputs={inputs}") || live.includes("<NetWorthGrowth inputs={reconciledInputs}"), "Growth module is integrated into Net Worth");
 expect(live.includes('table: "transactions"'), "Net Worth listens to Transactions realtime");
 expect(live.includes('table: "debts"'), "Net Worth listens to Debt realtime");
 expect(live.includes('table: "debt_payments"'), "Net Worth listens to Debt Payment realtime");

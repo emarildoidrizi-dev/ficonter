@@ -7,6 +7,8 @@ import { MobileNavigationController } from "@/components/MobileNavigationControl
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
+import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
+import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
@@ -92,10 +94,21 @@ export default async function BusinessLayout({
 
   const preferences = readInterfacePreferences(user.user_metadata);
 
+  const workspaceCurrency = business?.base_currency ?? "EUR";
+
   return (
+    <CurrencyDisplayProvider
+      workspace="business"
+      baseCurrency={workspaceCurrency}
+      reportingCurrency={workspaceCurrency}
+    >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...preferences} />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
+      <BaseCurrencyBootstrap
+        workspace="business"
+        currency={workspaceCurrency}
+      />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
       <UsageHeartbeat workspace="business" />
@@ -140,5 +153,6 @@ export default async function BusinessLayout({
       </main>
           <PWAMobileDock workspace="business" />
       </div>
+    </CurrencyDisplayProvider>
   );
 }

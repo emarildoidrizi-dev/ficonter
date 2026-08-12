@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.contract";
 import { createClient } from "@/lib/supabase/client";
@@ -19,7 +19,10 @@ import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
 import { localDateKey, oneCalendarMonthEndKey } from "@/lib/finance/commitmentWindow";
-import { formatCurrency } from "@/lib/financialOptions";
+import { currencySymbol, formatCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
+import { historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import styles from "./BillsManager.module.css";
 
 type BillStatus = "pending" | "paid" | "cancelled";
@@ -197,9 +200,27 @@ export function BillsManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency, latestRate } = useCurrencyDisplay();
   const [bills, setBills] = useState<Bill[]>(initialBills);
+  const billDates = useMemo(
+    () => bills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
+    [bills],
+  );
+  const { rateForDate } = useHistoricalReportingRates(billDates);
+  const billAmountInBase = useCallback(
+    (bill: Bill) =>
+      historicalRecordAmountInBaseCurrency({
+        originalAmount: bill.amount,
+        originalCurrency: bill.currency,
+        amountEur: bill.amount_eur,
+        date: bill.paid_at?.slice(0, 10) ?? bill.due_date,
+        context: { baseCurrency, latestRate, rateForDate },
+      }),
+    [baseCurrency, latestRate, rateForDate],
+  );
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
+    currency: baseCurrency,
     autopay_timezone: browserTimezone(),
   }));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -408,18 +429,19 @@ export function BillsManager({
     const oneMonthBills = pending.filter(
       (bill) => bill.due_date >= todayKey && bill.due_date <= oneMonthEndKey,
     );
-    const oneMonthTotal = sumMoney(oneMonthBills.map((bill) => bill.amount_eur));
+    const oneMonthTotal = sumMoney(oneMonthBills.map((bill) => billAmountInBase(bill)));
     return {
       upcoming: oneMonthBills.length,
       overdue: overdue.length,
       dueThisWeek: dueThisWeek.length,
       oneMonthTotal,
     };
-  }, [bills, todayKey]);
+  }, [billAmountInBase, bills, todayKey]);
 
   function resetForm() {
     setForm({
       ...EMPTY_FORM,
+      currency: baseCurrency,
       due_date: localDateKey(),
       autopay_timezone: browserTimezone(),
     });
@@ -433,7 +455,7 @@ export function BillsManager({
       company: bill.company ?? "",
       category: bill.category,
       amount: String(bill.amount),
-      currency: bill.currency,
+      currency: normalizeCurrency(bill.currency, baseCurrency),
       due_date: bill.due_date,
       recurrence: bill.recurrence === "none" ? "monthly" : bill.recurrence,
       payment_method: bill.payment_method ?? "Other",
@@ -752,7 +774,7 @@ export function BillsManager({
         <article><Clock3 /><span>Upcoming</span><strong>{summary.upcoming}</strong></article>
         <article><CalendarDays /><span>Due this week</span><strong>{summary.dueThisWeek}</strong></article>
         <article className={summary.overdue ? styles.warningCard : ""}><CircleAlert /><span>Overdue</span><strong>{summary.overdue}</strong></article>
-        <article><span className={styles.euro}>€</span><span>One-month commitments</span><strong>{money(summary.oneMonthTotal)}</strong></article>
+        <article><span className={styles.euro}>{currencySymbol(baseCurrency)}</span><span>One-month commitments</span><strong>{formatCurrency(summary.oneMonthTotal, baseCurrency)}</strong></article>
       </div>
 
       <div className={styles.actionRow}>
@@ -780,7 +802,7 @@ export function BillsManager({
             <label>Bill name<input value={form.name} onChange={(e) => setForm({...form, name:e.target.value})} placeholder="e.g. Electricity" required /></label>
             <label>Company<input value={form.company} onChange={(e) => setForm({...form, company:e.target.value})} placeholder="Optional" /></label>
             <label>Category<select value={form.category} onChange={(e) => setForm({...form, category:e.target.value})}>{CATEGORIES.map((item)=><option key={item}>{item}</option>)}</select></label>
-            <label>Amount<div className={styles.amountField}><input type="number" min="0.01" step="0.01" value={form.amount} onChange={(e)=>setForm({...form, amount:e.target.value})} required /><select value={form.currency} onChange={(e)=>setForm({...form, currency:e.target.value})}>{CURRENCIES.map((item)=><option key={item}>{item}</option>)}</select></div></label>
+            <label>Amount<div className={styles.amountField}><input type="number" min="0.01" step="0.01" value={form.amount} onChange={(e)=>setForm({...form, amount:e.target.value})} required /><select value={form.currency} onChange={(e)=>setForm({...form, currency:normalizeCurrency(e.target.value, baseCurrency)})}>{CURRENCIES.map((item)=><option key={item}>{item}</option>)}</select></div></label>
             <label>Due date<input type="date" value={form.due_date} onChange={(e)=>setForm({...form, due_date:e.target.value})} required /></label>
             <label>Repeats<select value={form.recurrence} onChange={(e)=>setForm({...form, recurrence:e.target.value as RecurringSchedule})}><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="yearly">Yearly</option></select></label>
             <label>Payment method<select value={form.payment_method} onChange={(e)=>setForm({...form, payment_method:e.target.value})}>{PAYMENT_METHODS.map((item)=><option key={item}>{item}</option>)}</select></label>
@@ -910,7 +932,7 @@ export function BillsManager({
                 ) : null}
               </div>
               <div className={styles.amount}>
-                <strong>{money(bill.amount_eur, "EUR")}</strong>
+                <strong>{formatCurrency(billAmountInBase(bill), baseCurrency)}</strong>
                 {bill.currency !== "EUR" && <span>{money(bill.amount, bill.currency)}</span>}
               </div>
               <div className={styles.cardActions}>
@@ -980,8 +1002,8 @@ export function BillsManager({
                 <strong>{billPendingDeletion.name}</strong>
               </div>
               <div>
-                <span>EUR value</span>
-                <strong>{money(billPendingDeletion.amount_eur, "EUR")}</strong>
+                <span>Base currency value</span>
+                <strong>{formatCurrency(billAmountInBase(billPendingDeletion), baseCurrency)}</strong>
               </div>
             </div>
 

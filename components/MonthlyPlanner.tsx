@@ -15,13 +15,15 @@ import {
   transactionActivityDate,
 } from "@/lib/finance/monthlyCashActuals";
 import { formatCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
+import { baseCurrencyAmountToCanonicalEur, canonicalAmountInBaseCurrency, mapBillsToBaseCurrency, mapTransactionsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import styles from "./MonthlyPlanner.module.css";
 
 type Section = "income" | "bills" | "expenses" | "savings" | "debt";
 type BreakdownView = "ring" | "bars" | "tiles";
 type BreakdownKey = Section | "goals";
-type Tx = { id:string; user_id:string; description:string; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null; exchange_rate_source:string|null };
-type Bill = { id:string; user_id:string; name:string; category:string; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
+type Tx = { id:string; user_id:string; description:string; amount:number|string; currency:string|null; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null; exchange_rate_source:string|null };
+type Bill = { id:string; user_id:string; name:string; category:string; amount:number|string; currency:string|null; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
 type Plan = { id:string; user_id:string; month:string; start_balance:number|string; created_at:string; updated_at:string };
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
@@ -32,7 +34,6 @@ const sections: {key:Section; title:string}[] = [
 ];
 const debtWords=["debt","loan","credit-card","credit card","mortgage principal","student-loan","personal-loan"];
 const savingWords=["savings","emergency fund","retirement","stocks","etfs","bonds","crypto","investment","house deposit","education fund"];
-const eur=(v:number)=>formatCurrency(finiteNumber(v),"EUR");
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
@@ -51,6 +52,7 @@ const classify=(tx:Tx):Section=>{
 };
 
 export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];showAdvancedPosition?:boolean}){
+  const { baseCurrency, latestRate } = useCurrencyDisplay();
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
   const [transactions,setTransactions]=useState(initialTransactions);
@@ -97,8 +99,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       do{
         refreshQueuedRef.current=false;
         const [transactionResult,billResult,planResult,itemResult,goalResult]=await Promise.all([
-          supabase.from("transactions").select("id,user_id,description,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id",userId).order("occurred_at",{ascending:false}),
-          supabase.from("bills").select("id,user_id,name,category,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
+          supabase.from("transactions").select("id,user_id,description,amount,currency,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id",userId).order("occurred_at",{ascending:false}),
+          supabase.from("bills").select("id,user_id,name,category,amount,currency,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
           supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
           supabase.from("monthly_budget_items").select("id,user_id,month,section,label,planned_amount,position,created_at,updated_at").eq("user_id",userId).order("position",{ascending:true}),
           supabase.from("goals").select("id,user_id,name,target_amount,current_amount,target_date,status,created_at,updated_at").eq("user_id",userId).order("created_at",{ascending:true}),
@@ -157,11 +159,21 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);
 
+  const currencyDates=useMemo(()=>[
+    ...transactions.map(transaction=>transaction.transaction_date),
+    ...bills.map(bill=>bill.paid_at?.slice(0,10)??bill.due_date),
+  ],[transactions,bills]);
+  const { rateForDate }=useHistoricalReportingRates(currencyDates);
+  const currencyContext=useMemo(()=>({baseCurrency,latestRate,rateForDate}),[baseCurrency,latestRate,rateForDate]);
+  const financeTransactions=useMemo(()=>mapTransactionsToBaseCurrency(transactions,currencyContext) as Tx[],[transactions,currencyContext]);
+  const financeBills=useMemo(()=>mapBillsToBaseCurrency(bills,currencyContext) as Bill[],[bills,currencyContext]);
+  const money=useCallback((value:number|string)=>formatCurrency(finiteNumber(value),baseCurrency),[baseCurrency]);
+
   const plan=plans.find(p=>p.month===month);
   const previousMonth=(()=>{const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()-1);return monthKey(d)})();
   const previousPlan=plans.find(p=>p.month===previousMonth);
-  const previousTransactions=transactions.filter(t=>inMonth(transactionActivityDate(t),previousMonth));
-  const previousPaidBillTxIds=new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
+  const previousTransactions=financeTransactions.filter(t=>inMonth(transactionActivityDate(t),previousMonth));
+  const previousPaidBillTxIds=new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string));
   const previousActual:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
   let previousGoalInvestments=0;
   previousTransactions.forEach(t=>{
@@ -169,12 +181,17 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     if(isGoalInvestment(t)){previousGoalInvestments=addMoney(previousGoalInvestments,t.amount_eur);return;}
     previousActual[classify(t)]=addMoney(previousActual[classify(t)],t.amount_eur);
   });
-  bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),previousMonth)).forEach(b=>{previousActual.bills=addMoney(previousActual.bills,b.amount_eur)});
-  const previousLeft=subtractMoney(addMoney(previousPlan?.start_balance??0,previousActual.income),previousActual.bills,previousActual.expenses,previousActual.savings,previousActual.debt,previousGoalInvestments);
+  financeBills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),previousMonth)).forEach(b=>{previousActual.bills=addMoney(previousActual.bills,b.amount_eur)});
+  const previousStartBalance=previousPlan
+    ? canonicalAmountInBaseCurrency(previousPlan.start_balance,currencyContext)
+    : 0;
+  const previousLeft=subtractMoney(addMoney(previousStartBalance,previousActual.income),previousActual.bills,previousActual.expenses,previousActual.savings,previousActual.debt,previousGoalInvestments);
   const derivedStartBalance=startBalanceBehavior==="carry-forward"?previousLeft:0;
-  const startBalance=roundMoney(plan?.start_balance??derivedStartBalance);
-  const paidBillTxIds=useMemo(()=>new Set(bills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[bills]);
-  const monthTx=useMemo(()=>transactions.filter(t=>inMonth(transactionActivityDate(t),month)),[transactions,month]);
+  const startBalance=plan
+    ? canonicalAmountInBaseCurrency(plan.start_balance,currencyContext)
+    : roundMoney(derivedStartBalance);
+  const paidBillTxIds=useMemo(()=>new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[financeBills]);
+  const monthTx=useMemo(()=>financeTransactions.filter(t=>inMonth(transactionActivityDate(t),month)),[financeTransactions,month]);
   const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
   const actualBySection=useMemo(()=>{
     const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
@@ -182,15 +199,19 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       if(paidBillTxIds.has(t.id)||isGoalInvestment(t))return;
       totals[classify(t)]=addMoney(totals[classify(t)],t.amount_eur);
     });
-    bills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),month)).forEach(b=>{totals.bills=addMoney(totals.bills,b.amount_eur)});
+    financeBills.filter(b=>b.status==="paid"&&inMonth(billActivityDate(b),month)).forEach(b=>{totals.bills=addMoney(totals.bills,b.amount_eur)});
     return totals;
-  },[monthTx,bills,month,paidBillTxIds]);
+  },[monthTx,financeBills,month,paidBillTxIds]);
   const monthItems=items.filter(i=>i.month===month);
-  const planned=(s:Section)=>sumMoney(monthItems.filter(i=>i.section===s).map(i=>i.planned_amount));
+  const planned=(s:Section)=>sumMoney(
+    monthItems
+      .filter(i=>i.section===s)
+      .map(i=>canonicalAmountInBaseCurrency(i.planned_amount,currencyContext)),
+  );
   const actual=(s:Section)=>actualBySection[s];
   const synchronizedCashActuals=useMemo(
-    ()=>calculateMonthlyCashActuals(month,transactions,bills),
-    [month,transactions,bills],
+    ()=>calculateMonthlyCashActuals(month,financeTransactions,financeBills),
+    [month,financeTransactions,financeBills],
   );
   const totalIncome=synchronizedCashActuals.income;
   const incomeCardTotal=addMoney(startBalance,totalIncome);
@@ -222,16 +243,31 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses").reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
-  async function saveStartBalance(v:string){const value=roundMoney(v); const payload={user_id:userId,month,start_balance:value,updated_at:new Date().toISOString()}; const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single(); if(error)setNotice(error.message); else {setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);setNotice("Starting balance updated.");notifyFiconterDataChange("all")}}
+  async function saveStartBalance(v:string){
+    const entered=roundMoney(v);
+    const canonical=baseCurrencyAmountToCanonicalEur(entered,currencyContext);
+    if(canonical===null){
+      setNotice("Currency conversion is still loading. Try again in a moment.");
+      return;
+    }
+    const payload={user_id:userId,month,start_balance:canonical,updated_at:new Date().toISOString()};
+    const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single();
+    if(error)setNotice(error.message);
+    else{
+      setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);
+      setNotice("Starting balance updated.");
+      notifyFiconterDataChange("all");
+    }
+  }
   async function deleteItem(id:string){const {error}=await supabase.from("monthly_budget_items").delete().eq("id",id).eq("user_id",userId);if(error)setNotice(error.message);else {setItems(c=>c.filter(i=>i.id!==id));notifyFiconterDataChange("all")}}
 
   return <section className={styles.planner}>
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your complete monthly activity and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
-      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>EUR</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
-      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?eur(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
-      <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{eur(actual(s.key))}</strong></div>})}</article>
+      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>{baseCurrency}</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
+      <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?money(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
+      <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{money(actual(s.key))}</strong></div>})}</article>
       <article className={styles.breakdown}>
         <div className={styles.breakdownHeader}>
           <h3>Breakdown</h3>
@@ -241,14 +277,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         </div>
         {!breakdownParts.length?<div className={styles.breakdownEmpty}>No outgoing activity recorded yet.</div>:null}
         {breakdownParts.length>0&&breakdownView==="ring"?<div className={styles.ringView}>
-          <div className={styles.breakdownRing} style={{background:gradient}}><div><span>Total activity</span><strong>{eur(breakdownTotal)}</strong></div></div>
+          <div className={styles.breakdownRing} style={{background:gradient}}><div><span>Total activity</span><strong>{money(breakdownTotal)}</strong></div></div>
           <div className={styles.breakdownLegend}>{breakdownParts.map(part=><span key={part.key}><i style={{background:part.color}}/>{part.label}<b>{Math.round(part.value/breakdownTotal*100)}%</b></span>)}</div>
         </div>:null}
-        {breakdownParts.length>0&&breakdownView==="bars"?<div className={styles.breakdownBars}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div className={styles.breakdownBarRow} key={part.key}><div><span>{part.label}</span><strong>{eur(part.value)}</strong></div><i><em style={{width:`${percent}%`,background:part.color}}/></i><small>{percent.toFixed(1)}%</small></div>})}</div>:null}
-        {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{eur(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
+        {breakdownParts.length>0&&breakdownView==="bars"?<div className={styles.breakdownBars}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div className={styles.breakdownBarRow} key={part.key}><div><span>{part.label}</span><strong>{money(part.value)}</strong></div><i><em style={{width:`${percent}%`,background:part.color}}/></i><small>{percent.toFixed(1)}%</small></div>})}</div>:null}
+        {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{money(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
       </article>
     </div>
-    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{eur(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{eur(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{eur(actual("savings"))}</b></span><span>Goals<b>-{eur(goalInvestments)}</b></span><span>Debt<b>-{eur(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?eur(left):"Personal Pro"}</b></span></div></div>
+    <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{money(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{money(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{money(actual("savings"))}</b></span><span>Goals<b>-{money(goalInvestments)}</b></span><span>Debt<b>-{money(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?money(left):"Personal Pro"}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {
         const isCompact = compactSections.has(s.key);
@@ -380,7 +416,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                       key={`${s.key}-${label}`}
                     >
                       <span>{label}</span>
-                      <span>{eur(value)}</span>
+                      <span>{money(value)}</span>
                     </div>
                   ))
                 ) : (
@@ -389,7 +425,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
 
                 <footer className={styles.compactFooter}>
                   <span>Total</span>
-                  <b>{eur(sectionActualTotal)}</b>
+                  <b>{money(sectionActualTotal)}</b>
                 </footer>
               </>
             ) : (
@@ -422,10 +458,10 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
                   return (
                     <div className={styles.row} key={item.id}>
                       <span>{item.label}</span>
-                      <span>{eur(Number(item.planned_amount))}</span>
-                      <span>{matchingActual ? eur(matchingActual) : "—"}</span>
+                      <span>{money(canonicalAmountInBaseCurrency(item.planned_amount,currencyContext))}</span>
+                      <span>{matchingActual ? money(matchingActual) : "—"}</span>
                       <span>
-                        {eur(Number(item.planned_amount) - matchingActual)}
+                        {money(canonicalAmountInBaseCurrency(item.planned_amount,currencyContext) - matchingActual)}
                       </span>
                       <button onClick={() => deleteItem(item.id)}>
                         <Trash2 size={14} />
@@ -436,9 +472,9 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
 
                 <footer>
                   <span>Total</span>
-                  <b>{eur(planned(s.key))}</b>
-                  <b>{eur(actual(s.key))}</b>
-                  <b>{eur(planned(s.key) - actual(s.key))}</b>
+                  <b>{money(planned(s.key))}</b>
+                  <b>{money(actual(s.key))}</b>
+                  <b>{money(planned(s.key) - actual(s.key))}</b>
                 </footer>
               </>
             )}
@@ -449,13 +485,13 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
       <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
       {(() => {
-        const invested = sumMoney(goals.map(goal=>goal.current_amount));
-        const target = sumMoney(goals.map(goal=>goal.target_amount));
+        const invested = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.current_amount,currencyContext)));
+        const target = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.target_amount,currencyContext)));
         const progress = target ? Math.min(100, invested / target * 100) : 0;
         return <div className={styles.goalSummaryBody}>
           <div className={styles.goalSummaryAmounts}>
-            <span>Invested<b>{eur(invested)}</b></span>
-            <span>Target<b>{eur(target)}</b></span>
+            <span>Invested<b>{money(invested)}</b></span>
+            <span>Target<b>{money(target)}</b></span>
           </div>
           <div className={styles.goalSummaryProgress}><i style={{width:`${progress}%`}}/></div>
           <div className={styles.goalSummaryFooter}>
@@ -466,6 +502,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       })()}
     </article>
     </div>
-    <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div><div className={`${styles.expenseViewport} ficonter-scroll-region`} tabIndex={expenseTransactions.length>10?0:undefined} aria-label="Monthly expense transactions. The newest ten are visible first; scroll for older records.">{expenseTransactions.map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{eur(finiteNumber(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</div>{expenseTransactions.length>10&&<p className={styles.expenseScrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}</article><article className={styles.spending}><h3>Spending breakdown</h3>{spendingBreakdown.map(([k,v])=><div key={k}><span>{k}</span><b>{eur(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
+    <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div><div className={`${styles.expenseViewport} ficonter-scroll-region`} tabIndex={expenseTransactions.length>10?0:undefined} aria-label="Monthly expense transactions. The newest ten are visible first; scroll for older records.">{expenseTransactions.map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{money(finiteNumber(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</div>{expenseTransactions.length>10&&<p className={styles.expenseScrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}</article><article className={styles.spending}><h3>Spending breakdown</h3>{spendingBreakdown.map(([k,v])=><div key={k}><span>{k}</span><b>{money(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
   </section>
 }

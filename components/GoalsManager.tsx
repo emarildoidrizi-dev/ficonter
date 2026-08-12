@@ -14,8 +14,14 @@ import {
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
-import { finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/lib/finance/money";
+import { finiteNumber, roundMoney, roundRate, subtractMoney, sumMoney } from "@/lib/finance/money";
 import { formatCurrency } from "@/lib/financialOptions";
+import { useCurrencyDisplay } from "@/components/CurrencyDisplayProvider";
+import {
+  baseCurrencyAmountToCanonicalEur,
+  canonicalAmountInBaseCurrency,
+} from "@/lib/finance/baseCurrencyReconciliation";
+import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
 import {
   AVERAGE_PERIODS,
   summarizeDatedAmounts,
@@ -48,9 +54,6 @@ type GoalInvestment = {
   created_at: string;
 };
 
-const money = (value: number | string) =>
-  formatCurrency(finiteNumber(value), "EUR");
-
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -79,6 +82,20 @@ export function GoalsManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { baseCurrency, latestRate } = useCurrencyDisplay();
+  const currencyContext = useMemo(
+    () => ({
+      baseCurrency,
+      latestRate,
+      rateForDate: () => latestRate,
+    }),
+    [baseCurrency, latestRate],
+  );
+  const money = (value: number | string) =>
+    formatCurrency(
+      canonicalAmountInBaseCurrency(value, currencyContext),
+      baseCurrency,
+    );
   const [goals, setGoals] = useState(initialGoals);
   const [investments, setInvestments] = useState(initialInvestments);
   const [open, setOpen] = useState(false);
@@ -165,11 +182,15 @@ export function GoalsManager({
     try {
       const form = new FormData(event.currentTarget);
       const name = String(form.get("name") ?? "").trim();
-      const targetAmount = roundMoney(form.get("target_amount"));
+      const targetAmountDisplay = roundMoney(form.get("target_amount"));
+      const targetAmount = baseCurrencyAmountToCanonicalEur(
+        targetAmountDisplay,
+        currencyContext,
+      );
       const targetDate = String(form.get("target_date") ?? "");
 
       if (!name) throw new Error("Enter a goal name.");
-      if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+      if (targetAmount === null || !Number.isFinite(targetAmount) || targetAmount <= 0) {
         throw new Error("Enter a target amount greater than zero.");
       }
       if (targetDate && Number.isNaN(new Date(`${targetDate}T00:00:00`).getTime())) {
@@ -228,8 +249,8 @@ export function GoalsManager({
       const remaining = Math.max(
         0,
         subtractMoney(
-          investmentGoal.target_amount,
-          investmentGoal.current_amount,
+          canonicalAmountInBaseCurrency(investmentGoal.target_amount, currencyContext),
+          canonicalAmountInBaseCurrency(investmentGoal.current_amount, currencyContext),
         ),
       );
 
@@ -251,11 +272,25 @@ export function GoalsManager({
         throw new Error("Choose a valid recorded date and time.");
       }
 
+      const conversion = await convertWithCachedRate(
+        amount,
+        baseCurrency,
+        "EUR",
+        { date: investmentDate },
+      );
+      if (conversion.convertedAmount === null) {
+        throw new Error("The investment exchange rate could not be calculated.");
+      }
+
       const { data, error } = await supabase.rpc("record_goal_investment", {
         p_goal_id: investmentGoal.id,
-        p_amount: roundMoney(amount),
+        p_amount_eur: roundMoney(conversion.convertedAmount),
+        p_original_amount: roundMoney(amount),
+        p_currency: baseCurrency,
+        p_exchange_rate: roundRate(conversion.rate),
         p_invested_at: recordedAt.toISOString(),
         p_notes: notes,
+        p_exchange_rate_date: investmentDate,
       });
       if (error) throw error;
 
@@ -352,8 +387,16 @@ export function GoalsManager({
     }
   }
 
-  const totalTarget = sumMoney(goals.map((goal) => goal.target_amount));
-  const totalSaved = sumMoney(goals.map((goal) => goal.current_amount));
+  const totalTarget = sumMoney(
+    goals.map((goal) =>
+      canonicalAmountInBaseCurrency(goal.target_amount, currencyContext),
+    ),
+  );
+  const totalSaved = sumMoney(
+    goals.map((goal) =>
+      canonicalAmountInBaseCurrency(goal.current_amount, currencyContext),
+    ),
+  );
 
   const goalFundingPeriod = useMemo(
     () =>
@@ -361,7 +404,7 @@ export function GoalsManager({
         investments,
         averagePeriod,
         (investment) => investment.invested_at,
-        (investment) => finiteNumber(investment.amount),
+        (investment) => canonicalAmountInBaseCurrency(investment.amount, currencyContext),
       ),
     [averagePeriod, investments],
   );
@@ -443,8 +486,8 @@ export function GoalsManager({
       <div className={`${styles.grid} ficonter-scroll-region`}>
         {goals.length ? (
           goals.map((goal) => {
-            const target = finiteNumber(goal.target_amount);
-            const current = finiteNumber(goal.current_amount);
+            const target = canonicalAmountInBaseCurrency(goal.target_amount, currencyContext);
+            const current = canonicalAmountInBaseCurrency(goal.current_amount, currencyContext);
             const progress = target
               ? Math.min(100, (current / target) * 100)
               : 0;
@@ -589,7 +632,14 @@ export function GoalsManager({
                 type="number"
                 min="0.01"
                 step="0.01"
-                defaultValue={editing?.target_amount ?? ""}
+                defaultValue={
+                  editing
+                    ? canonicalAmountInBaseCurrency(
+                        editing.target_amount,
+                        currencyContext,
+                      )
+                    : ""
+                }
                 required
               />
             </label>
@@ -650,15 +700,15 @@ export function GoalsManager({
                 Math.max(
                   0,
                   subtractMoney(
-                    investmentGoal.target_amount,
-                    investmentGoal.current_amount,
+                    canonicalAmountInBaseCurrency(investmentGoal.target_amount, currencyContext),
+                    canonicalAmountInBaseCurrency(investmentGoal.current_amount, currencyContext),
                   ),
                 ),
               )}
             </p>
 
             <label>
-              Investment amount (EUR)
+              Investment amount
               <input
                 name="amount"
                 type="number"
@@ -666,8 +716,8 @@ export function GoalsManager({
                 max={Math.max(
                   0.01,
                   subtractMoney(
-                    investmentGoal.target_amount,
-                    investmentGoal.current_amount,
+                    canonicalAmountInBaseCurrency(investmentGoal.target_amount, currencyContext),
+                    canonicalAmountInBaseCurrency(investmentGoal.current_amount, currencyContext),
                   ),
                 )}
                 step="0.01"

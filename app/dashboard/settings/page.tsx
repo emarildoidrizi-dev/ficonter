@@ -68,13 +68,23 @@ export default async function SettingsPage({
     redirect("/dashboard/settings?section=profile");
   }
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select(
-      "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
-    )
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const [
+    { data: subscription },
+    { data: profile },
+  ] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select(
+        "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("base_currency")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
 
   const subscriptionSnapshot =
     (subscription as SubscriptionSnapshot | null) ?? null;
@@ -148,6 +158,7 @@ export default async function SettingsPage({
         userId={user.id}
         email={user.email ?? ""}
         metadata={user.user_metadata ?? {}}
+        initialBaseCurrency={profile?.base_currency ?? "EUR"}
         initialSection={section}
         subscription={isSubscriptionExempt ? null : displaySubscription}
         requiredFeature={requiredFeature}

@@ -2,6 +2,9 @@
 
 import { useLayoutEffect } from "react";
 import {
+  DEFAULT_APPEARANCE,
+  DEFAULT_WALLPAPER_SCENE,
+  FIXED_INTERFACE_PROFILE_VERSION,
   normalizeAppearance,
   normalizeBackgroundMotion,
   normalizeSidebarAtmosphereMode,
@@ -65,6 +68,10 @@ function applyPreferences(
 
   try {
     localStorage.setItem("ficonter-appearance", appearance);
+    localStorage.setItem(
+      "ficonter-interface-profile-version",
+      FIXED_INTERFACE_PROFILE_VERSION,
+    );
     localStorage.setItem("ficonter-density", density);
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
@@ -104,6 +111,10 @@ export function InterfacePreferencesBootstrap({
       }
     }
 
+    const needsGoldenCalmMigration =
+      readStorage("ficonter-interface-profile-version") !==
+      FIXED_INTERFACE_PROFILE_VERSION;
+
     let currentAppearance = normalizeAppearance(
       readStorage("ficonter-appearance") ?? appearance,
     );
@@ -116,6 +127,11 @@ export function InterfacePreferencesBootstrap({
     let currentWallpaperScene = normalizeWallpaperScene(
       readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
     );
+
+    if (needsGoldenCalmMigration) {
+      currentAppearance = DEFAULT_APPEARANCE;
+      currentWallpaperScene = DEFAULT_WALLPAPER_SCENE;
+    }
     let currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
       readStorage("ficonter-sidebar-atmosphere-mode") ?? sidebarAtmosphereMode,
     );

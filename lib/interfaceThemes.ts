@@ -49,6 +49,10 @@ export type BackgroundMotionPreference =
   (typeof BACKGROUND_MOTION_VALUES)[number];
 export type WallpaperScenePreference =
   (typeof WALLPAPER_SCENE_VALUES)[number];
+
+export const FIXED_INTERFACE_PROFILE_VERSION = "golden-calm-v1";
+export const DEFAULT_APPEARANCE: AppearancePreference = "midnight";
+export const DEFAULT_WALLPAPER_SCENE: WallpaperScenePreference = "future-grid";
 export type SidebarAtmosphereStyle =
   (typeof SIDEBAR_ATMOSPHERE_VALUES)[number];
 export type SidebarAtmosphereMode =
@@ -195,7 +199,7 @@ export function normalizeAppearance(
 ): AppearancePreference {
   return APPEARANCE_VALUES.includes(value as AppearancePreference)
     ? (value as AppearancePreference)
-    : "light";
+    : DEFAULT_APPEARANCE;
 }
 
 export function normalizeBackgroundMotion(
@@ -211,7 +215,7 @@ export function normalizeWallpaperScene(
 ): WallpaperScenePreference {
   return WALLPAPER_SCENE_VALUES.includes(value as WallpaperScenePreference)
     ? (value as WallpaperScenePreference)
-    : "coastal-island";
+    : DEFAULT_WALLPAPER_SCENE;
 }
 
 export function resolveAppearance(

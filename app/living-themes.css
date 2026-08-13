@@ -4,7 +4,7 @@
  */
 
 :root {
-  --living-scene: url("/wallpapers/coastal-island.svg");
+  --living-scene: url("/wallpapers/future-grid.svg");
   --living-position: center center;
   --living-overlay: rgba(245, 242, 236, 0.62);
   --living-edge-overlay: rgba(245, 242, 236, 0.26);

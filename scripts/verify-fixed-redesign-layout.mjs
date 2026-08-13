@@ -6,6 +6,8 @@ const required = [
   "app/layout.tsx",
   "app/dashboard/layout.tsx",
   "app/globals.css",
+  "app/living-themes.css",
+  "app/coastal-shell.css",
   "components/DashboardLiveOverview.tsx",
   "components/DashboardLiveOverview.module.css",
   "components/InterfacePreferencesBootstrap.tsx",
@@ -20,6 +22,8 @@ const required = [
   "components/CommandPalette.tsx",
   "components/CommandPalette.module.css",
   "lib/commandPalette.ts",
+  "lib/interfaceThemes.ts",
+  "public/wallpapers/future-grid.svg",
 ];
 
 let checks = 0;
@@ -55,6 +59,20 @@ assert(!layout.includes("layout:"), "Dashboard layout still reads the retired pr
 const rootLayout = fs.readFileSync(path.join(root, "app/layout.tsx"), "utf8");
 assert(rootLayout.includes('localStorage.removeItem("ficonter-layout")'), "Legacy browser layout choice is not cleared");
 assert(!rootLayout.includes("data-layout"), "Root layout still exposes a selectable layout attribute");
+assert(rootLayout.includes("FIXED_INTERFACE_PROFILE_VERSION"), "Golden Calm profile migration is not mounted");
+assert(rootLayout.includes("DEFAULT_APPEARANCE"), "Root layout does not use the fixed appearance default");
+assert(rootLayout.includes("DEFAULT_WALLPAPER_SCENE"), "Root layout does not use the fixed wallpaper default");
+
+const themes = fs.readFileSync(path.join(root, "lib/interfaceThemes.ts"), "utf8");
+assert(themes.includes('DEFAULT_APPEARANCE: AppearancePreference = "midnight"'), "Midnight is not the fixed profile default");
+assert(themes.includes('DEFAULT_WALLPAPER_SCENE: WallpaperScenePreference = "future-grid"'), "Future Grid is not the fixed profile wallpaper");
+
+const shell = fs.readFileSync(path.join(root, "app/coastal-shell.css"), "utf8");
+assert(!shell.includes('html[data-resolved-theme="light"] .app-shell'), "The retired Coastal palette still overrides the fixed shell");
+
+const independence = fs.readFileSync(path.join(root, "components/FinancialIndependence.tsx"), "utf8");
+assert(independence.includes("normalizeNetWorthGrowthInputs"), "Financial Independence net-worth normalization is missing");
+assert(independence.includes("normalizeSavingsIntelligenceInputs"), "Financial Independence savings normalization is missing");
 
 const commands = fs.readFileSync(path.join(root, "lib/commandPalette.ts"), "utf8");
 assert((commands.match(/id: "/g) ?? []).length >= 15, "Command palette contains too few actions");

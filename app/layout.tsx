@@ -21,7 +21,10 @@ import {
 import {
   APPEARANCE_VALUES,
   BACKGROUND_MOTION_VALUES,
+  DEFAULT_APPEARANCE,
+  DEFAULT_WALLPAPER_SCENE,
   DARK_APPEARANCE_VALUES,
+  FIXED_INTERFACE_PROFILE_VERSION,
   SIDEBAR_ATMOSPHERE_MODE_VALUES,
   SIDEBAR_ATMOSPHERE_MOTION_VALUES,
   SIDEBAR_ATMOSPHERE_VALUES,
@@ -90,18 +93,29 @@ const interfacePreferenceScript = `
     var supportedSidebarAtmospheres = ${JSON.stringify(SIDEBAR_ATMOSPHERE_VALUES)};
     var supportedSidebarAtmosphereModes = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MODE_VALUES)};
     var supportedSidebarAtmosphereMotion = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MOTION_VALUES)};
-    var appearance = localStorage.getItem("ficonter-appearance") || "light";
+    var profileVersion = localStorage.getItem("ficonter-interface-profile-version");
+    var appearance = localStorage.getItem("ficonter-appearance") || ${JSON.stringify(DEFAULT_APPEARANCE)};
     var density = localStorage.getItem("ficonter-density") || "comfortable";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
-    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
+    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
     var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
     var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
     var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "animated";
 
-    if (supported.indexOf(appearance) === -1) appearance = "light";
+    if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
+      appearance = ${JSON.stringify(DEFAULT_APPEARANCE)};
+      wallpaperScene = ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
+      sidebarAtmosphereMode = "auto";
+      localStorage.setItem("ficonter-appearance", appearance);
+      localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
+      localStorage.setItem("ficonter-sidebar-atmosphere-mode", sidebarAtmosphereMode);
+      localStorage.setItem("ficonter-interface-profile-version", ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)});
+    }
+
+    if (supported.indexOf(appearance) === -1) appearance = ${JSON.stringify(DEFAULT_APPEARANCE)};
     if (density !== "compact") density = "comfortable";
     if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
-    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
+    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
     if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
     if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
     if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "animated";

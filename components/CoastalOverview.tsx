@@ -24,7 +24,6 @@ type Props = {
   monthLabel: string;
   monthIncome: number;
   monthSpent: number;
-  cashFlowBars: number[];
   financialHealth: FinancialHealthResult;
   upcomingBills: CoastalUpcomingBill[];
   spendingRhythm: number;
@@ -55,7 +54,6 @@ export function CoastalOverview({
   monthLabel,
   monthIncome,
   monthSpent,
-  cashFlowBars,
   financialHealth,
   upcomingBills,
   spendingRhythm,
@@ -71,6 +69,14 @@ export function CoastalOverview({
     ? financialHealth.label
     : "Finish setup";
   const safeSavingCapacity = Math.max(0, leftAfterEverything);
+  const cashFlowScale = Math.max(monthIncome, monthSpent, 0);
+  const cashFlowColumns = [
+    { label: "Income", amount: Math.max(0, monthIncome), tone: "income" },
+    { label: "Spent", amount: Math.max(0, monthSpent), tone: "spent" },
+  ].map((column) => ({
+    ...column,
+    height: cashFlowScale > 0 ? (column.amount / cashFlowScale) * 100 : 0,
+  }));
   const comparisonInsight = previousMonthChange === null
     ? "A full month will unlock spending comparisons"
     : previousMonthChange <= 0
@@ -128,9 +134,21 @@ export function CoastalOverview({
             <div><span>Income</span><strong>{formatCurrency(monthIncome, currency)}</strong></div>
             <div><span>Spent</span><strong>{formatCurrency(monthSpent, currency)}</strong></div>
           </div>
-          <div className={styles.cashBars} aria-label="Spending over the last six weeks">
-            {cashFlowBars.map((height, index) => (
-              <span key={index} style={{ height: `${Math.max(8, height)}%` }} />
+          <div
+            className={styles.cashComparison}
+            aria-label={`${monthLabel} income and spending, shown on the same scale`}
+          >
+            {cashFlowColumns.map((column) => (
+              <div className={styles.cashColumn} key={column.label}>
+                <div className={styles.cashColumnTrack}>
+                  <span
+                    data-tone={column.tone}
+                    style={{ height: `${column.height}%` }}
+                    title={`${column.label}: ${formatCurrency(column.amount, currency)}`}
+                  />
+                </div>
+                <small>{column.label}</small>
+              </div>
             ))}
           </div>
         </article>

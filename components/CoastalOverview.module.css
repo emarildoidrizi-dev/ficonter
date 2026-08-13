@@ -194,20 +194,48 @@
 
 .cashSummary > div:last-child { text-align: right; }
 
-.cashBars {
-  height: 112px;
+.cashComparison {
+  height: 118px;
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(28px, 5vw, 64px);
   margin-top: 18px;
 }
 
-.cashBars span {
-  flex: 1;
-  min-width: 12px;
+.cashColumn {
+  width: min(34%, 112px);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.cashColumnTrack {
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(48, 94, 101, .2);
   border-radius: 8px 8px 2px 2px;
-  background: linear-gradient(180deg, #70c7d8, #438b88);
+  background: linear-gradient(180deg, rgba(111, 199, 216, .06), rgba(67, 139, 136, .1));
+}
+
+.cashColumnTrack span {
+  width: 100%;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, #6fc7d8, #438b88);
   transition: height .25s ease;
+}
+
+.cashColumnTrack span[data-tone="spent"] {
+  background: linear-gradient(180deg, #8eb8ce, #526f91);
+}
+
+.cashColumn small {
+  color: #455b66;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
 }
 
 .upcomingList { margin-top: 22px; }
@@ -285,7 +313,7 @@
   .cardGrid { grid-template-columns: 1fr; }
   .card { grid-column: auto; min-height: 0; padding: 20px; }
   .miniStats { grid-template-columns: 1fr; }
-  .cashBars { height: 92px; }
+  .cashComparison { height: 104px; }
   .mobileGpsLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 14px; border-radius: 14px; background: rgba(246,242,223,.9); color: #264a55; font-size: 13px; font-weight: 800; }
 }
 

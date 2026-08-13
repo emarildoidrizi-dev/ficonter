@@ -184,21 +184,6 @@ export function DashboardLiveOverview({
     return totals;
   })();
 
-  const weeklyBars = (() => {
-    const buckets = [0, 0, 0, 0, 0, 0];
-    const todayDate = new Date(`${today}T12:00:00`);
-    initialTransactions.forEach((transaction) => {
-      if (transaction.type === "income" || linkedTransactionIds.has(transaction.id)) return;
-      const transactionDate = new Date(`${transaction.transaction_date}T12:00:00`);
-      const age = Math.floor((todayDate.getTime() - transactionDate.getTime()) / 86_400_000);
-      if (age < 0 || age >= 42) return;
-      const amount = transactionAmount(transaction);
-      if (amount !== null) buckets[5 - Math.floor(age / 7)] += amount;
-    });
-    const maximum = Math.max(...buckets, 0);
-    return maximum > 0 ? buckets.map((value) => Math.round((value / maximum) * 100)) : buckets;
-  })();
-
   const stillToPay = initialBills.reduce((total, bill) => {
       if (bill.status === "paid" || bill.status === "cancelled") return total;
       return total + (billAmount(bill) ?? 0);
@@ -225,7 +210,6 @@ export function DashboardLiveOverview({
       monthLabel={new Intl.DateTimeFormat("en-GB", { month: "long" }).format(now)}
       monthIncome={monthTotals[currentMonthKey].income}
       monthSpent={spendingAmount}
-      cashFlowBars={weeklyBars}
       financialHealth={financialHealth}
       upcomingBills={upcomingBills}
       spendingRhythm={spendingRhythm}

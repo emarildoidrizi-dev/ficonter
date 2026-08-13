@@ -59,6 +59,11 @@ type RouteItem = {
   exact?: boolean;
 };
 
+type RouteGroup = {
+  label: string;
+  routes: RouteItem[];
+};
+
 type Props = {
   workspace: Workspace;
   displayName: string;
@@ -236,6 +241,74 @@ const businessRoutes: RouteItem[] = [
   },
 ];
 
+const personalRouteGroups: RouteGroup[] = [
+  {
+    label: "Overview",
+    routes: [personalRoutes[0]],
+  },
+  {
+    label: "Money",
+    routes: [
+      personalRoutes[1],
+      personalRoutes[3],
+      personalRoutes[6],
+      personalRoutes[5],
+      personalRoutes[9],
+    ],
+  },
+  {
+    label: "Planning",
+    routes: [
+      personalRoutes[2],
+      personalRoutes[4],
+      personalRoutes[7],
+      personalRoutes[10],
+    ],
+  },
+  {
+    label: "Wealth",
+    routes: [
+      personalRoutes[8],
+      personalRoutes[11],
+      personalRoutes[12],
+      personalRoutes[13],
+    ],
+  },
+  {
+    label: "Tools & account",
+    routes: [
+      personalRoutes[14],
+      personalRoutes[15],
+      personalRoutes[16],
+    ],
+  },
+];
+
+const businessRouteGroups: RouteGroup[] = [
+  {
+    label: "Overview",
+    routes: [businessRoutes[0]],
+  },
+  {
+    label: "Operations",
+    routes: [
+      businessRoutes[1],
+      businessRoutes[2],
+      businessRoutes[3],
+      businessRoutes[4],
+    ],
+  },
+  {
+    label: "Management",
+    routes: [
+      businessRoutes[5],
+      businessRoutes[6],
+      businessRoutes[7],
+      businessRoutes[8],
+    ],
+  },
+];
+
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -367,6 +440,11 @@ export function FiconterNativeAppChrome({
       ? businessRoutes
       : personalRoutes;
 
+  const routeGroups =
+    workspace === "business"
+      ? businessRouteGroups
+      : personalRouteGroups;
+
   const route = useMemo(
     () => currentRoute(pathname, routes, workspace),
     [pathname, routes, workspace],
@@ -379,18 +457,12 @@ export function FiconterNativeAppChrome({
 
   const primaryItems =
     workspace === "business"
-      ? [
-          businessRoutes[0],
-          businessRoutes[1],
-          businessRoutes[2],
-          businessRoutes[6],
-        ]
-      : [
-          personalRoutes[0],
-          personalRoutes[1],
-          personalRoutes[2],
-          personalRoutes[16],
-        ];
+      ? [businessRoutes[0], businessRoutes[1], businessRoutes[2]]
+      : [personalRoutes[0], personalRoutes[1], personalRoutes[2]];
+
+  const moreActive = !primaryItems.some((item) =>
+    activeRoute(pathname, item, workspace),
+  );
 
   const addHref =
     workspace === "business"
@@ -491,6 +563,19 @@ export function FiconterNativeAppChrome({
   }, [pathname]);
 
   useEffect(() => {
+    if (!drawerOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [drawerOpen]);
+
+  useEffect(() => {
     document.documentElement.dataset.ficonterAppDrawer =
       drawerOpen ? "open" : "closed";
 
@@ -535,7 +620,6 @@ export function FiconterNativeAppChrome({
     }
 
     root.removeAttribute("data-ficonter-native-app");
-    root.removeAttribute("data-ficonter-pwa-phone");
 
     window.location.replace("/login");
   }
@@ -554,14 +638,14 @@ export function FiconterNativeAppChrome({
         </button>
 
         <div className={styles.routeIdentity}>
-          <span>{route.title}</span>
-          <strong title={identity}>{identity}</strong>
+          <span className={styles.routeEyebrow}>
+            FICONTER · {workspace === "business" ? "BUSINESS" : "PERSONAL"}
+          </span>
+          <strong>{route.title}</strong>
         </div>
 
-        <span className={styles.workspaceBadge}>
-          {workspace === "business"
-            ? "Business"
-            : "Personal"}
+        <span className={styles.workspaceBadge} title={identity}>
+          {workspace === "business" ? "B" : "P"}
         </span>
       </header>
 
@@ -646,9 +730,12 @@ export function FiconterNativeAppChrome({
 
         <button
           type="button"
-          className={styles.dockItem}
+          className={`${styles.dockItem} ${
+            moreActive ? styles.dockActive : ""
+          }`}
           onClick={openDrawer}
           aria-label="Open all sections"
+          aria-expanded={drawerOpen}
         >
           <LayoutGrid size={21} aria-hidden={true} />
           <span>More</span>
@@ -710,72 +797,62 @@ export function FiconterNativeAppChrome({
           )}
         </Link>
 
-        <div className={styles.drawerLabel}>
-          All sections
-        </div>
+        <nav className={styles.drawerNavigation} aria-label="All app sections">
+          {routeGroups.map((group) => (
+            <section className={styles.drawerGroup} key={group.label}>
+              <div className={styles.drawerLabel}>{group.label}</div>
+              <div className={styles.drawerGroupLinks}>
+                {group.routes.map((item) => {
+                  const Icon = item.icon;
+                  const feature =
+                    workspace === "personal"
+                      ? subscriptionFeatureForPersonalRoute(item.href)
+                      : null;
+                  const locked = Boolean(
+                    feature &&
+                      !hasSubscriptionFeature(
+                        subscriptionPlanCode,
+                        feature,
+                      ),
+                  );
+                  const targetHref =
+                    locked && feature
+                      ? getSubscriptionUpgradeHref(feature)
+                      : item.href;
+                  const active =
+                    !locked &&
+                    activeRoute(pathname, item, workspace);
 
-        <nav className={styles.drawerNavigation}>
-          {routes.map((item) => {
-            const Icon = item.icon;
-            const feature =
-              workspace === "personal"
-                ? subscriptionFeatureForPersonalRoute(item.href)
-                : null;
-            const locked = Boolean(
-              feature &&
-                !hasSubscriptionFeature(
-                  subscriptionPlanCode,
-                  feature,
-                ),
-            );
-            const targetHref =
-              locked && feature
-                ? getSubscriptionUpgradeHref(feature)
-                : item.href;
-            const active =
-              !locked &&
-              activeRoute(pathname, item, workspace);
-
-            return (
-              <Link
-                href={targetHref}
-                prefetch={!locked}
-                key={item.href}
-                className={`${styles.drawerLink} ${
-                  active
-                    ? styles.drawerLinkActive
-                    : ""
-                }`}
-                aria-current={
-                  active ? "page" : undefined
-                }
-                aria-label={
-                  locked
-                    ? `${item.label} — upgrade required`
-                    : undefined
-                }
-              >
-                <span className={styles.drawerIcon}>
-                  <Icon
-                    size={19}
-                    aria-hidden={true}
-                  />
-                </span>
-                <span>{item.label}</span>
-                {locked ? (
-                  <LockKeyhole
-                    size={15}
-                    aria-hidden={true}
-                  />
-                ) : (
-                  <ChevronRight
-                    size={16}
-                    aria-hidden={true}
-                  />
-                )}
-              </Link>
-            );
-          })}
+                  return (
+                    <Link
+                      href={targetHref}
+                      prefetch={!locked}
+                      key={item.href}
+                      className={`${styles.drawerLink} ${
+                        active ? styles.drawerLinkActive : ""
+                      }`}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={
+                        locked
+                          ? `${item.label} — upgrade required`
+                          : undefined
+                      }
+                    >
+                      <span className={styles.drawerIcon}>
+                        <Icon size={18} aria-hidden={true} />
+                      </span>
+                      <span className={styles.drawerLinkLabel}>{item.label}</span>
+                      {locked ? (
+                        <LockKeyhole size={14} aria-hidden={true} />
+                      ) : (
+                        <ChevronRight size={15} aria-hidden={true} />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </nav>
 
         <div className={styles.drawerFooter}>

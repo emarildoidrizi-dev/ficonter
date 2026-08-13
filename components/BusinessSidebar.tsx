@@ -5,14 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Archive, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
   LayoutDashboard, LogOut, PackageOpen, Settings2, ShieldCheck,
-  ShoppingCart, Truck, Users, WalletCards,
+  ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent, type MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
 import { switchActiveBusinessAction } from "@/app/business/actions";
 import { Brand } from "./Brand";
+import { LanguageSelector } from "./LanguageSelector";
+import { NotificationCenter } from "./NotificationCenter";
 import styles from "./BusinessSidebar.module.css";
 
 type BusinessLink = readonly [href: string, icon: LucideIcon, label: string, manageOnly?: boolean, platformOnly?: boolean];
@@ -50,7 +52,11 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const headerRef = useRef<HTMLElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [selectedBusinessId, setSelectedBusinessId] = useState(business?.id ?? "");
@@ -67,6 +73,34 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     setSelectedBusinessId(business?.id ?? "");
     if (pendingBusinessId && business?.id === pendingBusinessId) setPendingBusinessId("");
   }, [business?.id, pendingBusinessId]);
+
+  useEffect(() => {
+    setPendingHref(null);
+    setAccountMenuOpen(false);
+    headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!pendingHref) return;
+    const timer = window.setTimeout(() => setPendingHref(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [pendingHref]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setAccountMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   useEffect(() => {
     if (!pendingBusinessId || business?.id === pendingBusinessId) return;
@@ -103,12 +137,18 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     router.refresh();
   }
 
+  function trackRoute(href: string) {
+    const targetPath = href.split("?")[0] || href;
+    setAccountMenuOpen(false);
+    setPendingHref(pathname === targetPath ? null : targetPath);
+  }
+
   return (
-    <header className={styles.shellHeader}>
+    <header className={styles.shellHeader} ref={headerRef}>
       <div className={styles.topRow}>
         <div className={styles.brandArea}>
-          <Brand href="/business/overview" />
-          <span className={styles.workspacePill}>Business</span>
+          <div className={styles.brandCard}><Brand href="/business/overview" /></div>
+          <span className={styles.workspacePill}><Building2 size={15} />Business<ChevronDown size={14} /></span>
         </div>
 
         <div className={styles.businessIdentity}>
@@ -128,18 +168,32 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           {archivedCount ? <span className={styles.archiveNotice}><Archive size={12} />{archivedCount} archived</span> : null}
         </div>
 
-        <div className={styles.account}>
-          <span className={styles.avatar}>{displayName.slice(0, 1).toUpperCase()}</span>
-          <span className={styles.accountText}><strong>{displayName}</strong><small>{user.email}</small></span>
-          <Link href="/dashboard/overview" aria-label="Personal workspace" title="Personal workspace"><WalletCards size={17} /></Link>
-          <button onClick={signOut} disabled={signingOut} aria-label="Log out"><LogOut size={17} /></button>
+        <div className={styles.headerActions}>
+          <LanguageSelector />
+          <NotificationCenter isAdmin={isPlatformAdmin} />
+          <div className={styles.accountDock} ref={accountRef}>
+            {accountMenuOpen ? (
+              <div className={styles.accountMenu} role="menu" aria-label="Account menu">
+                <Link href="/dashboard/settings?section=profile" role="menuitem" onClick={() => trackRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></Link>
+                <Link href="/business/manage" role="menuitem" onClick={() => trackRoute("/business/manage")}><Settings2 size={17} /><span>Manage businesses</span></Link>
+                <div className={styles.accountMenuDivider} />
+                <button type="button" role="menuitem" className={styles.signOutItem} onClick={signOut} disabled={signingOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
+              </div>
+            ) : null}
+            <button type="button" className={styles.accountButton} aria-expanded={accountMenuOpen} aria-haspopup="menu" onClick={() => setAccountMenuOpen((open) => !open)}>
+              <span className={styles.avatar}>{displayName.slice(0, 1).toUpperCase()}</span>
+              <span className={styles.accountText}><strong>{displayName}</strong><small>{user.email}</small></span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <Link href="/dashboard/overview" className={styles.switchPersonal} aria-label="Switch to Personal" title="Switch to Personal"><WalletCards size={14} /><span>Switch to Personal</span></Link>
         </div>
       </div>
 
       <nav className={styles.navigation} aria-label="Business navigation">
         {business ? (
           <>
-            <Link href="/business/overview" className={`${styles.overviewLink}${activeRoute(pathname, "/business/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={activeRoute(pathname, "/business/overview") ? "page" : undefined} prefetch={false}><LayoutDashboard size={17} />Overview</Link>
+            <Link href="/business/overview" className={`${styles.overviewLink}${activeRoute(pathname, "/business/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={activeRoute(pathname, "/business/overview") ? "page" : undefined} prefetch={false} onClick={() => trackRoute("/business/overview")}><LayoutDashboard size={17} />Overview</Link>
             {groups.map((group) => {
               const visibleLinks = group.links.filter(([, , , manageOnly, platformOnly]) => (!manageOnly || canManage) && (!platformOnly || isPlatformAdmin));
               if (!visibleLinks.length) return null;
@@ -148,7 +202,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
                 <details className={styles.navGroup} key={group.label}>
                   <summary className={groupActive ? styles.groupActive : undefined}>{group.label}<ChevronDown size={14} /></summary>
                   <div className={styles.groupMenu}>
-                    {visibleLinks.map(([href, Icon, label]) => <Link href={href} key={href} className={activeRoute(pathname, href) ? styles.activeMenuLink : undefined} aria-current={activeRoute(pathname, href) ? "page" : undefined} prefetch={false}><Icon size={17} /><span>{label}</span></Link>)}
+                    {visibleLinks.map(([href, Icon, label]) => <Link href={href} key={href} className={activeRoute(pathname, href) ? styles.activeMenuLink : undefined} aria-current={activeRoute(pathname, href) ? "page" : undefined} prefetch={false} onClick={() => trackRoute(href)}><Icon size={17} /><span>{label}</span></Link>)}
                   </div>
                 </details>
               );
@@ -162,6 +216,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           </>
         )}
       </nav>
+      <div className={`${styles.progress}${pendingHref ? ` ${styles.progressVisible}` : ""}`} aria-hidden="true"><span /></div>
     </header>
   );
 }

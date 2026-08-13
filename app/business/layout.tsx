@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
-import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
@@ -19,6 +18,7 @@ import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "
 import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
 import { getSubscriptionUpgradeHref } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import "../business-interface.css";
 
 type StoredPreferences = {
   appearance?: string;
@@ -143,10 +143,7 @@ export default async function BusinessLayout({
           email: user.email ?? "",
         }}
       />
-      <main className="app-main">
-        <WorkspaceSwitcher current="business" subscriptionPlanCode={subscriptionPlanCode} />
-        {children}
-      </main>
+      <main className="app-main business-interface">{children}</main>
       <PWAMobileDock
         workspace="business"
         subscriptionPlanCode={subscriptionPlanCode}

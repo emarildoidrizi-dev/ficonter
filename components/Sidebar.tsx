@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type SyntheticEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
@@ -71,6 +71,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   const headerRef = useRef<HTMLElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -97,8 +98,8 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
 
   useEffect(() => {
     setPendingHref(null);
+    setOpenGroup(null);
     setMenuOpen(false);
-    headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
   }, [pathname]);
 
   useEffect(() => {
@@ -110,12 +111,12 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
       if (!headerRef.current?.contains(event.target as Node)) {
-        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+        setOpenGroup(null);
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+        setOpenGroup(null);
       }
     }
     document.addEventListener("pointerdown", handlePointerDown);
@@ -181,26 +182,15 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   function openRoute(href: string) {
     const targetPath = href.split("?")[0] || href;
     setMenuOpen(false);
-    closeNavigationGroups();
+    setOpenGroup(null);
     setPendingHref(pathname === targetPath ? null : targetPath);
     router.push(href);
   }
 
-  function closeNavigationGroups(except?: HTMLDetailsElement) {
-    headerRef.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((detail) => {
-      if (detail !== except) detail.removeAttribute("open");
-    });
-  }
-
   function trackNavigation(href: string) {
     const targetPath = href.split("?")[0] || href;
-    closeNavigationGroups();
+    setOpenGroup(null);
     setPendingHref(pathname === targetPath ? null : targetPath);
-  }
-
-  function handleGroupToggle(event: SyntheticEvent<HTMLDetailsElement>) {
-    const detail = event.currentTarget;
-    if (detail.open) closeNavigationGroups(detail);
   }
 
   async function signOut(event: ReactMouseEvent<HTMLButtonElement>) {
@@ -245,6 +235,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
             href={businessHref}
             className={styles.switchBusiness}
             aria-label={businessLocked ? "Switch to Business — Business Pro required" : "Switch to Business"}
+            onClick={() => setOpenGroup(null)}
           >
             {businessLocked ? <LockKeyhole size={14} /> : <BriefcaseBusiness size={14} />}
             <span>Switch to Business</span>
@@ -259,8 +250,15 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
         {groups.map((group) => {
           const groupActive = group.links.some(([href]) => isRouteActive(pathname, href));
           return (
-            <details className={styles.navGroup} key={group.label} onToggle={handleGroupToggle}>
-              <summary className={groupActive ? styles.groupActive : undefined}>{group.label}<ChevronDown size={14} /></summary>
+            <details className={styles.navGroup} key={group.label} open={openGroup === group.label}>
+              <summary
+                className={groupActive ? styles.groupActive : undefined}
+                aria-expanded={openGroup === group.label}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOpenGroup((current) => current === group.label ? null : group.label);
+                }}
+              >{group.label}<ChevronDown size={14} /></summary>
               <div className={styles.groupMenu}>
                 {group.links.map(([href, Icon, label]) => {
                   const feature = subscriptionFeatureForPersonalRoute(href);

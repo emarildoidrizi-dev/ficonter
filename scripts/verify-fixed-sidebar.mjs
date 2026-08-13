@@ -15,6 +15,10 @@ const checks = [
   [businessCss.includes(".groupMenu"), "business grouped navigation"],
   [personalSource.includes("<details"), "personal accessible navigation groups"],
   [businessSource.includes("<details"), "business accessible navigation groups"],
+  [personalSource.includes("open={openGroup === group.label}"), "personal controlled single-open navigation"],
+  [businessSource.includes("open={openGroup === group.label}"), "business controlled single-open navigation"],
+  [personalSource.includes("setOpenGroup(null)"), "personal immediate navigation close"],
+  [businessSource.includes("setOpenGroup(null)"), "business immediate navigation close"],
   [navigationCss.includes("@media (max-width: 900px)"), "personal mobile reset"],
   [businessCss.includes("@media(max-width:900px)"), "business mobile reset"],
 ];

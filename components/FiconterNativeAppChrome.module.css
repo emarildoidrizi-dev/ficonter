@@ -22,7 +22,7 @@
     10px
     max(13px, env(safe-area-inset-left));
   border-bottom: 1px solid rgba(216, 189, 124, 0.2);
-  background: rgba(10, 20, 17, 0.94);
+  background: color-mix(in srgb, var(--mobile-chrome-bg) 94%, transparent);
   box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(24px) saturate(145%);
 }
@@ -34,7 +34,7 @@
   place-items: center;
   border: 1px solid rgba(216, 189, 124, 0.26);
   border-radius: 15px;
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   background: rgba(255, 255, 255, 0.055);
 }
 
@@ -53,7 +53,7 @@
 }
 
 .routeIdentity span {
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   font-size: 17px;
   font-weight: 800;
   line-height: 1.05;
@@ -62,7 +62,7 @@
 
 .routeIdentity strong {
   margin-top: 5px;
-  color: #b8c1bb;
+  color: var(--mobile-chrome-muted);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -79,7 +79,7 @@
   padding: 9px 11px;
   border: 1px solid rgba(216, 189, 124, 0.3);
   border-radius: 999px;
-  color: #efe2ba;
+  color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.11);
   font-size: 10.5px;
   font-weight: 850;
@@ -106,7 +106,7 @@
   padding: 7px;
   border: 1px solid rgba(216, 189, 124, 0.2);
   border-radius: 24px;
-  background: rgba(10, 20, 17, 0.94);
+  background: color-mix(in srgb, var(--mobile-chrome-bg) 94%, transparent);
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(24px) saturate(150%);
 }
@@ -120,7 +120,7 @@
   gap: 5px;
   border: 0;
   border-radius: 17px;
-  color: #a9b3ad;
+  color: var(--mobile-chrome-muted);
   background: transparent;
   font: inherit;
   font-size: 9.5px;
@@ -136,12 +136,12 @@
 }
 
 .dockActive {
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   background: rgba(216, 189, 124, 0.13);
 }
 
 .dockActive svg {
-  color: #d8bd7c;
+  color: var(--mobile-chrome-accent);
 }
 
 .addButton {
@@ -153,7 +153,7 @@
   justify-self: center;
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 20px;
-  color: #101914;
+  color: var(--mobile-chrome-on-accent);
   background:
     linear-gradient(145deg, #ead79f, #c9ae6d);
   box-shadow:
@@ -174,7 +174,7 @@
 }
 
 .addButton:focus-visible {
-  outline: 2px solid #f3dfa4;
+  outline: 2px solid var(--mobile-chrome-focus);
   outline-offset: 3px;
 }
 
@@ -221,7 +221,7 @@
       rgba(216, 189, 124, 0.13),
       transparent 30%
     ),
-    #0b1511;
+    var(--mobile-chrome-surface);
   box-shadow: 28px 0 80px rgba(0, 0, 0, 0.38);
   transform: translate3d(-105%, 0, 0);
   transition: transform 210ms ease;
@@ -245,7 +245,7 @@
   place-items: center;
   border: 1px solid rgba(216, 189, 124, 0.65);
   border-radius: 16px;
-  color: #d8bd7c;
+  color: var(--mobile-chrome-accent);
   background: rgba(216, 189, 124, 0.08);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 25px;
@@ -264,7 +264,7 @@
 }
 
 .drawerHeader span {
-  color: #d8bd7c;
+  color: var(--mobile-chrome-accent);
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.16em;
@@ -272,7 +272,7 @@
 
 .drawerHeader strong {
   margin-top: 6px;
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -287,7 +287,7 @@
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 14px;
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -301,7 +301,7 @@
   padding: 0 15px;
   border: 1px solid rgba(216, 189, 124, 0.22);
   border-radius: 17px;
-  color: #f3ead2;
+  color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.08);
   font-size: 12px;
   font-weight: 800;
@@ -309,7 +309,7 @@
 
 .drawerLabel {
   margin: 24px 5px 10px;
-  color: #7f8d85;
+  color: var(--mobile-chrome-muted);
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.16em;
@@ -330,7 +330,7 @@
   padding: 7px 12px 7px 7px;
   border: 1px solid transparent;
   border-radius: 17px;
-  color: #c3ccc6;
+  color: var(--mobile-chrome-muted);
   background: rgba(255, 255, 255, 0.025);
   font-size: 13px;
   font-weight: 730;
@@ -342,19 +342,19 @@
   height: 38px;
   place-items: center;
   border-radius: 13px;
-  color: #aebbb3;
+  color: var(--mobile-chrome-muted);
   background: rgba(255, 255, 255, 0.045);
 }
 
 .drawerLinkActive {
   border-color: rgba(216, 189, 124, 0.27);
-  color: #f8f4e9;
+  color: var(--mobile-chrome-text);
   background: rgba(216, 189, 124, 0.1);
 }
 
 .drawerLinkActive .drawerIcon {
-  color: #101914;
-  background: #d8bd7c;
+  color: var(--mobile-chrome-on-accent);
+  background: var(--mobile-chrome-accent);
 }
 
 @media (orientation: landscape) {
@@ -397,8 +397,8 @@
   background:
     linear-gradient(
       180deg,
-      #0a1411 0%,
-      rgba(10, 20, 17, 0.965) 100%
+      var(--mobile-chrome-bg) 0%,
+      color-mix(in srgb, var(--mobile-chrome-bg) 96.5%, transparent) 100%
     ) !important;
   transform: translateZ(0);
 }
@@ -462,8 +462,8 @@
     linear-gradient(
       180deg,
       rgba(11, 21, 17, 0),
-      #0b1511 22%,
-      #0b1511 100%
+      var(--mobile-chrome-surface) 22%,
+      var(--mobile-chrome-surface) 100%
     );
 }
 
@@ -477,7 +477,7 @@
   padding: 7px 14px 7px 8px;
   border: 1px solid rgba(184, 79, 79, 0.35);
   border-radius: 17px;
-  color: #f3d7d7;
+  color: var(--mobile-chrome-danger-text);
   background: rgba(132, 45, 45, 0.13);
   font: inherit;
   font-size: 13px;
@@ -497,12 +497,12 @@
   height: 40px;
   place-items: center;
   border-radius: 13px;
-  color: #f1c4c4;
+  color: var(--mobile-chrome-danger-icon);
   background: rgba(184, 79, 79, 0.16);
 }
 
 .signOutButton:focus-visible {
-  outline: 2px solid #d8bd7c;
+  outline: 2px solid var(--mobile-chrome-accent);
   outline-offset: 3px;
 }
 

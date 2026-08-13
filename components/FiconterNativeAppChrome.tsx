@@ -35,6 +35,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
 } from "react";
@@ -376,6 +377,18 @@ function synchronizeNativeAppMode() {
   const root = document.documentElement;
   const { width, height } = readViewportSize();
   const device = resolveDeviceClass();
+  const layoutHeight = Math.max(
+    1,
+    Math.round(window.innerHeight || document.documentElement.clientHeight),
+  );
+  const visualHeight = Math.max(
+    1,
+    Math.round(window.visualViewport?.height || layoutHeight),
+  );
+  const keyboardThreshold = Math.max(160, Math.round(layoutHeight * 0.18));
+  const keyboardOpen =
+    device !== "desktop" &&
+    layoutHeight - visualHeight >= keyboardThreshold;
 
   root.dataset.ficonterNativeApp =
     device === "desktop" ? "false" : "true";
@@ -385,6 +398,11 @@ function synchronizeNativeAppMode() {
     : "browser";
   root.dataset.ficonterOrientation =
     width >= height ? "landscape" : "portrait";
+  root.dataset.ficonterKeyboard = keyboardOpen ? "open" : "closed";
+  root.style.setProperty(
+    "--ficonter-visual-viewport-height",
+    `${visualHeight}px`,
+  );
 }
 
 function activeRoute(
@@ -434,6 +452,9 @@ export function FiconterNativeAppChrome({
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
   const routes =
     workspace === "business"
@@ -568,6 +589,32 @@ export function FiconterNativeAppChrome({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setDrawerOpen(false);
+        window.requestAnimationFrame(() => {
+          menuButtonRef.current?.focus({ preventScroll: true });
+        });
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        drawerRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => !element.hasAttribute("inert"));
+
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
@@ -578,6 +625,12 @@ export function FiconterNativeAppChrome({
   useEffect(() => {
     document.documentElement.dataset.ficonterAppDrawer =
       drawerOpen ? "open" : "closed";
+
+    if (drawerOpen) {
+      window.requestAnimationFrame(() => {
+        drawerCloseButtonRef.current?.focus({ preventScroll: true });
+      });
+    }
 
     return () => {
       document.documentElement.dataset.ficonterAppDrawer =
@@ -628,11 +681,13 @@ export function FiconterNativeAppChrome({
     <>
       <header className={styles.header}>
         <button
+          ref={menuButtonRef}
           type="button"
           className={styles.menuButton}
           onClick={openDrawer}
           aria-label="Open app navigation"
           aria-expanded={drawerOpen}
+          aria-controls="ficonter-app-drawer"
         >
           <Menu size={22} aria-hidden={true} />
         </button>
@@ -747,16 +802,27 @@ export function FiconterNativeAppChrome({
         className={`${styles.backdrop} ${
           drawerOpen ? styles.backdropOpen : ""
         }`}
-        onClick={() => setDrawerOpen(false)}
+        onClick={() => {
+          setDrawerOpen(false);
+          window.requestAnimationFrame(() => {
+            menuButtonRef.current?.focus({ preventScroll: true });
+          });
+        }}
         aria-label="Close app navigation"
         tabIndex={drawerOpen ? 0 : -1}
       />
 
       <aside
+        ref={drawerRef}
+        id="ficonter-app-drawer"
         className={`${styles.drawer} ${
           drawerOpen ? styles.drawerOpen : ""
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="FICONTER app navigation"
         aria-hidden={!drawerOpen}
+        inert={!drawerOpen}
       >
         <div className={styles.drawerHeader}>
           <div className={styles.appMark}>F</div>
@@ -765,8 +831,14 @@ export function FiconterNativeAppChrome({
             <strong>{identity}</strong>
           </div>
           <button
+            ref={drawerCloseButtonRef}
             type="button"
-            onClick={() => setDrawerOpen(false)}
+            onClick={() => {
+              setDrawerOpen(false);
+              window.requestAnimationFrame(() => {
+                menuButtonRef.current?.focus({ preventScroll: true });
+              });
+            }}
             aria-label="Close app navigation"
           >
             <X size={22} aria-hidden={true} />

@@ -1,1 +1,1 @@
-refactor(mobile): redesign app navigation chrome and grouped drawer
+fix(mobile): finalize comfort ergonomics and real-device QA

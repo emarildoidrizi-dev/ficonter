@@ -8,7 +8,6 @@ import "./coastal-shell.css";
 import "./mobile-module-layouts.css";
 import "./mobile-comfort.css";
 import "./mobile-shell-v2.css";
-import "./mobile-screen-stack.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

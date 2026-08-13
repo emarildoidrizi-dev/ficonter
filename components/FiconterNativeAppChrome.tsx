@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   BarChart3,
   BookOpen,
   BriefcaseBusiness,
@@ -75,7 +74,6 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   email?: string;
-  avatarPath?: string;
   businessName?: string;
   businessProfiles?: BusinessProfileOption[];
   activeBusinessId?: string | null;
@@ -90,7 +88,7 @@ type DeviceClass = "phone" | "tablet" | "desktop";
 
 const personalRoutes: RouteItem[] = [
   {
-    href: "/dashboard/overview",
+    href: "/dashboard",
     label: "Home",
     title: "Overview",
     icon: House,
@@ -428,7 +426,7 @@ function activeRoute(
       );
     }
 
-    return pathname === "/dashboard" || pathname === "/dashboard/overview";
+    return pathname === "/dashboard";
   }
 
   return (
@@ -451,21 +449,10 @@ function currentRoute(
   );
 }
 
-function isRootWorkspaceRoute(pathname: string, workspace: Workspace) {
-  if (workspace === "business") {
-    return pathname === "/business" || pathname === "/business/overview";
-  }
-
-  return pathname === "/dashboard" || pathname === "/dashboard/overview";
-}
-
-type NavigationDirection = "forward" | "back";
-
 export function FiconterNativeAppChrome({
   workspace,
   displayName,
   email = "",
-  avatarPath = "",
   businessName = "",
   businessProfiles = [],
   activeBusinessId = null,
@@ -475,9 +462,6 @@ export function FiconterNativeAppChrome({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [liveAvatarPath, setLiveAvatarPath] = useState(avatarPath);
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -485,13 +469,8 @@ export function FiconterNativeAppChrome({
     activeBusinessId ?? "",
   );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const accountButtonRef = useRef<HTMLButtonElement>(null);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
-  const previousPathnameRef = useRef(pathname);
-  const transitionTimerRef = useRef<number | null>(null);
-  const edgeSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const routes =
     workspace === "business"
@@ -507,9 +486,6 @@ export function FiconterNativeAppChrome({
     () => currentRoute(pathname, routes, workspace),
     [pathname, routes, workspace],
   );
-
-  const rootRoute = workspace === "business" ? "/business/overview" : "/dashboard/overview";
-  const rootScreen = isRootWorkspaceRoute(pathname, workspace);
 
   const identity =
     workspace === "business"
@@ -550,32 +526,6 @@ export function FiconterNativeAppChrome({
   const switchTargetHref = businessWorkspaceLocked
     ? getSubscriptionUpgradeHref("business_workspace")
     : switchHref;
-
-  function beginNavigationTransition(direction: NavigationDirection) {
-    const root = document.documentElement;
-    root.dataset.ficonterNavDirection = direction;
-    root.dataset.ficonterNavTransition = "pending";
-  }
-
-  function navigateBack() {
-    if (rootScreen) return;
-
-    beginNavigationTransition("back");
-    const startingPath = window.location.pathname;
-    window.history.back();
-
-    window.setTimeout(() => {
-      if (window.location.pathname === startingPath) {
-        beginNavigationTransition("back");
-        router.push(rootRoute);
-      }
-    }, 260);
-  }
-
-  function navigateForward(href: string) {
-    if (href === pathname) return;
-    beginNavigationTransition("forward");
-  }
 
   useEffect(() => {
     synchronizeNativeAppMode();
@@ -626,77 +576,6 @@ export function FiconterNativeAppChrome({
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    const previousPathname = previousPathnameRef.current;
-
-    if (previousPathname !== pathname) {
-      if (!root.dataset.ficonterNavDirection) {
-        root.dataset.ficonterNavDirection = "forward";
-      }
-
-      root.dataset.ficonterNavTransition = "active";
-
-      if (transitionTimerRef.current) {
-        window.clearTimeout(transitionTimerRef.current);
-      }
-
-      transitionTimerRef.current = window.setTimeout(() => {
-        delete root.dataset.ficonterNavTransition;
-        delete root.dataset.ficonterNavDirection;
-        transitionTimerRef.current = null;
-      }, 360);
-
-      previousPathnameRef.current = pathname;
-    }
-
-    return () => {
-      if (transitionTimerRef.current) {
-        window.clearTimeout(transitionTimerRef.current);
-        transitionTimerRef.current = null;
-      }
-    };
-  }, [pathname]);
-
-  useEffect(() => {
-    const onPopState = () => beginNavigationTransition("back");
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  useEffect(() => {
-    if (rootScreen) return;
-
-    const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      if (touch.clientX > 26) return;
-      edgeSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
-    };
-
-    const onTouchEnd = (event: TouchEvent) => {
-      const start = edgeSwipeStartRef.current;
-      edgeSwipeStartRef.current = null;
-      if (!start || event.changedTouches.length !== 1) return;
-
-      const touch = event.changedTouches[0];
-      const deltaX = touch.clientX - start.x;
-      const deltaY = Math.abs(touch.clientY - start.y);
-
-      if (deltaX >= 76 && deltaY <= 58) {
-        navigateBack();
-      }
-    };
-
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchend", onTouchEnd, { passive: true });
-
-    return () => {
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [rootScreen, pathname]);
-
-  useEffect(() => {
     const scheduled = primaryItems.map((item, index) =>
       window.setTimeout(() => {
         router.prefetch(item.href);
@@ -718,79 +597,12 @@ export function FiconterNativeAppChrome({
 
   useEffect(() => {
     setDrawerOpen(false);
-    setAccountMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
   }, [activeBusinessId]);
-
-  useEffect(() => {
-    setLiveAvatarPath(avatarPath);
-  }, [avatarPath]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadAvatar() {
-      if (!liveAvatarPath) {
-        if (active) setAvatarUrl("");
-        return;
-      }
-
-      const { data, error } = await supabase.storage
-        .from("profile-photos")
-        .createSignedUrl(liveAvatarPath, 60 * 60);
-
-      if (active) setAvatarUrl(error ? "" : data.signedUrl);
-    }
-
-    void loadAvatar();
-    return () => {
-      active = false;
-    };
-  }, [liveAvatarPath, supabase]);
-
-  useEffect(() => {
-    function handleProfileUpdate(event: Event) {
-      const detail = (event as CustomEvent<{ profilePhotoPath?: string }>).detail;
-      if (typeof detail?.profilePhotoPath === "string") {
-        setLiveAvatarPath(detail.profilePhotoPath);
-      }
-    }
-
-    window.addEventListener("ficonter:profile-updated", handleProfileUpdate);
-    return () => window.removeEventListener("ficonter:profile-updated", handleProfileUpdate);
-  }, []);
-
-  useEffect(() => {
-    if (!accountMenuOpen) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (accountButtonRef.current?.contains(target)) return;
-      if (accountMenuRef.current?.contains(target)) return;
-      setAccountMenuOpen(false);
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setAccountMenuOpen(false);
-      window.requestAnimationFrame(() => {
-        accountButtonRef.current?.focus({ preventScroll: true });
-      });
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [accountMenuOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -848,7 +660,6 @@ export function FiconterNativeAppChrome({
   }, [drawerOpen]);
 
   function openDrawer() {
-    setAccountMenuOpen(false);
     setDrawerOpen(true);
 
     routes.forEach((item, index) => {
@@ -891,7 +702,6 @@ export function FiconterNativeAppChrome({
 
     setSigningOut(true);
     setDrawerOpen(false);
-    setAccountMenuOpen(false);
 
     const root = document.documentElement;
 
@@ -923,102 +733,34 @@ export function FiconterNativeAppChrome({
           workspace === "business" ? styles.businessHeader : ""
         }`}
       >
-        <div className={styles.brandRow}>
-          <div className={styles.brandIdentity} aria-label="FICONTER — Financial Control Center">
-            <img
-              className={styles.headerBrandMark}
-              src="/ficonter-mark.svg"
-              alt=""
-              width={40}
-              height={40}
-              aria-hidden="true"
-            />
-            <span className={styles.brandCopy}>
-              <strong>FICONTER</strong>
-              <small>Financial Control Center</small>
-            </span>
-          </div>
-
-          <button
-            ref={accountButtonRef}
-            type="button"
-            className={styles.workspaceBadge}
-            title={`${accountName} — log out menu`}
-            aria-label={`Open log out menu for ${accountName}`}
-            aria-haspopup="menu"
-            aria-expanded={accountMenuOpen}
-            aria-controls="ficonter-account-menu"
-            onClick={() => {
-              setDrawerOpen(false);
-              setAccountMenuOpen((open) => !open);
-            }}
-          >
-            {avatarUrl ? (
-              <img
-                className={styles.workspaceAvatarImage}
-                src={avatarUrl}
-                alt=""
-                aria-hidden="true"
-              />
-            ) : (
-              <span>{accountInitial}</span>
-            )}
-          </button>
-        </div>
-
-        <div className={styles.contextRow}>
-          {rootScreen ? (
-            <button
-              ref={menuButtonRef}
-              type="button"
-              className={styles.menuButton}
-              onClick={openDrawer}
-              aria-label="Open app navigation"
-              aria-expanded={drawerOpen}
-              aria-controls="ficonter-app-drawer"
-            >
-              <Menu size={22} strokeWidth={2.3} aria-hidden={true} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={`${styles.menuButton} ${styles.backButton}`}
-              onClick={navigateBack}
-              aria-label={`Back from ${route.title}`}
-            >
-              <ArrowLeft size={23} strokeWidth={2.25} aria-hidden={true} />
-            </button>
-          )}
-
-          <strong className={styles.routeTitle}>{route.title}</strong>
-          <span className={styles.workspaceLabel}>
-            {workspace === "business" ? "BUSINESS" : "PERSONAL"}
-            <span aria-hidden="true"> ·</span>
-          </span>
-        </div>
-
-        <div
-          ref={accountMenuRef}
-          id="ficonter-account-menu"
-          className={`${styles.accountMenu} ${
-            accountMenuOpen ? styles.accountMenuOpen : ""
-          }`}
-          role="menu"
-          aria-label="Account actions"
-          aria-hidden={!accountMenuOpen}
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className={styles.menuButton}
+          onClick={openDrawer}
+          aria-label="Open app navigation"
+          aria-expanded={drawerOpen}
+          aria-controls="ficonter-app-drawer"
         >
-          <button
-            type="button"
-            className={`${styles.accountMenuItem} ${styles.accountMenuDanger}`}
-            role="menuitem"
-            tabIndex={accountMenuOpen ? 0 : -1}
-            onClick={() => void signOut()}
-            disabled={signingOut}
-          >
-            <LogOut size={19} aria-hidden={true} />
-            <span>{signingOut ? "Logging out…" : "Log out"}</span>
-          </button>
+          <Menu size={24} strokeWidth={2.2} aria-hidden={true} />
+        </button>
+
+        <div className={styles.routeIdentity}>
+          <span className={styles.routeEyebrow}>
+            {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
+          </span>
+          <strong>{route.title}</strong>
         </div>
+
+        <Link
+          href="/dashboard/settings"
+          prefetch={true}
+          className={styles.workspaceBadge}
+          title={`${accountName} — account settings`}
+          aria-label={`Open account settings for ${accountName}`}
+        >
+          <span>{accountInitial}</span>
+        </Link>
 
         {workspace === "business" && businessProfiles.length ? (
           <label className={styles.businessProfileBar}>
@@ -1064,7 +806,6 @@ export function FiconterNativeAppChrome({
                 active ? styles.dockActive : ""
               }`}
               aria-current={active ? "page" : undefined}
-              onClick={() => navigateForward(item.href)}
             >
               <Icon size={21} aria-hidden={true} />
               <span>{item.label}</span>
@@ -1082,7 +823,6 @@ export function FiconterNativeAppChrome({
           }
           onClick={() => {
             if (workspace === "business") {
-              beginNavigationTransition("forward");
               router.push(addHref);
               return;
             }
@@ -1094,7 +834,6 @@ export function FiconterNativeAppChrome({
               return;
             }
 
-            beginNavigationTransition("forward");
             router.push(`${addHref}#quick-add`);
           }}
         >
@@ -1118,7 +857,6 @@ export function FiconterNativeAppChrome({
                 active ? styles.dockActive : ""
               }`}
               aria-current={active ? "page" : undefined}
-              onClick={() => navigateForward(item.href)}
             >
               <Icon size={21} aria-hidden={true} />
               <span>{item.label}</span>
@@ -1135,7 +873,6 @@ export function FiconterNativeAppChrome({
           aria-current={
             pathname.startsWith("/dashboard/settings") ? "page" : undefined
           }
-          onClick={() => navigateForward("/dashboard/settings")}
         >
           <Settings2 size={21} aria-hidden={true} />
           <span>Settings</span>
@@ -1199,6 +936,24 @@ export function FiconterNativeAppChrome({
           </button>
         </div>
 
+        <div className={styles.accountPanel}>
+          <span className={styles.accountAvatar} aria-hidden="true">{accountInitial}</span>
+          <span className={styles.accountIdentity}>
+            <strong>{accountName}</strong>
+            <small>{email || (workspace === "business" ? identity : "Signed in")}</small>
+          </span>
+          <button
+            type="button"
+            className={styles.accountSignOut}
+            onClick={() => void signOut()}
+            disabled={signingOut}
+            aria-label="Sign out"
+          >
+            <LogOut size={18} aria-hidden={true} />
+            <span>{signingOut ? "Signing out…" : "Sign out"}</span>
+          </button>
+        </div>
+
         {workspace === "business" && businessProfiles.length ? (
           <label className={styles.drawerBusinessSelector}>
             <span>Business profile</span>
@@ -1223,10 +978,6 @@ export function FiconterNativeAppChrome({
           href={switchTargetHref}
           prefetch={!businessWorkspaceLocked}
           className={styles.workspaceSwitch}
-          onClick={() => {
-            navigateForward(switchTargetHref);
-            setDrawerOpen(false);
-          }}
           aria-label={
             businessWorkspaceLocked
               ? "Open business workspace — Business Pro required"
@@ -1287,10 +1038,6 @@ export function FiconterNativeAppChrome({
                           ? `${item.label} — upgrade required`
                           : undefined
                       }
-                      onClick={() => {
-                        navigateForward(targetHref);
-                        setDrawerOpen(false);
-                      }}
                     >
                       <span className={styles.drawerIcon}>
                         <Icon size={18} aria-hidden={true} />

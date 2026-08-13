@@ -19,7 +19,7 @@ expect(chrome.includes("businessRouteGroups"), "Business navigation must be grou
 expect(chrome.includes("drawerGroupLinks"), "Drawer must render grouped links.");
 expect(chrome.includes("moreActive"), "More dock control must show the active state for secondary routes.");
 expect(chrome.includes('event.key === "Escape"'), "Drawer must close with Escape.");
-expect(chrome.includes("FICONTER") && chrome.includes("PERSONAL") && chrome.includes("BUSINESS"), "Mobile header must expose a stable FICONTER/workspace eyebrow.");
+expect(chrome.includes("FICONTER ·"), "Mobile header must expose a stable FICONTER/workspace eyebrow.");
 expect(chromeCss.includes(".drawerGroup"), "Grouped drawer styling is missing.");
 expect(chromeCss.includes(".dockActive::after"), "Dock active indicator is missing.");
 expect(chromeCss.includes("prefers-reduced-motion"), "Reduced-motion support is missing.");

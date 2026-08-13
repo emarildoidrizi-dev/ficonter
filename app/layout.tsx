@@ -7,7 +7,6 @@ import "./native-mobile-app.css";
 import "./coastal-shell.css";
 import "./mobile-module-layouts.css";
 import "./mobile-comfort.css";
-import "./mobile-shell-v2.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

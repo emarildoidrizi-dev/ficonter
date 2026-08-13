@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   LockKeyhole,
   LogOut,
+  Menu,
   MessageSquareText,
   PackageOpen,
   ReceiptText,
@@ -688,34 +689,19 @@ export function FiconterNativeAppChrome({
           aria-expanded={drawerOpen}
           aria-controls="ficonter-app-drawer"
         >
-          <span className={styles.headerMark} aria-hidden="true">F</span>
+          <Menu size={22} aria-hidden={true} />
         </button>
 
         <div className={styles.routeIdentity}>
           <span className={styles.routeEyebrow}>
-            {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
+            FICONTER · {workspace === "business" ? "BUSINESS" : "PERSONAL"}
           </span>
           <strong>{route.title}</strong>
         </div>
 
-        <Link
-          href={switchTargetHref}
-          prefetch={!businessWorkspaceLocked}
-          className={styles.workspaceBadge}
-          title={identity}
-          aria-label={
-            businessWorkspaceLocked
-              ? "Business workspace — Business Pro required"
-              : workspace === "business"
-                ? "Switch to personal workspace"
-                : "Switch to business workspace"
-          }
-        >
-          <span>{workspace === "business" ? "B" : "P"}</span>
-          {businessWorkspaceLocked ? (
-            <LockKeyhole size={11} aria-hidden={true} />
-          ) : null}
-        </Link>
+        <span className={styles.workspaceBadge} title={identity}>
+          {workspace === "business" ? "B" : "P"}
+        </span>
       </header>
 
       <nav
@@ -838,13 +824,11 @@ export function FiconterNativeAppChrome({
         aria-hidden={!drawerOpen}
         inert={!drawerOpen}
       >
-        <div className={styles.sheetHandle} aria-hidden="true" />
         <div className={styles.drawerHeader}>
           <div className={styles.appMark}>F</div>
           <div>
-            <span>FICONTER</span>
-            <strong>All sections</strong>
-            <small>{identity}</small>
+            <span>FICONTER APP</span>
+            <strong>{identity}</strong>
           </div>
           <button
             ref={drawerCloseButtonRef}
@@ -930,13 +914,11 @@ export function FiconterNativeAppChrome({
                         <Icon size={18} aria-hidden={true} />
                       </span>
                       <span className={styles.drawerLinkLabel}>{item.label}</span>
-                      <span className={styles.drawerLinkStatus}>
-                        {locked ? (
-                          <LockKeyhole size={13} aria-hidden={true} />
-                        ) : active ? (
-                          <span className={styles.activeDot} aria-hidden="true" />
-                        ) : null}
-                      </span>
+                      {locked ? (
+                        <LockKeyhole size={14} aria-hidden={true} />
+                      ) : (
+                        <ChevronRight size={15} aria-hidden={true} />
+                      )}
                     </Link>
                   );
                 })}

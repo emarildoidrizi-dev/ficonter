@@ -1,1 +1,1 @@
-refactor(mobile): replace shell and unify mobile UI system
+fix(mobile): finalize comfort ergonomics and real-device QA

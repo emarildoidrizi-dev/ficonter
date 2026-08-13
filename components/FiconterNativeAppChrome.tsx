@@ -17,7 +17,7 @@ import {
   HandCoins,
   House,
   Landmark,
-  LayoutGrid,
+  Menu,
   LockKeyhole,
   LogOut,
   MessageSquareText,
@@ -500,9 +500,6 @@ export function FiconterNativeAppChrome({
       ? [businessRoutes[0], businessRoutes[1], businessRoutes[2]]
       : [personalRoutes[0], personalRoutes[1], personalRoutes[2]];
 
-  const moreActive = !primaryItems.some((item) =>
-    activeRoute(pathname, item, workspace),
-  );
 
   const addHref =
     workspace === "business"
@@ -745,14 +742,7 @@ export function FiconterNativeAppChrome({
           aria-expanded={drawerOpen}
           aria-controls="ficonter-app-drawer"
         >
-          <img
-            className={styles.headerMark}
-            src="/ficonter-mark.svg"
-            alt=""
-            width={30}
-            height={30}
-            aria-hidden="true"
-          />
+          <Menu size={24} strokeWidth={2.2} aria-hidden={true} />
         </button>
 
         <div className={styles.routeIdentity}>
@@ -762,16 +752,15 @@ export function FiconterNativeAppChrome({
           <strong>{route.title}</strong>
         </div>
 
-        <button
-          type="button"
+        <Link
+          href="/dashboard/settings"
+          prefetch={true}
           className={styles.workspaceBadge}
-          title={`${accountName} — account`}
-          aria-label={`Open account menu for ${accountName}`}
-          aria-expanded={drawerOpen}
-          onClick={openDrawer}
+          title={`${accountName} — account settings`}
+          aria-label={`Open account settings for ${accountName}`}
         >
           <span>{accountInitial}</span>
-        </button>
+        </Link>
 
         {workspace === "business" && businessProfiles.length ? (
           <label className={styles.businessProfileBar}>
@@ -875,18 +864,19 @@ export function FiconterNativeAppChrome({
           );
         })}
 
-        <button
-          type="button"
+        <Link
+          href="/dashboard/settings"
+          prefetch={true}
           className={`${styles.dockItem} ${
-            moreActive ? styles.dockActive : ""
+            pathname.startsWith("/dashboard/settings") ? styles.dockActive : ""
           }`}
-          onClick={openDrawer}
-          aria-label="Open all sections"
-          aria-expanded={drawerOpen}
+          aria-current={
+            pathname.startsWith("/dashboard/settings") ? "page" : undefined
+          }
         >
-          <LayoutGrid size={21} aria-hidden={true} />
-          <span>More</span>
-        </button>
+          <Settings2 size={21} aria-hidden={true} />
+          <span>Settings</span>
+        </Link>
       </nav>
 
       <button

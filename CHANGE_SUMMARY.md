@@ -2,6 +2,15 @@
 
 This release consolidates the latest complete FICONTER project and the accepted post-upload hardening packages into one official source tree.
 
+## Monthly budget synchronization
+
+- Added one dedicated monthly spending-budget amount to the Monthly Planner.
+- Connected that value to the Overview's Monthly budget use card.
+- Added real-time spent, remaining or over-budget amounts and an exact percentage.
+- Preserved percentages above 100% so overspending is reported honestly.
+- Kept future-dated transactions and bills out of the current spent-to-date total.
+- Added the required non-negative database field and a one-run Supabase SQL file.
+
 ## Merged
 
 - Performance and accuracy hardening

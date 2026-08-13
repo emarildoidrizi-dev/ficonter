@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isFinancialDataScope, subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
-import { reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
 import { CoastalOverview, type CoastalUpcomingBill } from "@/components/CoastalOverview";
@@ -48,11 +48,17 @@ type Bill = {
   transaction_id: string | null;
 };
 
+type BudgetPlan = {
+  month: string;
+  spending_budget: number | string;
+};
+
 type Props = {
   userId: string;
   name: string;
   initialTransactions: Transaction[];
   initialBills: Bill[];
+  initialBudgetPlans: BudgetPlan[];
   initialHealthInputs: FinancialHealthInputs;
   initialSetupAcknowledgements: SetupAcknowledgements;
   initialGpsInputs: AiInsightsInputs;
@@ -77,6 +83,7 @@ export function DashboardLiveOverview({
   name,
   initialTransactions,
   initialBills,
+  initialBudgetPlans,
   initialHealthInputs,
   initialSetupAcknowledgements,
   initialGpsInputs,
@@ -189,6 +196,7 @@ export function DashboardLiveOverview({
       [previousMonthKey]: { income: 0, spent: 0 },
     };
     initialTransactions.forEach((transaction) => {
+      if (transaction.transaction_date > today) return;
       const key = transaction.transaction_date.slice(0, 7);
       if (!totals[key] || linkedTransactionIds.has(transaction.id)) return;
       const amount = transactionAmount(transaction);
@@ -198,7 +206,9 @@ export function DashboardLiveOverview({
     });
     initialBills.forEach((bill) => {
       if (bill.status !== "paid") return;
-      const key = (bill.paid_at?.slice(0, 10) ?? bill.due_date).slice(0, 7);
+      const activityDate = bill.paid_at?.slice(0, 10) ?? bill.due_date;
+      if (activityDate > today) return;
+      const key = activityDate.slice(0, 7);
       if (!totals[key]) return;
       const amount = billAmount(bill);
       if (amount !== null) totals[key].spent += amount;
@@ -215,7 +225,11 @@ export function DashboardLiveOverview({
       .sort((left, right) => left.due_date.localeCompare(right.due_date))
       .slice(0, 3)
       .map((bill) => ({ id: bill.id, name: bill.name || "Upcoming bill", dueDate: bill.due_date, amount: billAmount(bill) }));
-  const spendingBudget = Math.max(0, financialHealthInputs.planner.plannedOutflow);
+  const selectedBudgetPlan = initialBudgetPlans.find((plan) => plan.month === currentMonthKey);
+  const spendingBudget = Math.max(
+    0,
+    canonicalAmountInBaseCurrency(selectedBudgetPlan?.spending_budget ?? 0, context),
+  );
   const spendingAmount = monthTotals[currentMonthKey].spent;
   // A percentage has no mathematical meaning until the customer has set a
   // monthly spending budget. Preserve the real ratio above 100% so an

@@ -17,6 +17,7 @@ for (const file of required) {
 }
 
 const scenes = [
+  "coastal-island",
   "space-nebula",
   "aurora",
   "ocean-horizon",
@@ -64,4 +65,4 @@ if (!css.includes("prefers-reduced-motion")) {
   throw new Error("Reduced motion protection is missing");
 }
 
-console.log("FICONTER Scene Wallpapers v1 verification passed (8 scenes).");
+console.log(`FICONTER Scene Wallpapers verification passed (${scenes.length} scenes).`);

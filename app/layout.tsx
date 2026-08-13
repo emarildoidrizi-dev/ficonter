@@ -4,6 +4,7 @@ import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
 import "./native-mobile-app.css";
+import "./coastal-shell.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
@@ -96,7 +97,7 @@ const interfacePreferenceScript = `
     var density = localStorage.getItem("ficonter-density") || "comfortable";
     var layout = localStorage.getItem("ficonter-layout") || "horizon";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
-    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "space-nebula";
+    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
     var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
     var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
     var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "animated";
@@ -105,7 +106,7 @@ const interfacePreferenceScript = `
     if (density !== "compact") density = "comfortable";
     if (supportedLayouts.indexOf(layout) === -1) layout = "horizon";
     if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
-    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "space-nebula";
+    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
     if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
     if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
     if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "animated";
@@ -121,6 +122,9 @@ const interfacePreferenceScript = `
       switch (wallpaperScene) {
         case "space-nebula":
           resolvedSidebarAtmosphere = "orbital";
+          break;
+        case "coastal-island":
+          resolvedSidebarAtmosphere = "topography";
           break;
         case "aurora":
           resolvedSidebarAtmosphere = "lightbeam";

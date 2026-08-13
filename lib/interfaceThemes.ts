@@ -16,6 +16,7 @@ export const BACKGROUND_MOTION_VALUES = [
 ] as const;
 
 export const WALLPAPER_SCENE_VALUES = [
+  "coastal-island",
   "space-nebula",
   "aurora",
   "ocean-horizon",
@@ -79,6 +80,11 @@ export const INTERFACE_THEME_OPTIONS = [
 }>;
 
 export const WALLPAPER_SCENE_OPTIONS = [
+  {
+    value: "coastal-island",
+    label: "Coastal Island",
+    description: "A bright tropical shore with palms, turquoise water and warm sand.",
+  },
   {
     value: "space-nebula",
     label: "Space Nebula",
@@ -205,7 +211,7 @@ export function normalizeWallpaperScene(
 ): WallpaperScenePreference {
   return WALLPAPER_SCENE_VALUES.includes(value as WallpaperScenePreference)
     ? (value as WallpaperScenePreference)
-    : "space-nebula";
+    : "coastal-island";
 }
 
 export function resolveAppearance(
@@ -251,6 +257,8 @@ export function resolveSidebarAtmosphereStyle(
   if (mode === "manual") return manualStyle;
 
   switch (wallpaperScene) {
+    case "coastal-island":
+      return "topography";
     case "space-nebula":
       return "orbital";
     case "aurora":
@@ -270,4 +278,3 @@ export function resolveSidebarAtmosphereStyle(
       return "none";
   }
 }
-

@@ -2457,6 +2457,16 @@ export const FULL_UI_TRANSLATIONS: Record<string, FullUiTranslationRow> = {
   "Canonical EUR net position": { de: "Kanonische EUR-Nettoposition", es: "Posición neta canónica en EUR", sq: "Pozicioni neto kanonik në EUR", ar: "صافي المركز المرجعي باليورو", pt: "Posição líquida canónica em EUR", it: "Posizione netta canonica in EUR", ru: "Каноническая чистая позиция в EUR" },
   "Canonical EUR pending bills": { de: "Kanonische ausstehende EUR-Rechnungen", es: "Facturas pendientes canónicas en EUR", sq: "Faturat kanonike në pritje në EUR", ar: "الفواتير المعلقة المرجعية باليورو", pt: "Faturas pendentes canónicas em EUR", it: "Fatture pendenti canoniche in EUR", ru: "Канонические ожидающие счета в EUR" },
   "Display currency": { de: "Anzeigewährung", es: "Moneda de visualización", sq: "Monedha e shfaqjes", ar: "عملة العرض", pt: "Moeda de apresentação", it: "Valuta di visualizzazione", ru: "Валюта отображения" },
+  "Operations": { de: "Betrieb", es: "Operaciones", sq: "Operacionet", ar: "العمليات", pt: "Operações", it: "Operazioni", ru: "Операции" },
+  "Control": { de: "Kontrolle", es: "Control", sq: "Kontrolli", ar: "التحكم", pt: "Controlo", it: "Controllo", ru: "Контроль" },
+  "Intelligence": { de: "Intelligenz", es: "Inteligencia", sq: "Inteligjenca", ar: "الذكاء", pt: "Inteligência", it: "Intelligence", ru: "Аналитика" },
+  "Wealth & intelligence": { de: "Vermögen & Intelligenz", es: "Patrimonio e inteligencia", sq: "Pasuria dhe inteligjenca", ar: "الثروة والذكاء", pt: "Património e inteligência", it: "Patrimonio e intelligence", ru: "Капитал и аналитика" },
+  "Control & intelligence": { de: "Kontrolle & Intelligenz", es: "Control e inteligencia", sq: "Kontrolli dhe inteligjenca", ar: "التحكم والذكاء", pt: "Controlo e inteligência", it: "Controllo e intelligence", ru: "Контроль и аналитика" },
+  "FICONTER": { de: "FICONTER", es: "FICONTER", sq: "FICONTER", ar: "FICONTER", pt: "FICONTER", it: "FICONTER", ru: "FICONTER" },
+  "modules": { de: "Module", es: "módulos", sq: "module", ar: "الوحدات", pt: "módulos", it: "moduli", ru: "модули" },
+  "Personal finance navigation": { de: "Navigation für persönliche Finanzen", es: "Navegación de finanzas personales", sq: "Navigimi i financave personale", ar: "التنقل في الشؤون المالية الشخصية", pt: "Navegação de finanças pessoais", it: "Navigazione delle finanze personali", ru: "Навигация по личным финансам" },
+  "Coastal Island": { de: "Küsteninsel", es: "Isla costera", sq: "Ishull bregdetar", ar: "جزيرة ساحلية", pt: "Ilha costeira", it: "Isola costiera", ru: "Прибрежный остров" },
+  "A bright tropical shore with palms, turquoise water and warm sand.": { de: "Eine helle tropische Küste mit Palmen, türkisfarbenem Wasser und warmem Sand.", es: "Una luminosa costa tropical con palmeras, agua turquesa y arena cálida.", sq: "Një bregdet i ndritshëm tropikal me palma, ujë bruz dhe rërë të ngrohtë.", ar: "شاطئ استوائي مشرق مع نخيل ومياه فيروزية ورمال دافئة.", pt: "Uma costa tropical luminosa com palmeiras, água turquesa e areia quente.", it: "Una luminosa costa tropicale con palme, acqua turchese e sabbia calda.", ru: "Яркий тропический берег с пальмами, бирюзовой водой и тёплым песком." },
 };
 
 export const FULL_UI_TRANSLATION_COUNT = Object.keys(FULL_UI_TRANSLATIONS).length;

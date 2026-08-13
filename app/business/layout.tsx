@@ -3,7 +3,6 @@ import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
-import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -128,7 +127,6 @@ export default async function BusinessLayout({
         )}
         businessName={business?.name ?? "Business workspace"}
       />
-            <MobileNavigationController workspace="business" />
       <BusinessSidebar
         businesses={businesses}
         business={business}
@@ -151,7 +149,15 @@ export default async function BusinessLayout({
         <WorkspaceSwitcher current="business" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
-          <PWAMobileDock workspace="business" />
+      <PWAMobileDock
+        workspace="business"
+        subscriptionPlanCode={subscriptionPlanCode}
+        canManage={
+          membership?.role === "owner" ||
+          membership?.role === "admin"
+        }
+        isPlatformAdmin={Boolean(admin)}
+      />
       </div>
     </CurrencyDisplayProvider>
   );

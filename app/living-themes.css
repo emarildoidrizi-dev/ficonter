@@ -4,7 +4,7 @@
  */
 
 :root {
-  --living-scene: url("/wallpapers/space-nebula.svg");
+  --living-scene: url("/wallpapers/coastal-island.svg");
   --living-position: center center;
   --living-overlay: rgba(245, 242, 236, 0.62);
   --living-edge-overlay: rgba(245, 242, 236, 0.26);
@@ -12,6 +12,14 @@
   --living-scene-opacity: 1;
   --living-scene-saturation: 0.92;
   --living-scene-brightness: 1.03;
+}
+
+html[data-wallpaper-scene="coastal-island"] {
+  --living-scene: url("/wallpapers/coastal-island.svg");
+  --living-position: center center;
+  --living-accent: rgba(54, 151, 145, 0.17);
+  --living-scene-saturation: 0.9;
+  --living-scene-brightness: 1.02;
 }
 
 html[data-resolved-theme="dark"] {
@@ -210,6 +218,7 @@ html[data-background-motion="static"] .living-theme-light {
 
 /* A slightly stronger veil for bright scenes when the interface itself is dark. */
 html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"],
 html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"],
 html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"],
 html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"] {

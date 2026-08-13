@@ -10,7 +10,6 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
-import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -130,7 +129,6 @@ export default async function DashboardLayout({
             "",
         )}
       />
-            <MobileNavigationController workspace="personal" />
       <Sidebar
         isAdmin={Boolean(admin)}
         subscriptionPlanCode={subscriptionPlanCode}
@@ -151,7 +149,11 @@ export default async function DashboardLayout({
         <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
-          <PWAMobileDock workspace="personal" />
+      <PWAMobileDock
+        workspace="personal"
+        subscriptionPlanCode={subscriptionPlanCode}
+        isAdmin={Boolean(admin)}
+      />
       </div>
     </CurrencyDisplayProvider>
   );

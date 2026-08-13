@@ -4,7 +4,9 @@
 .brandCard,.workspacePill,.switchBusiness { min-height:54px;display:inline-flex;align-items:center;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08) }
 .brandCard { padding:5px 17px }
 .brandCard :global(.brand) { gap:11px }
-.brandCard :global(.brand)>span { color:#223d4c;font-family:inherit;font-size:19px;font-weight:900;letter-spacing:.02em;text-transform:uppercase }
+.brandCard :global(.brand)>span { color:#173b3d }
+.brandCard :global(.brand)>span>span:first-child { font-family:Georgia,"Times New Roman",serif;font-size:20px;font-weight:700;letter-spacing:.025em }
+.brandCard :global(.brand)>span>span:last-child { color:#647b78;font-size:7px;letter-spacing:.11em }
 .brandCard :global(.brand) img { width:42px;height:42px;border-radius:12px }
 .workspacePill { gap:7px;padding:0 18px;color:#274352;font-size:14px;font-weight:650 }
 .headerActions>:global([class*="LanguageSelector_root"]) button { min-height:54px;padding-inline:18px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;font-size:14px }

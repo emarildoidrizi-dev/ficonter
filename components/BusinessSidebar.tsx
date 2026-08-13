@@ -8,7 +8,7 @@ import {
   ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent, type MouseEvent, type SyntheticEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
 import { switchActiveBusinessAction } from "@/app/business/actions";
@@ -87,6 +87,25 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   }, [pendingHref]);
 
   useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!accountMenuOpen) return;
     function handlePointerDown(event: PointerEvent) {
       if (!accountRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
@@ -140,7 +159,19 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   function trackRoute(href: string) {
     const targetPath = href.split("?")[0] || href;
     setAccountMenuOpen(false);
+    closeNavigationGroups();
     setPendingHref(pathname === targetPath ? null : targetPath);
+  }
+
+  function closeNavigationGroups(except?: HTMLDetailsElement) {
+    headerRef.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((detail) => {
+      if (detail !== except) detail.removeAttribute("open");
+    });
+  }
+
+  function handleGroupToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    const detail = event.currentTarget;
+    if (detail.open) closeNavigationGroups(detail);
   }
 
   return (
@@ -199,7 +230,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
               if (!visibleLinks.length) return null;
               const groupActive = visibleLinks.some(([href]) => activeRoute(pathname, href));
               return (
-                <details className={styles.navGroup} key={group.label}>
+                <details className={styles.navGroup} key={group.label} onToggle={handleGroupToggle}>
                   <summary className={groupActive ? styles.groupActive : undefined}>{group.label}<ChevronDown size={14} /></summary>
                   <div className={styles.groupMenu}>
                     {visibleLinks.map(([href, Icon, label]) => <Link href={href} key={href} className={activeRoute(pathname, href) ? styles.activeMenuLink : undefined} aria-current={activeRoute(pathname, href) ? "page" : undefined} prefetch={false} onClick={() => trackRoute(href)}><Icon size={17} /><span>{label}</span></Link>)}

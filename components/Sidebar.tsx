@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type SyntheticEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
@@ -108,6 +108,25 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   }, [pendingHref]);
 
   useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        headerRef.current?.querySelectorAll("details[open]").forEach((detail) => detail.removeAttribute("open"));
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     async function loadAvatar() {
       if (!avatarPath) { if (active) setAvatarUrl(""); return; }
@@ -162,8 +181,26 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   function openRoute(href: string) {
     const targetPath = href.split("?")[0] || href;
     setMenuOpen(false);
+    closeNavigationGroups();
     setPendingHref(pathname === targetPath ? null : targetPath);
     router.push(href);
+  }
+
+  function closeNavigationGroups(except?: HTMLDetailsElement) {
+    headerRef.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((detail) => {
+      if (detail !== except) detail.removeAttribute("open");
+    });
+  }
+
+  function trackNavigation(href: string) {
+    const targetPath = href.split("?")[0] || href;
+    closeNavigationGroups();
+    setPendingHref(pathname === targetPath ? null : targetPath);
+  }
+
+  function handleGroupToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    const detail = event.currentTarget;
+    if (detail.open) closeNavigationGroups(detail);
   }
 
   async function signOut(event: ReactMouseEvent<HTMLButtonElement>) {
@@ -216,13 +253,13 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
       </div>
 
       <nav className={styles.navigation} aria-label="Personal finance navigation">
-        <Link href="/dashboard/overview" prefetch={false} className={`${styles.overviewLink}${isRouteActive(pathname, "/dashboard/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/overview") ? "page" : undefined} onClick={() => setPendingHref("/dashboard/overview")}>
+        <Link href="/dashboard/overview" prefetch={false} className={`${styles.overviewLink}${isRouteActive(pathname, "/dashboard/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/overview") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/overview")}>
           <LayoutDashboard size={17} /><span>Overview</span>
         </Link>
         {groups.map((group) => {
           const groupActive = group.links.some(([href]) => isRouteActive(pathname, href));
           return (
-            <details className={styles.navGroup} key={group.label}>
+            <details className={styles.navGroup} key={group.label} onToggle={handleGroupToggle}>
               <summary className={groupActive ? styles.groupActive : undefined}>{group.label}<ChevronDown size={14} /></summary>
               <div className={styles.groupMenu}>
                 {group.links.map(([href, Icon, label]) => {
@@ -231,7 +268,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
                   const targetHref = locked && feature ? getSubscriptionUpgradeHref(feature) : href;
                   const active = !locked && isRouteActive(pathname, href);
                   return (
-                    <Link href={targetHref} key={href} prefetch={false} className={active ? styles.activeMenuLink : undefined} aria-current={active ? "page" : undefined} aria-label={locked ? `${label} — upgrade required` : undefined} title={locked ? "Upgrade required" : undefined} onClick={() => setPendingHref(targetHref)}>
+                    <Link href={targetHref} key={href} prefetch={false} className={active ? styles.activeMenuLink : undefined} aria-current={active ? "page" : undefined} aria-label={locked ? `${label} — upgrade required` : undefined} title={locked ? "Upgrade required" : undefined} onClick={() => trackNavigation(targetHref)}>
                       <Icon size={17} /><span>{label}</span>{locked ? <LockKeyhole size={13} /> : null}
                     </Link>
                   );
@@ -240,7 +277,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
             </details>
           );
         })}
-        <Link href="/dashboard/settings" prefetch={false} className={`${styles.settingsLink}${isRouteActive(pathname, "/dashboard/settings") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/settings") ? "page" : undefined}>
+        <Link href="/dashboard/settings" prefetch={false} className={`${styles.settingsLink}${isRouteActive(pathname, "/dashboard/settings") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/settings") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/settings")}>
           <span>Settings</span>
         </Link>
       </nav>

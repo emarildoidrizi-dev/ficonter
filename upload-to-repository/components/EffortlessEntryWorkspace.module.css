@@ -1,0 +1,362 @@
+.workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.modeCard,
+.recurringCard,
+.shortcutsCard,
+.formSection {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-card) 94%, transparent);
+}
+
+.modeCard,
+.recurringCard,
+.shortcutsCard {
+  padding: 16px;
+}
+
+.formSection {
+  padding: 18px;
+}
+
+.sectionHeading,
+.sectionHeadingRow,
+.formHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.sectionHeadingRow,
+.formHeading {
+  justify-content: space-between;
+}
+
+.sectionHeading h4,
+.formHeading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.sectionHeading p,
+.formHeading p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.iconBadge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gold) 13%, transparent);
+  color: var(--gold);
+}
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.modeButton,
+.modeActive {
+  position: relative;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.modeButton:hover,
+.modeActive:hover {
+  transform: translateY(-1px);
+}
+
+.modeActive {
+  border-color: color-mix(in srgb, var(--gold) 62%, var(--line));
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
+}
+
+.modeButton strong,
+.modeActive strong {
+  display: block;
+  font-size: 13px;
+}
+
+.modeButton span,
+.modeActive span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.38;
+}
+
+.modeActive svg {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: var(--gold);
+}
+
+.confirmAllButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 44%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recurringList {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.recurringRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
+}
+
+.recurringRow > div {
+  min-width: 0;
+}
+
+.recurringRow > div strong,
+.recurringRow > div span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recurringRow > div strong,
+.recurringRow > strong {
+  color: var(--text-primary);
+  font-size: 12.5px;
+}
+
+.recurringRow > div span {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.recurringRow > button {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.shortcutSection {
+  margin-top: 14px;
+}
+
+.shortcutLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chipGrid,
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.templateChip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.templateChip > button,
+.recentButton {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.templateChip > button:first-child:hover,
+.recentButton:hover {
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+}
+
+.templateChip > button:last-child {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-left: 1px solid var(--line);
+  color: var(--text-secondary);
+}
+
+.templateChip strong,
+.templateChip span,
+.recentButton strong,
+.recentButton span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templateChip strong,
+.recentButton strong {
+  font-size: 12px;
+}
+
+.templateChip span,
+.recentButton span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+
+.recentButton {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.formHeading {
+  margin-bottom: 14px;
+}
+
+.formHeading > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  color: var(--gold);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-card) 85%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.spin {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .modeGrid,
+  .chipGrid,
+  .recentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHeadingRow {
+    display: grid;
+  }
+
+  .confirmAllButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .recurringRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .recurringRow > button {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Effortless Entry v2 — visibly distinct mode cards */
+.modeButtonTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 20px;
+}
+
+.modeButtonTop small {
+  color: var(--gold);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.modeButton em,
+.modeActive em {
+  display: inline-flex;
+  margin-top: 9px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.modeActive em {
+  background: color-mix(in srgb, var(--gold) 13%, transparent);
+  color: var(--text-primary);
+}

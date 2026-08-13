@@ -11,7 +11,7 @@ This is a **complete repository package** for `redesign/ficonter-v2`.
 5. Delete every obsolete path listed in `FILES_TO_DELETE_AFTER_UPLOAD.txt` if it
    still exists.
 6. In GitHub Desktop, use the summary:
-   `feat(landing): present Ficonter through real-life stories`
+   `fix(theme): guarantee readable surfaces and correct budget use`
 7. Click **Commit to redesign/ficonter-v2**, then **Push origin**.
 8. Wait for the Vercel Preview deployment to show **Ready** before testing.
 
@@ -19,15 +19,17 @@ The real coastal photo wallpapers remain available. The retired sidebar
 atmosphere cards, Auto/Manual choice, motion controls, and their runtime effects
 are removed.
 
-The public landing page now includes two lightweight photographic lifestyle
-scenes, a realistic privacy-safe Ficonter interface preview, dedicated previews
-for Overview, Planning, Wealth, and Business, clearer benefits and privacy
-messaging, and stronger account-creation calls to action. All values shown on
-the public page are fictional demonstration data.
+This package retains the redesigned public landing experience and every earlier
+coastal interface repair.
 
-The Overview cash-flow chart continues to compare the current month's Income
-and Spent totals on one proportional scale. The two figures shown above the
-chart are the exact values used to determine the column heights.
+The Personal overview and Business workspace now share theme-aware surface,
+text, border, control and progress tokens. The global contrast guard accounts
+for gradients and enforces WCAG AA text contrast after every theme change.
+
+The former Spending rhythm card is now Monthly budget use. It reports a real
+percentage only when a monthly budget exists; otherwise it explains that no
+budget is set and links to Budget setup. It never reports 0% for division by a
+zero budget.
 
 Do not combine this package with an older FICONTER ZIP after deployment; that
 could restore retired code.

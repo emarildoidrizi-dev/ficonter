@@ -1,0 +1,381 @@
+.planner{display:grid;gap:20px}.header{display:flex;justify-content:space-between;align-items:end;gap:24px}.header span{font-size:11px;letter-spacing:.18em;font-weight:800;color:#a88751}.header h1{margin:7px 0 6px;font:500 clamp(48px,7vw,92px)/.95 Georgia,serif;color:#222524}.header p{margin:0;color:#706961}.monthNav{display:flex;gap:8px;align-items:center}.monthNav button,.monthNav input{height:44px;border:1px solid #ddd5c9;background:#fff;border-radius:11px;padding:0 12px}.monthNav button{width:44px;display:grid;place-items:center}.notice{position:fixed;top:22px;right:24px;z-index:20;background:#25302a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 12px 35px #0003}.topGrid{display:grid;grid-template-columns:.85fr 1fr 1.2fr 1fr;gap:14px}.topGrid>article,.cashFlow,.tableCard,.bottomGrid>article{background:#fff;border:1px solid #e5ddd1;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(46,39,30,.035)}.topGrid h3,.cashFlow h3,.tableCard h3,.bottomGrid h3{text-transform:uppercase;letter-spacing:.16em;font-size:12px;margin:0 0 16px;text-align:center}.overview label{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #eee7dd;padding:8px 0;font-size:12px}.overview strong{font-weight:600}.overview input{width:105px;text-align:right;border:0;background:#f7f3ed;padding:5px}.ring{--progress:0%;width:170px;aspect-ratio:1;margin:auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#d9c7e2 var(--progress),#f0efed 0);position:relative}.ring:after{content:"";position:absolute;inset:25px;border-radius:50%;background:#fff}.ring strong{z-index:1;font-size:22px}.bars>div{display:grid;grid-template-columns:75px minmax(0,1fr) auto;gap:10px;align-items:center;margin:12px 0;font-size:11px}.bars i{height:12px;background:#f2f1ef;position:relative;display:block;overflow:hidden;border-radius:999px}.bars em{position:absolute;inset:0 auto 0 0;min-width:2px;border-radius:999px;background:linear-gradient(90deg,#a991cf,#e6c9d8)}.bars strong{min-width:76px;text-align:right;color:#222524;font-size:11px;font-variant-numeric:tabular-nums}.pie{width:160px;aspect-ratio:1;border-radius:50%;margin:auto}.breakdown>div:last-child{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:10px;text-transform:capitalize}.breakdown span{display:flex;gap:5px;align-items:center}.breakdown span i{width:8px;height:8px;border-radius:50%}.cashFlow>div{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid #e6ded3}.cashFlow span{padding:13px;border-right:1px solid #eee6dc;font-size:12px}.cashFlow b{display:block;margin-top:5px;font-size:14px}.cashFlow .left{background:#dcecf2}.sectionGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.tableCard header{display:flex;justify-content:space-between;align-items:center;margin:-18px -18px 0;padding:15px 18px;background:#e7d7e2}.tableCard.income header{background:#d8dcf3}.tableCard.expenses header{background:#f0d6bd}.tableCard.savings header{background:#dcd3eb}.tableCard.debt header{background:#d7e9f0}.tableCard header h3{margin:0}.tableCard header button{border:0;background:#ffffffa8;border-radius:8px;padding:7px 9px;display:flex;gap:4px}.tableHead,.row,.tableCard footer{display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr 28px;gap:7px;align-items:center;padding:9px 0;border-bottom:1px solid #eee7de;font-size:11px}.tableHead{text-transform:uppercase;font-weight:800}.row button{border:0;background:none;color:#98544c}.tableCard footer{grid-template-columns:1.4fr .8fr .8fr .8fr;margin-top:8px;border:0;text-transform:uppercase}.bottomGrid{display:grid;grid-template-columns:2.3fr 1fr;gap:14px}.expenseViewport{max-height:390px;overflow-y:auto;scrollbar-gutter:stable;padding-right:5px}.expenseViewport:focus-visible{outline:2px solid #b69a6a;outline-offset:3px;border-radius:10px}.expenseScrollHint{margin:10px 2px 0;color:#77716a;font-size:11px;text-align:right}.expenseHead,.expenseRow{display:grid;grid-template-columns:110px 110px 170px 1fr;gap:10px;padding:9px;border-bottom:1px solid #eee6dd;font-size:11px}.expenseHead{font-weight:800;background:#f1dbc6}.spending>div{display:grid;grid-template-columns:1fr auto 55px;gap:8px;border-bottom:1px solid #eee7dd;padding:8px;font-size:11px}.modal{position:fixed;inset:0;z-index:50;background:#20242399;backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px}.modal form{width:min(420px,100%);background:#fffdf9;border-radius:22px;padding:26px;position:relative;display:grid;gap:14px}.modal form>button:first-child{position:absolute;right:15px;top:12px;border:0;background:none;font-size:26px}.modal svg{color:#a88751}.modal label{display:grid;gap:7px;font-weight:700;font-size:12px}.modal input{border:1px solid #ddd4c8;border-radius:10px;padding:13px}.save{border:0;border-radius:11px;background:#222624;color:#fff;padding:14px;font-weight:800}@media(max-width:1200px){.topGrid{grid-template-columns:repeat(2,1fr)}.sectionGrid{grid-template-columns:repeat(2,1fr)}.cashFlow>div{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.header{align-items:stretch;flex-direction:column}.topGrid,.sectionGrid,.bottomGrid{grid-template-columns:1fr}.cashFlow>div{grid-template-columns:1fr 1fr}.expenseHead,.expenseRow{grid-template-columns:90px 90px 1fr}.expenseHead span:last-child,.expenseRow span:last-child{display:none}}
+.compactCard .compactTable{
+  grid-template-columns:minmax(0,1fr) minmax(120px,.55fr);
+  gap:18px;
+}
+.compactCard .compactTable span:last-child{
+  text-align:right;
+  font-weight:700;
+}
+.compactCard .compactFooter{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(120px,.55fr);
+  gap:18px;
+  align-items:center;
+  margin-top:8px;
+  padding:12px 0 2px;
+  border:0;
+  text-transform:uppercase;
+}
+.compactCard .compactFooter b{
+  text-align:right;
+}
+.compactEmpty{
+  padding:24px 0;
+  color:#8a8278;
+  font-size:12px;
+  text-align:center;
+  border-bottom:1px solid #eee7de;
+}
+
+.cleanCardHeader{
+  display:flex;
+  align-items:center;
+  min-height:72px;
+}
+.cleanCardHeader h3{
+  margin:0;
+}
+.compactCard .compactTable{
+  grid-template-columns:minmax(0,1fr) minmax(150px,.55fr);
+}
+
+.tableCard.goals header{background:#e5dcf1}.goalTable{grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr);gap:14px}.goalTable span:nth-child(2),.goalTable span:nth-child(3){text-align:right;font-weight:700}.goalFooter{display:grid!important;grid-template-columns:minmax(0,1.4fr) minmax(110px,.7fr) minmax(110px,.7fr)!important;gap:14px!important}.goalFooter b{text-align:right}@media(max-width:650px){.goalTable,.goalFooter{grid-template-columns:minmax(0,1fr) 100px 100px!important}}
+
+.goalSummaryCard{min-height:230px}.goalSummaryCard header{background:#e5dcf1}.goalSummaryBody{display:grid;gap:18px;padding-top:20px}.goalSummaryAmounts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.goalSummaryAmounts span{padding:13px;border-radius:12px;background:#f7f3ed;color:#817a72;font-size:11px}.goalSummaryAmounts b{display:block;margin-top:6px;color:#25282a;font-size:15px}.goalSummaryProgress{height:9px;border-radius:999px;background:#ece8e2;overflow:hidden}.goalSummaryProgress i{display:block;height:100%;border-radius:inherit;background:#9c7cc6}.goalSummaryFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#77716a;font-size:12px}.goalSummaryFooter a{padding:8px 11px;border:1px solid #ded6ca;border-radius:9px;background:#fff;color:#25282a;font-weight:800}@media(max-width:650px){.goalSummaryAmounts{grid-template-columns:1fr}.goalSummaryFooter{align-items:flex-start;flex-direction:column}}
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .topGrid > article,
+:global(html[data-resolved-theme="dark"]) .cashFlow,
+:global(html[data-resolved-theme="dark"]) .tableCard,
+:global(html[data-resolved-theme="dark"]) .bottomGrid > article,
+:global(html[data-resolved-theme="dark"]) .modal form,
+:global(html[data-resolved-theme="dark"]) .goalSummaryAmounts span {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .monthNav button,
+:global(html[data-resolved-theme="dark"]) .monthNav input,
+:global(html[data-resolved-theme="dark"]) .goalSummaryFooter a,
+:global(html[data-resolved-theme="dark"]) .tableCard header button { background: var(--surface-raised) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header h1,.topGrid h3,.cashFlow h3,.tableCard h3,.bottomGrid h3,.overview strong,.ring strong,.cashFlow b,.goalSummaryAmounts b,.compactFooter b) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.header p,.overview label,.bars > div,.breakdown,.cashFlow span,.tableHead,.row,.tableCard footer,.expenseHead,.expenseRow,.spending > div,.compactEmpty,.goalSummaryFooter,.goalSummaryAmounts span) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .bars strong { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.overview label,.cashFlow > div,.cashFlow span,.tableHead,.row,.tableCard footer,.expenseHead,.expenseRow,.spending > div,.compactEmpty) { border-color: var(--border-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .overview input { background: var(--control-bg) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .ring { background: conic-gradient(#b99ad0 var(--progress),#31373a 0) !important; }
+:global(html[data-resolved-theme="dark"]) .ring::after { background: var(--surface-card) !important; }
+:global(html[data-resolved-theme="dark"]) .bars i,
+:global(html[data-resolved-theme="dark"]) .goalSummaryProgress { background: var(--surface-subtle) !important; }
+:global(html[data-resolved-theme="dark"]) .cashFlow .left { background: #243941 !important; }
+:global(html[data-resolved-theme="dark"]) .tableCard header { color: #171a1c !important; }
+:global(html[data-resolved-theme="dark"]) .tableCard header h3 { color: #171a1c !important; }
+:global(html[data-resolved-theme="dark"]) .expenseHead { background: #46382c !important; }
+:global(html[data-resolved-theme="dark"]) .modal input { background: var(--control-bg) !important; color: var(--text-primary) !important; border-color: var(--border-subtle) !important; }
+
+:global(html[data-resolved-theme="dark"]) .expenseScrollHint { color: var(--text-secondary) !important; }
+
+/* Monthly Planner breakdown view selector */
+.breakdown {
+  --breakdown-bills: var(--gold, #c9a45e);
+  --breakdown-expenses: var(--burgundy, #bd737c);
+  --breakdown-savings: var(--sage, #6fa28a);
+  --breakdown-goals: #8e9fd2;
+  --breakdown-debt: #a990c7;
+  --breakdown-track: var(--surface-subtle, #eeeae4);
+  min-width: 0;
+}
+
+.breakdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.breakdownHeader h3 {
+  margin: 0;
+  text-align: left;
+}
+
+.breakdownControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 10px;
+  background: var(--surface-subtle, #f4f0ea);
+}
+
+.breakdownControls button {
+  min-height: 29px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary, #706961);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+
+.breakdownControls button:hover {
+  background: var(--surface-hover, #ebe4da);
+  color: var(--text-primary, #222524);
+}
+
+.breakdownControls .activeBreakdownView {
+  background: var(--surface-raised, #fff);
+  color: var(--text-primary, #222524);
+  box-shadow: 0 3px 10px rgba(31, 35, 38, .09);
+}
+
+.breakdownEmpty {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  color: var(--text-secondary, #77716a);
+  font-size: 12px;
+  text-align: center;
+}
+
+.ringView {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+}
+
+.breakdownRing {
+  position: relative;
+  display: grid;
+  width: 156px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-subtle, #ddd5c9) 74%, transparent);
+}
+
+.breakdownRing::after {
+  content: "";
+  position: absolute;
+  inset: 31px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 50%;
+  background: var(--surface-card, #fff);
+}
+
+.breakdownRing > div {
+  position: relative;
+  z-index: 1;
+  max-width: 92px;
+  text-align: center;
+}
+
+.breakdownRing span,
+.breakdownRing strong {
+  display: block;
+}
+
+.breakdownRing span {
+  color: var(--text-secondary, #706961);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.breakdownRing strong {
+  margin-top: 5px;
+  color: var(--text-primary, #222524);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px 11px;
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+}
+
+.breakdownLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.breakdownLegend i,
+.breakdownTiles span i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.breakdownLegend b {
+  color: var(--text-primary, #222524);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownBars {
+  display: grid;
+  gap: 13px;
+  padding-top: 3px;
+}
+
+.breakdownBarRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.breakdownBarRow > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.breakdownBarRow span {
+  color: var(--text-secondary, #706961);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.breakdownBarRow strong {
+  color: var(--text-primary, #222524);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownBarRow > i {
+  position: relative;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--breakdown-track);
+}
+
+.breakdownBarRow em {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 3px;
+  border-radius: inherit;
+}
+
+.breakdownBarRow small {
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownTiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.breakdownTiles > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 12px;
+  background: var(--surface-subtle, #f7f3ed);
+}
+
+.breakdownTiles span,
+.breakdownTiles strong,
+.breakdownTiles small {
+  display: block;
+}
+
+.breakdownTiles span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary, #706961);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.breakdownTiles strong {
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--text-primary, #222524);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdownTiles small {
+  margin-top: 4px;
+  color: var(--text-secondary, #706961);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .breakdownHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .breakdownControls {
+    width: 100%;
+  }
+
+  .breakdownControls button {
+    flex: 1;
+  }
+
+  .breakdownTiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* All FICONTER themes use shared contrast tokens for this switcher. */
+:global(html[data-theme]) .breakdownControls,
+:global(html[data-resolved-theme]) .breakdownControls,
+:global(html[data-theme]) .breakdownTiles > div,
+:global(html[data-resolved-theme]) .breakdownTiles > div,
+:global(html[data-theme]) .breakdownRing::after,
+:global(html[data-resolved-theme]) .breakdownRing::after {
+  border-color: var(--border-subtle) !important;
+}
+
+:global(html[data-theme]) .breakdownControls,
+:global(html[data-resolved-theme]) .breakdownControls,
+:global(html[data-theme]) .breakdownTiles > div,
+:global(html[data-resolved-theme]) .breakdownTiles > div {
+  background: var(--surface-subtle) !important;
+}
+
+:global(html[data-theme]) .breakdownControls .activeBreakdownView,
+:global(html[data-resolved-theme]) .breakdownControls .activeBreakdownView,
+:global(html[data-theme]) .breakdownRing::after,
+:global(html[data-resolved-theme]) .breakdownRing::after {
+  background: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-theme]) :is(.breakdownHeader h3,.breakdownRing strong,.breakdownLegend b,.breakdownBarRow strong,.breakdownTiles strong),
+:global(html[data-resolved-theme]) :is(.breakdownHeader h3,.breakdownRing strong,.breakdownLegend b,.breakdownBarRow strong,.breakdownTiles strong) {
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-theme]) :is(.breakdownControls button,.breakdownEmpty,.breakdownRing span,.breakdownLegend,.breakdownBarRow span,.breakdownBarRow small,.breakdownTiles span,.breakdownTiles small),
+:global(html[data-resolved-theme]) :is(.breakdownControls button,.breakdownEmpty,.breakdownRing span,.breakdownLegend,.breakdownBarRow span,.breakdownBarRow small,.breakdownTiles span,.breakdownTiles small) {
+  color: var(--text-secondary) !important;
+}

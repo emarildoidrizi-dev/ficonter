@@ -1,0 +1,144 @@
+.toolbarTop{display:grid;grid-template-columns:minmax(220px,1fr) auto auto auto;gap:10px;margin-bottom:10px}.toolbar{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px;margin-bottom:14px}.toolbar select,.searchBox,.secondaryAction,.exportButton{height:44px;border:1px solid #ddd6cb;border-radius:12px;background:#fcfaf7;color:#25282a}.toolbar select{padding:0 12px}.searchBox{display:flex;align-items:center;gap:9px;padding:0 12px}.searchBox input{border:0;outline:0;background:transparent;width:100%;font:inherit}.secondaryAction,.exportButton{display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;font-weight:800;cursor:pointer}.secondaryAction:hover{border-color:#b69a6a;background:#f4ede1}.exportButton{background:#202427;color:#fff;border-color:#202427}.exportButton:disabled{opacity:.45;cursor:not-allowed}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.summary>div{position:relative;padding:13px 14px;border:1px solid #e6dfd5;border-radius:14px;background:#f8f5ef}.summary svg{position:absolute;right:13px;top:13px;color:#b69a6a}.summary span,.amountBlock span,.details span,.balanceBlock span{display:block;color:#77736d;font-size:12px}.summary strong{display:block;margin-top:5px;padding-right:22px}.recordCount{text-align:right;color:#77736d;font-size:13px;margin:4px 0 10px}.listViewport{max-height:min(72vh,760px);overflow-y:auto;scrollbar-gutter:stable;padding-right:6px}.listViewport:focus-visible{outline:2px solid #b69a6a;outline-offset:4px;border-radius:14px}.list{display:grid;gap:9px}.scrollHint{margin:10px 4px 0;color:#77736d;font-size:12px;text-align:right}.row{min-height:82px;display:grid;grid-template-columns:4px minmax(180px,1fr) minmax(120px,auto) minmax(130px,auto) auto;align-items:center;gap:15px;padding:14px;border:1px solid #e4ddd3;border-radius:15px;background:#fff;transition:.18s ease}.row:hover{transform:translateY(-1px);border-color:#c6aa79;box-shadow:0 8px 24px rgba(40,35,28,.07)}.incomeMark,.expenseMark{align-self:stretch;border-radius:999px}.incomeMark{background:#617a70}.expenseMark{background:#925b5b}.details strong{display:block;color:#25282a}.details span{margin-top:5px}.amountBlock,.balanceBlock{text-align:right}.amountBlock strong,.balanceBlock strong{white-space:nowrap}.positive{color:#557268}.negative{color:#925b5b}.actions{display:flex;gap:7px}.actions button{display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;border:1px solid #ddd6cb;border-radius:10px;background:#fcfaf7;color:#4b4b48;font-weight:700;cursor:pointer}.actions button:hover{border-color:#b69a6a;background:#f1e8d8}.actions .deleteButton:hover{border-color:#925b5b;background:#f6e6e6;color:#925b5b}.empty{padding:34px;text-align:center;color:#77736d}.error,.notice{margin:10px 0;padding:11px 13px;border-radius:11px}.error{background:#f3e2e2;color:#8b4d4d}.notice{background:#dfe9e4;color:#446358}.backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(25,27,28,.62);backdrop-filter:blur(7px)}.modal{position:relative;width:min(620px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:30px;border-radius:24px;background:#fcfaf7;box-shadow:0 35px 100px rgba(0,0,0,.3)}.smallModal{width:min(470px,100%)}.modal small{color:#a58a5d;font-weight:800;letter-spacing:.13em}.modal h3{margin:8px 38px 17px 0;font-family:Georgia,serif;font-size:34px;font-weight:500}.modal p{color:#77736d;line-height:1.6}.close{position:absolute;top:18px;right:18px;width:36px;height:36px;display:grid;place-items:center;border:1px solid #ddd6cb;border-radius:50%;background:transparent}.modal form label{display:grid;gap:7px;margin-bottom:12px;font-weight:700}.modal input,.modal select{height:46px;padding:0 12px;border:1px solid #ddd6cb;border-radius:11px;background:white;font:inherit}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.modalActions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.modalActions button{height:42px;padding:0 17px;border:1px solid #d8d0c4;border-radius:11px;background:#fff;font-weight:800}.modalActions .primaryButton{border-color:#202427;background:#202427;color:#fff}.modalActions .dangerButton{border-color:#925b5b;background:#925b5b;color:#fff}@media(max-width:1250px){.summary{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:4px 1fr auto auto}.balanceBlock{grid-column:2;text-align:left}.actions{grid-column:3/5;justify-content:flex-end}}@media(max-width:900px){.toolbarTop{grid-template-columns:1fr 1fr}.searchBox{grid-column:1/-1}.toolbar{grid-template-columns:1fr 1fr}.row{grid-template-columns:4px 1fr auto}.balanceBlock{grid-column:2;text-align:left}.amountBlock{grid-column:3;grid-row:1/3}.actions{grid-column:2/4;justify-content:flex-end}}@media(max-width:650px){.toolbarTop,.toolbar,.summary,.formGrid{grid-template-columns:1fr}.searchBox{grid-column:auto}.row{grid-template-columns:4px 1fr}.amountBlock,.balanceBlock{text-align:left;grid-column:2;grid-row:auto}.actions{grid-column:2;justify-content:flex-start}.actions button{flex:1;justify-content:center}.modal{padding:25px 19px}.modalActions{flex-direction:column-reverse}.modalActions button{width:100%}}
+
+.toolbarFive{grid-template-columns:repeat(5,minmax(120px,1fr))}.neutralMark{align-self:stretch;border-radius:999px;background:#b69a6a}.currencyTotals{display:flex;flex-direction:column;gap:3px}.currencyTotals>span{font-size:inherit;color:inherit}@media(max-width:1250px){.toolbarFive{grid-template-columns:repeat(3,1fr)}}@media(max-width:900px){.toolbarFive{grid-template-columns:1fr 1fr}}@media(max-width:650px){.toolbarFive{grid-template-columns:1fr}}
+.fxPreview{margin:8px 0 14px;padding:12px 14px;border:1px solid #dfd5c7;border-radius:12px;background:#f7f1e7;color:#5f5b55;font-size:13px}
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .searchBox,
+:global(html[data-resolved-theme="dark"]) .secondaryAction,
+:global(html[data-resolved-theme="dark"]) .summary > div,
+:global(html[data-resolved-theme="dark"]) .row,
+:global(html[data-resolved-theme="dark"]) .modal,
+:global(html[data-resolved-theme="dark"]) .actions button,
+:global(html[data-resolved-theme="dark"]) .modalActions button,
+:global(html[data-resolved-theme="dark"]) .fxPreview {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .toolbar select,
+:global(html[data-resolved-theme="dark"]) .modal input,
+:global(html[data-resolved-theme="dark"]) .modal select { background: var(--control-bg) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .row:hover { background: var(--surface-raised) !important; border-color: #715f45 !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details strong,.summary strong,.amountBlock strong,.balanceBlock strong,.modal h3) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details span,.summary span,.amountBlock span,.balanceBlock span,.recordCount,.modal p,.empty,.fxPreview) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .positive { color: #a7c9b7 !important; }
+:global(html[data-resolved-theme="dark"]) .negative { color: #e5a09d !important; }
+
+:global(html[data-resolved-theme="dark"]) .scrollHint { color: var(--text-secondary) !important; }
+
+/* Transaction range and bulk-management controls */
+.dateRangeCard{display:grid;grid-template-columns:minmax(250px,1fr) minmax(145px,190px) minmax(145px,190px) auto auto;align-items:end;gap:10px;margin-bottom:10px;padding:12px 14px;border:1px solid #e1d9ce;border-radius:15px;background:#f8f5ef}.dateRangeHeading{display:flex;align-items:center;gap:10px;min-height:44px}.dateRangeHeading>svg{flex:0 0 auto;color:#b69a6a}.dateRangeHeading strong,.dateRangeHeading span{display:block}.dateRangeHeading strong{color:#25282a;font-size:14px}.dateRangeHeading span{margin-top:3px;color:#77736d;font-size:12px}.dateRangeCard>label{display:grid;gap:5px;color:#5f5b55;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.dateRangeCard input{height:42px;padding:0 11px;border:1px solid #dcd3c7;border-radius:11px;background:#fff;color:#25282a;font:inherit;text-transform:none;letter-spacing:normal}.dateApplyButton,.dateClearButton{height:42px;padding:0 15px;border-radius:11px;font-weight:800;cursor:pointer}.dateApplyButton{border:1px solid #202427;background:#202427;color:#fff}.dateClearButton{border:1px solid #d8d0c4;background:#fff;color:#454744}.dateClearButton:disabled{opacity:.45;cursor:not-allowed}
+.selectionBar{display:flex;align-items:center;gap:12px;min-height:50px;margin:10px 0;padding:8px 10px 8px 13px;border:1px solid #e1d9ce;border-radius:14px;background:#f8f5ef}.selectAllControl{display:flex;align-items:center;gap:9px;color:#313434;font-size:13px;font-weight:800;cursor:pointer}.selectAllControl input,.rowCheckbox input{width:17px;height:17px;margin:0;accent-color:#8f774f;cursor:pointer}.selectAllControl input:disabled{cursor:not-allowed}.selectionCount{color:#77736d;font-size:12px;white-space:nowrap}.bulkActions{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-left:auto;flex-wrap:wrap}.bulkActions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:35px;padding:0 10px;border:1px solid #d8d0c4;border-radius:10px;background:#fff;color:#454744;font-size:12px;font-weight:800;cursor:pointer}.bulkActions button:hover{border-color:#b69a6a;background:#f1e8d8}.bulkActions button:disabled{opacity:.45;cursor:not-allowed}.bulkActions .bulkDeleteButton{border-color:#ddc1c1;color:#925b5b}.bulkActions .bulkDeleteButton:hover{border-color:#925b5b;background:#f6e6e6}.rowCheckbox{display:grid;place-items:center;width:26px;height:36px}.selectedRow{border-color:#b69a6a;background:#fbf7ef;box-shadow:0 0 0 1px rgba(182,154,106,.16)}
+
+/* Add the selection control without disturbing the transaction content. */
+.row{grid-template-columns:26px 4px minmax(180px,1fr) minmax(120px,auto) auto}.summary{grid-template-columns:repeat(3,1fr)}
+
+@media(max-width:1250px){.dateRangeCard{grid-template-columns:minmax(240px,1fr) 1fr 1fr auto auto}.row{grid-template-columns:26px 4px minmax(190px,1fr) auto}.actions{grid-column:3/5;justify-content:flex-end}.summary{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:980px){.dateRangeCard{grid-template-columns:1fr 1fr}.dateRangeHeading{grid-column:1/-1}.dateApplyButton,.dateClearButton{width:100%}.selectionBar{align-items:flex-start;flex-wrap:wrap}.bulkActions{width:100%;justify-content:flex-start;margin-left:0}.row{grid-template-columns:26px 4px 1fr auto}.amountBlock{grid-column:4;grid-row:1/3}.actions{grid-column:3/5;justify-content:flex-end}}
+@media(max-width:650px){.dateRangeCard{grid-template-columns:1fr}.dateRangeHeading{grid-column:auto}.selectionBar{display:grid;grid-template-columns:1fr auto}.bulkActions{grid-column:1/-1;display:grid;grid-template-columns:1fr}.bulkActions button{width:100%;min-height:40px}.row{grid-template-columns:26px 4px 1fr}.details{grid-column:3}.amountBlock{grid-column:3;grid-row:auto;text-align:left}.actions{grid-column:3;justify-content:flex-start}}
+
+:global(html[data-resolved-theme="dark"]) .dateRangeCard,
+:global(html[data-resolved-theme="dark"]) .selectionBar,
+:global(html[data-resolved-theme="dark"]) .bulkActions button,
+:global(html[data-resolved-theme="dark"]) .dateClearButton{
+  background:var(--surface-card)!important;
+  border-color:var(--border-subtle)!important;
+  color:var(--text-primary)!important;
+}
+:global(html[data-resolved-theme="dark"]) .dateRangeCard input{background:var(--control-bg)!important;border-color:var(--border-subtle)!important;color:var(--text-primary)!important;color-scheme:dark}
+:global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading strong,.selectAllControl){color:var(--text-primary)!important}
+:global(html[data-resolved-theme="dark"]) :is(.dateRangeHeading span,.dateRangeCard>label,.selectionCount){color:var(--text-secondary)!important}
+:global(html[data-resolved-theme="dark"]) .selectedRow{background:var(--surface-raised)!important;border-color:#8f774f!important}
+
+.loadMoreButton {
+  margin-left: 10px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.loadMoreButton:hover,
+.loadMoreButton:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+
+/* Mobile ledger controls: compact heights and proper text centering. */
+.toolbar select,
+.dateRangeCard input,
+.dateApplyButton,
+.dateClearButton {
+  box-sizing: border-box;
+}
+
+@media (max-width: 650px) {
+  .toolbar select,
+  .dateRangeCard input,
+  .dateApplyButton,
+  .dateClearButton {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .toolbar select {
+    text-overflow: ellipsis;
+  }
+}
+
+/* Transactions date-range iOS containment — V6.1 */
+@media (max-width: 650px) {
+  .dateRangeCard,
+  .dateRangeCard > label {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .dateRangeCard > label {
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .dateRangeCard input[type="date"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    box-sizing: border-box !important;
+    padding: 0 14px !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    line-height: normal !important;
+  }
+
+  .dateRangeCard input[type="date"]::-webkit-date-and-time-value {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 54px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+  }
+
+  .dateRangeCard input[type="date"]::-webkit-datetime-edit {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+}

@@ -1,0 +1,357 @@
+.page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 28px;
+  padding: clamp(28px, 5vw, 52px);
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 37%),
+    var(--surface-card);
+}
+
+.hero > div:first-child {
+  position: relative;
+  z-index: 1;
+  max-width: 850px;
+}
+
+.hero span,
+.sectionHeading span,
+.sectionHeadingCompact span,
+.contactCard span {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 12px 0 13px;
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(48px, 7vw, 88px);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+}
+
+.hero p,
+.sectionHeading p,
+.sectionHeadingCompact p,
+.contactCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.hero p {
+  max-width: 760px;
+  font-size: 15px;
+}
+
+.heroBadge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--border-subtle));
+  border-radius: 999px;
+  padding: 10px 13px;
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface-card));
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quickGrid article {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 19px;
+  padding: 20px;
+  background: var(--surface-card);
+}
+
+.quickGrid svg {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  color: var(--gold);
+}
+
+.quickGrid span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.quickGrid strong {
+  max-width: calc(100% - 34px);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 26px;
+  padding-top: 10px;
+}
+
+.sectionHeading h2,
+.sectionHeadingCompact h2,
+.contactCard h2 {
+  margin: 8px 0 0;
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.sectionHeading p {
+  max-width: 560px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.guideGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.guideCard {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  padding: 23px;
+  background: var(--surface-card);
+}
+
+.guideIcon,
+.contactIcon {
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, var(--border-subtle));
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface-card));
+  color: var(--gold);
+}
+
+.guideIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+.guideCard h3 {
+  margin: 18px 0 8px;
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.guideCard > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.guideCard ul {
+  display: grid;
+  gap: 9px;
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--border-subtle);
+  list-style: none;
+}
+
+.guideCard li {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.guideCard li svg {
+  margin-top: 1px;
+  color: var(--gold);
+}
+
+.faqLayout {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.3fr);
+  gap: 24px;
+  align-items: start;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 26px;
+  background: var(--surface-card);
+}
+
+.sectionHeadingCompact p {
+  margin-top: 11px;
+  font-size: 12px;
+}
+
+.faqList {
+  display: grid;
+  gap: 9px;
+}
+
+.faqList details {
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  background: var(--surface-subtle);
+}
+
+.faqList summary {
+  padding: 15px 17px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.faqList details[open] summary {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.faqList p {
+  margin: 0;
+  padding: 14px 17px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.contactCard {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--border-subtle));
+  border-radius: 24px;
+  padding: 25px;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--gold) 8%, var(--surface-card)), var(--surface-card));
+}
+
+.contactIcon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+}
+
+.contactCard h2 {
+  font-size: clamp(27px, 3vw, 38px);
+}
+
+.contactCard p {
+  max-width: 720px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.contactCard button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--text-primary);
+  border-radius: 13px;
+  padding: 0 18px;
+  background: var(--text-primary);
+  color: var(--surface-card);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.contactCard button:hover,
+.contactCard button:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+@media (max-width: 1050px) {
+  .guideGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .faqLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero,
+  .sectionHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sectionHeading p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .quickGrid,
+  .guideGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactCard {
+    grid-template-columns: 50px minmax(0, 1fr);
+  }
+
+  .contactIcon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .contactCard button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contactCard button:hover,
+  .contactCard button:focus-visible {
+    transform: none;
+  }
+}

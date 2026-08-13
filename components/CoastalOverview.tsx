@@ -26,7 +26,7 @@ type Props = {
   monthSpent: number;
   financialHealth: FinancialHealthResult;
   upcomingBills: CoastalUpcomingBill[];
-  spendingRhythm: number;
+  spendingRhythm: number | null;
   spendingAmount: number;
   spendingBudget: number;
   financialGps: FinancialGpsResult;
@@ -83,6 +83,13 @@ export function CoastalOverview({
       ? `Spending is ${Math.abs(previousMonthChange).toFixed(0)}% lower this month`
       : `Spending is ${previousMonthChange.toFixed(0)}% higher this month`;
   const uniqueErrors = [...new Set(errorMessages.filter(Boolean))];
+  const hasSpendingBudget = spendingRhythm !== null && spendingBudget > 0;
+  const spendingProgress = hasSpendingBudget
+    ? Math.min(100, Math.max(0, spendingRhythm ?? 0))
+    : 0;
+  const spendingRhythmLabel = hasSpendingBudget
+    ? `${Math.round(spendingRhythm ?? 0)}% of the monthly spending budget used`
+    : "No monthly spending budget has been set";
 
   return (
     <div className={styles.overview}>
@@ -168,12 +175,29 @@ export function CoastalOverview({
           </div>
         </article>
 
-        <article className={`${styles.card} ${styles.rhythmCard}`}>
-          <h2>Spending rhythm</h2>
-          <div className={styles.donut} style={{ "--progress": `${spendingRhythm * 3.6}deg` } as CSSProperties}>
-            <span>{Math.round(spendingRhythm)}%</span>
+        <article
+          className={`${styles.card} ${styles.rhythmCard}`}
+          data-budget-state={hasSpendingBudget ? "available" : "missing"}
+        >
+          <h2>Monthly budget use</h2>
+          <div
+            className={styles.donut}
+            role="img"
+            aria-label={spendingRhythmLabel}
+            style={{ "--progress": `${spendingProgress * 3.6}deg` } as CSSProperties}
+          >
+            <span>{hasSpendingBudget ? `${Math.round(spendingRhythm ?? 0)}%` : "—"}</span>
           </div>
-          <p>{formatCurrency(spendingAmount, currency)} of {formatCurrency(spendingBudget, currency)} monthly budget</p>
+          {hasSpendingBudget ? (
+            <p>{formatCurrency(spendingAmount, currency)} of {formatCurrency(spendingBudget, currency)} monthly budget</p>
+          ) : (
+            <div className={styles.missingBudget}>
+              <p>{formatCurrency(spendingAmount, currency)} spent this month · No monthly budget set</p>
+              <Link href="/dashboard/budget">
+                Set a monthly budget <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
         </article>
 
         <article className={`${styles.card} ${styles.insightsCard}`}>

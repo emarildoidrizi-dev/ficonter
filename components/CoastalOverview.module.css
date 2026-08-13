@@ -1,6 +1,6 @@
 .overview {
   width: 100%;
-  color: #1d394a;
+  color: var(--text-primary);
 }
 
 .error {
@@ -9,10 +9,10 @@
   gap: 9px;
   margin-bottom: 12px;
   padding: 11px 14px;
-  border: 1px solid rgba(171, 93, 76, .24);
+  border: 1px solid color-mix(in srgb, var(--burgundy) 42%, transparent);
   border-radius: 13px;
-  background: rgba(250, 235, 226, .86);
-  color: #8d4e43;
+  background: color-mix(in srgb, var(--danger-soft) 92%, transparent);
+  color: var(--burgundy);
   font-size: 13px;
   font-weight: 700;
 }
@@ -28,7 +28,7 @@
 .eyebrow {
   display: block;
   margin-bottom: 9px;
-  color: #4c8e8a;
+  color: var(--sage);
   font-size: 12px;
   font-weight: 850;
   letter-spacing: .18em;
@@ -37,7 +37,7 @@
 
 .hero h1 {
   margin: 0;
-  color: #1d394a;
+  color: var(--text-primary);
   font-family: inherit;
   font-size: clamp(31px, 3.2vw, 46px);
   font-weight: 450;
@@ -47,7 +47,7 @@
 
 .hero p {
   margin: 12px 0 0;
-  color: #536fa8;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
@@ -59,16 +59,16 @@
   justify-content: center;
   gap: 8px;
   padding: 0 24px;
-  border: 1px solid rgba(110, 101, 74, .17);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  background: rgba(246, 242, 223, .9);
-  color: #253f4e;
-  box-shadow: 0 12px 30px rgba(65, 89, 78, .08);
+  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  color: var(--text-primary);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--surface-sidebar) 9%, transparent);
   font-size: 14px;
   font-weight: 850;
 }
 
-.addMoney:hover { transform: translateY(-1px); background: #f7f3e4; }
+.addMoney:hover { transform: translateY(-1px); background: var(--surface-hover); }
 
 .cardGrid {
   display: grid;
@@ -80,16 +80,21 @@
   min-width: 0;
   min-height: 274px;
   padding: clamp(22px, 2vw, 28px);
-  border: 1px solid rgba(111, 102, 74, .15);
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  background:
-    linear-gradient(145deg, rgba(247, 243, 225, .91), rgba(237, 238, 220, .85));
-  box-shadow: 0 20px 48px rgba(58, 81, 72, .11);
+  background-color: var(--surface-card);
+  background-image: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-raised) 94%, transparent),
+    color-mix(in srgb, var(--surface-card) 92%, var(--sage-soft) 8%)
+  );
+  color: var(--text-primary);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--surface-sidebar) 12%, transparent);
 }
 
 .card h2 {
   margin: 0;
-  color: #223e4e;
+  color: var(--text-primary);
   font-size: 18px;
   font-weight: 500;
   letter-spacing: -.02em;
@@ -100,7 +105,7 @@
 .cashCard, .insightsCard { grid-column: span 4; }
 
 .cardLabel {
-  color: #38515c;
+  color: var(--text-secondary);
   font-size: 13px;
   text-transform: uppercase;
 }
@@ -108,7 +113,7 @@
 .availableAmount {
   display: block;
   margin-top: 22px;
-  color: #397fb0;
+  color: color-mix(in srgb, var(--sage) 72%, var(--text-primary));
   font-size: clamp(38px, 3.2vw, 54px);
   font-weight: 650;
   letter-spacing: -.035em;
@@ -116,7 +121,7 @@
 }
 
 .cardNote, .healthMessage {
-  color: #526da5;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -133,17 +138,18 @@
   min-width: 0;
   padding: 15px 16px;
   border-radius: 13px;
-  background: rgba(230, 227, 208, .72);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
 }
 
 .miniStats span, .cashSummary span {
   display: block;
   margin-bottom: 8px;
-  color: #455b66;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
-.miniStats strong, .cashSummary strong { color: #203b4b; font-size: 15px; }
+.miniStats strong, .cashSummary strong { color: var(--text-primary); font-size: 15px; }
 
 .healthLine {
   display: flex;
@@ -153,12 +159,12 @@
 }
 
 .healthLine > strong {
-  color: #4e9290;
+  color: var(--sage);
   font-size: 52px;
   line-height: .9;
 }
 
-.healthLine span, .healthLine p { margin: 0; color: #294453; font-size: 13px; }
+.healthLine span, .healthLine p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 .healthLine p { margin-top: 7px; }
 
 .healthTrack {
@@ -166,14 +172,14 @@
   overflow: hidden;
   margin-top: 34px;
   border-radius: 99px;
-  background: rgba(71, 143, 142, .13);
+  background: color-mix(in srgb, var(--sage) 18%, var(--surface-subtle));
 }
 
 .healthTrack span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #b49b5d, #4e9290);
+  background: linear-gradient(90deg, var(--gold), var(--sage));
 }
 
 .healthMessage {
@@ -215,24 +221,36 @@
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  border-bottom: 2px solid rgba(48, 94, 101, .2);
+  border-bottom: 2px solid color-mix(in srgb, var(--sage) 34%, transparent);
   border-radius: 8px 8px 2px 2px;
-  background: linear-gradient(180deg, rgba(111, 199, 216, .06), rgba(67, 139, 136, .1));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sage) 8%, transparent),
+    color-mix(in srgb, var(--sage) 16%, transparent)
+  );
 }
 
 .cashColumnTrack span {
   width: 100%;
   border-radius: 8px 8px 2px 2px;
-  background: linear-gradient(180deg, #6fc7d8, #438b88);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sage) 68%, #8fd9e6),
+    color-mix(in srgb, var(--sage) 88%, var(--solid-bg))
+  );
   transition: height .25s ease;
 }
 
 .cashColumnTrack span[data-tone="spent"] {
-  background: linear-gradient(180deg, #8eb8ce, #526f91);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--gold) 46%, #85b8d5),
+    color-mix(in srgb, var(--gold) 34%, var(--solid-bg))
+  );
 }
 
 .cashColumn small {
-  color: #455b66;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 750;
   text-align: center;
@@ -246,7 +264,7 @@
   align-items: center;
   gap: 12px;
   min-height: 68px;
-  border-bottom: 1px solid rgba(77, 92, 76, .13);
+  border-bottom: 1px solid var(--border-subtle);
   color: inherit;
 }
 
@@ -257,14 +275,14 @@
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: rgba(228, 243, 239, .9);
-  color: #315264;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
 }
 .upcomingItem > span { min-width: 0; display: grid; gap: 4px; }
 .upcomingItem strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
-.upcomingItem small { color: #647cb2; font-size: 12px; }
-.upcomingItem b { color: #203b4b; font-size: 14px; }
-.emptyUpcoming { display: grid; min-height: 150px; place-items: center; color: #647b74; font-size: 13px; text-align: center; }
+.upcomingItem small { color: var(--text-secondary); font-size: 12px; }
+.upcomingItem b { color: var(--text-primary); font-size: 14px; }
+.emptyUpcoming { display: grid; min-height: 150px; place-items: center; color: var(--text-secondary); font-size: 13px; text-align: center; }
 
 .rhythmCard { text-align: center; }
 .rhythmCard h2 { text-align: left; }
@@ -276,12 +294,29 @@
   margin: 27px auto 0;
   place-items: center;
   border-radius: 50%;
-  background: conic-gradient(#4f918f var(--progress), rgba(76, 145, 143, .15) 0);
+  background: conic-gradient(
+    var(--sage) var(--progress),
+    color-mix(in srgb, var(--sage) 18%, var(--surface-subtle)) 0
+  );
   position: relative;
 }
-.donut::after { position: absolute; inset: 22px; border-radius: 50%; background: rgba(246, 246, 236, .97); content: ""; }
-.donut span { position: relative; z-index: 1; color: #213c4d; font-size: 24px; font-weight: 850; }
-.rhythmCard p { margin: 14px 0 0; color: #5870a4; font-size: 12px; }
+.donut::after { position: absolute; inset: 22px; border-radius: 50%; background: var(--surface-raised); content: ""; }
+.donut span { position: relative; z-index: 1; color: var(--text-primary); font-size: 24px; font-weight: 850; }
+.rhythmCard p { margin: 14px 0 0; color: var(--text-secondary); font-size: 12px; }
+.rhythmCard[data-budget-state="missing"] .donut {
+  background: conic-gradient(var(--border-strong) 0deg, var(--surface-subtle) 0);
+}
+.missingBudget { display: grid; justify-items: center; gap: 9px; }
+.missingBudget p { max-width: 240px; line-height: 1.45; }
+.missingBudget a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 850;
+}
+.missingBudget a:hover { color: var(--sage); }
 
 .insightList { margin-top: 24px; }
 .insightList a {
@@ -290,8 +325,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(77, 92, 76, .13);
-  color: #294657;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   font-size: 14px;
 }
 .insightList a:last-child { border-bottom: 0; }
@@ -314,7 +349,7 @@
   .card { grid-column: auto; min-height: 0; padding: 20px; }
   .miniStats { grid-template-columns: 1fr; }
   .cashComparison { height: 104px; }
-  .mobileGpsLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 14px; border-radius: 14px; background: rgba(246,242,223,.9); color: #264a55; font-size: 13px; font-weight: 800; }
+  .mobileGpsLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 14px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-card); color: var(--text-primary); font-size: 13px; font-weight: 800; }
 }
 
 @media (max-width: 470px) {

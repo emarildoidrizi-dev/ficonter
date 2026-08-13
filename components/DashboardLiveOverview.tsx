@@ -72,10 +72,6 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
 export function DashboardLiveOverview({
   userId,
   name,
@@ -195,7 +191,12 @@ export function DashboardLiveOverview({
       .map((bill) => ({ id: bill.id, name: bill.name || "Upcoming bill", dueDate: bill.due_date, amount: billAmount(bill) }));
   const spendingBudget = Math.max(0, financialHealthInputs.planner.plannedOutflow);
   const spendingAmount = monthTotals[currentMonthKey].spent;
-  const spendingRhythm = spendingBudget > 0 ? clamp((spendingAmount / spendingBudget) * 100, 0, 100) : 0;
+  // A percentage has no mathematical meaning until the customer has set a
+  // monthly spending budget. Preserve the real ratio above 100% so an
+  // overspent month is reported honestly instead of being capped at 100%.
+  const spendingRhythm = spendingBudget > 0
+    ? Math.max(0, (spendingAmount / spendingBudget) * 100)
+    : null;
   const previousMonthChange = monthTotals[previousMonthKey].spent > 0
     ? ((spendingAmount - monthTotals[previousMonthKey].spent) / monthTotals[previousMonthKey].spent) * 100
     : null;

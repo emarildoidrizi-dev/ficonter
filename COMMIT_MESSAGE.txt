@@ -1,1 +1,1 @@
-feat(landing): present Ficonter through real-life stories
+fix(theme): guarantee readable surfaces and correct budget use

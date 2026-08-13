@@ -230,11 +230,11 @@ const defaultPreferences: Preferences = {
   plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
-  backgroundMotion: "animated",
+  backgroundMotion: "static",
   wallpaperScene: "coastal-island",
-  sidebarAtmosphereMode: "auto",
+  sidebarAtmosphereMode: "manual",
   sidebarAtmosphereStyle: "none",
-  sidebarAtmosphereMotion: "animated",
+  sidebarAtmosphereMotion: "static",
   language: "en",
   notifications: {
     billReminders: true,
@@ -1844,8 +1844,8 @@ const showSubscriptionManagement =
             <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
               <legend>Wallpaper motion</legend>
               <p className={styles.themeHelp}>
-                Animated uses a very slow cinematic drift. Static keeps the selected
-                scene still. Off restores the standard solid theme background.
+                Static is recommended for fast navigation. It keeps the real photograph
+                still and avoids continuous graphics work. Off hides the photograph.
               </p>
               <div className={styles.motionGrid}>
                 {BACKGROUND_MOTION_OPTIONS.map(({ value, label, description }) => (

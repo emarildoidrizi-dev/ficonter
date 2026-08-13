@@ -85,7 +85,6 @@
   background:
     linear-gradient(145deg, rgba(247, 243, 225, .91), rgba(237, 238, 220, .85));
   box-shadow: 0 20px 48px rgba(58, 81, 72, .11);
-  backdrop-filter: blur(16px) saturate(112%);
 }
 
 .card h2 {

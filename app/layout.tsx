@@ -94,20 +94,20 @@ const interfacePreferenceScript = `
     var profileVersion = localStorage.getItem("ficonter-interface-profile-version");
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
-    var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
+    var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "static";
     var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
-    var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
+    var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "manual";
     var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
-    var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "animated";
+    var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "static";
 
     if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
       appearance = "light";
       density = "comfortable";
-      backgroundMotion = "animated";
+      backgroundMotion = "static";
       wallpaperScene = "coastal-island";
-      sidebarAtmosphereMode = "auto";
+      sidebarAtmosphereMode = "manual";
       sidebarAtmosphereStyle = "none";
-      sidebarAtmosphereMotion = "animated";
+      sidebarAtmosphereMotion = "static";
       localStorage.setItem("ficonter-appearance", appearance);
       localStorage.setItem("ficonter-density", density);
       localStorage.setItem("ficonter-background-motion", backgroundMotion);
@@ -120,11 +120,11 @@ const interfacePreferenceScript = `
 
     if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
-    if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
+    if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "static";
     if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
-    if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
+    if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "manual";
     if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
-    if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "animated";
+    if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "static";
 
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var resolved = appearance === "system"
@@ -133,34 +133,7 @@ const interfacePreferenceScript = `
 
     var resolvedSidebarAtmosphere = sidebarAtmosphereStyle;
 
-    if (sidebarAtmosphereMode === "auto") {
-      switch (wallpaperScene) {
-        case "space-nebula":
-          resolvedSidebarAtmosphere = "orbital";
-          break;
-        case "coastal-island":
-          resolvedSidebarAtmosphere = "topography";
-          break;
-        case "aurora":
-          resolvedSidebarAtmosphere = "lightbeam";
-          break;
-        case "ocean-horizon":
-        case "sand-dunes":
-        case "forest-mist":
-          resolvedSidebarAtmosphere = "topography";
-          break;
-        case "marble-glow":
-        case "future-grid":
-          resolvedSidebarAtmosphere = "architectural";
-          break;
-        case "minimal-luxe":
-          resolvedSidebarAtmosphere =
-            resolved === "dark" ? "orbital" : "none";
-          break;
-        default:
-          resolvedSidebarAtmosphere = "none";
-      }
-    }
+    if (sidebarAtmosphereMode === "auto") resolvedSidebarAtmosphere = "none";
 
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;

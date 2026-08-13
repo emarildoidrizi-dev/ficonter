@@ -16,19 +16,13 @@ for (const file of required) {
 }
 
 const scenes = [
-  "coastal-island",
-  "space-nebula",
-  "aurora",
-  "ocean-horizon",
-  "sand-dunes",
-  "marble-glow",
-  "future-grid",
-  "forest-mist",
-  "minimal-luxe",
+  ["coastal-island", "coastal-beach-real.webp"],
+  ["ocean-horizon", "ocean-sun-real.webp"],
+  ["sand-dunes", "sand-beach-real.webp"],
 ];
 
-for (const scene of scenes) {
-  const asset = `public/wallpapers/${scene}.svg`;
+for (const [, filename] of scenes) {
+  const asset = `public/wallpapers/${filename}`;
   if (!fs.existsSync(asset)) throw new Error(`Missing wallpaper asset ${asset}`);
 }
 
@@ -37,10 +31,10 @@ const css = fs.readFileSync("app/living-themes.css", "utf8");
 const settings = fs.readFileSync("components/SettingsWorkspace.tsx", "utf8");
 const layout = fs.readFileSync("app/dashboard/layout.tsx", "utf8");
 
-for (const scene of scenes) {
+for (const [scene, filename] of scenes) {
   if (!themeSource.includes(`"${scene}"`)) throw new Error(`Missing scene option ${scene}`);
   if (!css.includes(`data-wallpaper-scene="${scene}"`)) throw new Error(`Missing scene CSS ${scene}`);
-  if (!css.includes(`/wallpapers/${scene}.svg`)) throw new Error(`Missing scene URL ${scene}`);
+  if (!css.includes(`/wallpapers/${filename}`)) throw new Error(`Missing scene URL ${scene}`);
 }
 
 for (const token of [
@@ -64,4 +58,8 @@ if (!css.includes("prefers-reduced-motion")) {
   throw new Error("Reduced motion protection is missing");
 }
 
-console.log(`FICONTER Scene Wallpapers verification passed (${scenes.length} scenes).`);
+if (css.includes("coastal-island.svg")) {
+  throw new Error("The cartoon coastal wallpaper is still active");
+}
+
+console.log(`FICONTER photographic wallpaper verification passed (${scenes.length} real scenes).`);

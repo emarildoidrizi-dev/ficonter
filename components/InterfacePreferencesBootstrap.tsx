@@ -138,11 +138,11 @@ export function InterfacePreferencesBootstrap({
     if (requiresProfileMigration) {
       currentAppearance = "light";
       currentDensity = "comfortable";
-      currentBackgroundMotion = "animated";
+      currentBackgroundMotion = "static";
       currentWallpaperScene = "coastal-island";
-      currentSidebarAtmosphereMode = "auto";
+      currentSidebarAtmosphereMode = "manual";
       currentSidebarAtmosphereStyle = "none";
-      currentSidebarAtmosphereMotion = "animated";
+      currentSidebarAtmosphereMotion = "static";
     }
 
     const applyCurrent = () =>

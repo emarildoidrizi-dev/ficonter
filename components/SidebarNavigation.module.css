@@ -1,17 +1,17 @@
 .shellHeader { position:relative;z-index:110;width:100%;padding:12px clamp(18px,2.5vw,38px) 0;color:#223d4c;background:transparent;overscroll-behavior:contain }
 .topRow { min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:18px }
 .brandArea,.headerActions { display:flex;align-items:center;gap:10px;min-width:0 }
-.brandCard,.workspacePill,.switchBusiness { min-height:54px;display:inline-flex;align-items:center;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);backdrop-filter:blur(16px) }
+.brandCard,.workspacePill,.switchBusiness { min-height:54px;display:inline-flex;align-items:center;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08) }
 .brandCard { padding:5px 17px }
 .brandCard :global(.brand) { gap:11px }
 .brandCard :global(.brand)>span { color:#223d4c;font-family:inherit;font-size:19px;font-weight:900;letter-spacing:.02em;text-transform:uppercase }
 .brandCard :global(.brand) img { width:42px;height:42px;border-radius:12px }
 .workspacePill { gap:7px;padding:0 18px;color:#274352;font-size:14px;font-weight:650 }
-.headerActions>:global([class*="LanguageSelector_root"]) button { min-height:54px;padding-inline:18px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;font-size:14px;backdrop-filter:blur(16px) }
+.headerActions>:global([class*="LanguageSelector_root"]) button { min-height:54px;padding-inline:18px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;font-size:14px }
 .headerActions>:global([class*="NotificationCenter_root"]) { grid-template-columns:1fr }
 .headerActions>:global([class*="NotificationCenter_root"])>button:first-child { display:none }
 .headerActions>:global([class*="NotificationCenter_root"]) button { min-width:54px;min-height:54px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352 }
-.navigation { min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid rgba(112,100,69,.14);border-radius:17px;background:rgba(246,243,225,.87);box-shadow:0 14px 34px rgba(42,75,67,.08);backdrop-filter:blur(16px) }
+.navigation { min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid rgba(112,100,69,.14);border-radius:17px;background:rgba(246,243,225,.95);box-shadow:0 14px 34px rgba(42,75,67,.08) }
 .overviewLink,.settingsLink,.navGroup summary { min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;color:#263f4d;font-size:13px;font-weight:800;cursor:pointer;list-style:none;transition:.16s ease }
 .navGroup summary::-webkit-details-marker { display:none }
 .overviewLink:hover,.settingsLink:hover,.navGroup summary:hover,.navGroup[open] summary,.activeLink,.groupActive { color:#315f63;border-color:rgba(76,128,109,.08);background:rgba(184,211,198,.58) }

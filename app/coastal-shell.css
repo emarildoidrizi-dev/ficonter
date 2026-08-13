@@ -64,7 +64,6 @@ html[data-wallpaper-scene="coastal-island"] .living-theme-readability {
   background:
     linear-gradient(180deg, rgba(223, 239, 233, 0.3), rgba(224, 232, 211, 0.22) 56%, rgba(222, 204, 172, 0.34)),
     linear-gradient(90deg, rgba(228, 239, 232, 0.26), transparent 58%, rgba(235, 220, 189, 0.2));
-  backdrop-filter: blur(0.45px);
 }
 
 html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-theme-readability {

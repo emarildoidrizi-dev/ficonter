@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { Brand } from "@/components/Brand";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 import styles from "./page.module.css";
 
@@ -78,15 +79,20 @@ export default async function HomePage({
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Brand />
-          <nav className={styles.navigation} aria-label="Public navigation">
-            <a href="#platform">Platform</a>
-            <a href="#for-you">For you</a>
-            <a href="#privacy">Privacy</a>
-            <Link href="/login">Log in</Link>
-            <Link className={styles.headerCta} href="/register">
-              Create account
-            </Link>
-          </nav>
+          <div className={styles.headerActions}>
+            <nav className={styles.navigation} aria-label="Public navigation">
+              <a href="#platform">Platform</a>
+              <a href="#for-you">For you</a>
+              <a href="#privacy">Privacy</a>
+              <Link className={styles.loginLink} href="/login">Log in</Link>
+              <Link className={styles.headerCta} href="/register">
+                Create account
+              </Link>
+            </nav>
+            <div className={styles.headerLanguage}>
+              <LanguageSelector variant="public" />
+            </div>
+          </div>
         </div>
       </header>
 

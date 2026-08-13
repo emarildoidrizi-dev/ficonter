@@ -237,3 +237,38 @@ html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
     scroll-behavior: auto;
   }
 }
+
+/* Phase 6.10 — content clearance for the ordered two-row app header. */
+html[data-ficonter-native-app="true"] .app-main {
+  scroll-padding-top: calc(126px + env(safe-area-inset-top));
+  padding-top: calc(126px + env(safe-area-inset-top)) !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main.business-interface {
+  scroll-padding-top: calc(178px + env(safe-area-inset-top));
+  padding-top: calc(178px + env(safe-area-inset-top)) !important;
+}
+
+@media (max-width: 360px) {
+  html[data-ficonter-native-app="true"] .app-main {
+    scroll-padding-top: calc(120px + env(safe-area-inset-top));
+    padding-top: calc(120px + env(safe-area-inset-top)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main.business-interface {
+    scroll-padding-top: calc(168px + env(safe-area-inset-top));
+    padding-top: calc(168px + env(safe-area-inset-top)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main {
+    scroll-padding-top: calc(104px + env(safe-area-inset-top));
+    padding-top: calc(104px + env(safe-area-inset-top)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main.business-interface {
+    scroll-padding-top: calc(146px + env(safe-area-inset-top));
+    padding-top: calc(146px + env(safe-area-inset-top)) !important;
+  }
+}

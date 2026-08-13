@@ -923,71 +923,79 @@ export function FiconterNativeAppChrome({
           workspace === "business" ? styles.businessHeader : ""
         }`}
       >
-        {rootScreen ? (
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className={`${styles.menuButton} ${styles.brandMenuButton}`}
-            onClick={openDrawer}
-            aria-label="Open app navigation"
-            aria-expanded={drawerOpen}
-            aria-controls="ficonter-app-drawer"
-          >
+        <div className={styles.brandRow}>
+          <div className={styles.brandIdentity} aria-label="FICONTER — Financial Control Center">
             <img
               className={styles.headerBrandMark}
               src="/ficonter-mark.svg"
               alt=""
-              width={38}
-              height={38}
+              width={40}
+              height={40}
               aria-hidden="true"
             />
-            <span className={styles.menuBadge} aria-hidden="true">
-              <Menu size={12} strokeWidth={2.4} />
+            <span className={styles.brandCopy}>
+              <strong>FICONTER</strong>
+              <small>Financial Control Center</small>
             </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={`${styles.menuButton} ${styles.backButton}`}
-            onClick={navigateBack}
-            aria-label={`Back from ${route.title}`}
-          >
-            <ArrowLeft size={24} strokeWidth={2.25} aria-hidden={true} />
-          </button>
-        )}
+          </div>
 
-        <div className={styles.routeIdentity}>
-          <span className={styles.routeEyebrow}>
-            {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
-          </span>
-          <strong>{route.title}</strong>
+          <button
+            ref={accountButtonRef}
+            type="button"
+            className={styles.workspaceBadge}
+            title={`${accountName} — log out menu`}
+            aria-label={`Open log out menu for ${accountName}`}
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
+            aria-controls="ficonter-account-menu"
+            onClick={() => {
+              setDrawerOpen(false);
+              setAccountMenuOpen((open) => !open);
+            }}
+          >
+            {avatarUrl ? (
+              <img
+                className={styles.workspaceAvatarImage}
+                src={avatarUrl}
+                alt=""
+                aria-hidden="true"
+              />
+            ) : (
+              <span>{accountInitial}</span>
+            )}
+          </button>
         </div>
 
-        <button
-          ref={accountButtonRef}
-          type="button"
-          className={styles.workspaceBadge}
-          title={`${accountName} — account menu`}
-          aria-label={`Open account menu for ${accountName}`}
-          aria-haspopup="menu"
-          aria-expanded={accountMenuOpen}
-          aria-controls="ficonter-account-menu"
-          onClick={() => {
-            setDrawerOpen(false);
-            setAccountMenuOpen((open) => !open);
-          }}
-        >
-          {avatarUrl ? (
-            <img
-              className={styles.workspaceAvatarImage}
-              src={avatarUrl}
-              alt=""
-              aria-hidden="true"
-            />
+        <div className={styles.contextRow}>
+          {rootScreen ? (
+            <button
+              ref={menuButtonRef}
+              type="button"
+              className={styles.menuButton}
+              onClick={openDrawer}
+              aria-label="Open app navigation"
+              aria-expanded={drawerOpen}
+              aria-controls="ficonter-app-drawer"
+            >
+              <Menu size={22} strokeWidth={2.3} aria-hidden={true} />
+            </button>
           ) : (
-            <span>{accountInitial}</span>
+            <button
+              type="button"
+              className={`${styles.menuButton} ${styles.backButton}`}
+              onClick={navigateBack}
+              aria-label={`Back from ${route.title}`}
+            >
+              <ArrowLeft size={23} strokeWidth={2.25} aria-hidden={true} />
+            </button>
           )}
-        </button>
+
+          <strong className={styles.routeTitle}>{route.title}</strong>
+          <span className={styles.workspaceLabel}>
+            {workspace === "business" ? "BUSINESS" : "PERSONAL"}
+            <span aria-hidden="true"> ·</span>
+          </span>
+        </div>
 
         <div
           ref={accountMenuRef}

@@ -22,9 +22,9 @@ expect(chrome.includes("edgeSwipeStartRef"), "Edge swipe-back tracking is missin
 expect(chrome.includes("deltaX >= 76"), "Swipe-back threshold is missing.");
 expect(chrome.includes("beginNavigationTransition(\"forward\")"), "Forward route transitions are missing.");
 expect(chrome.includes("headerBrandMark"), "Top-left website emblem is missing.");
-expect(chrome.includes("menuBadge"), "Top-left sidebar affordance is missing.");
+expect(chrome.includes("<Menu") && chrome.includes("onClick={openDrawer}"), "Second-row sidebar affordance is missing.");
 expect(chrome.includes("<ArrowLeft"), "Deep-screen back icon is missing.");
-expect(chromeCss.includes(".brandMenuButton"), "Emblem/menu styling is missing.");
+expect(chromeCss.includes(".contextRow"), "Ordered menu/title row styling is missing.");
 expect(chromeCss.includes(".backButton"), "Back control styling is missing.");
 expect(stack.includes("height: 100dvh !important"), "Bounded app viewport is missing.");
 expect(stack.includes("overflow-y: auto !important"), "Module-scoped vertical scrolling is missing.");

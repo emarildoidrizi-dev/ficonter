@@ -1210,3 +1210,264 @@
 .businessProfileBar select {
   color: var(--mobile-text-primary);
 }
+
+/* Phase 6.10 — ordered two-row mobile header.
+   Row 1: website emblem + compact full brand identity | profile photo.
+   Row 2: menu/back | current module | workspace label.
+   Each control has one dedicated slot: no stacking, badges, silhouettes or duplicates. */
+:global(html[data-ficonter-native-app="true"]) .header {
+  display: grid;
+  min-height: calc(112px + env(safe-area-inset-top));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 50px 44px;
+  align-items: stretch;
+  gap: 6px;
+  padding:
+    max(7px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    7px
+    max(14px, env(safe-area-inset-left));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.brandRow,
+.contextRow {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
+.brandRow {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 12px;
+}
+
+.brandIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.headerBrandMark {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: none;
+}
+
+.brandCopy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  color: var(--mobile-text-primary);
+  line-height: 1;
+}
+
+.brandCopy strong,
+.brandCopy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brandCopy strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+}
+
+.brandCopy small {
+  color: var(--mobile-text-secondary);
+  font-size: 7.5px;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contextRow {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.contextRow .menuButton,
+.contextRow .backButton {
+  width: 40px;
+  height: 40px;
+  align-self: center;
+  justify-self: start;
+  border-radius: 13px;
+}
+
+.routeTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mobile-text-primary);
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceLabel {
+  justify-self: end;
+  color: var(--mobile-text-secondary);
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: 0.115em;
+  white-space: nowrap;
+}
+
+.workspaceLabel > span {
+  color: var(--mobile-accent);
+}
+
+.workspaceBadge {
+  width: 44px;
+  height: 44px;
+  align-self: center;
+  justify-self: end;
+  border: 2px solid color-mix(in srgb, var(--mobile-surface-raised) 88%, var(--mobile-border));
+  background: var(--mobile-surface-raised);
+  box-shadow: none;
+}
+
+/* Remove every old emblem/menu badge composition. The emblem is branding only;
+   the menu/back control has its own row and its own hit target. */
+.brandMenuButton,
+.menuBadge {
+  display: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountMenu {
+  top: calc(env(safe-area-inset-top) + 108px);
+}
+
+:global(html[data-ficonter-native-app="true"]) .businessHeader {
+  min-height: calc(162px + env(safe-area-inset-top));
+  grid-template-rows: 50px 44px 44px;
+  row-gap: 6px;
+}
+
+.businessProfileBar {
+  grid-column: 1;
+  min-height: 44px;
+}
+
+@media (max-width: 360px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    min-height: calc(108px + env(safe-area-inset-top));
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 48px 42px;
+    gap: 5px;
+    padding-right: max(10px, env(safe-area-inset-right));
+    padding-left: max(10px, env(safe-area-inset-left));
+  }
+
+  .brandRow {
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 9px;
+  }
+
+  .headerBrandMark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brandCopy strong {
+    font-size: 14px;
+  }
+
+  .brandCopy small {
+    font-size: 6.8px;
+    letter-spacing: 0.095em;
+  }
+
+  .contextRow {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .contextRow .menuButton,
+  .contextRow .backButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .routeTitle {
+    font-size: 17px;
+  }
+
+  .workspaceLabel {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .businessHeader {
+    min-height: calc(156px + env(safe-area-inset-top));
+    grid-template-rows: 48px 42px 42px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    min-height: calc(94px + env(safe-area-inset-top));
+    grid-template-rows: 40px 38px;
+    gap: 3px;
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: 4px;
+  }
+
+  .headerBrandMark,
+  .workspaceBadge {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brandCopy strong {
+    font-size: 13px;
+  }
+
+  .brandCopy small {
+    font-size: 6.5px;
+  }
+
+  .contextRow .menuButton,
+  .contextRow .backButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .routeTitle {
+    font-size: 16px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .businessHeader {
+    min-height: calc(136px + env(safe-area-inset-top));
+    grid-template-rows: 40px 38px 36px;
+  }
+}
+
+:global(html[data-ficonter-device="tablet"]) .header {
+  min-height: calc(116px + env(safe-area-inset-top));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 52px 46px;
+  padding-right: max(22px, env(safe-area-inset-right));
+  padding-left: max(22px, env(safe-area-inset-left));
+}
+
+:global(html[data-ficonter-device="tablet"]) .businessHeader {
+  min-height: calc(168px + env(safe-area-inset-top));
+  grid-template-rows: 52px 46px 46px;
+}

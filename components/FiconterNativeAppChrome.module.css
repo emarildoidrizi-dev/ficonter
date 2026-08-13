@@ -1098,3 +1098,115 @@
     height: 18px;
   }
 }
+
+/* Phase 6.9 — clean floating top rail.
+   The top chrome no longer paints a dark strip over the wallpaper. Controls
+   float cleanly over the active scene, without duplicate shadow silhouettes. */
+:global(html[data-ficonter-native-app="true"]) .header {
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.routeEyebrow {
+  color: var(--mobile-text-secondary);
+  text-shadow: none;
+}
+
+.routeIdentity strong {
+  color: var(--mobile-text-primary);
+  text-shadow: none;
+}
+
+.menuButton,
+.backButton,
+.brandMenuButton {
+  box-shadow: none;
+}
+
+.menuButton {
+  border-color: color-mix(in srgb, var(--mobile-border-strong) 78%, transparent);
+  color: var(--mobile-text-primary);
+  background: color-mix(in srgb, var(--mobile-surface-raised) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+}
+
+.menuButton > svg,
+.backButton > svg {
+  color: var(--mobile-text-primary);
+}
+
+.brandMenuButton {
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.headerBrandMark,
+.menuBadge {
+  box-shadow: none;
+}
+
+.menuBadge {
+  border-color: color-mix(in srgb, var(--mobile-surface-raised) 92%, transparent);
+}
+
+.workspaceBadge {
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--mobile-border-strong) 82%, transparent);
+  color: var(--mobile-text-primary);
+  background: color-mix(in srgb, var(--mobile-surface-raised) 88%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+}
+
+.workspaceAvatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountMenu {
+  width: min(154px, calc(100vw - 24px));
+  border-color: var(--mobile-border);
+  color: var(--mobile-text-primary);
+  background: color-mix(in srgb, var(--mobile-surface-raised) 96%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--mobile-text-primary) 12%, transparent);
+}
+
+.accountMenuItem {
+  color: var(--mobile-text-primary);
+}
+
+.accountMenuDanger,
+.accountMenuDanger svg {
+  color: #a45e57;
+}
+
+.accountMenuItem:active {
+  background: color-mix(in srgb, var(--mobile-text-primary) 6%, transparent);
+}
+
+.businessProfileBar {
+  border-color: var(--mobile-border);
+  color: var(--mobile-text-primary);
+  background: color-mix(in srgb, var(--mobile-surface-raised) 88%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+}
+
+.businessProfileLabel {
+  color: var(--mobile-text-secondary);
+}
+
+.businessProfileBar select {
+  color: var(--mobile-text-primary);
+}

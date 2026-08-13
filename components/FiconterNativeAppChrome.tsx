@@ -30,7 +30,6 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -76,6 +75,7 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   email?: string;
+  avatarPath?: string;
   businessName?: string;
   businessProfiles?: BusinessProfileOption[];
   activeBusinessId?: string | null;
@@ -465,6 +465,7 @@ export function FiconterNativeAppChrome({
   workspace,
   displayName,
   email = "",
+  avatarPath = "",
   businessName = "",
   businessProfiles = [],
   activeBusinessId = null,
@@ -475,6 +476,8 @@ export function FiconterNativeAppChrome({
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [liveAvatarPath, setLiveAvatarPath] = useState(avatarPath);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -724,6 +727,44 @@ export function FiconterNativeAppChrome({
   }, [activeBusinessId]);
 
   useEffect(() => {
+    setLiveAvatarPath(avatarPath);
+  }, [avatarPath]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAvatar() {
+      if (!liveAvatarPath) {
+        if (active) setAvatarUrl("");
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(liveAvatarPath, 60 * 60);
+
+      if (active) setAvatarUrl(error ? "" : data.signedUrl);
+    }
+
+    void loadAvatar();
+    return () => {
+      active = false;
+    };
+  }, [liveAvatarPath, supabase]);
+
+  useEffect(() => {
+    function handleProfileUpdate(event: Event) {
+      const detail = (event as CustomEvent<{ profilePhotoPath?: string }>).detail;
+      if (typeof detail?.profilePhotoPath === "string") {
+        setLiveAvatarPath(detail.profilePhotoPath);
+      }
+    }
+
+    window.addEventListener("ficonter:profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("ficonter:profile-updated", handleProfileUpdate);
+  }, []);
+
+  useEffect(() => {
     if (!accountMenuOpen) return;
 
     const onPointerDown = (event: PointerEvent) => {
@@ -936,7 +977,16 @@ export function FiconterNativeAppChrome({
             setAccountMenuOpen((open) => !open);
           }}
         >
-          <span>{accountInitial}</span>
+          {avatarUrl ? (
+            <img
+              className={styles.workspaceAvatarImage}
+              src={avatarUrl}
+              alt=""
+              aria-hidden="true"
+            />
+          ) : (
+            <span>{accountInitial}</span>
+          )}
         </button>
 
         <div
@@ -949,20 +999,6 @@ export function FiconterNativeAppChrome({
           aria-label="Account actions"
           aria-hidden={!accountMenuOpen}
         >
-          <Link
-            href="/dashboard/settings?section=profile"
-            prefetch={true}
-            className={styles.accountMenuItem}
-            role="menuitem"
-            tabIndex={accountMenuOpen ? 0 : -1}
-            onClick={() => {
-              setAccountMenuOpen(false);
-              navigateForward("/dashboard/settings?section=profile");
-            }}
-          >
-            <UserRound size={19} aria-hidden={true} />
-            <span>Profile</span>
-          </Link>
           <button
             type="button"
             className={`${styles.accountMenuItem} ${styles.accountMenuDanger}`}

@@ -9,7 +9,6 @@ import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
-import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -134,11 +133,6 @@ export default async function DashboardLayout({
       <main className="app-main">
         {children}
       </main>
-      <PWAMobileDock
-        workspace="personal"
-        subscriptionPlanCode={subscriptionPlanCode}
-        isAdmin={Boolean(admin)}
-      />
       </div>
     </CurrencyDisplayProvider>
   );

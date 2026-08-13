@@ -1,5 +1,6 @@
-/* FICONTER NATIVE MOBILE APPLICATION PRESENTATION LAYER
-   This stylesheet is active only for an installed standalone phone PWA. */
+/* FICONTER MOBILE APPLICATION PRESENTATION LAYER
+   Active for FICONTER dashboard/business phone and tablet layouts in
+   browser or standalone mode. Desktop presentation remains unchanged. */
 
 html[data-ficonter-native-app="true"] {
   --native-canvas: #08110e;
@@ -72,6 +73,10 @@ html[data-ficonter-native-app="true"] .app-shell {
 }
 
 html[data-ficonter-native-app="true"] .sidebar,
+html[data-ficonter-native-app="true"]
+  [class*="SidebarNavigation_shellHeader"],
+html[data-ficonter-native-app="true"]
+  [class*="BusinessSidebar_shellHeader"],
 html[data-ficonter-native-app="true"]
   [class*="MobileNavigationController_mobileBar"],
 html[data-ficonter-native-app="true"]

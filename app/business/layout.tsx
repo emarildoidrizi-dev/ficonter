@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
-import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -145,15 +144,6 @@ export default async function BusinessLayout({
         }}
       />
       <main className="app-main business-interface">{children}</main>
-      <PWAMobileDock
-        workspace="business"
-        subscriptionPlanCode={subscriptionPlanCode}
-        canManage={
-          membership?.role === "owner" ||
-          membership?.role === "admin"
-        }
-        isPlatformAdmin={Boolean(admin)}
-      />
       </div>
     </CurrencyDisplayProvider>
   );

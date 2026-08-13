@@ -10,7 +10,7 @@ import {
   CalendarRange,
   ChartNoAxesCombined,
   ChevronRight,
-  CirclePlus,
+  Plus,
   CreditCard,
   FileText,
   Goal,
@@ -747,10 +747,10 @@ export function FiconterNativeAppChrome({
         >
           <img
             className={styles.headerMark}
-            src="/ficonter-mark.svg"
+            src="/ficonter-app-icon.png"
             alt=""
-            width={30}
-            height={30}
+            width={52}
+            height={52}
             aria-hidden="true"
           />
         </button>
@@ -848,7 +848,7 @@ export function FiconterNativeAppChrome({
             router.push(`${addHref}#quick-add`);
           }}
         >
-          <CirclePlus size={27} aria-hidden={true} />
+          <Plus size={30} aria-hidden={true} />
         </button>
 
         {primaryItems.slice(2, 3).map((item) => {

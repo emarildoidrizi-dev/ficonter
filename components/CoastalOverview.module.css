@@ -357,3 +357,279 @@
   .addMoney { width: 100%; }
   .availableAmount { font-size: 36px; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE MOCKUP 04 — editorial coastal overview                     */
+/* Desktop remains on the established dashboard composition.                  */
+/* -------------------------------------------------------------------------- */
+
+.miniStat {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.miniStatIcon,
+.miniStatCopy,
+.miniStatChevron,
+.healthHeader,
+.healthInfo {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .overview {
+    position: relative;
+    isolation: isolate;
+    padding-top: 0;
+    color: #17382f;
+  }
+
+  .overview::before {
+    position: absolute;
+    z-index: -2;
+    top: -28px;
+    right: -14px;
+    left: -14px;
+    height: 620px;
+    background:
+      linear-gradient(180deg, rgba(251, 248, 239, .60) 0%, rgba(251, 247, 236, .62) 32%, rgba(247, 242, 228, .82) 73%, rgba(241, 239, 228, .96) 100%),
+      url('/wallpapers/time-morning.webp') center 35% / cover no-repeat;
+    content: "";
+    pointer-events: none;
+  }
+
+  .overview::after {
+    position: absolute;
+    z-index: -1;
+    top: 390px;
+    right: -14px;
+    left: -14px;
+    height: 390px;
+    background: linear-gradient(180deg, rgba(245, 242, 231, 0), rgba(238, 239, 232, .88) 70%, rgba(238, 239, 232, 1));
+    content: "";
+    pointer-events: none;
+  }
+
+  .hero {
+    min-height: 354px;
+    display: block;
+    padding: 58px 10px 20px;
+    margin: 0 0 -6px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .eyebrow {
+    margin-bottom: 15px;
+    color: #567969;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 820;
+    letter-spacing: .20em;
+  }
+
+  .hero h1 {
+    max-width: 100%;
+    color: #17382f;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(35px, 10.6vw, 47px);
+    font-weight: 500;
+    letter-spacing: -.045em;
+    line-height: 1.02;
+  }
+
+  .hero p {
+    margin-top: 15px;
+    color: #68776f;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.38;
+  }
+
+  .addMoney {
+    width: min(100%, 292px);
+    min-height: 50px;
+    margin-top: 25px;
+    padding: 0 25px;
+    border: 1px solid #cba95a;
+    border-radius: 999px;
+    color: #efd99e;
+    background: linear-gradient(180deg, #244a40 0%, #12362e 100%);
+    box-shadow: 0 8px 20px rgba(24, 49, 42, .22), inset 0 1px 0 rgba(255,255,255,.12);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .addMoney svg {
+    width: 23px;
+    height: 23px;
+    stroke-width: 1.7;
+  }
+
+  .cardGrid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .card {
+    border: 1px solid rgba(213, 188, 122, .58);
+    border-radius: 25px;
+    background: linear-gradient(145deg, rgba(255, 252, 244, .97), rgba(246, 243, 233, .96));
+    box-shadow: 0 18px 42px rgba(23, 56, 47, .13), inset 0 1px 0 rgba(255,255,255,.92);
+  }
+
+  .availableCard {
+    min-height: 0;
+    padding: 24px 21px 21px;
+  }
+
+  .cardLabel {
+    color: #5c7167;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .13em;
+  }
+
+  .availableAmount {
+    margin-top: 13px;
+    color: #153e34;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(43px, 13vw, 58px);
+    font-weight: 500;
+    letter-spacing: -.045em;
+    line-height: .98;
+  }
+
+  .cardNote {
+    margin: 13px 0 0;
+    color: #6a7871;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 14px;
+  }
+
+  .miniStats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .miniStats > .miniStat {
+    min-height: 80px;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 13px;
+    padding: 12px 13px;
+    border: 1px solid rgba(201, 174, 105, .42);
+    border-radius: 19px;
+    background: linear-gradient(135deg, rgba(241, 242, 232, .96), rgba(230, 234, 225, .90));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.76), 0 7px 18px rgba(47, 63, 55, .06);
+  }
+
+  .miniStatIcon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border: 1px solid rgba(201, 164, 79, .76);
+    border-radius: 50%;
+    color: #54786a;
+    background: #faf8ef;
+    box-shadow: 0 5px 14px rgba(48, 63, 56, .09);
+  }
+
+  .miniStatCopy {
+    min-width: 0;
+    display: block;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+
+  .miniStatCopy > span {
+    display: block;
+    margin: 0 0 5px;
+    overflow: hidden;
+    color: #5f7068;
+    font-size: 13px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .miniStatCopy > strong {
+    display: block;
+    color: #193c33;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .miniStatChevron {
+    display: block;
+    justify-self: end;
+    color: #9a772f;
+    stroke-width: 1.7;
+  }
+
+  .healthCard {
+    min-height: 178px;
+    padding: 21px;
+  }
+
+  .healthHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .healthHeader h2 {
+    margin: 0;
+    color: #17382f;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -.025em;
+  }
+
+  .healthInfo {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid rgba(163, 139, 80, .48);
+    border-radius: 50%;
+    color: #9b8654;
+  }
+
+  .healthLine {
+    margin-top: 22px;
+  }
+
+  .cashCard,
+  .upcomingCard,
+  .rhythmCard,
+  .insightsCard {
+    background: linear-gradient(145deg, rgba(255, 252, 244, .98), rgba(245, 243, 235, .96));
+  }
+}
+
+@media (max-width: 390px) {
+  .hero { padding-top: 48px; min-height: 324px; }
+  .hero h1 { font-size: 35px; }
+  .availableCard { padding-inline: 17px; }
+  .availableAmount { font-size: 43px; }
+  .miniStats > .miniStat { grid-template-columns: 44px minmax(0,1fr) 18px; gap: 10px; }
+  .miniStatIcon { width: 44px; height: 44px; }
+  .miniStatCopy > strong { font-size: 17px; }
+}

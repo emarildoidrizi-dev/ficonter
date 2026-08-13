@@ -650,3 +650,75 @@ html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
     --mobile-page-bottom: 132px;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* PHASE 7 — MOBILE MOCKUP 04 VISUAL SYSTEM                                    */
+/* Reproduces the approved editorial coastal mockup while preserving data and */
+/* navigation behavior. Desktop stays untouched.                              */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] {
+  --mobile-page-x: 14px;
+  --mobile-page-top: 92px;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  background: #eef0e8 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_hero"] {
+  margin-bottom: -6px !important;
+  border-radius: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_availableCard"] {
+  min-height: 0 !important;
+  padding: 24px 21px 21px !important;
+  border-radius: 25px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_availableAmount"] {
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-size: clamp(43px, 13vw, 58px) !important;
+  font-weight: 500 !important;
+  line-height: .98 !important;
+  letter-spacing: -.045em !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_cardGrid"] {
+  gap: 14px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_card"] {
+  min-height: 0 !important;
+  padding: 21px !important;
+  border-radius: 25px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthCard"] {
+  min-height: 178px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_hero"] h1,
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthHeader"] h2 {
+  color: #17382f !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_hero"] h1 {
+  font-size: clamp(35px, 10.6vw, 47px) !important;
+  font-weight: 500 !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.045em !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthHeader"] h2 {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+}
+
+@media (max-width: 390px) {
+  html[data-ficonter-native-app="true"] {
+    --mobile-page-top: 88px;
+  }
+}

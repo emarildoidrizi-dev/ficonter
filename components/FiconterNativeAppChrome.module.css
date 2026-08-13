@@ -68,10 +68,13 @@
   cursor: pointer;
 }
 
-.menuButton > svg {
-  width: 24px;
-  height: 24px;
-  color: var(--mobile-chrome-accent);
+.headerMark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  object-fit: cover;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
 }
 
 .routeIdentity {
@@ -274,7 +277,7 @@
   filter: brightness(0.96);
 }
 
-/* Full navigation sheet. It can only be opened from the top-left menu button. */
+/* More menu: bottom sheet instead of a side drawer. */
 :global(html[data-ficonter-native-app="true"]) .backdrop {
   position: fixed;
   z-index: 1880;

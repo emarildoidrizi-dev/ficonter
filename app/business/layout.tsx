@@ -123,7 +123,12 @@ export default async function BusinessLayout({
             user.user_metadata?.name ??
             "",
         )}
+        email={user.email ?? ""}
         businessName={business?.name ?? "Business workspace"}
+        activeBusinessId={business?.id ?? null}
+        businessProfiles={businesses
+          .filter((item) => item.status !== "archived")
+          .map((item) => ({ id: item.id, name: item.name }))}
       />
       <BusinessSidebar
         businesses={businesses}

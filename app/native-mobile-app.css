@@ -1130,3 +1130,18 @@ html[data-ficonter-native-app="true"] .app-main
   margin: 0 0 0 auto !important;
   padding: 6px !important;
 }
+
+/* Phase 6.1: Business mobile shell has a persistent active-business selector. */
+html[data-ficonter-native-app="true"] .app-main.business-interface {
+  padding-top:
+    calc(140px + max(env(safe-area-inset-top), 0px))
+    !important;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main.business-interface {
+    padding-top:
+      calc(116px + max(env(safe-area-inset-top), 0px))
+      !important;
+  }
+}

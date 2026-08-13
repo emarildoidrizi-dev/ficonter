@@ -113,6 +113,7 @@ export default async function DashboardLayout({
             user.user_metadata?.name ??
             "",
         )}
+        email={user.email ?? ""}
       />
       <Sidebar
         isAdmin={Boolean(admin)}

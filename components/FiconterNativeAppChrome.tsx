@@ -20,7 +20,6 @@ import {
   LayoutGrid,
   LockKeyhole,
   LogOut,
-  Menu,
   MessageSquareText,
   PackageOpen,
   ReceiptText,
@@ -40,6 +39,7 @@ import {
   type ComponentType,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { switchActiveBusinessAction } from "@/app/business/actions";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
 import styles from "./FiconterNativeAppChrome.module.css";
@@ -65,10 +65,18 @@ type RouteGroup = {
   routes: RouteItem[];
 };
 
+type BusinessProfileOption = {
+  id: string;
+  name: string;
+};
+
 type Props = {
   workspace: Workspace;
   displayName: string;
+  email?: string;
   businessName?: string;
+  businessProfiles?: BusinessProfileOption[];
+  activeBusinessId?: string | null;
   subscriptionPlanCode: SubscriptionPlanCode;
 };
 
@@ -444,7 +452,10 @@ function currentRoute(
 export function FiconterNativeAppChrome({
   workspace,
   displayName,
+  email = "",
   businessName = "",
+  businessProfiles = [],
+  activeBusinessId = null,
   subscriptionPlanCode,
 }: Props) {
   const pathname = usePathname();
@@ -452,6 +463,11 @@ export function FiconterNativeAppChrome({
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [switchingBusiness, setSwitchingBusiness] = useState(false);
+  const [businessSwitchError, setBusinessSwitchError] = useState("");
+  const [selectedBusinessId, setSelectedBusinessId] = useState(
+    activeBusinessId ?? "",
+  );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -475,6 +491,9 @@ export function FiconterNativeAppChrome({
     workspace === "business"
       ? businessName.trim() || "Business workspace"
       : displayName.trim() || "Personal workspace";
+
+  const accountName = displayName.trim() || email.split("@")[0] || "Account";
+  const accountInitial = accountName.slice(0, 1).toUpperCase() || "F";
 
   const primaryItems =
     workspace === "business"
@@ -584,6 +603,11 @@ export function FiconterNativeAppChrome({
   }, [pathname]);
 
   useEffect(() => {
+    setSelectedBusinessId(activeBusinessId ?? "");
+    setBusinessSwitchError("");
+  }, [activeBusinessId]);
+
+  useEffect(() => {
     if (!drawerOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -648,6 +672,34 @@ export function FiconterNativeAppChrome({
     });
   }
 
+  async function switchBusinessProfile(nextBusinessId: string) {
+    if (
+      workspace !== "business" ||
+      !nextBusinessId ||
+      nextBusinessId === activeBusinessId ||
+      switchingBusiness
+    ) {
+      return;
+    }
+
+    const previousBusinessId = selectedBusinessId || activeBusinessId || "";
+    setSelectedBusinessId(nextBusinessId);
+    setSwitchingBusiness(true);
+    setBusinessSwitchError("");
+
+    const result = await switchActiveBusinessAction(nextBusinessId);
+
+    if (!result.ok) {
+      setSelectedBusinessId(previousBusinessId);
+      setBusinessSwitchError(result.error);
+      setSwitchingBusiness(false);
+      return;
+    }
+
+    setSwitchingBusiness(false);
+    router.refresh();
+  }
+
   async function signOut() {
     if (signingOut) return;
 
@@ -679,7 +731,11 @@ export function FiconterNativeAppChrome({
 
   return (
     <>
-      <header className={styles.header}>
+      <header
+        className={`${styles.header} ${
+          workspace === "business" ? styles.businessHeader : ""
+        }`}
+      >
         <button
           ref={menuButtonRef}
           type="button"
@@ -689,19 +745,48 @@ export function FiconterNativeAppChrome({
           aria-expanded={drawerOpen}
           aria-controls="ficonter-app-drawer"
         >
-          <Menu size={22} aria-hidden={true} />
+          <span className={styles.headerMark} aria-hidden="true">F</span>
         </button>
 
         <div className={styles.routeIdentity}>
           <span className={styles.routeEyebrow}>
-            FICONTER · {workspace === "business" ? "BUSINESS" : "PERSONAL"}
+            {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
           </span>
           <strong>{route.title}</strong>
         </div>
 
-        <span className={styles.workspaceBadge} title={identity}>
-          {workspace === "business" ? "B" : "P"}
-        </span>
+        <button
+          type="button"
+          className={styles.workspaceBadge}
+          title={`${accountName} — account`}
+          aria-label={`Open account menu for ${accountName}`}
+          aria-expanded={drawerOpen}
+          onClick={openDrawer}
+        >
+          <span>{accountInitial}</span>
+        </button>
+
+        {workspace === "business" && businessProfiles.length ? (
+          <label className={styles.businessProfileBar}>
+            <span className={styles.businessProfileIcon} aria-hidden="true">
+              <Building2 size={16} />
+            </span>
+            <span className={styles.businessProfileLabel}>Active business</span>
+            <select
+              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+              onChange={(event) => void switchBusinessProfile(event.target.value)}
+              disabled={switchingBusiness}
+              aria-label="Change active business profile"
+            >
+              {businessProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className={styles.businessProfileChevron} size={16} aria-hidden="true" />
+          </label>
+        ) : null}
       </header>
 
       <nav
@@ -824,11 +909,13 @@ export function FiconterNativeAppChrome({
         aria-hidden={!drawerOpen}
         inert={!drawerOpen}
       >
+        <div className={styles.sheetHandle} aria-hidden="true" />
         <div className={styles.drawerHeader}>
           <div className={styles.appMark}>F</div>
           <div>
-            <span>FICONTER APP</span>
-            <strong>{identity}</strong>
+            <span>FICONTER</span>
+            <strong>All sections</strong>
+            <small>{identity}</small>
           </div>
           <button
             ref={drawerCloseButtonRef}
@@ -844,6 +931,44 @@ export function FiconterNativeAppChrome({
             <X size={22} aria-hidden={true} />
           </button>
         </div>
+
+        <div className={styles.accountPanel}>
+          <span className={styles.accountAvatar} aria-hidden="true">{accountInitial}</span>
+          <span className={styles.accountIdentity}>
+            <strong>{accountName}</strong>
+            <small>{email || (workspace === "business" ? identity : "Signed in")}</small>
+          </span>
+          <button
+            type="button"
+            className={styles.accountSignOut}
+            onClick={() => void signOut()}
+            disabled={signingOut}
+            aria-label="Sign out"
+          >
+            <LogOut size={18} aria-hidden={true} />
+            <span>{signingOut ? "Signing out…" : "Sign out"}</span>
+          </button>
+        </div>
+
+        {workspace === "business" && businessProfiles.length ? (
+          <label className={styles.drawerBusinessSelector}>
+            <span>Business profile</span>
+            <select
+              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+              onChange={(event) => void switchBusinessProfile(event.target.value)}
+              disabled={switchingBusiness}
+              aria-label="Change active business profile"
+            >
+              {businessProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
+            </select>
+            {switchingBusiness ? <small>Updating business…</small> : null}
+            {businessSwitchError ? <small className={styles.businessProfileError}>{businessSwitchError}</small> : null}
+          </label>
+        ) : null}
 
         <Link
           href={switchTargetHref}
@@ -914,11 +1039,13 @@ export function FiconterNativeAppChrome({
                         <Icon size={18} aria-hidden={true} />
                       </span>
                       <span className={styles.drawerLinkLabel}>{item.label}</span>
-                      {locked ? (
-                        <LockKeyhole size={14} aria-hidden={true} />
-                      ) : (
-                        <ChevronRight size={15} aria-hidden={true} />
-                      )}
+                      <span className={styles.drawerLinkStatus}>
+                        {locked ? (
+                          <LockKeyhole size={13} aria-hidden={true} />
+                        ) : active ? (
+                          <span className={styles.activeDot} aria-hidden="true" />
+                        ) : null}
+                      </span>
                     </Link>
                   );
                 })}
@@ -927,26 +1054,6 @@ export function FiconterNativeAppChrome({
           ))}
         </nav>
 
-        <div className={styles.drawerFooter}>
-          <button
-            type="button"
-            className={styles.signOutButton}
-            onClick={() => void signOut()}
-            disabled={signingOut}
-          >
-            <span className={styles.signOutIcon}>
-              <LogOut
-                size={19}
-                aria-hidden={true}
-              />
-            </span>
-            <span>
-              {signingOut
-                ? "Signing out…"
-                : "Sign out"}
-            </span>
-          </button>
-        </div>
       </aside>
     </>
   );

@@ -1,20 +1,410 @@
-.shellHeader{position:relative;z-index:110;width:100%;padding:12px clamp(18px,2.5vw,38px) 0;color:#223d4c;background:transparent;overscroll-behavior:contain}
-.topRow{min-height:66px;display:grid;grid-template-columns:minmax(320px,1fr) minmax(260px,.8fr) minmax(420px,1.25fr);align-items:center;gap:14px}
-.brandArea,.businessIdentity,.headerActions{display:flex;align-items:center;gap:10px;min-width:0}
-.brandCard,.workspacePill,.businessIdentity,.accountButton,.switchPersonal{min-height:54px;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08)}
-.brandCard{display:inline-flex;align-items:center;padding:5px 17px}.brandCard :global(.brand){gap:11px}.brandCard :global(.brand)>span{color:#173b3d}.brandCard :global(.brand)>span>span:first-child{font-family:Georgia,"Times New Roman",serif;font-size:20px;font-weight:700;letter-spacing:.025em}.brandCard :global(.brand)>span>span:last-child{color:#647b78;font-size:7px;letter-spacing:.11em}.brandCard :global(.brand) img{width:42px;height:42px;border-radius:12px}
-.workspacePill{display:inline-flex;align-items:center;gap:7px;padding:0 18px;color:#274352;font-size:14px;font-weight:650}
-.businessIdentity{justify-self:center;width:min(100%,300px);padding:5px 11px}.businessMark,.avatar{flex:0 0 auto;width:34px;height:34px;display:grid;place-items:center;overflow:hidden;border-radius:11px;background:#d9e5dd;color:#24434c;font-weight:900}.businessMark img{width:100%;height:100%;object-fit:cover}
-.businessSelector{display:grid;gap:1px;min-width:0;flex:1}.businessSelector span{color:#698078;font-size:9px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}.businessSelector select{width:100%;min-height:29px;padding:0 22px 0 0;border:0;background:transparent;color:#274352;font-size:12px;font-weight:850;outline:0}.businessSelector option{color:#183b4b}
-.status,.switchError,.archiveNotice{font-size:10px}.status,.archiveNotice{color:#698078}.archiveNotice{display:flex;align-items:center;gap:4px}.switchError{color:#a85d50}.createLink{color:#274352;font-size:12px;font-weight:800}
-.headerActions{justify-content:flex-end}.headerActions>:global([class*="LanguageSelector_root"]) button{min-height:54px;padding-inline:18px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;font-size:14px}.headerActions>:global([class*="NotificationCenter_root"]){grid-template-columns:1fr}.headerActions>:global([class*="NotificationCenter_root"])>button:first-child{display:none}.headerActions>:global([class*="NotificationCenter_root"]) button{min-width:54px;min-height:54px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352}
-.accountDock{position:relative;min-width:0}.accountButton{min-width:160px;display:grid;grid-template-columns:30px minmax(0,1fr) 16px;align-items:center;gap:8px;padding:4px 12px 4px 7px;color:#274352;text-align:left}.accountButton:hover{background:#f6f2df}.accountText{min-width:0;display:grid}.accountText strong,.accountText small{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.accountText strong{font-size:13px}.accountText small{display:none}
-.switchPersonal{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;color:#274352;font-size:13px;font-weight:750}.switchPersonal:hover{background:#f6f2df}
-.accountMenu{position:absolute;z-index:120;top:calc(100% + 10px);right:0;width:232px;padding:8px;border:1px solid rgba(112,100,69,.2);border-radius:16px;background:rgba(246,239,220,.99);color:#183b4b;box-shadow:0 24px 65px rgba(17,50,54,.25)}.accountMenu a,.accountMenu button{width:100%;min-height:40px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#526861;text-align:left;font-size:12px;font-weight:750}.accountMenu a:hover,.accountMenu button:hover{color:#183b4b;background:rgba(75,132,105,.13)}.accountMenuDivider{height:1px;margin:6px;background:rgba(112,100,69,.15)}.accountMenu .signOutItem{color:#a85d50}
-.navigation{min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid rgba(112,100,69,.14);border-radius:17px;background:rgba(246,243,225,.95);box-shadow:0 14px 34px rgba(42,75,67,.08)}
-.overviewLink,.navGroup summary{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;color:#263f4d;font-size:13px;font-weight:800;cursor:pointer;list-style:none;transition:.16s ease}.navGroup summary::-webkit-details-marker{display:none}.overviewLink:hover,.navGroup summary:hover,.navGroup[open] summary,.activeLink,.groupActive{color:#315f63;border-color:rgba(76,128,109,.08);background:rgba(184,211,198,.58)}.navGroup{position:relative}.navGroup[open] summary svg{transform:rotate(180deg)}
-.groupMenu{position:absolute;top:calc(100% + 9px);left:50%;width:max-content;min-width:230px;max-width:290px;transform:translateX(-50%);padding:8px;border:1px solid rgba(112,100,69,.2);border-radius:16px;background:rgba(246,239,220,.99);color:#173b47;box-shadow:0 24px 65px rgba(17,50,54,.24)}.groupMenu a{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:8px;min-height:39px;padding:0 10px;border-radius:10px;color:#526861;font-size:12px;font-weight:750}.groupMenu a:hover,.groupMenu .activeMenuLink{color:#173b47;background:rgba(75,132,105,.14)}
-.progress{position:absolute;right:0;bottom:-2px;left:0;height:2px;overflow:hidden;opacity:0}.progressVisible{opacity:1}.progress span{display:block;width:35%;height:100%;border-radius:99px;background:#4f918f;animation:loading 1.2s ease-in-out infinite}@keyframes loading{from{transform:translateX(-100%)}to{transform:translateX(385%)}}
-@media(max-width:1280px){.topRow{grid-template-columns:minmax(270px,1fr) minmax(230px,.8fr) minmax(300px,1fr)}.switchPersonal span,.workspacePill{display:none}.switchPersonal{width:54px;padding:0}.accountButton{min-width:120px}.archiveNotice{display:none}}
-@media(max-width:900px){.shellHeader{position:sticky;top:0;padding:8px 12px;background:rgba(224,237,231,.96)}.topRow{min-height:58px;display:flex;justify-content:space-between}.navigation{display:none}.brandCard,.businessIdentity,.accountButton,.headerActions>:global([class*="LanguageSelector_root"]) button,.headerActions>:global([class*="NotificationCenter_root"]) button{min-height:46px}.brandCard{padding-inline:10px}.brandCard :global(.brand)>span,.accountText,.switchPersonal{display:none}.businessIdentity{width:auto;min-width:150px;margin-left:auto}.businessMark{display:none}.headerActions{gap:6px}.accountButton{min-width:0;grid-template-columns:30px 16px;padding-inline:7px}.accountMenu{position:fixed;top:70px;right:12px}}
-@media(max-width:560px){.businessIdentity{display:none}.headerActions>:global([class*="LanguageSelector_root"]){display:none}}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.businessIdentity {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 16px;
+  background: linear-gradient(
+    145deg,
+    rgba(183, 155, 108, .2),
+    rgba(255, 255, 255, .04)
+  );
+}
+
+.businessIdentity > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #d8bd86;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.businessIdentity strong {
+  color: #fff8e8;
+  font-size: 15px;
+}
+
+.businessIdentity small {
+  color: #c7c1b8;
+  line-height: 1.45;
+}
+
+.businessSelector {
+  display: grid;
+  gap: 6px;
+}
+
+.businessSelector > span {
+  color: #aaa59e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.businessSelector select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 34px 0 11px;
+  border: 1px solid rgba(216, 189, 134, .34);
+  border-radius: 11px;
+  background: rgba(12, 18, 25, .72);
+  color: #fff8e8;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.businessSelector select:disabled {
+  cursor: wait;
+  opacity: .68;
+}
+
+.manageBusinesses {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(216, 189, 134, .24);
+  border-radius: 10px;
+  color: #e3cb98;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.manageBusinesses:hover {
+  border-color: rgba(216, 189, 134, .6);
+  background: rgba(216, 189, 134, .08);
+  color: #fff5dc;
+}
+
+.switchError {
+  color: #ffaaa2 !important;
+  font-size: 10px !important;
+}
+
+.navigation {
+  align-content: start;
+}
+
+.sectionLabel {
+  padding: 0 13px 7px;
+  color: #b79b6c;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.bottomDock {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.personalLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 12px;
+  color: #d8d2c8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.personalLink:hover {
+  border-color: rgba(183, 155, 108, .7);
+  color: #fff;
+}
+
+.account {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .04);
+}
+
+.account > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #b79b6c;
+  color: #15191c;
+  font-weight: 900;
+}
+
+.account div {
+  min-width: 0;
+}
+
+.account strong,
+.account small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account strong {
+  color: #fff;
+  font-size: 12px;
+}
+
+.account small {
+  margin-top: 3px;
+  color: #aaa59e;
+  font-size: 10px;
+}
+
+.account button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #cfc8be;
+}
+
+.account button:hover {
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: relative;
+    height: auto;
+  }
+
+  .bottomDock {
+    margin-top: 18px;
+  }
+}
+
+
+.archiveNotice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c2cad5 !important;
+  font-size: 10px !important;
+}
+
+
+.workspaceLabel {
+  min-height: 26px;
+}
+
+.sidebarBusinessLogo {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(216, 189, 134, .35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+  object-fit: contain;
+}
+
+
+/* FICONTER WEBSITE BUSINESS SIDEBAR — Gradient Header companion */
+.sidebarHeader {
+  position: relative;
+  flex: 0 0 auto;
+  margin: -10px -8px 14px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 193, 119, 0.24);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 82% -10%, rgba(255, 226, 154, 0.28), transparent 42%),
+    linear-gradient(145deg, rgba(181, 133, 52, 0.96), rgba(112, 79, 31, 0.88) 44%, rgba(19, 25, 24, 0.98) 100%);
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.headerGlow {
+  position: absolute;
+  inset: -45% -30% auto 18%;
+  height: 145px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(255, 229, 164, 0.18);
+  filter: blur(28px);
+}
+
+.sidebarHeader :global(.brand) {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 !important;
+}
+
+.sidebarHeader :global(.brand) img {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+  border-radius: 11px;
+}
+
+.sidebarHeader :global(.brand) span {
+  color: #fff8e7;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.headerProfile {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.headerProfile > span:first-child {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(255, 246, 221, 0.34);
+  border-radius: 12px;
+  background: rgba(9, 14, 13, 0.42);
+  color: #fff5dc;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.headerProfile div {
+  min-width: 0;
+}
+
+.headerProfile strong,
+.headerProfile small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerProfile strong {
+  color: #fffdf7;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.headerProfile small {
+  margin-top: 3px;
+  color: rgba(255, 247, 227, 0.72);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.workspacePill {
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 244, 215, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 13, 12, 0.24);
+  color: #fff0ca;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.businessIdentity {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-color: rgba(216, 189, 134, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.navigation {
+  gap: 2px;
+}
+
+.sectionLabel {
+  padding: 5px 10px 6px;
+  color: rgba(227, 211, 179, 0.64);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.sidebar :global(.side-link) {
+  min-height: 34px;
+  gap: 10px;
+  padding: 7px 10px 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 690;
+}
+
+.sidebar :global(.side-link svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar :global(.side-link:hover) {
+  border-color: rgba(216, 189, 124, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.sidebar :global(.side-link.active) {
+  border-color: rgba(225, 194, 121, 0.27);
+  background: linear-gradient(90deg, rgba(204, 161, 72, 0.24), rgba(216, 189, 124, 0.075));
+  color: #fff8e7;
+  box-shadow: inset 3px 0 0 #d8bd7c;
+}
+
+.bottomDock {
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.personalLink,
+.account {
+  border-color: rgba(216, 189, 124, 0.17);
+  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(216,189,124,0.03));
+}
+
+@media (min-width: 901px) {
+  .sidebar {
+    padding: 18px 14px 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebarHeader {
+    margin: 0 0 15px;
+  }
+}

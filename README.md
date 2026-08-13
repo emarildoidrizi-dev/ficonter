@@ -20,7 +20,7 @@ This repository is **FICONTER Release Candidate 1**. It consolidates the latest 
 - Financial File Import
 - Customer support messaging and Document Vault
 - Privacy-safe administration
-- Premium themes and real photographic scene wallpapers
+- Premium themes, scene wallpapers and sidebar atmospheres
 - CSV, JSON and PDF account exports
 
 ## Technology

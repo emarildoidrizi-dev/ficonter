@@ -9,22 +9,51 @@ export const APPEARANCE_VALUES = [
   "sandstone",
 ] as const;
 
-export const BACKGROUND_MOTION_VALUES = ["static", "off"] as const;
-
-export const WALLPAPER_SCENE_VALUES = [
-  "coastal-island",
-  "ocean-horizon",
-  "sand-dunes",
+export const BACKGROUND_MOTION_VALUES = [
+  "animated",
+  "static",
+  "off",
 ] as const;
 
-// Increment only when the platform intentionally changes its visual baseline.
-export const FIXED_INTERFACE_PROFILE_VERSION = "coastal-photography-v4";
+export const WALLPAPER_SCENE_VALUES = [
+  "space-nebula",
+  "aurora",
+  "ocean-horizon",
+  "sand-dunes",
+  "marble-glow",
+  "future-grid",
+  "forest-mist",
+  "minimal-luxe",
+] as const;
+
+export const SIDEBAR_ATMOSPHERE_VALUES = [
+  "none",
+  "orbital",
+  "lightbeam",
+  "topography",
+  "architectural",
+  "particles",
+] as const;
+
+export const SIDEBAR_ATMOSPHERE_MODE_VALUES = ["auto", "manual"] as const;
+
+export const SIDEBAR_ATMOSPHERE_MOTION_VALUES = [
+  "animated",
+  "static",
+  "off",
+] as const;
 
 export type AppearancePreference = (typeof APPEARANCE_VALUES)[number];
 export type BackgroundMotionPreference =
   (typeof BACKGROUND_MOTION_VALUES)[number];
 export type WallpaperScenePreference =
   (typeof WALLPAPER_SCENE_VALUES)[number];
+export type SidebarAtmosphereStyle =
+  (typeof SIDEBAR_ATMOSPHERE_VALUES)[number];
+export type SidebarAtmosphereMode =
+  (typeof SIDEBAR_ATMOSPHERE_MODE_VALUES)[number];
+export type SidebarAtmosphereMotion =
+  (typeof SIDEBAR_ATMOSPHERE_MOTION_VALUES)[number];
 export type ResolvedTheme = "light" | "dark";
 
 export const DARK_APPEARANCE_VALUES: AppearancePreference[] = [
@@ -51,19 +80,44 @@ export const INTERFACE_THEME_OPTIONS = [
 
 export const WALLPAPER_SCENE_OPTIONS = [
   {
-    value: "coastal-island",
-    label: "Real Coastal Beach",
-    description: "A real sunlit shoreline with turquoise water and natural sand.",
+    value: "space-nebula",
+    label: "Space Nebula",
+    description: "Stars, orbital light and a calm deep-space nebula.",
+  },
+  {
+    value: "aurora",
+    label: "Aurora",
+    description: "Northern lights above a quiet mountain horizon.",
   },
   {
     value: "ocean-horizon",
-    label: "Real Ocean Sun",
-    description: "A real calm sea with natural sunlight across the water.",
+    label: "Ocean Horizon",
+    description: "A tranquil sea, distant sun and layered waves.",
   },
   {
     value: "sand-dunes",
-    label: "Real Sand Beach",
-    description: "A real open beach with pale sand and clear Mediterranean water.",
+    label: "Sand Dunes",
+    description: "Warm sculpted dunes with soft evening light.",
+  },
+  {
+    value: "marble-glow",
+    label: "Marble Glow",
+    description: "Refined stone texture with subtle luminous veining.",
+  },
+  {
+    value: "future-grid",
+    label: "Future Grid",
+    description: "A restrained command-centre horizon and perspective grid.",
+  },
+  {
+    value: "forest-mist",
+    label: "Forest Mist",
+    description: "Layered evergreen silhouettes and quiet atmospheric fog.",
+  },
+  {
+    value: "minimal-luxe",
+    label: "Minimal Luxe",
+    description: "Soft architectural arcs and a premium neutral atmosphere.",
   },
 ] as const satisfies ReadonlyArray<{
   value: WallpaperScenePreference;
@@ -71,7 +125,49 @@ export const WALLPAPER_SCENE_OPTIONS = [
   description: string;
 }>;
 
+export const SIDEBAR_ATMOSPHERE_OPTIONS = [
+  {
+    value: "none",
+    label: "None",
+    description: "Keep the sidebar completely clean.",
+  },
+  {
+    value: "orbital",
+    label: "Orbital lines",
+    description: "Soft circular geometry with a quiet premium feel.",
+  },
+  {
+    value: "lightbeam",
+    label: "Light beam",
+    description: "A calm vertical glow with elegant depth.",
+  },
+  {
+    value: "topography",
+    label: "Topography",
+    description: "Contour lines inspired by landscapes and maps.",
+  },
+  {
+    value: "architectural",
+    label: "Architectural",
+    description: "Linear structure with a refined futuristic character.",
+  },
+  {
+    value: "particles",
+    label: "Particles",
+    description: "Faint star-like particles with understated motion.",
+  },
+] as const satisfies ReadonlyArray<{
+  value: SidebarAtmosphereStyle;
+  label: string;
+  description: string;
+}>;
+
 export const BACKGROUND_MOTION_OPTIONS = [
+  {
+    value: "animated",
+    label: "Animated",
+    description: "Very slow movement and depth behind the workspace.",
+  },
   {
     value: "static",
     label: "Static",
@@ -101,7 +197,7 @@ export function normalizeBackgroundMotion(
 ): BackgroundMotionPreference {
   return BACKGROUND_MOTION_VALUES.includes(value as BackgroundMotionPreference)
     ? (value as BackgroundMotionPreference)
-    : "static";
+    : "animated";
 }
 
 export function normalizeWallpaperScene(
@@ -109,7 +205,7 @@ export function normalizeWallpaperScene(
 ): WallpaperScenePreference {
   return WALLPAPER_SCENE_VALUES.includes(value as WallpaperScenePreference)
     ? (value as WallpaperScenePreference)
-    : "coastal-island";
+    : "space-nebula";
 }
 
 export function resolveAppearance(
@@ -119,3 +215,59 @@ export function resolveAppearance(
   if (appearance === "system") return prefersDark ? "dark" : "light";
   return DARK_APPEARANCE_VALUES.includes(appearance) ? "dark" : "light";
 }
+export function normalizeSidebarAtmosphereStyle(
+  value: string | null | undefined,
+): SidebarAtmosphereStyle {
+  return SIDEBAR_ATMOSPHERE_VALUES.includes(value as SidebarAtmosphereStyle)
+    ? (value as SidebarAtmosphereStyle)
+    : "none";
+}
+
+export function normalizeSidebarAtmosphereMode(
+  value: string | null | undefined,
+): SidebarAtmosphereMode {
+  return SIDEBAR_ATMOSPHERE_MODE_VALUES.includes(value as SidebarAtmosphereMode)
+    ? (value as SidebarAtmosphereMode)
+    : "auto";
+}
+
+export function normalizeSidebarAtmosphereMotion(
+  value: string | null | undefined,
+): SidebarAtmosphereMotion {
+  return SIDEBAR_ATMOSPHERE_MOTION_VALUES.includes(
+    value as SidebarAtmosphereMotion,
+  )
+    ? (value as SidebarAtmosphereMotion)
+    : "animated";
+}
+
+export function resolveSidebarAtmosphereStyle(
+  appearance: AppearancePreference,
+  resolvedTheme: ResolvedTheme,
+  wallpaperScene: WallpaperScenePreference,
+  mode: SidebarAtmosphereMode,
+  manualStyle: SidebarAtmosphereStyle,
+): SidebarAtmosphereStyle {
+  if (mode === "manual") return manualStyle;
+
+  switch (wallpaperScene) {
+    case "space-nebula":
+      return "orbital";
+    case "aurora":
+      return "lightbeam";
+    case "ocean-horizon":
+    case "sand-dunes":
+    case "forest-mist":
+      return "topography";
+    case "marble-glow":
+    case "future-grid":
+      return "architectural";
+    case "minimal-luxe":
+      return resolvedTheme === "dark" || appearance === "midnight"
+        ? "orbital"
+        : "none";
+    default:
+      return "none";
+  }
+}
+

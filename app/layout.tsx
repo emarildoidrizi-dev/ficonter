@@ -4,7 +4,6 @@ import "./globals.css";
 import "./theme-palettes.css";
 import "./living-themes.css";
 import "./native-mobile-app.css";
-import "./coastal-shell.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
@@ -22,16 +21,20 @@ import {
   APPEARANCE_VALUES,
   BACKGROUND_MOTION_VALUES,
   DARK_APPEARANCE_VALUES,
-  FIXED_INTERFACE_PROFILE_VERSION,
+  SIDEBAR_ATMOSPHERE_MODE_VALUES,
+  SIDEBAR_ATMOSPHERE_MOTION_VALUES,
+  SIDEBAR_ATMOSPHERE_VALUES,
   WALLPAPER_SCENE_VALUES,
 } from "@/lib/interfaceThemes";
+
+import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
   viewportFit: "cover",
-  themeColor: "#dce9e3",
+  themeColor: "#08110e",
 };
 
 export const metadata: Metadata = {
@@ -45,7 +48,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Ficonter",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
   formatDetection: {
     telephone: false,
@@ -83,49 +86,102 @@ const interfacePreferenceScript = `
     var root = document.documentElement;
     var supported = ${JSON.stringify(APPEARANCE_VALUES)};
     var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
+    var supportedLayouts = ${JSON.stringify(INTERFACE_LAYOUT_VALUES)};
     var supportedMotion = ${JSON.stringify(BACKGROUND_MOTION_VALUES)};
     var supportedScenes = ${JSON.stringify(WALLPAPER_SCENE_VALUES)};
-    var profileVersion = localStorage.getItem("ficonter-interface-profile-version");
+    var supportedSidebarAtmospheres = ${JSON.stringify(SIDEBAR_ATMOSPHERE_VALUES)};
+    var supportedSidebarAtmosphereModes = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MODE_VALUES)};
+    var supportedSidebarAtmosphereMotion = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MOTION_VALUES)};
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
-    var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "static";
-    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
-
-    if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
-      appearance = "light";
-      density = "comfortable";
-      backgroundMotion = "static";
-      wallpaperScene = "coastal-island";
-      localStorage.setItem("ficonter-appearance", appearance);
-      localStorage.setItem("ficonter-density", density);
-      localStorage.setItem("ficonter-background-motion", backgroundMotion);
-      localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
-      localStorage.setItem("ficonter-interface-profile-version", ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)});
-    }
+    var layout = localStorage.getItem("ficonter-layout") || "horizon";
+    var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
+    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "space-nebula";
+    var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
+    var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
+    var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "animated";
 
     if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
-    if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "static";
-    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
+    if (supportedLayouts.indexOf(layout) === -1) layout = "horizon";
+    if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
+    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "space-nebula";
+    if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
+    if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
+    if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "animated";
 
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var resolved = appearance === "system"
       ? (prefersDark ? "dark" : "light")
       : (darkThemes.indexOf(appearance) >= 0 ? "dark" : "light");
 
+    var resolvedSidebarAtmosphere = sidebarAtmosphereStyle;
+
+    if (sidebarAtmosphereMode === "auto") {
+      switch (wallpaperScene) {
+        case "space-nebula":
+          resolvedSidebarAtmosphere = "orbital";
+          break;
+        case "aurora":
+          resolvedSidebarAtmosphere = "lightbeam";
+          break;
+        case "ocean-horizon":
+        case "sand-dunes":
+        case "forest-mist":
+          resolvedSidebarAtmosphere = "topography";
+          break;
+        case "marble-glow":
+        case "future-grid":
+          resolvedSidebarAtmosphere = "architectural";
+          break;
+        case "minimal-luxe":
+          resolvedSidebarAtmosphere =
+            resolved === "dark" ? "orbital" : "none";
+          break;
+        default:
+          resolvedSidebarAtmosphere = "none";
+      }
+    }
+
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;
+    root.dataset.layout = layout;
     root.dataset.backgroundMotion = backgroundMotion;
     root.dataset.wallpaperScene = wallpaperScene;
-    delete root.dataset.sidebarAtmosphereMode;
-    delete root.dataset.sidebarAtmosphereStyle;
-    delete root.dataset.sidebarAtmosphereMotion;
+    root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
+    root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
+    root.dataset.sidebarAtmosphereMotion = sidebarAtmosphereMotion;
     root.style.colorScheme = resolved;
-    localStorage.removeItem("ficonter-layout");
-    localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
-    localStorage.removeItem("ficonter-sidebar-atmosphere-style");
-    localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
+  } catch (_) {}
+})();`;
+
+const mobileShellBootstrapScript = `
+(function () {
+  try {
+    var root = document.documentElement;
+    var viewport = window.visualViewport;
+    var width = Math.max(1, Math.round((viewport && viewport.width) || window.innerWidth || root.clientWidth || 1));
+    var height = Math.max(1, Math.round((viewport && viewport.height) || window.innerHeight || root.clientHeight || 1));
+    var screenWidth = Math.max(1, Math.round((window.screen && window.screen.width) || width));
+    var screenHeight = Math.max(1, Math.round((window.screen && window.screen.height) || height));
+    var shortestScreenSide = Math.min(screenWidth, screenHeight);
+    var longestScreenSide = Math.max(screenWidth, screenHeight);
+    var coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    var compactViewport = width <= 900;
+    var compactTouchDevice = coarsePointer && shortestScreenSide <= 820 && longestScreenSide <= 1366;
+    var mobileShell = compactViewport || compactTouchDevice;
+    var device = !mobileShell
+      ? "desktop"
+      : (width <= 640 || shortestScreenSide <= 480 ? "phone" : "tablet");
+    var standalone =
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      Boolean(navigator.standalone);
+
+    root.dataset.ficonterNativeApp = mobileShell ? "true" : "false";
+    root.dataset.ficonterDevice = device;
+    root.dataset.ficonterDisplayMode = standalone ? "standalone" : "browser";
+    root.dataset.ficonterOrientation = width >= height ? "landscape" : "portrait";
   } catch (_) {}
 })();`;
 
@@ -181,6 +237,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: mobileShellBootstrapScript,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: interfacePreferenceScript,

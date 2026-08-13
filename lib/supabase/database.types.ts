@@ -2292,7 +2292,6 @@ export type Database = {
           created_at: string
           id: string
           month: string
-          spending_budget: number
           start_balance: number
           updated_at: string
           user_id: string
@@ -2301,7 +2300,6 @@ export type Database = {
           created_at?: string
           id?: string
           month: string
-          spending_budget?: number
           start_balance?: number
           updated_at?: string
           user_id: string
@@ -2310,7 +2308,6 @@ export type Database = {
           created_at?: string
           id?: string
           month?: string
-          spending_budget?: number
           start_balance?: number
           updated_at?: string
           user_id?: string

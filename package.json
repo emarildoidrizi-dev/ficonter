@@ -22,11 +22,10 @@
     "verify:support-platform": "node scripts/verify-support-messaging-documents.mjs",
     "verify:financial-setup": "node scripts/verify-financial-setup.mjs",
     "verify:performance-accuracy": "node scripts/verify-performance-accuracy.mjs",
-    "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-theme-contrast-and-budget-use.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmosphere-removal.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-fixed-redesign-layout.mjs",
+    "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmospheres.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-horizon-layout.mjs",
     "verify:release-candidate": "node scripts/verify-release-candidate.mjs",
     "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs",
     "verify:localization": "node scripts/verify-localization.mjs",
-    "verify:monthly-budget": "node scripts/verify-monthly-spending-budget.mjs",
     "verify:credit-cards": "node scripts/verify-credit-card-management.mjs",
     "verify:database-contract": "node scripts/verify-database-contract.mjs",
     "verify:hardening": "node scripts/verify-release-candidate.mjs"

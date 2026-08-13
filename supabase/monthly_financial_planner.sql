@@ -2,11 +2,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.monthly_budget_plans(
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
  month text not null check(month ~ '^\\d{4}-\\d{2}$'), start_balance numeric(14,2) not null default 0,
- spending_budget numeric(14,2) not null default 0 check(spending_budget>=0),
  created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique(user_id,month));
-alter table public.monthly_budget_plans add column if not exists spending_budget numeric(14,2) not null default 0;
-alter table public.monthly_budget_plans drop constraint if exists monthly_budget_plans_spending_budget_check;
-alter table public.monthly_budget_plans add constraint monthly_budget_plans_spending_budget_check check(spending_budget>=0);
 create table if not exists public.monthly_budget_items(
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
  month text not null check(month ~ '^\\d{4}-\\d{2}$'), section text not null check(section in('income','bills','expenses','savings','debt')),

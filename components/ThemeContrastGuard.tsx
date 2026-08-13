@@ -29,39 +29,10 @@ const TEXT_SELECTOR = [
   "textarea",
 ].join(",");
 
-// WCAG 2.2 AA contrast for normal text. Large display text can legally use a
-// lower ratio, but one consistent threshold keeps financial labels and values
-// readable at every responsive size.
-const MIN_CONTRAST = 4.5;
+const MIN_CONTRAST = 3.75;
 
 function parseColor(value: string): Rgba | null {
   if (!value || value === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
-
-  const hex = value.trim().match(/^#([\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i);
-  if (hex) {
-    const expanded = hex[1].length <= 4
-      ? [...hex[1]].map((character) => character + character).join("")
-      : hex[1];
-    return {
-      r: Number.parseInt(expanded.slice(0, 2), 16),
-      g: Number.parseInt(expanded.slice(2, 4), 16),
-      b: Number.parseInt(expanded.slice(4, 6), 16),
-      a: expanded.length === 8 ? Number.parseInt(expanded.slice(6, 8), 16) / 255 : 1,
-    };
-  }
-
-  const srgb = value.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+%?))?\)/i);
-  if (srgb) {
-    const alpha = srgb[4]?.endsWith("%")
-      ? Number.parseFloat(srgb[4]) / 100
-      : Number.parseFloat(srgb[4] ?? "1");
-    return {
-      r: Math.max(0, Math.min(255, Number.parseFloat(srgb[1]) * 255)),
-      g: Math.max(0, Math.min(255, Number.parseFloat(srgb[2]) * 255)),
-      b: Math.max(0, Math.min(255, Number.parseFloat(srgb[3]) * 255)),
-      a: Math.max(0, Math.min(1, alpha)),
-    };
-  }
 
   const match = value.match(/rgba?\(([^)]+)\)/i);
   if (!match) return null;
@@ -114,40 +85,13 @@ function composite(foreground: Rgba, background: Rgba): Rgba {
   };
 }
 
-function backgroundImageColors(value: string): Rgba[] {
-  if (!value || value === "none" || value.includes("url(")) return [];
-
-  const matches = value.match(/(?:rgba?\([^)]+\)|color\(srgb\s+[^)]+\))/gi) ?? [];
-  return matches
-    .map((match) => parseColor(match))
-    .filter((color): color is Rgba => Boolean(color));
-}
-
-function averageColors(colors: Rgba[]): Rgba {
-  if (!colors.length) return { r: 0, g: 0, b: 0, a: 0 };
-  const total = colors.reduce(
-    (sum, color) => ({
-      r: sum.r + color.r,
-      g: sum.g + color.g,
-      b: sum.b + color.b,
-      a: sum.a + color.a,
-    }),
-    { r: 0, g: 0, b: 0, a: 0 },
-  );
-  return {
-    r: total.r / colors.length,
-    g: total.g / colors.length,
-    b: total.b / colors.length,
-    a: total.a / colors.length,
-  };
-}
-
 function effectiveBackground(element: Element): Rgba {
-  const ancestors: Element[] = [];
+  const layers: Rgba[] = [];
   let node: Element | null = element;
 
   while (node) {
-    ancestors.push(node);
+    const background = parseColor(getComputedStyle(node).backgroundColor);
+    if (background && background.a > 0) layers.push(background);
     node = node.parentElement;
   }
 
@@ -159,21 +103,8 @@ function effectiveBackground(element: Element): Rgba {
       : { r: 245, g: 242, b: 236, a: 1 });
 
   let result: Rgba = { ...fallback, a: 1 };
-  for (const ancestor of ancestors.reverse()) {
-    const style = getComputedStyle(ancestor);
-    const background = parseColor(style.backgroundColor);
-    if (background && background.a > 0) result = composite(background, result);
-
-    // CSS gradients sit above background-color. Sampling their declared color
-    // stops is a stable approximation and prevents a transparent element from
-    // incorrectly inheriting the wallpaper's light/dark tone.
-    const gradientColors = backgroundImageColors(style.backgroundImage);
-    if (gradientColors.length) {
-      result = averageColors(
-        gradientColors.map((color) => composite(color, result)),
-      );
-      result.a = 1;
-    }
+  for (let index = layers.length - 1; index >= 0; index -= 1) {
+    result = composite(layers[index], result);
   }
 
   return result;
@@ -339,12 +270,12 @@ export function ThemeContrastGuard() {
 
   return (
     <style>{`
-      [data-resolved-theme] .app-shell .ficonter-auto-contrast {
+      .ficonter-auto-contrast {
         color: var(--ficonter-auto-text) !important;
         -webkit-text-fill-color: var(--ficonter-auto-text) !important;
       }
 
-      [data-resolved-theme] .app-shell .ficonter-auto-contrast::placeholder {
+      .ficonter-auto-contrast::placeholder {
         color: color-mix(in srgb, var(--ficonter-auto-text) 72%, transparent) !important;
         -webkit-text-fill-color: color-mix(in srgb, var(--ficonter-auto-text) 72%, transparent) !important;
         opacity: 1 !important;

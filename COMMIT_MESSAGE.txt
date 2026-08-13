@@ -1,1 +1,1 @@
-feat(planner): synchronize monthly spending budget
+chore(platform): consolidate FICONTER release candidate 1

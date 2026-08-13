@@ -112,6 +112,7 @@ for (const existingFeature of [
   "BACKGROUND_MOTION_OPTIONS",
   "preferences.wallpaperScene",
   "preferences.backgroundMotion",
+  "preferences.layout",
 ]) {
   if (!settingsSource.includes(existingFeature)) {
     throw new Error(`Existing appearance feature was not preserved: ${existingFeature}`);

@@ -1,61 +1,16 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BriefcaseBusiness,
-  Check,
-  CircleDollarSign,
-  Landmark,
-  LockKeyhole,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Users,
-  WalletCards,
-} from "lucide-react";
-
+import { ArrowRight, BarChart3, LockKeyhole, Sparkles, WalletCards, Target, ReceiptText } from "lucide-react";
 import { Brand } from "@/components/Brand";
+import { PublicPreviewGreeting } from "@/components/PublicPreviewGreeting";
 
-import styles from "./page.module.css";
-
-const productViews = [
-  {
-    icon: WalletCards,
-    title: "Overview",
-    copy: "Balance, monthly movement, commitments and financial health in one composed view.",
-    stat: "€6,260",
-    statLabel: "available after planning",
-  },
-  {
-    icon: Target,
-    title: "Planning",
-    copy: "Turn budgets, bills and goals into a plan that stays understandable as life changes.",
-    stat: "72%",
-    statLabel: "monthly plan funded",
-  },
-  {
-    icon: TrendingUp,
-    title: "Wealth",
-    copy: "Follow net worth, reserves and long-term independence without losing sight of today.",
-    stat: "+8.4%",
-    statLabel: "twelve-month progress",
-  },
-  {
-    icon: BriefcaseBusiness,
-    title: "Business",
-    copy: "Keep business revenue, costs, inventory and reporting distinct but close at hand.",
-    stat: "31.6%",
-    statLabel: "operating margin",
-  },
-] as const;
-
-const principles = [
-  [ShieldCheck, "Private by design", "Authenticated workspaces and database-level access policies keep each account isolated."],
-  [Sparkles, "Calm by design", "A clear hierarchy turns complex financial information into focused next steps."],
-  [Users, "Personal and business", "Move between household and business finances without mixing the records that matter."],
+const features = [
+  [WalletCards, "Unified overview", "See income, expenses, cash flow, bills and net worth from one calm dashboard."],
+  [ReceiptText, "Daily money control", "Record transactions, monitor obligations and understand where your money goes."],
+  [Target, "Purposeful goals", "Build emergency reserves and long-term goals with clear progress and monthly plans."],
+  [BarChart3, "Intelligent insight", "Turn raw numbers into financial health indicators and practical next actions."],
+  [LockKeyhole, "Private by design", "Every account has isolated data protected by authentication and database policies."],
+  [Sparkles, "Luxury simplicity", "A refined, comfortable interface that removes the stress from financial organization."],
 ] as const;
 
 export default async function HomePage({
@@ -74,283 +29,76 @@ export default async function HomePage({
   }
 
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
+    <main>
+      <div className="container">
+        <nav className="nav">
           <Brand />
-          <nav className={styles.navigation} aria-label="Public navigation">
-            <a href="#platform">Platform</a>
-            <a href="#for-you">For you</a>
-            <a href="#privacy">Privacy</a>
+          <div className="nav-links">
+            <a href="#features">Features</a>
+            <a href="#security">Privacy</a>
             <Link href="/login">Log in</Link>
-            <Link className={styles.headerCta} href="/register">
-              Create account
-            </Link>
-          </nav>
-        </div>
-      </header>
+            <Link className="btn btn-gold" href="/register">Create account</Link>
+          </div>
+        </nav>
 
-      <section className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <div className={styles.eyebrow}>Financial Control Center</div>
-          <h1>Know where you stand. Decide what comes next.</h1>
-          <p className={styles.heroLead}>
-            Ficonter brings personal and business finances into one private,
-            considered workspace—so every number has context and every plan has
-            direction.
-          </p>
-          <div className={styles.heroActions}>
-            <Link className={styles.primaryButton} href="/register">
-              Start free <ArrowRight size={18} aria-hidden="true" />
-            </Link>
-            <a className={styles.secondaryButton} href="#platform">
-              Explore the platform
-            </a>
-          </div>
-          <div className={styles.heroAssurances} aria-label="Ficonter benefits">
-            <span><Check size={16} /> Personal and business workspaces</span>
-            <span><Check size={16} /> No advertising</span>
-            <span><Check size={16} /> Your data stays yours</span>
-          </div>
-        </div>
-
-        <div className={styles.heroVisual}>
-          <Image
-            src="/landing/ficonter-personal-finance.webp"
-            alt="A couple reviewing their finances together on Ficonter at home"
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 54vw"
-          />
-          <div className={styles.photoShade} />
-          <div className={styles.heroPhotoCaption}>
-            <span>One shared picture</span>
-            <strong>Plan together, with confidence.</strong>
-          </div>
-          <div className={styles.floatingDashboard}>
-            <div className={styles.floatingHeader}>
-              <div>
-                <span className={styles.demoLabel}>Demo workspace</span>
-                <strong>This month</strong>
-              </div>
-              <span className={styles.healthPill}>Healthy</span>
+        <section className="hero">
+          <div>
+            <div className="eyebrow">Private wealth, made clear</div>
+            <h1>Your private financial command center.</h1>
+            <p className="lead">Ficonter brings your financial life into one elegant, secure place—so you can understand today and shape tomorrow with confidence.</p>
+            <div className="hero-actions">
+              <Link className="btn btn-primary" href="/register">Start free <ArrowRight size={18}/></Link>
+              <Link className="btn btn-soft" href="/login">Log in</Link>
             </div>
-            <div className={styles.balanceLine}>
-              <div><span>Income</span><strong>€8,420</strong></div>
-              <ArrowRight size={16} />
-              <div><span>Available</span><strong>€6,260</strong></div>
-            </div>
-            <div className={styles.miniProgress}><span /></div>
-            <p>72% of this month’s plan is already funded.</p>
           </div>
-        </div>
-      </section>
-
-      <div className={styles.proofStrip}>
-        <div className={styles.proofItem}>
-          <LockKeyhole size={20} />
-          <div><strong>Private workspace</strong><span>Account data remains isolated</span></div>
-        </div>
-        <div className={styles.proofItem}>
-          <CircleDollarSign size={20} />
-          <div><strong>Clear financial picture</strong><span>Daily control and long-term direction</span></div>
-        </div>
-        <div className={styles.proofItem}>
-          <Landmark size={20} />
-          <div><strong>Two worlds, one system</strong><span>Personal and business without confusion</span></div>
-        </div>
+          <div className="hero-panel">
+            <div className="eyebrow">Private overview</div>
+            <PublicPreviewGreeting name="Lido" />
+            <p style={{color:"#c9c3ba"}}>Your financial position is stable and improving.</p>
+            <div className="metric-grid">
+              <div className="metric"><span>Net worth</span><strong>€42,650</strong></div>
+              <div className="metric"><span>Cash flow</span><strong style={{color:"#9fb9ad"}}>+€1,240</strong></div>
+              <div className="metric"><span>Savings rate</span><strong>28.8%</strong></div>
+              <div className="metric"><span>Health score</span><strong>82 / 100</strong></div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <section id="platform" className={styles.platformSection}>
-        <div className={styles.sectionIntro}>
-          <div className={styles.eyebrow}>See the platform</div>
-          <h2>A financial picture you can actually use.</h2>
-          <p>
-            Ficonter is organised around the decisions people make—not around
-            spreadsheets. Here is what your control center can bring together.
-          </p>
-        </div>
-
-        <div className={styles.productWindow} aria-label="Ficonter interface preview">
-          <div className={styles.windowBar}>
-            <div className={styles.windowDots}><span /><span /><span /></div>
-            <span>Ficonter · Personal workspace</span>
-            <span className={styles.liveBadge}><i /> Live overview</span>
-          </div>
-          <div className={styles.windowNav}>
-            <span className={styles.activeWindowNav}>Overview</span>
-            <span>Money</span>
-            <span>Planning</span>
-            <span>Wealth</span>
-            <span>Intelligence</span>
-          </div>
-          <div className={styles.windowContent}>
-            <div className={styles.windowHeading}>
-              <div><small>Good morning</small><h3>Your financial horizon</h3></div>
-              <span className={styles.demoTag}>Fictional demo data</span>
-            </div>
-            <div className={styles.overviewGrid}>
-              <article className={styles.availableCard}>
-                <span>Available after planning</span>
-                <strong>€6,260</strong>
-                <p>Across active personal accounts</p>
-                <div className={styles.availableSplit}>
-                  <div><span>Committed</span><b>€2,160</b></div>
-                  <div><span>Reserve</span><b>€1,850</b></div>
-                </div>
+      <section id="features" className="section">
+        <div className="container">
+          <div className="eyebrow">The Ficonter system</div>
+          <h2>Everything important. Nothing overwhelming.</h2>
+          <p className="section-copy">Ficonter is designed as a financial operating system for individuals and households who value clarity, privacy and a composed experience.</p>
+          <div className="cards">
+            {features.map(([Icon,title,copy]) => (
+              <article className="card" key={title}>
+                <div className="icon-box"><Icon size={22}/></div>
+                <h3>{title}</h3><p>{copy}</p>
               </article>
-              <article className={styles.healthCard}>
-                <span>Financial health</span>
-                <div><strong>78</strong><small>/ 100<br />Stable and improving</small></div>
-                <div className={styles.healthBar}><i /></div>
-                <p>Emergency reserve is moving in the right direction.</p>
-              </article>
-              <article className={styles.cashFlowCard}>
-                <span>Monthly cash flow</span>
-                <div className={styles.flowTotals}>
-                  <div><small>Income</small><b>€8,420</b></div>
-                  <div><small>Spent</small><b>€4,910</b></div>
-                </div>
-                <div className={styles.flowBars} aria-hidden="true">
-                  {[34, 48, 41, 62, 78, 55].map((height, index) => (
-                    <i key={index} style={{ height: `${height}%` }} />
-                  ))}
-                </div>
-              </article>
-            </div>
+            ))}
           </div>
-        </div>
-
-        <div className={styles.viewGrid}>
-          {productViews.map(({ icon: Icon, title, copy, stat, statLabel }) => (
-            <article className={styles.viewCard} key={title}>
-              <div className={styles.viewIcon}><Icon size={21} /></div>
-              <div className={styles.viewCardTop}>
-                <h3>{title}</h3>
-                <ArrowUpRight size={19} />
-              </div>
-              <p>{copy}</p>
-              <div className={styles.viewStat}><strong>{stat}</strong><span>{statLabel}</span></div>
-            </article>
-          ))}
         </div>
       </section>
 
-      <section id="for-you" className={styles.peopleSection}>
-        <div className={styles.sectionIntroLeft}>
-          <div className={styles.eyebrow}>Built around real life</div>
-          <h2>Clarity at home. Control at work.</h2>
-          <p>
-            Your financial life has more than one context. Ficonter keeps each
-            workspace focused while making the switch between them effortless.
-          </p>
-        </div>
-        <div className={styles.peopleGrid}>
-          <article className={styles.storyCard}>
-            <div className={styles.storyImage}>
-              <Image
-                src="/landing/ficonter-personal-finance.webp"
-                alt="People using Ficonter to plan their household finances"
-                fill
-                sizes="(max-width: 800px) 100vw, 50vw"
-              />
-            </div>
-            <div className={styles.storyBody}>
-              <span className={styles.storyLabel}><Users size={16} /> Personal</span>
-              <h3>Make money conversations easier.</h3>
-              <p>See what is available, what is committed and how today’s choices affect tomorrow.</p>
-              <ul>
-                <li><Check size={16} /> Monthly cash flow and obligations</li>
-                <li><Check size={16} /> Goals, reserves and long-term wealth</li>
-              </ul>
-            </div>
-          </article>
-
-          <article className={styles.storyCard}>
-            <div className={styles.storyImage}>
-              <Image
-                src="/landing/ficonter-business-workspace.webp"
-                alt="A small business team reviewing their Ficonter business workspace"
-                fill
-                sizes="(max-width: 800px) 100vw, 50vw"
-              />
-            </div>
-            <div className={styles.storyBody}>
-              <span className={styles.storyLabel}><BriefcaseBusiness size={16} /> Business</span>
-              <h3>Run the numbers without losing momentum.</h3>
-              <p>Keep revenue, operating costs and business records organised in a dedicated workspace.</p>
-              <ul>
-                <li><Check size={16} /> Revenue, costs and margin visibility</li>
-                <li><Check size={16} /> Inventory, suppliers and reporting</li>
-              </ul>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section className={styles.principlesSection}>
-        <div className={styles.principleGrid}>
-          {principles.map(([Icon, title, copy]) => (
-            <article key={title}>
-              <div className={styles.principleIcon}><Icon size={22} /></div>
-              <h3>{title}</h3>
-              <p>{copy}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="privacy" className={styles.privacySection}>
-        <div className={styles.privacyCopy}>
-          <div className={styles.eyebrow}>Privacy as a foundation</div>
-          <h2>Your finances are personal. The platform treats them that way.</h2>
-          <p>
-            Ficonter uses authenticated accounts and database-level access
-            policies so customers can access only their own records. The
-            platform is built without advertising and without selling financial
-            data.
-          </p>
-          <Link className={styles.privacyLink} href="/register">
-            Create a private workspace <ArrowRight size={17} />
-          </Link>
-        </div>
-        <div className={styles.privacyVisual}>
-          <div className={styles.lockOrb}><LockKeyhole size={40} /></div>
+      <section id="security" className="section dark-section">
+        <div className="container" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center"}}>
           <div>
-            <span>Account protection</span>
-            <strong>Private by default</strong>
+            <div className="eyebrow">Privacy as a foundation</div>
+            <h2>Your financial data belongs to you.</h2>
           </div>
-          <div className={styles.securityRows}>
-            <span><Check size={16} /> Isolated customer workspaces</span>
-            <span><Check size={16} /> Secure authentication</span>
-            <span><Check size={16} /> Data access policies</span>
-          </div>
+          <p style={{color:"#cbc6bd",lineHeight:1.8,fontSize:18}}>Ficonter uses authenticated accounts and database-level access policies so users can access only their own financial records. We are building without advertising and without selling financial data.</p>
         </div>
       </section>
 
-      <section className={styles.finalSection}>
-        <div>
-          <div className={styles.eyebrow}>Begin with clarity</div>
-          <h2>Your financial control center is ready.</h2>
-          <p>Create your private workspace and begin organising your finances in minutes.</p>
-        </div>
-        <div className={styles.finalActions}>
-          <Link className={styles.primaryButton} href="/register">
-            Create your account <ArrowRight size={18} />
-          </Link>
-          <Link className={styles.secondaryButton} href="/login">Log in</Link>
+      <section className="section center">
+        <div className="container">
+          <div className="eyebrow">Begin with clarity</div>
+          <h2>Build a more intentional financial life.</h2>
+          <p className="section-copy" style={{margin:"0 auto 28px"}}>Create your private workspace and begin organizing your finances in minutes.</p>
+          <Link className="btn btn-gold" href="/register">Create your Ficonter account</Link>
         </div>
       </section>
-
-      <footer className={styles.footer}>
-        <Brand />
-        <p>Financial control for the life you are building.</p>
-        <div>
-          <a href="#platform">Platform</a>
-          <a href="#privacy">Privacy</a>
-          <Link href="/login">Log in</Link>
-        </div>
-      </footer>
     </main>
   );
 }

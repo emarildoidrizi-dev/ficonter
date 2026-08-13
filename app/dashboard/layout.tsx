@@ -6,10 +6,9 @@ import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLangua
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
-import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
-import { PWAMobileDock } from "@/components/PWAMobileDock";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -18,8 +17,12 @@ import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "
 type StoredPreferences = {
   appearance?: string;
   density?: string;
+  layout?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
+  sidebarAtmosphereMode?: string;
+  sidebarAtmosphereStyle?: string;
+  sidebarAtmosphereMotion?: string;
   language?: string;
 };
 
@@ -39,6 +42,10 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
       typeof value.density === "string"
         ? value.density
         : undefined,
+    layout:
+      typeof value.layout === "string"
+        ? value.layout
+        : undefined,
     backgroundMotion:
       typeof value.backgroundMotion === "string"
         ? value.backgroundMotion
@@ -46,6 +53,18 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     wallpaperScene:
       typeof value.wallpaperScene === "string"
         ? value.wallpaperScene
+        : undefined,
+    sidebarAtmosphereMode:
+      typeof value.sidebarAtmosphereMode === "string"
+        ? value.sidebarAtmosphereMode
+        : undefined,
+    sidebarAtmosphereStyle:
+      typeof value.sidebarAtmosphereStyle === "string"
+        ? value.sidebarAtmosphereStyle
+        : undefined,
+    sidebarAtmosphereMotion:
+      typeof value.sidebarAtmosphereMotion === "string"
+        ? value.sidebarAtmosphereMotion
         : undefined,
     language:
       typeof value.language === "string" ? value.language : undefined,
@@ -72,9 +91,6 @@ export default async function DashboardLayout({
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const hasPaidTimeAwareWallpaper =
-    subscriptionPlanCode === "personal_pro" ||
-    subscriptionPlanCode === "business_pro";
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -90,9 +106,6 @@ export default async function DashboardLayout({
     >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
-      <TimeAwareWallpaperBootstrap
-        enabled={hasPaidTimeAwareWallpaper}
-      />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <BaseCurrencyBootstrap
         workspace="personal"
@@ -132,13 +145,9 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
+        <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
-      <PWAMobileDock
-        workspace="personal"
-        subscriptionPlanCode={subscriptionPlanCode}
-        isAdmin={Boolean(admin)}
-      />
       </div>
     </CurrencyDisplayProvider>
   );

@@ -24,7 +24,7 @@ type BreakdownView = "ring" | "bars" | "tiles";
 type BreakdownKey = Section | "goals";
 type Tx = { id:string; user_id:string; description:string; amount:number|string; currency:string|null; amount_eur:number|string; type:string; category:string; transaction_date:string; occurred_at:string|null; exchange_rate_source:string|null };
 type Bill = { id:string; user_id:string; name:string; category:string; amount:number|string; currency:string|null; amount_eur:number|string; due_date:string; status:string; paid_at:string|null; transaction_id:string|null };
-type Plan = { id:string; user_id:string; month:string; start_balance:number|string; spending_budget:number|string; created_at:string; updated_at:string };
+type Plan = { id:string; user_id:string; month:string; start_balance:number|string; created_at:string; updated_at:string };
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 
@@ -51,7 +51,7 @@ const classify=(tx:Tx):Section=>{
   return "expenses";
 };
 
-export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,initialError="",showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];initialError?:string;showAdvancedPosition?:boolean}){
+export function MonthlyPlanner({userId,initialTransactions,initialBills,initialPlans,initialItems,initialGoals,showAdvancedPosition=true}:{userId:string;initialTransactions:Tx[];initialBills:Bill[];initialPlans:Plan[];initialItems:Item[];initialGoals:Goal[];showAdvancedPosition?:boolean}){
   const { baseCurrency, latestRate } = useCurrencyDisplay();
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
@@ -60,9 +60,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const [plans,setPlans]=useState(initialPlans);
   const [items,setItems]=useState(initialItems);
   const [goals,setGoals]=useState(initialGoals);
-  const [notice,setNotice]=useState(initialError);
-  const [budgetStatus,setBudgetStatus]=useState("");
-  const [budgetSaving,setBudgetSaving]=useState(false);
+  const [notice,setNotice]=useState("");
   const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
   const [breakdownView,setBreakdownView]=useState<BreakdownView>("ring");
   const refreshTimerRef=useRef<number|null>(null);
@@ -103,7 +101,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         const [transactionResult,billResult,planResult,itemResult,goalResult]=await Promise.all([
           supabase.from("transactions").select("id,user_id,description,amount,currency,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id",userId).order("occurred_at",{ascending:false}),
           supabase.from("bills").select("id,user_id,name,category,amount,currency,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
-          supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,spending_budget,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
+          supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
           supabase.from("monthly_budget_items").select("id,user_id,month,section,label,planned_amount,position,created_at,updated_at").eq("user_id",userId).order("position",{ascending:true}),
           supabase.from("goals").select("id,user_id,name,target_amount,current_amount,target_date,status,created_at,updated_at").eq("user_id",userId).order("created_at",{ascending:true}),
         ]);
@@ -192,9 +190,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const startBalance=plan
     ? canonicalAmountInBaseCurrency(plan.start_balance,currencyContext)
     : roundMoney(derivedStartBalance);
-  const spendingBudget=plan
-    ? canonicalAmountInBaseCurrency(plan.spending_budget,currencyContext)
-    : 0;
   const paidBillTxIds=useMemo(()=>new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[financeBills]);
   const monthTx=useMemo(()=>financeTransactions.filter(t=>inMonth(transactionActivityDate(t),month)),[financeTransactions,month]);
   const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
@@ -222,8 +217,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const incomeCardTotal=addMoney(startBalance,totalIncome);
   const goalInvestments=sumMoney(monthTx.filter(isGoalInvestment).map(transaction=>transaction.amount_eur));
   const totalOut=synchronizedCashActuals.outflow;
-  const budgetUsedPercent=spendingBudget>0?Math.max(0,totalOut/spendingBudget*100):null;
-  const budgetRemaining=spendingBudget>0?subtractMoney(spendingBudget,totalOut):0;
   // Goal investments reduce available cash independently.
   // They never update the Monthly Planner Savings card.
   const left=subtractMoney(incomeCardTotal,totalOut);
@@ -266,31 +259,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       notifyFiconterDataChange("all");
     }
   }
-  async function saveMonthlyBudget(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();
-    const entered=Number(new FormData(event.currentTarget).get("spending_budget"));
-    if(!Number.isFinite(entered)||entered<0){
-      setBudgetStatus("Enter a valid budget amount.");
-      return;
-    }
-    const canonical=baseCurrencyAmountToCanonicalEur(roundMoney(entered),currencyContext);
-    if(canonical===null){
-      setBudgetStatus("Currency conversion is still loading. Try again in a moment.");
-      return;
-    }
-    setBudgetSaving(true);
-    setBudgetStatus("");
-    const payload={user_id:userId,month,spending_budget:canonical,updated_at:new Date().toISOString()};
-    const {data,error}=await supabase.from("monthly_budget_plans").upsert(payload,{onConflict:"user_id,month"}).select().single();
-    setBudgetSaving(false);
-    if(error){
-      setBudgetStatus(error.message);
-      return;
-    }
-    setPlans(current=>[data as Plan,...current.filter(entry=>entry.month!==month)]);
-    setBudgetStatus(entered>0?"Monthly budget saved.":"Monthly budget cleared.");
-    notifyFiconterDataChange("planner");
-  }
   async function deleteItem(id:string){const {error}=await supabase.from("monthly_budget_items").delete().eq("id",id).eq("user_id",userId);if(error)setNotice(error.message);else {setItems(c=>c.filter(i=>i.id!==id));notifyFiconterDataChange("all")}}
 
   return <section className={styles.planner}>
@@ -316,35 +284,6 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         {breakdownParts.length>0&&breakdownView==="tiles"?<div className={styles.breakdownTiles}>{[...breakdownParts].sort((a,b)=>b.value-a.value).map(part=>{const percent=part.value/breakdownTotal*100;return <div key={part.key}><span><i style={{background:part.color}}/>{part.label}</span><strong>{money(part.value)}</strong><small>{percent.toFixed(1)}% of outgoing activity</small></div>})}</div>:null}
       </article>
     </div>
-    <article className={styles.monthlyBudgetCard}>
-      <div className={styles.monthlyBudgetIntro}>
-        <span>Monthly spending limit</span>
-        <h3>Monthly budget</h3>
-        <p>Set the total amount you plan to spend in {monthTitle(month)}.</p>
-      </div>
-      <form className={styles.monthlyBudgetForm} onSubmit={saveMonthlyBudget}>
-        <label htmlFor="monthly-budget-amount">Budget amount</label>
-        <div>
-          <input key={`${month}-${baseCurrency}-${spendingBudget}`} id="monthly-budget-amount" name="spending_budget" inputMode="decimal" min="0" step="0.01" type="number" defaultValue={spendingBudget>0?roundMoney(spendingBudget):""} placeholder="0.00"/>
-          <span>{baseCurrency}</span>
-          <button type="submit" disabled={budgetSaving}>{budgetSaving?"Saving…":"Save budget"}</button>
-        </div>
-        <p className={styles.monthlyBudgetStatus} aria-live="polite">{budgetStatus||"Enter 0 to clear the budget."}</p>
-      </form>
-      <div className={styles.monthlyBudgetMetric}>
-        <span>Spent so far</span>
-        <strong>{money(totalOut)}</strong>
-      </div>
-      <div className={styles.monthlyBudgetMetric}>
-        <span>{budgetRemaining<0?"Over budget":"Remaining"}</span>
-        <strong className={budgetRemaining<0?styles.overBudget:""}>{spendingBudget>0?money(Math.abs(budgetRemaining)):"—"}</strong>
-      </div>
-      <div className={styles.monthlyBudgetProgress}>
-        <div><span>Budget used</span><strong>{budgetUsedPercent===null?"Set a budget":`${budgetUsedPercent.toFixed(1)}%`}</strong></div>
-        <i aria-label={budgetUsedPercent===null?"No monthly budget set":`${budgetUsedPercent.toFixed(1)} percent of monthly budget used`}><em style={{width:`${Math.min(100,budgetUsedPercent??0)}%`}}/></i>
-        <small>{spendingBudget>0?`${money(totalOut)} of ${money(spendingBudget)}`:"Add a monthly budget to track spending in real time."}</small>
-      </div>
-    </article>
     <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{money(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{money(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{money(actual("savings"))}</b></span><span>Goals<b>-{money(goalInvestments)}</b></span><span>Debt<b>-{money(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?money(left):"Personal Pro"}</b></span></div></div>
     <div className={styles.sectionGrid}>
       {sections.map((s) => {

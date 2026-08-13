@@ -16,34 +16,15 @@
   filter: drop-shadow(0 7px 16px rgba(0, 0, 0, 0.14));
 }
 
-.identity {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
 .wordmark {
   overflow: hidden;
   color: inherit;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.025em;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
   line-height: 1;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.descriptor {
-  overflow: hidden;
-  color: #647b78;
-  font-family: Inter, Arial, sans-serif;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  line-height: 1;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -56,11 +37,7 @@
 
 :global(.sidebar) .wordmark {
   color: #fff8e8;
-  font-size: 21px;
-}
-
-:global(.sidebar) .descriptor {
-  color: #9bd1c6;
+  font-size: 20px;
 }
 
 :global(.auth-art) .mark {
@@ -73,13 +50,8 @@
 :global(.auth-art) .wordmark {
   color: #f1d79b;
   font-size: 24px;
-  letter-spacing: 0.05em;
-}
-
-:global(.auth-art) .descriptor {
-  color: #9bd1c6;
-  font-size: 8px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 640px) {
@@ -91,9 +63,5 @@
 
   .wordmark {
     font-size: 17px;
-  }
-
-  .descriptor {
-    display: none;
   }
 }

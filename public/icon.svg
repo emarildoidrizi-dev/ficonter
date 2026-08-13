@@ -1,28 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Ficonter Control Core emblem</title>
-  <desc id="desc">One financial F held inside two open control-center rings.</desc>
+  <title id="title">Ficonter monogram</title>
+  <desc id="desc">A champagne gold architectural F monogram inside a circular frame on deep charcoal.</desc>
   <defs>
-    <linearGradient id="core-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#173f42"/>
-      <stop offset="0.58" stop-color="#102d31"/>
-      <stop offset="1" stop-color="#091a1f"/>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2d99c"/>
+      <stop offset="0.48" stop-color="#c9a45d"/>
+      <stop offset="1" stop-color="#8c6429"/>
     </linearGradient>
-    <linearGradient id="core-gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f4dfa5"/>
-      <stop offset="0.5" stop-color="#d4b66c"/>
-      <stop offset="1" stop-color="#9e7430"/>
-    </linearGradient>
-    <linearGradient id="core-teal" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#9bd1c6"/>
-      <stop offset="1" stop-color="#4d8f8d"/>
-    </linearGradient>
+    <radialGradient id="bg" cx="40%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#242b2e"/>
+      <stop offset="1" stop-color="#111619"/>
+    </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="122" fill="url(#core-bg)"/>
-  <rect x="10" y="10" width="492" height="492" rx="112" fill="none" stroke="#ffffff" stroke-opacity=".07" stroke-width="8"/>
-  <circle cx="256" cy="256" r="171" fill="none" stroke="url(#core-gold)" stroke-width="18" stroke-linecap="round" stroke-dasharray="824 251" transform="rotate(37 256 256)"/>
-  <circle cx="256" cy="256" r="124" fill="none" stroke="url(#core-teal)" stroke-width="11" stroke-linecap="round" stroke-dasharray="594 185" transform="rotate(37 256 256)"/>
-  <circle cx="256" cy="256" r="76" fill="#0e292d" stroke="#f4dfa5" stroke-opacity=".22" stroke-width="3"/>
-  <path d="M229 322V185H309 M229 246H291" fill="none" stroke="url(#core-gold)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="354" cy="179" r="9" fill="#f4dfa5"/>
-  <circle cx="390" cy="152" r="6" fill="#9bd1c6"/>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="188" fill="none" stroke="url(#gold)" stroke-width="12"/>
+  <g fill="url(#gold)">
+    <rect x="180" y="145" width="22" height="226" rx="2"/>
+    <rect x="180" y="145" width="156" height="22" rx="2"/>
+    <rect x="180" y="232" width="126" height="22" rx="2"/>
+    <rect x="222" y="180" width="22" height="191" rx="2" opacity=".96"/>
+    <rect x="222" y="180" width="114" height="22" rx="2" opacity=".96"/>
+    <rect x="222" y="270" width="94" height="22" rx="2" opacity=".96"/>
+  </g>
 </svg>

@@ -90,7 +90,7 @@ The Vercel preview deployment is therefore the authoritative final compilation g
 10. Confirm Overview, Transactions and Monthly Planner update without a manual refresh.
 11. Import a small CSV and a searchable PDF.
 12. Export account data in CSV, JSON and PDF.
-13. Change theme, real photographic wallpaper and wallpaper motion.
+13. Change theme, wallpaper, wallpaper motion and sidebar atmosphere.
 14. Confirm desktop main-content scrolling, fixed sidebar behavior and mobile page scrolling.
 15. Test customer Inbox, Admin Support Inbox, notifications and Document Vault.
 

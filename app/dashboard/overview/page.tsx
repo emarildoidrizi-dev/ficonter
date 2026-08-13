@@ -20,7 +20,6 @@ export default async function DashboardPage() {
   const [
     transactionResult,
     billResult,
-    budgetPlanResult,
     healthResult,
     gpsResult,
   ] = await Promise.all([
@@ -33,13 +32,8 @@ export default async function DashboardPage() {
       .order("occurred_at", { ascending: false }),
     supabase
       .from("bills")
-      .select("id,name,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
+      .select("id,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
       .eq("user_id", user.id),
-    supabase
-      .from("monthly_budget_plans")
-      .select("month,spending_budget")
-      .eq("user_id", user.id)
-      .order("month", { ascending: false }),
     supabase.rpc("get_financial_health_inputs"),
     supabase.rpc("get_ai_insights_inputs"),
   ]);
@@ -66,17 +60,13 @@ export default async function DashboardPage() {
       name={name}
       initialTransactions={transactions}
       initialBills={bills}
-      initialBudgetPlans={budgetPlanResult.data ?? []}
       initialHealthInputs={healthInputs}
       initialSetupAcknowledgements={readSetupAcknowledgements(
         user.user_metadata,
       )}
       initialGpsInputs={gpsInputs}
       initialError={
-        transactionResult.error?.message ??
-        billResult.error?.message ??
-        budgetPlanResult.error?.message ??
-        ""
+        transactionResult.error?.message ?? billResult.error?.message ?? ""
       }
       initialHealthError={healthResult.error?.message ?? ""}
       initialGpsError={gpsResult.error?.message ?? ""}

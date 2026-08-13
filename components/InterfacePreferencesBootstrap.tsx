@@ -2,71 +2,92 @@
 
 import { useLayoutEffect } from "react";
 import {
-  FIXED_INTERFACE_PROFILE_VERSION,
   normalizeAppearance,
   normalizeBackgroundMotion,
+  normalizeSidebarAtmosphereMode,
+  normalizeSidebarAtmosphereMotion,
+  normalizeSidebarAtmosphereStyle,
   normalizeWallpaperScene,
   resolveAppearance,
+  resolveSidebarAtmosphereStyle,
   type AppearancePreference,
   type BackgroundMotionPreference,
+  type SidebarAtmosphereMode,
+  type SidebarAtmosphereMotion,
+  type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
+import {
+  normalizeInterfaceLayout,
+  type InterfaceLayoutPreference,
+} from "@/lib/interfaceLayout";
 
 type DensityPreference = "comfortable" | "compact";
 
 type Props = {
   appearance?: string | null;
   density?: string | null;
+  layout?: string | null;
   backgroundMotion?: string | null;
   wallpaperScene?: string | null;
+  sidebarAtmosphereMode?: string | null;
+  sidebarAtmosphereStyle?: string | null;
+  sidebarAtmosphereMotion?: string | null;
 };
 
 function normalizeDensity(value: string | null | undefined): DensityPreference {
   return value === "compact" ? "compact" : "comfortable";
 }
 
-function removeLegacySidebarAtmosphere() {
-  const root = document.documentElement;
-  delete root.dataset.sidebarAtmosphereMode;
-  delete root.dataset.sidebarAtmosphereStyle;
-  delete root.dataset.sidebarAtmosphereMotion;
-
-  try {
-    localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
-    localStorage.removeItem("ficonter-sidebar-atmosphere-style");
-    localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
-  } catch {
-    // Strict privacy modes can block storage. The obsolete DOM state is still removed.
-  }
-}
-
 function applyPreferences(
   appearance: AppearancePreference,
   density: DensityPreference,
+  layout: InterfaceLayoutPreference,
   backgroundMotion: BackgroundMotionPreference,
   wallpaperScene: WallpaperScenePreference,
+  sidebarAtmosphereMode: SidebarAtmosphereMode,
+  sidebarAtmosphereStyle: SidebarAtmosphereStyle,
+  sidebarAtmosphereMotion: SidebarAtmosphereMotion,
 ) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const resolvedTheme = resolveAppearance(appearance, prefersDark);
+  const resolvedSidebarAtmosphere = resolveSidebarAtmosphereStyle(
+    appearance,
+    resolvedTheme,
+    wallpaperScene,
+    sidebarAtmosphereMode,
+    sidebarAtmosphereStyle,
+  );
 
   root.dataset.theme = appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = density;
+  root.dataset.layout = layout;
   root.dataset.backgroundMotion = backgroundMotion;
   root.dataset.wallpaperScene = wallpaperScene;
+  root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
+  root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
+  root.dataset.sidebarAtmosphereMotion = sidebarAtmosphereMotion;
   root.style.colorScheme = resolvedTheme;
-  removeLegacySidebarAtmosphere();
 
   try {
     localStorage.setItem("ficonter-appearance", appearance);
     localStorage.setItem("ficonter-density", density);
-    localStorage.removeItem("ficonter-layout");
+    localStorage.setItem("ficonter-layout", layout);
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
     localStorage.setItem(
-      "ficonter-interface-profile-version",
-      FIXED_INTERFACE_PROFILE_VERSION,
+      "ficonter-sidebar-atmosphere-mode",
+      sidebarAtmosphereMode,
+    );
+    localStorage.setItem(
+      "ficonter-sidebar-atmosphere-style",
+      sidebarAtmosphereStyle,
+    );
+    localStorage.setItem(
+      "ficonter-sidebar-atmosphere-motion",
+      sidebarAtmosphereMotion,
     );
   } catch {
     // Strict privacy modes can block storage. The active DOM state still applies.
@@ -76,8 +97,12 @@ function applyPreferences(
 export function InterfacePreferencesBootstrap({
   appearance,
   density,
+  layout,
   backgroundMotion,
   wallpaperScene,
+  sidebarAtmosphereMode,
+  sidebarAtmosphereStyle,
+  sidebarAtmosphereMotion,
 }: Props) {
   useLayoutEffect(() => {
     function readStorage(key: string) {
@@ -88,14 +113,14 @@ export function InterfacePreferencesBootstrap({
       }
     }
 
-    const requiresProfileMigration =
-      readStorage("ficonter-interface-profile-version") !==
-      FIXED_INTERFACE_PROFILE_VERSION;
     let currentAppearance = normalizeAppearance(
       readStorage("ficonter-appearance") ?? appearance,
     );
     let currentDensity = normalizeDensity(
       readStorage("ficonter-density") ?? density,
+    );
+    let currentLayout = normalizeInterfaceLayout(
+      readStorage("ficonter-layout") ?? layout,
     );
     let currentBackgroundMotion = normalizeBackgroundMotion(
       readStorage("ficonter-background-motion") ?? backgroundMotion,
@@ -103,20 +128,27 @@ export function InterfacePreferencesBootstrap({
     let currentWallpaperScene = normalizeWallpaperScene(
       readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
     );
-
-    if (requiresProfileMigration) {
-      currentAppearance = "light";
-      currentDensity = "comfortable";
-      currentBackgroundMotion = "static";
-      currentWallpaperScene = "coastal-island";
-    }
+    let currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+      readStorage("ficonter-sidebar-atmosphere-mode") ?? sidebarAtmosphereMode,
+    );
+    let currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+      readStorage("ficonter-sidebar-atmosphere-style") ?? sidebarAtmosphereStyle,
+    );
+    let currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+      readStorage("ficonter-sidebar-atmosphere-motion") ??
+        sidebarAtmosphereMotion,
+    );
 
     const applyCurrent = () =>
       applyPreferences(
         currentAppearance,
         currentDensity,
+        currentLayout,
         currentBackgroundMotion,
         currentWallpaperScene,
+        currentSidebarAtmosphereMode,
+        currentSidebarAtmosphereStyle,
+        currentSidebarAtmosphereMotion,
       );
 
     applyCurrent();
@@ -134,18 +166,40 @@ export function InterfacePreferencesBootstrap({
       if (event.key === "ficonter-density") {
         currentDensity = normalizeDensity(event.newValue);
       }
+      if (event.key === "ficonter-layout") {
+        currentLayout = normalizeInterfaceLayout(event.newValue);
+      }
       if (event.key === "ficonter-background-motion") {
         currentBackgroundMotion = normalizeBackgroundMotion(event.newValue);
       }
       if (event.key === "ficonter-wallpaper-scene") {
         currentWallpaperScene = normalizeWallpaperScene(event.newValue);
       }
+      if (event.key === "ficonter-sidebar-atmosphere-mode") {
+        currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+          event.newValue,
+        );
+      }
+      if (event.key === "ficonter-sidebar-atmosphere-style") {
+        currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+          event.newValue,
+        );
+      }
+      if (event.key === "ficonter-sidebar-atmosphere-motion") {
+        currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+          event.newValue,
+        );
+      }
 
       if (
         event.key === "ficonter-appearance" ||
         event.key === "ficonter-density" ||
+        event.key === "ficonter-layout" ||
         event.key === "ficonter-background-motion" ||
-        event.key === "ficonter-wallpaper-scene"
+        event.key === "ficonter-wallpaper-scene" ||
+        event.key === "ficonter-sidebar-atmosphere-mode" ||
+        event.key === "ficonter-sidebar-atmosphere-style" ||
+        event.key === "ficonter-sidebar-atmosphere-motion"
       ) {
         applyCurrent();
       }
@@ -156,8 +210,12 @@ export function InterfacePreferencesBootstrap({
         event as CustomEvent<{
           appearance?: string;
           density?: string;
+          layout?: string;
           backgroundMotion?: string;
           wallpaperScene?: string;
+          sidebarAtmosphereMode?: string;
+          sidebarAtmosphereStyle?: string;
+          sidebarAtmosphereMotion?: string;
         }>
       ).detail;
 
@@ -165,11 +223,23 @@ export function InterfacePreferencesBootstrap({
         detail?.appearance ?? currentAppearance,
       );
       currentDensity = normalizeDensity(detail?.density ?? currentDensity);
+      currentLayout = normalizeInterfaceLayout(
+        detail?.layout ?? currentLayout,
+      );
       currentBackgroundMotion = normalizeBackgroundMotion(
         detail?.backgroundMotion ?? currentBackgroundMotion,
       );
       currentWallpaperScene = normalizeWallpaperScene(
         detail?.wallpaperScene ?? currentWallpaperScene,
+      );
+      currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
+        detail?.sidebarAtmosphereMode ?? currentSidebarAtmosphereMode,
+      );
+      currentSidebarAtmosphereStyle = normalizeSidebarAtmosphereStyle(
+        detail?.sidebarAtmosphereStyle ?? currentSidebarAtmosphereStyle,
+      );
+      currentSidebarAtmosphereMotion = normalizeSidebarAtmosphereMotion(
+        detail?.sidebarAtmosphereMotion ?? currentSidebarAtmosphereMotion,
       );
       applyCurrent();
     };
@@ -189,7 +259,16 @@ export function InterfacePreferencesBootstrap({
         handlePreferencesUpdated,
       );
     };
-  }, [appearance, backgroundMotion, density, wallpaperScene]);
+  }, [
+    appearance,
+    backgroundMotion,
+    density,
+    layout,
+    sidebarAtmosphereMode,
+    sidebarAtmosphereMotion,
+    sidebarAtmosphereStyle,
+    wallpaperScene,
+  ]);
 
   return null;
 }

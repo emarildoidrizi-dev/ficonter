@@ -115,19 +115,418 @@
 .themeHelp{margin:-4px 0 13px;color:var(--muted);font-size:11px;line-height:1.55}.optionGrid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.optionCard:has(input:checked){border-color:var(--gold);box-shadow:0 0 0 3px var(--focus-ring)}.optionPreview{position:relative;overflow:hidden}.optionPreview:after{content:"";position:absolute;right:9px;bottom:9px;width:22px;height:22px;border:3px solid rgba(255,255,255,.72);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.12)}.optionPreview[data-theme="midnight"]{background:linear-gradient(135deg,#081321 0 52%,#16283b 52% 78%,#d8b978 78%)}.optionPreview[data-theme="midnight"]:after{background:#f7f4ee}.optionPreview[data-theme="emerald"]{background:linear-gradient(135deg,#091510 0 52%,#1b3026 52% 78%,#cbb77c 78%)}.optionPreview[data-theme="emerald"]:after{background:#f6f3e9}.optionPreview[data-theme="bordeaux"]{background:linear-gradient(135deg,#160a10 0 52%,#34202a 52% 78%,#d3ad78 78%)}.optionPreview[data-theme="bordeaux"]:after{background:#fff7f2}.optionPreview[data-theme="ocean"]{background:linear-gradient(135deg,#eaf2f4 0 52%,#fbfdfd 52% 78%,#2f7886 78%)}.optionPreview[data-theme="ocean"]:after{background:#173039;border-color:rgba(255,255,255,.9)}.optionPreview[data-theme="sandstone"]{background:linear-gradient(135deg,#eee5d7 0 52%,#fcf8f1 52% 78%,#a97942 78%)}.optionPreview[data-theme="sandstone"]:after{background:#30271f;border-color:rgba(255,255,255,.9)}
 @media(max-width:700px){.optionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.optionGrid{grid-template-columns:1fr}}
 
+/* FICONTER Horizon dashboard layout preference */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.layoutCard {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: 132px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.layoutCard:has(input:checked) {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 14%, transparent);
+}
+
+.layoutCard input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.layoutCard strong {
+  align-self: end;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.layoutCard small {
+  align-self: start;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.layoutPreview {
+  grid-row: 1 / 3;
+  width: 132px;
+  height: 76px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 15px 1fr;
+  gap: 5px;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+}
+
+.layoutPreview i {
+  grid-column: 1 / -1;
+  display: block;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--gold) 72%, var(--surface-card));
+}
+
+.layoutPreview b {
+  display: block;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-card);
+}
+
+.layoutPreview[data-layout="horizon"] b:first-of-type {
+  grid-column: span 2;
+  background: linear-gradient(145deg, var(--surface-card), color-mix(in srgb, var(--gold) 15%, var(--surface-card)));
+}
+
+.layoutPreview[data-layout="horizon"] b:last-of-type {
+  background: var(--surface-sidebar);
+}
+
+.layoutPreview[data-layout="classic"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.layoutPreview[data-layout="classic"] b {
+  background: var(--surface-card);
+}
+
+@media (max-width: 1050px) {
+  .layoutGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .layoutCard {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+  .layoutPreview { width: 100px; }
+}
+
 /* FICONTER Scene Wallpapers v1 controls */
 .wallpaperGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px}.wallpaperCard{position:relative;display:grid!important;grid-template-rows:118px auto auto;gap:6px;padding:12px;border:1px solid var(--line);border-radius:17px;background:var(--paper);cursor:pointer;overflow:hidden}.wallpaperCard:has(input:checked){border-color:var(--gold);box-shadow:0 0 0 3px var(--focus-ring)}.wallpaperCard input{position:absolute;opacity:0;pointer-events:none}.wallpaperCard strong{color:var(--text-primary);font-size:13px}.wallpaperCard small{color:var(--text-secondary);font-size:10px;line-height:1.45}.wallpaperPreview{position:relative;display:block;width:100%;height:118px;overflow:hidden;border:1px solid var(--border-subtle);border-radius:12px;background-color:var(--surface-subtle);background-repeat:no-repeat;background-position:center;background-size:cover;isolation:isolate}.wallpaperPreview:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(8,12,15,.22));z-index:1}.wallpaperPreview i{position:absolute;left:12px;right:12px;bottom:11px;height:26px;border:1px solid rgba(255,255,255,.45);border-radius:8px;background:rgba(17,22,27,.42);box-shadow:0 8px 24px rgba(0,0,0,.15);backdrop-filter:blur(5px);z-index:2}.wallpaperPreview[data-wallpaper="space-nebula"]{background-image:url("/wallpapers/space-nebula.svg")}.wallpaperPreview[data-wallpaper="aurora"]{background-image:url("/wallpapers/aurora.svg")}.wallpaperPreview[data-wallpaper="ocean-horizon"]{background-image:url("/wallpapers/ocean-horizon.svg")}.wallpaperPreview[data-wallpaper="sand-dunes"]{background-image:url("/wallpapers/sand-dunes.svg")}.wallpaperPreview[data-wallpaper="marble-glow"]{background-image:url("/wallpapers/marble-glow.svg")}.wallpaperPreview[data-wallpaper="future-grid"]{background-image:url("/wallpapers/future-grid.svg")}.wallpaperPreview[data-wallpaper="forest-mist"]{background-image:url("/wallpapers/forest-mist.svg")}.wallpaperPreview[data-wallpaper="minimal-luxe"]{background-image:url("/wallpapers/minimal-luxe.svg")}
-.wallpaperPreview[data-wallpaper="coastal-island"]{background-image:url("/wallpapers/coastal-beach-real.webp")}.wallpaperPreview[data-wallpaper="ocean-horizon"]{background-image:url("/wallpapers/ocean-sun-real.webp")}.wallpaperPreview[data-wallpaper="sand-dunes"]{background-image:url("/wallpapers/sand-beach-real.webp")}
-.wallpaperScheduleCard{display:grid;grid-template-rows:118px auto auto;gap:6px;padding:12px;border:1px solid var(--line);border-radius:17px;background:var(--paper);overflow:hidden}.wallpaperScheduleCard strong{color:var(--text-primary);font-size:13px}.wallpaperScheduleCard small{color:var(--text-secondary);font-size:10px;line-height:1.45}.wallpaperPreview[data-daypart="morning"]{background-image:url("/wallpapers/time-morning.webp")}.wallpaperPreview[data-daypart="afternoon"]{background-image:url("/wallpapers/time-afternoon.webp")}.wallpaperPreview[data-daypart="evening"]{background-image:url("/wallpapers/time-evening.webp")}.wallpaperPreview[data-daypart="fixed"]{background-image:url("/wallpapers/coastal-beach-real.webp")}
 
 .motionGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.motionCard{position:relative;display:grid!important;grid-template-columns:104px minmax(0,1fr);grid-template-rows:auto auto;column-gap:14px;row-gap:4px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--paper);cursor:pointer}.motionCard:has(input:checked){border-color:var(--gold);box-shadow:0 0 0 3px var(--focus-ring)}.motionCard input{position:absolute;opacity:0;pointer-events:none}.motionCard strong{align-self:end;color:var(--text-primary);font-size:13px}.motionCard small{align-self:start;color:var(--text-secondary);font-size:10px;line-height:1.45}.motionPreview{position:relative;grid-row:1/3;width:104px;height:70px;overflow:hidden;border:1px solid var(--border-subtle);border-radius:11px;background-color:var(--surface-subtle);background-repeat:no-repeat;background-position:center;background-size:cover}.motionPreview[data-wallpaper="space-nebula"]{background-image:url("/wallpapers/space-nebula.svg")}.motionPreview[data-wallpaper="aurora"]{background-image:url("/wallpapers/aurora.svg")}.motionPreview[data-wallpaper="ocean-horizon"]{background-image:url("/wallpapers/ocean-horizon.svg")}.motionPreview[data-wallpaper="sand-dunes"]{background-image:url("/wallpapers/sand-dunes.svg")}.motionPreview[data-wallpaper="marble-glow"]{background-image:url("/wallpapers/marble-glow.svg")}.motionPreview[data-wallpaper="future-grid"]{background-image:url("/wallpapers/future-grid.svg")}.motionPreview[data-wallpaper="forest-mist"]{background-image:url("/wallpapers/forest-mist.svg")}.motionPreview[data-wallpaper="minimal-luxe"]{background-image:url("/wallpapers/minimal-luxe.svg")}.motionPreview:after{content:"";position:absolute;inset:0;background:rgba(9,13,17,.18)}.motionPreview i{position:absolute;inset:auto 10px 10px;height:12px;border-radius:999px;background:rgba(255,255,255,.74);box-shadow:0 3px 12px rgba(0,0,0,.2);z-index:2}.motionPreview[data-motion="animated"]{animation:settings-wallpaper-drift 7s ease-in-out infinite alternate}.motionPreview[data-motion="static"]{animation:none}.motionPreview[data-motion="off"]{background-image:none!important;background:var(--surface-subtle)}.motionPreview[data-motion="off"]:after{background:transparent}.motionPreview[data-motion="off"] i{background:var(--border-strong);box-shadow:none}
-.motionPreview[data-wallpaper="coastal-island"]{background-image:url("/wallpapers/coastal-beach-real.webp")}.motionPreview[data-wallpaper="ocean-horizon"]{background-image:url("/wallpapers/ocean-sun-real.webp")}.motionPreview[data-wallpaper="sand-dunes"]{background-image:url("/wallpapers/sand-beach-real.webp")}.motionPreview[data-motion="animated"]{animation:none}
 
 @keyframes settings-wallpaper-drift{0%{background-position:46% 48%;background-size:110%}100%{background-position:55% 52%;background-size:124%}}
-:global(html[data-resolved-theme="dark"]) .wallpaperCard,:global(html[data-resolved-theme="dark"]) .wallpaperScheduleCard,:global(html[data-resolved-theme="dark"]) .motionCard{background:var(--surface-card);border-color:var(--border-subtle)}
+:global(html[data-resolved-theme="dark"]) .wallpaperCard,:global(html[data-resolved-theme="dark"]) .motionCard{background:var(--surface-card);border-color:var(--border-subtle)}
 @media(prefers-reduced-motion:reduce){.motionPreview[data-motion="animated"]{animation:none}}
 @media(max-width:1100px){.motionGrid{grid-template-columns:1fr}.wallpaperGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.wallpaperGrid{grid-template-columns:1fr}.motionCard{grid-template-columns:86px minmax(0,1fr)}.motionPreview{width:86px}}
+
+/* Sidebar atmosphere controls */
+.segmentedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface-subtle);
+}
+
+.segmentedLabelBlock {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.segmentedLabelBlock strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.segmentedLabelBlock small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.sidebarAtmosphereGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sidebarAtmosphereCard,
+.sidebarMotionCard {
+  position: relative;
+  display: grid !important;
+  gap: 8px !important;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease, opacity 160ms ease;
+}
+
+.sidebarAtmosphereCard:hover,
+.sidebarMotionCard:hover {
+  transform: translateY(-1px);
+}
+
+.sidebarAtmosphereCard:has(input:checked),
+.sidebarMotionCard:has(input:checked) {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.sidebarAtmosphereCard input,
+.sidebarMotionCard input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebarAtmosphereCard strong,
+.sidebarMotionCard strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.sidebarAtmosphereCard small,
+.sidebarMotionCard small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.sidebarAtmosphereCardDisabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.sidebarAtmosphereCardDisabled:hover {
+  transform: none;
+}
+
+.sidebarAtmospherePreview {
+  position: relative;
+  height: 88px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: #0b1520;
+  isolation: isolate;
+}
+
+.sidebarAtmospherePreview::before,
+.sidebarAtmospherePreview::after,
+.sidebarAtmospherePreview i {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="none"] {
+  background: linear-gradient(145deg, #0b1520, #101c28);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="none"]::after {
+  inset: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="orbital"]::before {
+  width: 104px;
+  height: 104px;
+  left: 16px;
+  top: 19px;
+  border: 1px solid rgba(205, 177, 120, 0.32);
+  border-radius: 50%;
+  box-shadow: 0 0 0 19px rgba(205, 177, 120, 0.08),
+    0 0 0 39px rgba(111, 143, 183, 0.07);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="orbital"]::after {
+  width: 5px;
+  height: 5px;
+  right: 31px;
+  bottom: 23px;
+  border-radius: 50%;
+  background: #d3b579;
+  box-shadow: -63px -26px 0 -1px rgba(150, 173, 218, 0.9);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="lightbeam"]::before {
+  inset: -12px 18px -22px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(205, 177, 120, 0.08),
+    rgba(225, 195, 131, 0.48),
+    rgba(106, 167, 172, 0.12),
+    transparent
+  );
+  clip-path: polygon(36% 0, 62% 0, 92% 100%, 7% 100%);
+  filter: blur(1px);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="lightbeam"]::after {
+  left: 18px;
+  right: 18px;
+  bottom: 5px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(211, 181, 121, 0.18);
+  filter: blur(7px);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="topography"]::before {
+  inset: -26px -15px;
+  background:
+    repeating-radial-gradient(
+      ellipse at 31% 70%,
+      transparent 0 8px,
+      rgba(205, 177, 120, 0.21) 9px 10px,
+      transparent 11px 18px
+    ),
+    repeating-radial-gradient(
+      ellipse at 82% 25%,
+      transparent 0 13px,
+      rgba(101, 158, 176, 0.14) 14px 15px,
+      transparent 16px 27px
+    );
+  transform: rotate(-8deg);
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="architectural"]::before {
+  inset: 0;
+  background:
+    linear-gradient(rgba(205, 177, 120, 0.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(205, 177, 120, 0.13) 1px, transparent 1px),
+    linear-gradient(
+      134deg,
+      transparent 49.4%,
+      rgba(111, 161, 190, 0.3) 50%,
+      transparent 50.6%
+    );
+  background-size: 24px 24px, 24px 24px, 100% 100%;
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="architectural"]::after {
+  width: 70px;
+  height: 70px;
+  right: -11px;
+  bottom: -25px;
+  border: 1px solid rgba(205, 177, 120, 0.28);
+  border-radius: 50%;
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="particles"]::before {
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(222, 192, 128, 0.9) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(126, 172, 209, 0.65) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(222, 192, 128, 0.42) 0 2px, transparent 2.7px);
+  background-position: 8px 13px, 19px 5px, 34px 29px;
+  background-size: 31px 37px, 47px 51px, 67px 73px;
+}
+
+.sidebarAtmospherePreview[data-sidebar-atmosphere="particles"]::after {
+  inset: 35% 14% 8%;
+  border-radius: 50%;
+  background: rgba(205, 177, 120, 0.09);
+  filter: blur(8px);
+}
+
+.autoAtmosphereNote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+
+.autoAtmosphereNote span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.autoAtmosphereNote strong {
+  color: var(--ink);
+  font-size: 11px;
+  text-align: right;
+}
+
+.sidebarMotionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sidebarMotionCard {
+  min-height: 92px;
+  align-content: center;
+}
+
+:global(html[data-resolved-theme="dark"]) .sidebarAtmosphereCard,
+:global(html[data-resolved-theme="dark"]) .sidebarMotionCard {
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+}
+
+@media (max-width: 1100px) {
+  .sidebarAtmosphereGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .segmentedRow,
+  .autoAtmosphereNote {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segmented {
+    width: 100%;
+  }
+
+  .segmented label {
+    width: 100%;
+  }
+
+  .segmented span {
+    text-align: center;
+  }
+
+  .sidebarAtmosphereGrid,
+  .sidebarMotionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .autoAtmosphereNote strong {
+    text-align: left;
+  }
+}
 
 /* FICONTER Subscription System — Phase 1 */
 .subscriptionCurrentCard,

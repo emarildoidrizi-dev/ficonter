@@ -266,33 +266,23 @@ function readViewportSize() {
 }
 
 function resolveDeviceClass(): DeviceClass {
-  const { width, height } = readViewportSize();
-  const shortestPhysicalSide = Math.min(
-    window.screen.width || width,
-    window.screen.height || height,
-  );
-  const touchCapable =
-    navigator.maxTouchPoints > 0 ||
-    window.matchMedia("(pointer: coarse)").matches;
+  const { width } = readViewportSize();
+  const screenWidth = window.screen.width || width;
+  const screenHeight = window.screen.height || window.innerHeight || width;
+  const shortestPhysicalSide = Math.min(screenWidth, screenHeight);
+  const longestPhysicalSide = Math.max(screenWidth, screenHeight);
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const compactViewport = width <= 900;
-  const tabletOrFoldable =
-    touchCapable &&
-    shortestPhysicalSide <= 1180 &&
-    Math.max(width, height) <= 1440;
-  const installedCompact = isStandalone() && width <= 1180;
+  const compactTouchDevice =
+    coarsePointer &&
+    shortestPhysicalSide <= 820 &&
+    longestPhysicalSide <= 1366;
 
-  if (
-    !compactViewport &&
-    !tabletOrFoldable &&
-    !installedCompact
-  ) {
+  if (!compactViewport && !compactTouchDevice) {
     return "desktop";
   }
 
-  if (
-    width <= 640 ||
-    (touchCapable && shortestPhysicalSide <= 640)
-  ) {
+  if (width <= 640 || shortestPhysicalSide <= 480) {
     return "phone";
   }
 
@@ -535,7 +525,6 @@ export function FiconterNativeAppChrome({
     }
 
     root.removeAttribute("data-ficonter-native-app");
-    root.removeAttribute("data-ficonter-pwa-phone");
 
     window.location.replace("/login");
   }

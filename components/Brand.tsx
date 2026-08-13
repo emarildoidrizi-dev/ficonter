@@ -16,10 +16,7 @@ export function Brand({ href = "/" }: { href?: string }) {
         height={42}
         aria-hidden="true"
       />
-      <span className={styles.identity}>
-        <span className={styles.wordmark}>FICONTER</span>
-        <span className={styles.descriptor}>Financial Control Center</span>
-      </span>
+      <span className={styles.wordmark}>Ficonter</span>
     </Link>
   );
 }

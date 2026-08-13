@@ -1,25 +1,17 @@
 /*
- * FICONTER photographic coastal wallpapers.
- * One compressed image layer plus a light readability veil keeps navigation fast.
+ * FICONTER Scene Wallpapers v1
+ * Eight lightweight SVG scenes with optional slow motion and readability overlays.
  */
 
 :root {
-  --living-scene: url("/wallpapers/coastal-beach-real.webp");
+  --living-scene: url("/wallpapers/space-nebula.svg");
   --living-position: center center;
   --living-overlay: rgba(245, 242, 236, 0.62);
   --living-edge-overlay: rgba(245, 242, 236, 0.26);
   --living-accent: rgba(183, 155, 108, 0.2);
   --living-scene-opacity: 1;
-  --living-scene-saturation: 0.88;
-  --living-scene-brightness: 1.02;
-}
-
-html[data-wallpaper-scene="coastal-island"] {
-  --living-scene: url("/wallpapers/coastal-beach-real.webp");
-  --living-position: center center;
-  --living-accent: rgba(54, 151, 145, 0.17);
-  --living-scene-saturation: 0.9;
-  --living-scene-brightness: 1.02;
+  --living-scene-saturation: 0.92;
+  --living-scene-brightness: 1.03;
 }
 
 html[data-resolved-theme="dark"] {
@@ -30,61 +22,52 @@ html[data-resolved-theme="dark"] {
   --living-scene-brightness: 0.82;
 }
 
+html[data-wallpaper-scene="space-nebula"] {
+  --living-scene: url("/wallpapers/space-nebula.svg");
+  --living-position: center center;
+  --living-accent: rgba(87, 104, 255, 0.19);
+}
+
+html[data-wallpaper-scene="aurora"] {
+  --living-scene: url("/wallpapers/aurora.svg");
+  --living-position: center 42%;
+  --living-accent: rgba(53, 232, 179, 0.18);
+}
+
 html[data-wallpaper-scene="ocean-horizon"] {
-  --living-scene: url("/wallpapers/ocean-sun-real.webp");
+  --living-scene: url("/wallpapers/ocean-horizon.svg");
   --living-position: center center;
   --living-accent: rgba(47, 144, 176, 0.18);
 }
 
 html[data-wallpaper-scene="sand-dunes"] {
-  --living-scene: url("/wallpapers/sand-beach-real.webp");
+  --living-scene: url("/wallpapers/sand-dunes.svg");
   --living-position: center center;
   --living-accent: rgba(210, 137, 63, 0.18);
 }
 
-/* Plan-aware schedule: Free is fixed; paid plans follow the customer's local
-   clock on the exact same boundaries as the dashboard greeting. These rules
-   intentionally come after manual scene preferences so access is authoritative. */
-html[data-wallpaper-schedule="fixed"] {
-  --living-scene: url("/wallpapers/coastal-beach-real.webp");
+html[data-wallpaper-scene="marble-glow"] {
+  --living-scene: url("/wallpapers/marble-glow.svg");
   --living-position: center center;
-  --living-accent: rgba(54, 151, 145, 0.17);
+  --living-accent: rgba(180, 139, 85, 0.16);
 }
 
-html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="morning"] {
-  --living-scene: url("/wallpapers/time-morning.webp");
+html[data-wallpaper-scene="future-grid"] {
+  --living-scene: url("/wallpapers/future-grid.svg");
   --living-position: center center;
-  --living-accent: rgba(245, 194, 128, 0.17);
-  --living-scene-saturation: 0.9;
-  --living-scene-brightness: 1.04;
+  --living-accent: rgba(62, 212, 213, 0.18);
 }
 
-html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="afternoon"] {
-  --living-scene: url("/wallpapers/time-afternoon.webp");
+html[data-wallpaper-scene="forest-mist"] {
+  --living-scene: url("/wallpapers/forest-mist.svg");
   --living-position: center center;
-  --living-accent: rgba(54, 151, 145, 0.17);
-  --living-scene-saturation: 0.88;
-  --living-scene-brightness: 1.01;
+  --living-accent: rgba(72, 136, 106, 0.18);
 }
 
-html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="evening"] {
-  --living-scene: url("/wallpapers/time-evening.webp");
+html[data-wallpaper-scene="minimal-luxe"] {
+  --living-scene: url("/wallpapers/minimal-luxe.svg");
   --living-position: center center;
-  --living-accent: rgba(212, 137, 84, 0.18);
-  --living-scene-saturation: 0.86;
-  --living-scene-brightness: 0.82;
-}
-
-html[data-resolved-theme="light"][data-wallpaper-schedule="automatic"][data-wallpaper-daypart="evening"] {
-  --living-overlay: rgba(244, 240, 231, 0.66);
-  --living-edge-overlay: rgba(244, 240, 231, 0.48);
-  --living-scene-brightness: 0.9;
-}
-
-html[data-resolved-theme="dark"][data-wallpaper-schedule="automatic"] {
-  --living-overlay: rgba(6, 9, 12, 0.66);
-  --living-edge-overlay: rgba(6, 9, 12, 0.4);
-  --living-scene-brightness: 0.7;
+  --living-accent: rgba(183, 155, 108, 0.18);
 }
 
 body {
@@ -102,9 +85,7 @@ body {
 }
 
 html:not([data-background-motion="off"]) .app-shell,
-html:not([data-background-motion="off"]) .app-main,
-html[data-wallpaper-schedule] .app-shell,
-html[data-wallpaper-schedule] .app-main {
+html:not([data-background-motion="off"]) .app-main {
   background: transparent !important;
 }
 
@@ -124,6 +105,9 @@ html[data-wallpaper-schedule] .app-main {
 }
 
 .living-theme-scene,
+.living-theme-depth,
+.living-theme-light,
+.living-theme-grain,
 .living-theme-readability {
   position: absolute;
   inset: -4%;
@@ -140,7 +124,42 @@ html[data-wallpaper-schedule] .app-main {
   filter:
     saturate(var(--living-scene-saturation))
     brightness(var(--living-scene-brightness));
-  transform: scale(1.01);
+  transform: scale(1.035);
+  will-change: transform;
+}
+
+.living-theme-depth {
+  inset: -10%;
+  background-image: var(--living-scene);
+  background-repeat: no-repeat;
+  background-position: var(--living-position);
+  background-size: cover;
+  opacity: 0.2;
+  filter: blur(28px) saturate(1.12);
+  transform: scale(1.13);
+  mix-blend-mode: soft-light;
+  will-change: transform, opacity;
+}
+
+.living-theme-light {
+  inset: -22%;
+  background:
+    radial-gradient(circle at 22% 16%, var(--living-accent), transparent 31%),
+    radial-gradient(circle at 82% 78%, var(--living-accent), transparent 34%);
+  opacity: 0.72;
+  filter: blur(25px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.living-theme-grain {
+  inset: 0;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.55) 0 0.6px, transparent 0.8px),
+    radial-gradient(circle at 80% 65%, rgba(0,0,0,.3) 0 0.55px, transparent 0.8px);
+  background-size: 7px 7px, 9px 9px;
+  mix-blend-mode: soft-light;
 }
 
 .living-theme-readability {
@@ -148,24 +167,52 @@ html[data-wallpaper-schedule] .app-main {
   background:
     linear-gradient(90deg, var(--living-overlay), var(--living-edge-overlay) 38%, var(--living-edge-overlay) 70%, var(--living-overlay)),
     linear-gradient(180deg, var(--living-edge-overlay), transparent 32%, transparent 68%, var(--living-edge-overlay));
-  backdrop-filter: none;
+  backdrop-filter: blur(0.6px);
 }
 
-html[data-background-motion="off"]:not([data-wallpaper-schedule]) .living-theme-backdrop {
+html[data-background-motion="off"] .living-theme-backdrop {
   display: none;
 }
 
-html[data-background-motion="animated"] .living-theme-scene,
-html[data-background-motion="static"] .living-theme-scene {
+html[data-background-motion="animated"] .living-theme-scene {
+  animation: ficonter-scene-drift 54s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-depth {
+  animation: ficonter-depth-drift 67s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-light {
+  animation: ficonter-light-drift 38s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="static"] .living-theme-scene,
+html[data-background-motion="static"] .living-theme-depth,
+html[data-background-motion="static"] .living-theme-light {
   animation: none;
 }
 
+@keyframes ficonter-scene-drift {
+  0% { transform: scale(1.035) translate3d(-0.4%, -0.25%, 0); }
+  45% { transform: scale(1.075) translate3d(1.1%, 0.55%, 0); }
+  100% { transform: scale(1.055) translate3d(-0.2%, 1.1%, 0); }
+}
+
+@keyframes ficonter-depth-drift {
+  0% { transform: scale(1.13) translate3d(1.2%, 0, 0); opacity: 0.15; }
+  100% { transform: scale(1.18) translate3d(-1.6%, -1%, 0); opacity: 0.26; }
+}
+
+@keyframes ficonter-light-drift {
+  0% { transform: translate3d(-3%, -2%, 0) rotate(-2deg); opacity: 0.48; }
+  100% { transform: translate3d(4%, 3%, 0) rotate(3deg); opacity: 0.82; }
+}
+
 /* A slightly stronger veil for bright scenes when the interface itself is dark. */
-html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"]:not([data-wallpaper-schedule]),
-html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"]:not([data-wallpaper-schedule]),
-html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"]:not([data-wallpaper-schedule]),
-html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"]:not([data-wallpaper-schedule]),
-html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"]:not([data-wallpaper-schedule]) {
+html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"] {
   --living-overlay: rgba(6, 9, 12, 0.68);
   --living-edge-overlay: rgba(6, 9, 12, 0.42);
   --living-scene-brightness: 0.68;
@@ -181,14 +228,20 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
 }
 
 @media (max-width: 900px) {
+  .living-theme-depth { display: none; }
   .living-theme-scene { inset: -1%; transform: scale(1.02); }
   .living-theme-readability {
     background: linear-gradient(180deg, var(--living-overlay), var(--living-edge-overlay));
   }
+  html[data-background-motion="animated"] .living-theme-scene {
+    animation-duration: 76s;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .living-theme-scene {
+  .living-theme-scene,
+  .living-theme-depth,
+  .living-theme-light {
     animation: none !important;
   }
 }
@@ -229,7 +282,8 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
     overflow: hidden !important;
   }
 
-  .app-main {
+  .app-main,
+  html[data-layout="horizon"] .app-main {
     min-width: 0;
     min-height: 0;
     height: 100vh;
@@ -259,7 +313,8 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
     overflow: visible !important;
   }
 
-  .app-main {
+  .app-main,
+  html[data-layout="horizon"] .app-main {
     min-height: 100vh;
     min-height: 100dvh;
     height: auto !important;

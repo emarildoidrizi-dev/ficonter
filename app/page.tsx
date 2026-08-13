@@ -141,7 +141,7 @@ export default async function HomePage({
               <div><span>Available</span><strong>€6,260</strong></div>
             </div>
             <div className={styles.miniProgress}><span /></div>
-            <p>72% of this month&apos;s plan is already funded.</p>
+            <p>72% of this month’s plan is already funded.</p>
           </div>
         </div>
       </section>
@@ -201,7 +201,7 @@ export default async function HomePage({
               </article>
               <article className={styles.healthCard}>
                 <span>Financial health</span>
-                <div><strong>78</strong><small>/ 100<br />Stable &amp; improving</small></div>
+                <div><strong>78</strong><small>/ 100<br />Stable and improving</small></div>
                 <div className={styles.healthBar}><i /></div>
                 <p>Emergency reserve is moving in the right direction.</p>
               </article>
@@ -258,7 +258,7 @@ export default async function HomePage({
             <div className={styles.storyBody}>
               <span className={styles.storyLabel}><Users size={16} /> Personal</span>
               <h3>Make money conversations easier.</h3>
-              <p>See what is available, what is committed and how today&apos;s choices affect tomorrow.</p>
+              <p>See what is available, what is committed and how today’s choices affect tomorrow.</p>
               <ul>
                 <li><Check size={16} /> Monthly cash flow and obligations</li>
                 <li><Check size={16} /> Goals, reserves and long-term wealth</li>

@@ -11,7 +11,7 @@ This is a **complete repository package** for `redesign/ficonter-v2`.
 5. Delete every obsolete path listed in `FILES_TO_DELETE_AFTER_UPLOAD.txt` if it
    still exists.
 6. In GitHub Desktop, use the summary:
-   `feat(wallpaper): add paid time-aware coastal day cycle`
+   `fix(i18n): complete landing-page translations`
 7. Click **Commit to redesign/ficonter-v2**, then **Push origin**.
 8. Wait for the Vercel Preview deployment to show **Ready** before testing.
 
@@ -38,6 +38,14 @@ Business. Free customers always keep one fixed Coastal Beach photograph.
 
 Appearance Settings shows the active plan behavior instead of conflicting
 manual scene or wallpaper-off controls.
+
+The public landing page now changes as one complete language surface. Its hero,
+navigation, feature copy, financial demo, privacy copy, calls to action, image
+descriptions and accessibility labels are translated in English, German,
+Spanish, Albanian, Arabic, Portuguese, Italian and Russian. Arabic retains RTL
+layout. The localization verification now includes the redesigned landing page,
+so a future English-only phrase will fail the release check instead of reaching
+deployment.
 
 Do not combine this package with an older FICONTER ZIP after deployment; that
 could restore retired code.

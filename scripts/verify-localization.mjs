@@ -434,9 +434,14 @@ assert(provider.includes("supabase.auth.updateUser"), "Account language persiste
 assert(provider.includes("MutationObserver"), "Instant full-page localization bridge is missing.");
 assert(provider.includes("root.dir = option.direction"), "Runtime RTL document direction is missing.");
 assert(runtimeTranslator.includes("FULL_UI_TRANSLATIONS[source]?.[language]"), "Full interface catalog is not wired into runtime translation.");
+assert(runtimeTranslator.includes("LANDING_UI_TRANSLATIONS[source]?.[language]"), "Landing interface catalog is not wired into runtime translation.");
 assert(!runtimeTranslator.includes("composedTranslation("), "Mixed-language composed translation fallback must not exist.");
 
 const fullRows = findFullCatalogRows();
+const landingRows = findCatalogRows(
+  "lib/i18n/landingUiCatalog.ts",
+  "LANDING_UI_TRANSLATIONS",
+);
 const wealthRows = findCatalogRows(
   "lib/i18n/wealthUiCatalog.ts",
   "WEALTH_UI_TRANSLATIONS",
@@ -451,6 +456,7 @@ const globalTemplateRows = findCatalogRows(
 );
 
 assert(fullRows.size >= 2400, `Full UI catalog is unexpectedly small (${fullRows.size}).`);
+assert(landingRows.size >= 70, `Landing UI catalog is unexpectedly small (${landingRows.size}).`);
 assert(wealthRows.size >= 188, `Wealth runtime catalog is unexpectedly small (${wealthRows.size}).`);
 assert(wealthTemplateRows.size >= 60, `Wealth runtime template catalog is unexpectedly small (${wealthTemplateRows.size}).`);
 assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);
@@ -458,7 +464,7 @@ assert(runtimeTranslator.includes("WEALTH_UI_TRANSLATIONS[source]?.[language]"),
 assert(runtimeTranslator.includes("translateWealthTemplate"), "Wealth runtime templates are not wired into runtime translation.");
 assert(runtimeTranslator.includes("translateGlobalTemplate"), "Global runtime templates are not wired into runtime translation.");
 
-for (const catalog of [fullRows, wealthRows, wealthTemplateRows, globalTemplateRows]) {
+for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows]) {
   for (const [source, row] of catalog) {
     for (const language of NON_ENGLISH) {
       assert(
@@ -473,6 +479,7 @@ const covered = new Set([
   ...collectStringPropertyKeys("lib/i18n/phrases.ts"),
   ...collectStringPropertyKeys("lib/i18n/runtimeTranslator.ts"),
   ...fullRows.keys(),
+  ...landingRows.keys(),
   ...wealthRows.keys(),
 ]);
 
@@ -519,6 +526,7 @@ failCoverage("Dynamic UI template", uncoveredTemplates);
 console.log(`Localization verification passed.`);
 console.log(`- Languages: ${LANGUAGES.join(", ")}`);
 console.log(`- Full static UI catalog entries: ${fullRows.size}`);
+console.log(`- Landing UI catalog entries: ${landingRows.size}`);
 console.log(`- Wealth runtime catalog entries: ${wealthRows.size}`);
 console.log(`- Runtime template entries: ${runtimeTemplateCoverage.size}`);
 console.log(`- Static interface strings scanned: ${uiStrings.size}`);

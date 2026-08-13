@@ -154,13 +154,7 @@ html[data-ficonter-native-app="true"] .sidebar,
 html[data-ficonter-native-app="true"]
   [class*="SidebarNavigation_shellHeader"],
 html[data-ficonter-native-app="true"]
-  [class*="BusinessSidebar_shellHeader"],
-html[data-ficonter-native-app="true"]
-  [class*="MobileNavigationController_mobileBar"],
-html[data-ficonter-native-app="true"]
-  [class*="MobileNavigationController_overlay"],
-html[data-ficonter-native-app="true"]
-  [class*="PWAMobileDock_dock"] {
+  [class*="BusinessSidebar_shellHeader"] {
   display: none !important;
 }
 

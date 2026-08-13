@@ -1,1 +1,1 @@
-refactor(mobile): redesign app navigation chrome and grouped drawer
+refactor(mobile): redesign financial modules for phone and tablet

@@ -5,6 +5,7 @@ import "./theme-palettes.css";
 import "./living-themes.css";
 import "./native-mobile-app.css";
 import "./coastal-shell.css";
+import "./mobile-module-layouts.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

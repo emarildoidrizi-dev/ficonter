@@ -20,7 +20,6 @@ const required = [
   "components/CommandPalette.tsx",
   "components/CommandPalette.module.css",
   "lib/commandPalette.ts",
-  "lib/interfaceLayout.ts",
 ];
 
 let checks = 0;
@@ -39,19 +38,25 @@ for (const relative of required) {
 
 const overview = fs.readFileSync(path.join(root, "components/DashboardLiveOverview.tsx"), "utf8");
 assert(overview.includes("HorizonCommandStrip"), "Overview is missing the command strip");
-assert(overview.includes("HorizonOverviewBoard"), "Overview is missing the Horizon board");
+assert(overview.includes("HorizonOverviewBoard"), "Overview is missing the redesign board");
 assert(overview.includes("FinancialJourneyRail"), "Overview is missing the journey rail");
 assert(overview.includes("calculateFinancialGps"), "Overview is not using the shared Financial GPS calculation");
+assert(!overview.includes("classicOnly"), "The retired dashboard branch is still rendered");
 
 const settings = fs.readFileSync(path.join(root, "components/SettingsWorkspace.tsx"), "utf8");
-assert(settings.includes("Dashboard layout"), "Settings does not expose the layout selector");
-assert(settings.includes('layout: "horizon"'), "Horizon is not the default layout preference");
+assert(!settings.includes("Dashboard layout"), "Settings still exposes the retired layout selector");
+assert(!settings.includes("preferences.layout"), "Settings still stores a selectable dashboard layout");
 
 const layout = fs.readFileSync(path.join(root, "app/dashboard/layout.tsx"), "utf8");
 assert(layout.includes("<CommandPalette />"), "Command palette is not mounted in the dashboard");
-assert(layout.includes("<InterfacePreferencesBootstrap {...interfacePreferences} />") && layout.includes("layout:"), "Saved layout is not bootstrapped");
+assert(layout.includes("<InterfacePreferencesBootstrap {...interfacePreferences} />"), "Interface preferences are not bootstrapped");
+assert(!layout.includes("layout:"), "Dashboard layout still reads the retired preference");
+
+const rootLayout = fs.readFileSync(path.join(root, "app/layout.tsx"), "utf8");
+assert(rootLayout.includes('localStorage.removeItem("ficonter-layout")'), "Legacy browser layout choice is not cleared");
+assert(!rootLayout.includes("data-layout"), "Root layout still exposes a selectable layout attribute");
 
 const commands = fs.readFileSync(path.join(root, "lib/commandPalette.ts"), "utf8");
 assert((commands.match(/id: "/g) ?? []).length >= 15, "Command palette contains too few actions");
 
-console.log(`FICONTER Horizon Layout verification passed: ${checks} checks.`);
+console.log(`FICONTER fixed redesign layout verification passed: ${checks} checks.`);

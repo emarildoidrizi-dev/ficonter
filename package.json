@@ -22,7 +22,7 @@
     "verify:support-platform": "node scripts/verify-support-messaging-documents.mjs",
     "verify:financial-setup": "node scripts/verify-financial-setup.mjs",
     "verify:performance-accuracy": "node scripts/verify-performance-accuracy.mjs",
-    "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmospheres.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-horizon-layout.mjs",
+    "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmospheres.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-fixed-redesign-layout.mjs",
     "verify:release-candidate": "node scripts/verify-release-candidate.mjs",
     "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs",
     "verify:localization": "node scripts/verify-localization.mjs",

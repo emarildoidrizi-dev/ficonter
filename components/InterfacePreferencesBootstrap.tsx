@@ -17,17 +17,11 @@ import {
   type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
-import {
-  normalizeInterfaceLayout,
-  type InterfaceLayoutPreference,
-} from "@/lib/interfaceLayout";
-
 type DensityPreference = "comfortable" | "compact";
 
 type Props = {
   appearance?: string | null;
   density?: string | null;
-  layout?: string | null;
   backgroundMotion?: string | null;
   wallpaperScene?: string | null;
   sidebarAtmosphereMode?: string | null;
@@ -42,7 +36,6 @@ function normalizeDensity(value: string | null | undefined): DensityPreference {
 function applyPreferences(
   appearance: AppearancePreference,
   density: DensityPreference,
-  layout: InterfaceLayoutPreference,
   backgroundMotion: BackgroundMotionPreference,
   wallpaperScene: WallpaperScenePreference,
   sidebarAtmosphereMode: SidebarAtmosphereMode,
@@ -63,7 +56,6 @@ function applyPreferences(
   root.dataset.theme = appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = density;
-  root.dataset.layout = layout;
   root.dataset.backgroundMotion = backgroundMotion;
   root.dataset.wallpaperScene = wallpaperScene;
   root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
@@ -74,7 +66,7 @@ function applyPreferences(
   try {
     localStorage.setItem("ficonter-appearance", appearance);
     localStorage.setItem("ficonter-density", density);
-    localStorage.setItem("ficonter-layout", layout);
+    localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
     localStorage.setItem(
@@ -97,7 +89,6 @@ function applyPreferences(
 export function InterfacePreferencesBootstrap({
   appearance,
   density,
-  layout,
   backgroundMotion,
   wallpaperScene,
   sidebarAtmosphereMode,
@@ -118,9 +109,6 @@ export function InterfacePreferencesBootstrap({
     );
     let currentDensity = normalizeDensity(
       readStorage("ficonter-density") ?? density,
-    );
-    let currentLayout = normalizeInterfaceLayout(
-      readStorage("ficonter-layout") ?? layout,
     );
     let currentBackgroundMotion = normalizeBackgroundMotion(
       readStorage("ficonter-background-motion") ?? backgroundMotion,
@@ -143,7 +131,6 @@ export function InterfacePreferencesBootstrap({
       applyPreferences(
         currentAppearance,
         currentDensity,
-        currentLayout,
         currentBackgroundMotion,
         currentWallpaperScene,
         currentSidebarAtmosphereMode,
@@ -165,9 +152,6 @@ export function InterfacePreferencesBootstrap({
       }
       if (event.key === "ficonter-density") {
         currentDensity = normalizeDensity(event.newValue);
-      }
-      if (event.key === "ficonter-layout") {
-        currentLayout = normalizeInterfaceLayout(event.newValue);
       }
       if (event.key === "ficonter-background-motion") {
         currentBackgroundMotion = normalizeBackgroundMotion(event.newValue);
@@ -194,7 +178,6 @@ export function InterfacePreferencesBootstrap({
       if (
         event.key === "ficonter-appearance" ||
         event.key === "ficonter-density" ||
-        event.key === "ficonter-layout" ||
         event.key === "ficonter-background-motion" ||
         event.key === "ficonter-wallpaper-scene" ||
         event.key === "ficonter-sidebar-atmosphere-mode" ||
@@ -210,7 +193,6 @@ export function InterfacePreferencesBootstrap({
         event as CustomEvent<{
           appearance?: string;
           density?: string;
-          layout?: string;
           backgroundMotion?: string;
           wallpaperScene?: string;
           sidebarAtmosphereMode?: string;
@@ -223,9 +205,6 @@ export function InterfacePreferencesBootstrap({
         detail?.appearance ?? currentAppearance,
       );
       currentDensity = normalizeDensity(detail?.density ?? currentDensity);
-      currentLayout = normalizeInterfaceLayout(
-        detail?.layout ?? currentLayout,
-      );
       currentBackgroundMotion = normalizeBackgroundMotion(
         detail?.backgroundMotion ?? currentBackgroundMotion,
       );
@@ -263,7 +242,6 @@ export function InterfacePreferencesBootstrap({
     appearance,
     backgroundMotion,
     density,
-    layout,
     sidebarAtmosphereMode,
     sidebarAtmosphereMotion,
     sidebarAtmosphereStyle,

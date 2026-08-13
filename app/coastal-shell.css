@@ -78,8 +78,7 @@ html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-
     overflow: hidden;
   }
 
-  .app-main,
-  html[data-layout="horizon"] .app-main {
+  .app-main {
     height: auto;
     min-height: 0;
     overflow-x: hidden;
@@ -88,7 +87,7 @@ html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-
     scrollbar-gutter: stable;
   }
 
-  html[data-layout="horizon"] .app-main::before {
+  .app-main::before {
     left: 0;
   }
 }
@@ -99,8 +98,7 @@ html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-
     min-height: 100dvh;
   }
 
-  .app-main,
-  html[data-layout="horizon"] .app-main {
+  .app-main {
     min-height: 100dvh;
     padding-top: 16px !important;
     padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important;

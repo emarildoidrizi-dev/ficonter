@@ -28,8 +28,6 @@ import {
   WALLPAPER_SCENE_VALUES,
 } from "@/lib/interfaceThemes";
 
-import { INTERFACE_LAYOUT_VALUES } from "@/lib/interfaceLayout";
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -87,7 +85,6 @@ const interfacePreferenceScript = `
     var root = document.documentElement;
     var supported = ${JSON.stringify(APPEARANCE_VALUES)};
     var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
-    var supportedLayouts = ${JSON.stringify(INTERFACE_LAYOUT_VALUES)};
     var supportedMotion = ${JSON.stringify(BACKGROUND_MOTION_VALUES)};
     var supportedScenes = ${JSON.stringify(WALLPAPER_SCENE_VALUES)};
     var supportedSidebarAtmospheres = ${JSON.stringify(SIDEBAR_ATMOSPHERE_VALUES)};
@@ -95,7 +92,6 @@ const interfacePreferenceScript = `
     var supportedSidebarAtmosphereMotion = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MOTION_VALUES)};
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
-    var layout = localStorage.getItem("ficonter-layout") || "horizon";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
     var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
     var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
@@ -104,7 +100,6 @@ const interfacePreferenceScript = `
 
     if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
-    if (supportedLayouts.indexOf(layout) === -1) layout = "horizon";
     if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
     if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
     if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
@@ -150,13 +145,13 @@ const interfacePreferenceScript = `
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;
-    root.dataset.layout = layout;
     root.dataset.backgroundMotion = backgroundMotion;
     root.dataset.wallpaperScene = wallpaperScene;
     root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
     root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
     root.dataset.sidebarAtmosphereMotion = sidebarAtmosphereMotion;
     root.style.colorScheme = resolved;
+    localStorage.removeItem("ficonter-layout");
   } catch (_) {}
 })();`;
 

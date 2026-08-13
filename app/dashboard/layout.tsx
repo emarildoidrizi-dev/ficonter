@@ -18,7 +18,6 @@ import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "
 type StoredPreferences = {
   appearance?: string;
   density?: string;
-  layout?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
   sidebarAtmosphereMode?: string;
@@ -42,10 +41,6 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     density:
       typeof value.density === "string"
         ? value.density
-        : undefined,
-    layout:
-      typeof value.layout === "string"
-        ? value.layout
         : undefined,
     backgroundMotion:
       typeof value.backgroundMotion === "string"

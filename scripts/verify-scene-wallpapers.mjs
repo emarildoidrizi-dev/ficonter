@@ -9,7 +9,6 @@ const required = [
   "components/SettingsWorkspace.tsx",
   "components/SettingsWorkspace.module.css",
   "lib/interfaceThemes.ts",
-  "lib/interfaceLayout.ts",
 ];
 
 for (const file of required) {

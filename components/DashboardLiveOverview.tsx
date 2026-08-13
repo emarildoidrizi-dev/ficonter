@@ -33,7 +33,6 @@ import {
 } from "@/lib/wealth/financialHealth";
 import { FinancialHealthScore } from "@/components/FinancialHealthScore";
 import { FinancialSetupSummary } from "@/components/FinancialSetupSummary";
-import { FinancialGpsSummary } from "@/components/FinancialGpsSummary";
 import { HorizonCommandStrip } from "@/components/HorizonCommandStrip";
 import { HorizonOverviewBoard } from "@/components/HorizonOverviewBoard";
 import { FinancialJourneyRail } from "@/components/FinancialJourneyRail";
@@ -589,7 +588,7 @@ export function DashboardLiveOverview({
       ),
     [setupAcknowledgements, synchronizedGpsInputs],
   );
-  const horizonActivity = useMemo(
+  const overviewActivity = useMemo(
     () => recordedActivity.slice(0, 24).map((transaction) => ({
       amount: displayedTransactionAmount(transaction) ?? 0,
       income: isIncome(transaction),
@@ -629,7 +628,7 @@ export function DashboardLiveOverview({
 
       {initialError ? <div className="alert alert-error">{initialError}</div> : null}
 
-      <div className={styles.horizonOnly}>
+      <div className={styles.redesignSection}>
         <HorizonCommandStrip gps={financialGps} />
         {gpsError ? (
           <div className="alert alert-error">
@@ -638,7 +637,7 @@ export function DashboardLiveOverview({
         ) : null}
       </div>
 
-      <div className={styles.horizonOnly}>
+      <div className={styles.redesignSection}>
         {!financialGps.active || financialGps.setupCompletion < 100 ? (
           <FinancialSetupSummary
             inputs={reconciledHealthInputs}
@@ -651,52 +650,11 @@ export function DashboardLiveOverview({
           savings={displayActuals.totalSavings}
           cashFlow={displayActuals.netCashFlow}
           savingsRate={displaySavingsRate}
-          activity={horizonActivity}
+          activity={overviewActivity}
           gps={financialGps}
           valuesAlreadyInBaseCurrency
         />
         <FinancialJourneyRail gps={financialGps} />
-      </div>
-
-      <div className={styles.classicOnly}>
-        <FinancialSetupSummary
-          inputs={reconciledHealthInputs}
-          acknowledgements={setupAcknowledgements}
-        />
-        <FinancialGpsSummary
-          inputs={reconciledGpsInputs}
-          acknowledgements={setupAcknowledgements}
-          error={gpsError}
-        />
-
-        <section className="kpis">
-          <div className="kpi">
-            <span>Income recorded</span>
-            <strong>{formatCurrency(displayActuals.totalIncome, baseCurrency)}</strong>
-            <small className={styles.kpiNote}>Displayed in your selected base currency</small>
-          </div>
-          <div className="kpi">
-            <span>Expenses recorded</span>
-            <strong>{formatCurrency(displayActuals.totalExpenses, baseCurrency)}</strong>
-            <small className={styles.kpiNote}>Saving transfers are shown separately</small>
-          </div>
-          <div className="kpi">
-            <span>Recorded cash position</span>
-            <strong
-              className={
-                displayActuals.netCashFlow >= 0 ? "amount-positive" : "amount-negative"
-              }
-            >
-              {formatCurrency(displayActuals.netCashFlow, baseCurrency)}
-            </strong>
-            <small className={styles.kpiNote}>Completed income minus completed outflows through today</small>
-          </div>
-          <div className="kpi">
-            <span>Total savings rate</span>
-            <strong>{(metrics.savingsRate * 100).toFixed(1)}%</strong>
-            <small className={styles.kpiNote}>All recorded savings divided by income</small>
-          </div>
-        </section>
       </div>
 
       <FinancialHealthScore result={financialHealth} error={healthError} />

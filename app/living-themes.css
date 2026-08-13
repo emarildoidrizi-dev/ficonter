@@ -291,8 +291,7 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
     overflow: hidden !important;
   }
 
-  .app-main,
-  html[data-layout="horizon"] .app-main {
+  .app-main {
     min-width: 0;
     min-height: 0;
     height: 100vh;
@@ -322,8 +321,7 @@ html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
     overflow: visible !important;
   }
 
-  .app-main,
-  html[data-layout="horizon"] .app-main {
+  .app-main {
     min-height: 100vh;
     min-height: 100dvh;
     height: auto !important;

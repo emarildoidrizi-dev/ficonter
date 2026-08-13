@@ -23,7 +23,6 @@ import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
 type StoredPreferences = {
   appearance?: string;
   density?: string;
-  layout?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
   sidebarAtmosphereMode?: string;
@@ -47,7 +46,6 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   return {
     appearance: get("appearance"),
     density: get("density"),
-    layout: get("layout"),
     backgroundMotion: get("backgroundMotion"),
     wallpaperScene: get("wallpaperScene"),
     sidebarAtmosphereMode: get("sidebarAtmosphereMode"),

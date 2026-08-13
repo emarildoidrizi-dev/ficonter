@@ -68,10 +68,6 @@ import {
   type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
-import {
-  normalizeInterfaceLayout,
-  type InterfaceLayoutPreference,
-} from "@/lib/interfaceLayout";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
 import {
   CURRENCY_CODES,
@@ -122,7 +118,6 @@ type Preferences = {
   plannerStartBalance: string;
   density: "comfortable" | "compact";
   appearance: AppearancePreference;
-  layout: InterfaceLayoutPreference;
   backgroundMotion: BackgroundMotionPreference;
   wallpaperScene: WallpaperScenePreference;
   sidebarAtmosphereMode: SidebarAtmosphereMode;
@@ -222,7 +217,7 @@ const sections = [
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
-  { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
+  { id: "appearance", label: "Appearance", description: "Theme, motion and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
 ] as const;
@@ -235,7 +230,6 @@ const defaultPreferences: Preferences = {
   plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
-  layout: "horizon",
   backgroundMotion: "animated",
   wallpaperScene: "space-nebula",
   sidebarAtmosphereMode: "auto",
@@ -252,20 +246,18 @@ const defaultPreferences: Preferences = {
 };
 
 function readPreferences(metadata: Metadata): Preferences {
-  const stored =
+  const storedWithLegacyLayout =
     metadata.ficonter_preferences &&
     typeof metadata.ficonter_preferences === "object"
-      ? (metadata.ficonter_preferences as Partial<Preferences>)
+      ? (metadata.ficonter_preferences as Partial<Preferences> & { layout?: unknown })
       : {};
+  const { layout: _legacyLayout, ...stored } = storedWithLegacyLayout;
 
   return {
     ...defaultPreferences,
     ...stored,
     appearance: normalizeAppearance(
       typeof stored.appearance === "string" ? stored.appearance : undefined,
-    ),
-    layout: normalizeInterfaceLayout(
-      typeof stored.layout === "string" ? stored.layout : undefined,
     ),
     backgroundMotion: normalizeBackgroundMotion(
       typeof stored.backgroundMotion === "string"
@@ -345,7 +337,6 @@ function applyInterface(preferences: Preferences) {
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
-  root.dataset.layout = preferences.layout;
   root.dataset.backgroundMotion = preferences.backgroundMotion;
   root.dataset.wallpaperScene = preferences.wallpaperScene;
   root.dataset.sidebarAtmosphereMode = preferences.sidebarAtmosphereMode;
@@ -356,7 +347,7 @@ function applyInterface(preferences: Preferences) {
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
     localStorage.setItem("ficonter-density", preferences.density);
-    localStorage.setItem("ficonter-layout", preferences.layout);
+    localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", preferences.wallpaperScene);
     localStorage.setItem(
@@ -1997,39 +1988,6 @@ const showSubscriptionManagement =
                         applyInterface(next);
                       }}
                     />
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Dashboard layout</legend>
-              <p className={styles.themeHelp}>
-                Choose the visual structure of the Overview. Horizon adds a live command strip,
-                Financial GPS board and journey rail. Classic preserves the original dashboard.
-              </p>
-              <div className={styles.layoutGrid}>
-                {([
-                  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
-                  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
-                ] as const).map(([value, label, description]) => (
-                  <label className={styles.layoutCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.layout === value}
-                      onChange={() => {
-                        const next = { ...preferences, layout: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span className={styles.layoutPreview} data-layout={value} aria-hidden="true">
-                      <i />
-                      <b />
-                      <b />
-                      <b />
-                    </span>
                     <strong>{label}</strong>
                     <small>{description}</small>
                   </label>

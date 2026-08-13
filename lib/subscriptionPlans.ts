@@ -589,12 +589,6 @@ export const SUBSCRIPTION_FEATURE_CATALOG = {
     minimumPlan: "personal_pro",
     lifecycle: "released",
   },
-  dashboard_layouts: {
-    label: "Dashboard layouts",
-    category: "Account & customization",
-    minimumPlan: "personal_pro",
-    lifecycle: "released",
-  },
   layout_density: {
     label: "Compact / comfortable layout",
     category: "Account & customization",

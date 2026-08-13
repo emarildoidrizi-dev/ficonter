@@ -5,7 +5,8 @@
 .header,
 .bottomDock,
 .drawer,
-.backdrop {
+.backdrop,
+.accountMenu {
   display: none;
 }
 
@@ -15,7 +16,9 @@
 .backdrop,
 .header *,
 .bottomDock *,
-.drawer * {
+.drawer *,
+.accountMenu,
+.accountMenu * {
   box-sizing: border-box;
 }
 
@@ -118,10 +121,12 @@
   border-radius: 50%;
   color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.07);
+  font: inherit;
   font-size: 12px;
   font-weight: 900;
   line-height: 1;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .workspaceBadge > svg {
@@ -157,6 +162,89 @@
 .signOutButton:focus-visible {
   outline: 2px solid var(--mobile-chrome-focus);
   outline-offset: 2px;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountMenu {
+  position: fixed;
+  z-index: 1925;
+  top: calc(env(safe-area-inset-top) + 58px);
+  right: max(12px, env(safe-area-inset-right));
+  display: grid;
+  width: min(190px, calc(100vw - 24px));
+  gap: 5px;
+  padding: 7px;
+  border: 1px solid rgba(216, 189, 124, 0.2);
+  border-radius: 17px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--mobile-chrome-bg) 97%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  transform: translateY(-7px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity 140ms ease,
+    visibility 140ms ease,
+    transform 140ms ease;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountMenuOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.accountMenuItem {
+  display: grid;
+  width: 100%;
+  min-height: 46px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--mobile-chrome-text);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.accountMenuItem svg {
+  color: var(--mobile-chrome-accent);
+}
+
+.accountMenuItem:active {
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(0.985);
+}
+
+.accountMenuItem:focus-visible {
+  outline: 2px solid var(--mobile-chrome-focus);
+  outline-offset: -2px;
+}
+
+.accountMenuDanger {
+  color: var(--mobile-chrome-danger-text);
+}
+
+.accountMenuDanger svg {
+  color: var(--mobile-chrome-danger-text);
+}
+
+.accountMenuDanger:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 /* Edge-anchored bottom navigation. It is intentionally not a floating pill:

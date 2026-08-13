@@ -30,6 +30,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -473,6 +474,7 @@ export function FiconterNativeAppChrome({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -480,6 +482,8 @@ export function FiconterNativeAppChrome({
     activeBusinessId ?? "",
   );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const previousPathnameRef = useRef(pathname);
@@ -711,12 +715,41 @@ export function FiconterNativeAppChrome({
 
   useEffect(() => {
     setDrawerOpen(false);
+    setAccountMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
   }, [activeBusinessId]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (accountButtonRef.current?.contains(target)) return;
+      if (accountMenuRef.current?.contains(target)) return;
+      setAccountMenuOpen(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAccountMenuOpen(false);
+      window.requestAnimationFrame(() => {
+        accountButtonRef.current?.focus({ preventScroll: true });
+      });
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -774,6 +807,7 @@ export function FiconterNativeAppChrome({
   }, [drawerOpen]);
 
   function openDrawer() {
+    setAccountMenuOpen(false);
     setDrawerOpen(true);
 
     routes.forEach((item, index) => {
@@ -816,6 +850,7 @@ export function FiconterNativeAppChrome({
 
     setSigningOut(true);
     setDrawerOpen(false);
+    setAccountMenuOpen(false);
 
     const root = document.documentElement;
 
@@ -887,16 +922,59 @@ export function FiconterNativeAppChrome({
           <strong>{route.title}</strong>
         </div>
 
-        <Link
-          href="/dashboard/settings"
-          prefetch={true}
+        <button
+          ref={accountButtonRef}
+          type="button"
           className={styles.workspaceBadge}
-          title={`${accountName} — account settings`}
-          aria-label={`Open account settings for ${accountName}`}
-          onClick={() => navigateForward("/dashboard/settings")}
+          title={`${accountName} — account menu`}
+          aria-label={`Open account menu for ${accountName}`}
+          aria-haspopup="menu"
+          aria-expanded={accountMenuOpen}
+          aria-controls="ficonter-account-menu"
+          onClick={() => {
+            setDrawerOpen(false);
+            setAccountMenuOpen((open) => !open);
+          }}
         >
           <span>{accountInitial}</span>
-        </Link>
+        </button>
+
+        <div
+          ref={accountMenuRef}
+          id="ficonter-account-menu"
+          className={`${styles.accountMenu} ${
+            accountMenuOpen ? styles.accountMenuOpen : ""
+          }`}
+          role="menu"
+          aria-label="Account actions"
+          aria-hidden={!accountMenuOpen}
+        >
+          <Link
+            href="/dashboard/settings?section=profile"
+            prefetch={true}
+            className={styles.accountMenuItem}
+            role="menuitem"
+            tabIndex={accountMenuOpen ? 0 : -1}
+            onClick={() => {
+              setAccountMenuOpen(false);
+              navigateForward("/dashboard/settings?section=profile");
+            }}
+          >
+            <UserRound size={19} aria-hidden={true} />
+            <span>Profile</span>
+          </Link>
+          <button
+            type="button"
+            className={`${styles.accountMenuItem} ${styles.accountMenuDanger}`}
+            role="menuitem"
+            tabIndex={accountMenuOpen ? 0 : -1}
+            onClick={() => void signOut()}
+            disabled={signingOut}
+          >
+            <LogOut size={19} aria-hidden={true} />
+            <span>{signingOut ? "Logging out…" : "Log out"}</span>
+          </button>
+        </div>
 
         {workspace === "business" && businessProfiles.length ? (
           <label className={styles.businessProfileBar}>
@@ -1074,24 +1152,6 @@ export function FiconterNativeAppChrome({
             aria-label="Close app navigation"
           >
             <X size={22} aria-hidden={true} />
-          </button>
-        </div>
-
-        <div className={styles.accountPanel}>
-          <span className={styles.accountAvatar} aria-hidden="true">{accountInitial}</span>
-          <span className={styles.accountIdentity}>
-            <strong>{accountName}</strong>
-            <small>{email || (workspace === "business" ? identity : "Signed in")}</small>
-          </span>
-          <button
-            type="button"
-            className={styles.accountSignOut}
-            onClick={() => void signOut()}
-            disabled={signingOut}
-            aria-label="Sign out"
-          >
-            <LogOut size={18} aria-hidden={true} />
-            <span>{signingOut ? "Signing out…" : "Sign out"}</span>
           </button>
         </div>
 

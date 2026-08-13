@@ -30,9 +30,15 @@ import { finiteNumber, roundMoney } from "@/lib/finance/money";
 import { formatCurrency } from "@/lib/financialOptions";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
 import { canonicalAmountInBaseCurrency, reconcileEmergencyFundToBaseCurrency, reconcileNetWorthGrowthToBaseCurrency, reconcileSavingsToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
-import type { NetWorthGrowthInputs } from "@/lib/wealth/netWorthGrowth";
-import type { SavingsIntelligenceInputs } from "@/lib/wealth/savingsIntelligence";
-import type { EmergencyFundInputs } from "@/lib/wealth/emergencyFund";
+import {
+  normalizeNetWorthGrowthInputs,
+} from "@/lib/wealth/netWorthGrowth";
+import {
+  normalizeSavingsIntelligenceInputs,
+} from "@/lib/wealth/savingsIntelligence";
+import {
+  normalizeEmergencyFundInputs,
+} from "@/lib/wealth/emergencyFund";
 import styles from "./FinancialIndependence.module.css";
 
 type PlanningStyle = "safer" | "balanced" | "flexible";
@@ -402,21 +408,21 @@ export function FinancialIndependence({ userId }: { userId: string }) {
     const next: FinancialIndependencePayload = { ...payload };
     if (payload.netWorthGrowth) {
       next.netWorthGrowth = reconcileNetWorthGrowthToBaseCurrency(
-        payload.netWorthGrowth as NetWorthGrowthInputs,
+        normalizeNetWorthGrowthInputs(payload.netWorthGrowth),
         currencySource,
         currencyContext,
       ) as unknown as Record<string, unknown>;
     }
     if (payload.savingsIntelligence) {
       next.savingsIntelligence = reconcileSavingsToBaseCurrency(
-        payload.savingsIntelligence as SavingsIntelligenceInputs,
+        normalizeSavingsIntelligenceInputs(payload.savingsIntelligence),
         currencySource,
         currencyContext,
       ) as unknown as Record<string, unknown>;
     }
     if (payload.emergencyFund) {
       next.emergencyFund = reconcileEmergencyFundToBaseCurrency(
-        payload.emergencyFund as EmergencyFundInputs,
+        normalizeEmergencyFundInputs(payload.emergencyFund),
         currencySource,
         currencyContext,
       ) as unknown as Record<string, unknown>;

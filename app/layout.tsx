@@ -21,8 +21,6 @@ import {
 import {
   APPEARANCE_VALUES,
   BACKGROUND_MOTION_VALUES,
-  DEFAULT_APPEARANCE,
-  DEFAULT_WALLPAPER_SCENE,
   DARK_APPEARANCE_VALUES,
   FIXED_INTERFACE_PROFILE_VERSION,
   SIDEBAR_ATMOSPHERE_MODE_VALUES,
@@ -36,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   minimumScale: 1,
   viewportFit: "cover",
-  themeColor: "#08110e",
+  themeColor: "#dce9e3",
 };
 
 export const metadata: Metadata = {
@@ -50,7 +48,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Ficonter",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   formatDetection: {
     telephone: false,
@@ -94,28 +92,36 @@ const interfacePreferenceScript = `
     var supportedSidebarAtmosphereModes = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MODE_VALUES)};
     var supportedSidebarAtmosphereMotion = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MOTION_VALUES)};
     var profileVersion = localStorage.getItem("ficonter-interface-profile-version");
-    var appearance = localStorage.getItem("ficonter-appearance") || ${JSON.stringify(DEFAULT_APPEARANCE)};
+    var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "animated";
-    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
+    var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
     var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "auto";
     var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
     var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "animated";
 
     if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
-      appearance = ${JSON.stringify(DEFAULT_APPEARANCE)};
-      wallpaperScene = ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
+      appearance = "light";
+      density = "comfortable";
+      backgroundMotion = "animated";
+      wallpaperScene = "coastal-island";
       sidebarAtmosphereMode = "auto";
+      sidebarAtmosphereStyle = "none";
+      sidebarAtmosphereMotion = "animated";
       localStorage.setItem("ficonter-appearance", appearance);
+      localStorage.setItem("ficonter-density", density);
+      localStorage.setItem("ficonter-background-motion", backgroundMotion);
       localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
       localStorage.setItem("ficonter-sidebar-atmosphere-mode", sidebarAtmosphereMode);
+      localStorage.setItem("ficonter-sidebar-atmosphere-style", sidebarAtmosphereStyle);
+      localStorage.setItem("ficonter-sidebar-atmosphere-motion", sidebarAtmosphereMotion);
       localStorage.setItem("ficonter-interface-profile-version", ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)});
     }
 
-    if (supported.indexOf(appearance) === -1) appearance = ${JSON.stringify(DEFAULT_APPEARANCE)};
+    if (supported.indexOf(appearance) === -1) appearance = "light";
     if (density !== "compact") density = "comfortable";
     if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "animated";
-    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = ${JSON.stringify(DEFAULT_WALLPAPER_SCENE)};
+    if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
     if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "auto";
     if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
     if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "animated";

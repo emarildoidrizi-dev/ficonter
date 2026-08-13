@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import {
-  Activity, ArrowLeftRight, ChartPie, ChevronDown, CircleHelp, Compass,
+  Activity, ArrowLeftRight, BriefcaseBusiness, ChartPie, ChevronDown, CircleHelp, Compass,
   CreditCard, FileArchive, Landmark, LayoutDashboard, ListChecks,
   LockKeyhole, LogOut, MessageSquareText, PiggyBank, ReceiptText, Route,
-  Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserRound,
+  Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserRound, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from 
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
 import { Brand } from "./Brand";
 import { ContactSupportModal } from "./ContactSupportModal";
+import { LanguageSelector } from "./LanguageSelector";
 import { NotificationCenter } from "./NotificationCenter";
 import styles from "./SidebarNavigation.module.css";
 
@@ -89,6 +90,10 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   const avatarText = (displayName || accountEmail || "F").trim().slice(0, 1).toUpperCase();
   const accountAreaActive = ["/dashboard/setup", "/dashboard/settings", "/dashboard/help", "/dashboard/inbox"]
     .some((href) => pathname.startsWith(href));
+  const businessLocked = !hasSubscriptionFeature(subscriptionPlanCode, "business_workspace");
+  const businessHref = businessLocked
+    ? getSubscriptionUpgradeHref("business_workspace")
+    : "/business";
 
   useEffect(() => {
     setPendingHref(null);
@@ -174,8 +179,12 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   return (
     <header className={styles.shellHeader} ref={headerRef}>
       <div className={styles.topRow}>
-        <div className={styles.brandArea}><Brand href="/dashboard/overview" /><span className={styles.workspacePill}>Personal</span></div>
+        <div className={styles.brandArea}>
+          <div className={styles.brandCard}><Brand href="/dashboard/overview" /></div>
+          <span className={styles.workspacePill}><WalletCards size={15} />Personal<ChevronDown size={14} /></span>
+        </div>
         <div className={styles.headerActions}>
+          <LanguageSelector />
           <NotificationCenter isAdmin={isAdmin} />
           <div className={styles.accountDock} ref={accountRef}>
             {menuOpen ? (
@@ -195,6 +204,14 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
               <ChevronDown size={16} aria-hidden="true" />
             </button>
           </div>
+          <Link
+            href={businessHref}
+            className={styles.switchBusiness}
+            aria-label={businessLocked ? "Switch to Business — Business Pro required" : "Switch to Business"}
+          >
+            {businessLocked ? <LockKeyhole size={14} /> : <BriefcaseBusiness size={14} />}
+            <span>Switch to Business</span>
+          </Link>
         </div>
       </div>
 
@@ -223,6 +240,9 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
             </details>
           );
         })}
+        <Link href="/dashboard/settings" prefetch={false} className={`${styles.settingsLink}${isRouteActive(pathname, "/dashboard/settings") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/settings") ? "page" : undefined}>
+          <span>Settings</span>
+        </Link>
       </nav>
 
       <div className={`${styles.progress}${pendingHref ? ` ${styles.progressVisible}` : ""}`} aria-hidden="true"><span /></div>

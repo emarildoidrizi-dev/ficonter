@@ -8,7 +8,6 @@ import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
-import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
@@ -141,7 +140,6 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
-        <WorkspaceSwitcher current="personal" subscriptionPlanCode={subscriptionPlanCode} />
         {children}
       </main>
       <PWAMobileDock

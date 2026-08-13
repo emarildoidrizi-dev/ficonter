@@ -2,8 +2,6 @@
 
 import { useLayoutEffect } from "react";
 import {
-  DEFAULT_APPEARANCE,
-  DEFAULT_WALLPAPER_SCENE,
   FIXED_INTERFACE_PROFILE_VERSION,
   normalizeAppearance,
   normalizeBackgroundMotion,
@@ -68,10 +66,6 @@ function applyPreferences(
 
   try {
     localStorage.setItem("ficonter-appearance", appearance);
-    localStorage.setItem(
-      "ficonter-interface-profile-version",
-      FIXED_INTERFACE_PROFILE_VERSION,
-    );
     localStorage.setItem("ficonter-density", density);
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
@@ -87,6 +81,10 @@ function applyPreferences(
     localStorage.setItem(
       "ficonter-sidebar-atmosphere-motion",
       sidebarAtmosphereMotion,
+    );
+    localStorage.setItem(
+      "ficonter-interface-profile-version",
+      FIXED_INTERFACE_PROFILE_VERSION,
     );
   } catch {
     // Strict privacy modes can block storage. The active DOM state still applies.
@@ -111,10 +109,9 @@ export function InterfacePreferencesBootstrap({
       }
     }
 
-    const needsGoldenCalmMigration =
+    const requiresProfileMigration =
       readStorage("ficonter-interface-profile-version") !==
       FIXED_INTERFACE_PROFILE_VERSION;
-
     let currentAppearance = normalizeAppearance(
       readStorage("ficonter-appearance") ?? appearance,
     );
@@ -127,11 +124,6 @@ export function InterfacePreferencesBootstrap({
     let currentWallpaperScene = normalizeWallpaperScene(
       readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
     );
-
-    if (needsGoldenCalmMigration) {
-      currentAppearance = DEFAULT_APPEARANCE;
-      currentWallpaperScene = DEFAULT_WALLPAPER_SCENE;
-    }
     let currentSidebarAtmosphereMode = normalizeSidebarAtmosphereMode(
       readStorage("ficonter-sidebar-atmosphere-mode") ?? sidebarAtmosphereMode,
     );
@@ -142,6 +134,16 @@ export function InterfacePreferencesBootstrap({
       readStorage("ficonter-sidebar-atmosphere-motion") ??
         sidebarAtmosphereMotion,
     );
+
+    if (requiresProfileMigration) {
+      currentAppearance = "light";
+      currentDensity = "comfortable";
+      currentBackgroundMotion = "animated";
+      currentWallpaperScene = "coastal-island";
+      currentSidebarAtmosphereMode = "auto";
+      currentSidebarAtmosphereStyle = "none";
+      currentSidebarAtmosphereMotion = "animated";
+    }
 
     const applyCurrent = () =>
       applyPreferences(

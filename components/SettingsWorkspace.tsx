@@ -50,9 +50,6 @@ import {
 } from "@/lib/accountExport";
 import {
   BACKGROUND_MOTION_OPTIONS,
-  DEFAULT_APPEARANCE,
-  DEFAULT_WALLPAPER_SCENE,
-  FIXED_INTERFACE_PROFILE_VERSION,
   INTERFACE_THEME_OPTIONS,
   SIDEBAR_ATMOSPHERE_OPTIONS,
   WALLPAPER_SCENE_OPTIONS,
@@ -232,9 +229,9 @@ const defaultPreferences: Preferences = {
   weekStart: "monday",
   plannerStartBalance: "manual",
   density: "comfortable",
-  appearance: DEFAULT_APPEARANCE,
+  appearance: "light",
   backgroundMotion: "animated",
-  wallpaperScene: DEFAULT_WALLPAPER_SCENE,
+  wallpaperScene: "coastal-island",
   sidebarAtmosphereMode: "auto",
   sidebarAtmosphereStyle: "none",
   sidebarAtmosphereMotion: "animated",
@@ -256,30 +253,11 @@ function readPreferences(metadata: Metadata): Preferences {
       : {};
   const { layout: _legacyLayout, ...stored } = storedWithLegacyLayout;
 
-  let browserAppearance: string | null = null;
-  let browserWallpaperScene: string | null = null;
-  if (typeof window !== "undefined") {
-    try {
-      if (
-        localStorage.getItem("ficonter-interface-profile-version") ===
-        FIXED_INTERFACE_PROFILE_VERSION
-      ) {
-        browserAppearance = localStorage.getItem("ficonter-appearance");
-        browserWallpaperScene = localStorage.getItem(
-          "ficonter-wallpaper-scene",
-        );
-      }
-    } catch {
-      // Account metadata remains the fallback when storage is unavailable.
-    }
-  }
-
   return {
     ...defaultPreferences,
     ...stored,
     appearance: normalizeAppearance(
-      browserAppearance ??
-        (typeof stored.appearance === "string" ? stored.appearance : undefined),
+      typeof stored.appearance === "string" ? stored.appearance : undefined,
     ),
     backgroundMotion: normalizeBackgroundMotion(
       typeof stored.backgroundMotion === "string"
@@ -287,10 +265,9 @@ function readPreferences(metadata: Metadata): Preferences {
         : undefined,
     ),
     wallpaperScene: normalizeWallpaperScene(
-      browserWallpaperScene ??
-        (typeof stored.wallpaperScene === "string"
-          ? stored.wallpaperScene
-          : undefined),
+      typeof stored.wallpaperScene === "string"
+        ? stored.wallpaperScene
+        : undefined,
     ),
     sidebarAtmosphereMode: normalizeSidebarAtmosphereMode(
       typeof stored.sidebarAtmosphereMode === "string"
@@ -369,10 +346,6 @@ function applyInterface(preferences: Preferences) {
 
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
-    localStorage.setItem(
-      "ficonter-interface-profile-version",
-      FIXED_INTERFACE_PROFILE_VERSION,
-    );
     localStorage.setItem("ficonter-density", preferences.density);
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);

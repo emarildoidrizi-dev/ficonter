@@ -44,15 +44,14 @@ export const SIDEBAR_ATMOSPHERE_MOTION_VALUES = [
   "off",
 ] as const;
 
+// Increment only when the platform intentionally changes its visual baseline.
+export const FIXED_INTERFACE_PROFILE_VERSION = "coastal-horizon-v2";
+
 export type AppearancePreference = (typeof APPEARANCE_VALUES)[number];
 export type BackgroundMotionPreference =
   (typeof BACKGROUND_MOTION_VALUES)[number];
 export type WallpaperScenePreference =
   (typeof WALLPAPER_SCENE_VALUES)[number];
-
-export const FIXED_INTERFACE_PROFILE_VERSION = "golden-calm-v1";
-export const DEFAULT_APPEARANCE: AppearancePreference = "midnight";
-export const DEFAULT_WALLPAPER_SCENE: WallpaperScenePreference = "future-grid";
 export type SidebarAtmosphereStyle =
   (typeof SIDEBAR_ATMOSPHERE_VALUES)[number];
 export type SidebarAtmosphereMode =
@@ -199,7 +198,7 @@ export function normalizeAppearance(
 ): AppearancePreference {
   return APPEARANCE_VALUES.includes(value as AppearancePreference)
     ? (value as AppearancePreference)
-    : DEFAULT_APPEARANCE;
+    : "light";
 }
 
 export function normalizeBackgroundMotion(
@@ -215,7 +214,7 @@ export function normalizeWallpaperScene(
 ): WallpaperScenePreference {
   return WALLPAPER_SCENE_VALUES.includes(value as WallpaperScenePreference)
     ? (value as WallpaperScenePreference)
-    : DEFAULT_WALLPAPER_SCENE;
+    : "coastal-island";
 }
 
 export function resolveAppearance(

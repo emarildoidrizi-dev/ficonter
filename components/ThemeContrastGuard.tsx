@@ -258,6 +258,7 @@ function rgbaToCss(color: Rgba) {
 
 export function ThemeContrastGuard() {
   useEffect(() => {
+    const root = document.documentElement;
     let frame = 0;
     let timer = 0;
     const adjusted = new Set<HTMLElement>();
@@ -274,6 +275,11 @@ export function ThemeContrastGuard() {
       frame = 0;
       timer = 0;
       clearAdjustments();
+
+      // Mobile Phase 2 owns text contrast through deterministic semantic CSS
+      // tokens. Never repaint mobile text after render: doing so caused the
+      // visible dark -> white -> alternate-color flicker during theme changes.
+      if (root.dataset.ficonterNativeApp === "true") return;
 
       const scope = document.querySelector(".app-shell") ?? document.body;
       const elements = Array.from(scope.querySelectorAll<HTMLElement>(TEXT_SELECTOR));
@@ -304,13 +310,14 @@ export function ThemeContrastGuard() {
     }
 
     const rootObserver = new MutationObserver(scheduleAudit);
-    rootObserver.observe(document.documentElement, {
+    rootObserver.observe(root, {
       attributes: true,
       attributeFilter: [
         "data-theme",
         "data-resolved-theme",
         "data-wallpaper-scene",
         "data-background-motion",
+        "data-ficonter-native-app",
       ],
     });
 

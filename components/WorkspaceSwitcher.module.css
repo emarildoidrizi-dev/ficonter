@@ -6,12 +6,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 0 24px;
-  padding: 10px 12px 10px 16px;
+  margin: 0 0 20px;
+  padding: 8px 10px 8px 14px;
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
-  box-shadow: 0 10px 30px rgba(31, 35, 38, 0.04);
+  background: color-mix(in srgb, var(--surface-card) 88%, var(--sage-soft) 12%);
+  box-shadow: 0 10px 30px rgba(31, 66, 63, 0.07);
   backdrop-filter: blur(14px);
 }
 .label {

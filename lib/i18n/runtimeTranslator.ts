@@ -1,6 +1,7 @@
 import type { FiconterLanguage } from "./config";
 import { PHRASE_TRANSLATIONS, translatePhrase } from "./phrases";
 import { FULL_UI_TRANSLATIONS } from "./fullUiCatalog";
+import { LANDING_UI_TRANSLATIONS } from "./landingUiCatalog";
 import { WEALTH_UI_TRANSLATIONS } from "./wealthUiCatalog";
 import { translateWealthTemplate } from "./wealthRuntimeTemplates";
 import { translateGlobalTemplate } from "./globalRuntimeTemplates";
@@ -981,6 +982,7 @@ export function translateRuntimePhrase(
     PHRASE_TRANSLATIONS[source]?.[language] ??
     RUNTIME_TRANSLATIONS[source]?.[language] ??
     FULL_UI_TRANSLATIONS[source]?.[language] ??
+    LANDING_UI_TRANSLATIONS[source]?.[language] ??
     WEALTH_UI_TRANSLATIONS[source]?.[language];
 
   if (exact) {
@@ -999,6 +1001,7 @@ export function translateRuntimePhrase(
       PHRASE_TRANSLATIONS[token]?.[language] ??
       RUNTIME_TRANSLATIONS[token]?.[language] ??
       FULL_UI_TRANSLATIONS[token]?.[language] ??
+      LANDING_UI_TRANSLATIONS[token]?.[language] ??
       WEALTH_UI_TRANSLATIONS[token]?.[language];
     if (direct) return direct;
 
@@ -1007,6 +1010,7 @@ export function translateRuntimePhrase(
       PHRASE_TRANSLATIONS,
       RUNTIME_TRANSLATIONS,
       FULL_UI_TRANSLATIONS,
+      LANDING_UI_TRANSLATIONS,
       WEALTH_UI_TRANSLATIONS,
     ] as const) {
       for (const [key, row] of Object.entries(catalog)) {

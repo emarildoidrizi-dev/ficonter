@@ -51,21 +51,13 @@ import {
 import {
   BACKGROUND_MOTION_OPTIONS,
   INTERFACE_THEME_OPTIONS,
-  SIDEBAR_ATMOSPHERE_OPTIONS,
   WALLPAPER_SCENE_OPTIONS,
   normalizeAppearance,
   normalizeBackgroundMotion,
-  normalizeSidebarAtmosphereMode,
-  normalizeSidebarAtmosphereMotion,
-  normalizeSidebarAtmosphereStyle,
   normalizeWallpaperScene,
   resolveAppearance,
-  resolveSidebarAtmosphereStyle,
   type AppearancePreference,
   type BackgroundMotionPreference,
-  type SidebarAtmosphereMode,
-  type SidebarAtmosphereMotion,
-  type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
@@ -120,9 +112,6 @@ type Preferences = {
   appearance: AppearancePreference;
   backgroundMotion: BackgroundMotionPreference;
   wallpaperScene: WallpaperScenePreference;
-  sidebarAtmosphereMode: SidebarAtmosphereMode;
-  sidebarAtmosphereStyle: SidebarAtmosphereStyle;
-  sidebarAtmosphereMotion: SidebarAtmosphereMotion;
   language: FiconterLanguage;
   notifications: {
     billReminders: boolean;
@@ -232,9 +221,6 @@ const defaultPreferences: Preferences = {
   appearance: "light",
   backgroundMotion: "static",
   wallpaperScene: "coastal-island",
-  sidebarAtmosphereMode: "manual",
-  sidebarAtmosphereStyle: "none",
-  sidebarAtmosphereMotion: "static",
   language: "en",
   notifications: {
     billReminders: true,
@@ -246,12 +232,25 @@ const defaultPreferences: Preferences = {
 };
 
 function readPreferences(metadata: Metadata): Preferences {
-  const storedWithLegacyLayout =
+  const storedWithRetiredPreferences =
     metadata.ficonter_preferences &&
     typeof metadata.ficonter_preferences === "object"
-      ? (metadata.ficonter_preferences as Partial<Preferences> & { layout?: unknown })
+      ? (metadata.ficonter_preferences as Partial<Preferences> & {
+          layout?: unknown;
+        })
       : {};
-  const { layout: _legacyLayout, ...stored } = storedWithLegacyLayout;
+  const { layout: _legacyLayout, ...activePreferences } =
+    storedWithRetiredPreferences;
+  const stored = { ...activePreferences } as Partial<Preferences> &
+    Record<string, unknown>;
+
+  for (const retiredKey of [
+    "sidebarAtmosphereMode",
+    "sidebarAtmosphereStyle",
+    "sidebarAtmosphereMotion",
+  ]) {
+    delete stored[retiredKey];
+  }
 
   return {
     ...defaultPreferences,
@@ -267,21 +266,6 @@ function readPreferences(metadata: Metadata): Preferences {
     wallpaperScene: normalizeWallpaperScene(
       typeof stored.wallpaperScene === "string"
         ? stored.wallpaperScene
-        : undefined,
-    ),
-    sidebarAtmosphereMode: normalizeSidebarAtmosphereMode(
-      typeof stored.sidebarAtmosphereMode === "string"
-        ? stored.sidebarAtmosphereMode
-        : undefined,
-    ),
-    sidebarAtmosphereStyle: normalizeSidebarAtmosphereStyle(
-      typeof stored.sidebarAtmosphereStyle === "string"
-        ? stored.sidebarAtmosphereStyle
-        : undefined,
-    ),
-    sidebarAtmosphereMotion: normalizeSidebarAtmosphereMotion(
-      typeof stored.sidebarAtmosphereMotion === "string"
-        ? stored.sidebarAtmosphereMotion
         : undefined,
     ),
     language: normalizeLanguage(stored.language),
@@ -326,22 +310,15 @@ function applyInterface(preferences: Preferences) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const resolvedTheme = resolveAppearance(preferences.appearance, prefersDark);
-  const resolvedSidebarAtmosphere = resolveSidebarAtmosphereStyle(
-    preferences.appearance,
-    resolvedTheme,
-    preferences.wallpaperScene,
-    preferences.sidebarAtmosphereMode,
-    preferences.sidebarAtmosphereStyle,
-  );
 
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
   root.dataset.backgroundMotion = preferences.backgroundMotion;
   root.dataset.wallpaperScene = preferences.wallpaperScene;
-  root.dataset.sidebarAtmosphereMode = preferences.sidebarAtmosphereMode;
-  root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
-  root.dataset.sidebarAtmosphereMotion = preferences.sidebarAtmosphereMotion;
+  delete root.dataset.sidebarAtmosphereMode;
+  delete root.dataset.sidebarAtmosphereStyle;
+  delete root.dataset.sidebarAtmosphereMotion;
   root.style.colorScheme = resolvedTheme;
 
   try {
@@ -350,18 +327,9 @@ function applyInterface(preferences: Preferences) {
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", preferences.wallpaperScene);
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-mode",
-      preferences.sidebarAtmosphereMode,
-    );
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-style",
-      preferences.sidebarAtmosphereStyle,
-    );
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-motion",
-      preferences.sidebarAtmosphereMotion,
-    );
+    localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-style");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
   } catch {
     // The interface still updates when browser storage is unavailable.
   }
@@ -1867,127 +1835,6 @@ const showSubscriptionManagement =
                     >
                       <i />
                     </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Sidebar atmosphere</legend>
-              <p className={styles.themeHelp}>
-                Use the empty sidebar area for a subtle visual treatment without repeating
-                navigation, cards, commands, or financial information.
-              </p>
-              <div className={styles.segmentedRow}>
-                <div className={styles.segmentedLabelBlock}>
-                  <strong>Wallpaper matching</strong>
-                  <small>
-                    Auto selects the most suitable atmosphere for the active scene wallpaper.
-                    Manual lets the customer choose any style.
-                  </small>
-                </div>
-                <div className={styles.segmented}>
-                  <label>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMode === "auto"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMode: "auto" as const,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span>Auto</span>
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMode === "manual"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMode: "manual" as const,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span>Manual</span>
-                  </label>
-                </div>
-              </div>
-              <div className={styles.sidebarAtmosphereGrid}>
-                {SIDEBAR_ATMOSPHERE_OPTIONS.map(({ value, label, description }) => (
-                  <label
-                    className={`${styles.sidebarAtmosphereCard}${
-                      preferences.sidebarAtmosphereMode === "auto"
-                        ? ` ${styles.sidebarAtmosphereCardDisabled}`
-                        : ""
-                    }`}
-                    key={value}
-                  >
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereStyle === value}
-                      disabled={preferences.sidebarAtmosphereMode === "auto"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereStyle: value,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.sidebarAtmospherePreview}
-                      data-sidebar-atmosphere={value}
-                      aria-hidden="true"
-                    >
-                      <i />
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-              {preferences.sidebarAtmosphereMode === "auto" ? (
-                <div className={styles.autoAtmosphereNote}>
-                  <span>Automatic match active</span>
-                  <strong>The sidebar follows the selected scene wallpaper.</strong>
-                </div>
-              ) : null}
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Sidebar atmosphere motion</legend>
-              <p className={styles.themeHelp}>
-                Animated moves extremely slowly. Static keeps the selected treatment still.
-                Off removes it while preserving the selected style.
-              </p>
-              <div className={styles.sidebarMotionGrid}>
-                {([
-                  ["animated", "Animated", "Slow premium movement with reduced-motion protection."],
-                  ["static", "Static", "Keep the visual visible without movement."],
-                  ["off", "Off", "Hide the sidebar visual completely."],
-                ] as const).map(([value, label, description]) => (
-                  <label className={styles.sidebarMotionCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMotion === value}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMotion: value,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
                     <strong>{label}</strong>
                     <small>{description}</small>
                   </label>

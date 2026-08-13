@@ -23,9 +23,6 @@ import {
   BACKGROUND_MOTION_VALUES,
   DARK_APPEARANCE_VALUES,
   FIXED_INTERFACE_PROFILE_VERSION,
-  SIDEBAR_ATMOSPHERE_MODE_VALUES,
-  SIDEBAR_ATMOSPHERE_MOTION_VALUES,
-  SIDEBAR_ATMOSPHERE_VALUES,
   WALLPAPER_SCENE_VALUES,
 } from "@/lib/interfaceThemes";
 
@@ -88,33 +85,21 @@ const interfacePreferenceScript = `
     var darkThemes = ${JSON.stringify(DARK_APPEARANCE_VALUES)};
     var supportedMotion = ${JSON.stringify(BACKGROUND_MOTION_VALUES)};
     var supportedScenes = ${JSON.stringify(WALLPAPER_SCENE_VALUES)};
-    var supportedSidebarAtmospheres = ${JSON.stringify(SIDEBAR_ATMOSPHERE_VALUES)};
-    var supportedSidebarAtmosphereModes = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MODE_VALUES)};
-    var supportedSidebarAtmosphereMotion = ${JSON.stringify(SIDEBAR_ATMOSPHERE_MOTION_VALUES)};
     var profileVersion = localStorage.getItem("ficonter-interface-profile-version");
     var appearance = localStorage.getItem("ficonter-appearance") || "light";
     var density = localStorage.getItem("ficonter-density") || "comfortable";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "static";
     var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
-    var sidebarAtmosphereMode = localStorage.getItem("ficonter-sidebar-atmosphere-mode") || "manual";
-    var sidebarAtmosphereStyle = localStorage.getItem("ficonter-sidebar-atmosphere-style") || "none";
-    var sidebarAtmosphereMotion = localStorage.getItem("ficonter-sidebar-atmosphere-motion") || "static";
 
     if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
       appearance = "light";
       density = "comfortable";
       backgroundMotion = "static";
       wallpaperScene = "coastal-island";
-      sidebarAtmosphereMode = "manual";
-      sidebarAtmosphereStyle = "none";
-      sidebarAtmosphereMotion = "static";
       localStorage.setItem("ficonter-appearance", appearance);
       localStorage.setItem("ficonter-density", density);
       localStorage.setItem("ficonter-background-motion", backgroundMotion);
       localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
-      localStorage.setItem("ficonter-sidebar-atmosphere-mode", sidebarAtmosphereMode);
-      localStorage.setItem("ficonter-sidebar-atmosphere-style", sidebarAtmosphereStyle);
-      localStorage.setItem("ficonter-sidebar-atmosphere-motion", sidebarAtmosphereMotion);
       localStorage.setItem("ficonter-interface-profile-version", ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)});
     }
 
@@ -122,29 +107,25 @@ const interfacePreferenceScript = `
     if (density !== "compact") density = "comfortable";
     if (supportedMotion.indexOf(backgroundMotion) === -1) backgroundMotion = "static";
     if (supportedScenes.indexOf(wallpaperScene) === -1) wallpaperScene = "coastal-island";
-    if (supportedSidebarAtmosphereModes.indexOf(sidebarAtmosphereMode) === -1) sidebarAtmosphereMode = "manual";
-    if (supportedSidebarAtmospheres.indexOf(sidebarAtmosphereStyle) === -1) sidebarAtmosphereStyle = "none";
-    if (supportedSidebarAtmosphereMotion.indexOf(sidebarAtmosphereMotion) === -1) sidebarAtmosphereMotion = "static";
 
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var resolved = appearance === "system"
       ? (prefersDark ? "dark" : "light")
       : (darkThemes.indexOf(appearance) >= 0 ? "dark" : "light");
 
-    var resolvedSidebarAtmosphere = sidebarAtmosphereStyle;
-
-    if (sidebarAtmosphereMode === "auto") resolvedSidebarAtmosphere = "none";
-
     root.dataset.theme = appearance;
     root.dataset.resolvedTheme = resolved;
     root.dataset.density = density;
     root.dataset.backgroundMotion = backgroundMotion;
     root.dataset.wallpaperScene = wallpaperScene;
-    root.dataset.sidebarAtmosphereMode = sidebarAtmosphereMode;
-    root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
-    root.dataset.sidebarAtmosphereMotion = sidebarAtmosphereMotion;
+    delete root.dataset.sidebarAtmosphereMode;
+    delete root.dataset.sidebarAtmosphereStyle;
+    delete root.dataset.sidebarAtmosphereMotion;
     root.style.colorScheme = resolved;
     localStorage.removeItem("ficonter-layout");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-style");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
   } catch (_) {}
 })();`;
 

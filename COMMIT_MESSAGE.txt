@@ -1,1 +1,1 @@
-chore(platform): consolidate FICONTER release candidate 1
+fix(appearance): remove sidebar atmosphere customization

@@ -19,9 +19,6 @@ type StoredPreferences = {
   density?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
-  sidebarAtmosphereMode?: string;
-  sidebarAtmosphereStyle?: string;
-  sidebarAtmosphereMotion?: string;
   language?: string;
 };
 
@@ -48,18 +45,6 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     wallpaperScene:
       typeof value.wallpaperScene === "string"
         ? value.wallpaperScene
-        : undefined,
-    sidebarAtmosphereMode:
-      typeof value.sidebarAtmosphereMode === "string"
-        ? value.sidebarAtmosphereMode
-        : undefined,
-    sidebarAtmosphereStyle:
-      typeof value.sidebarAtmosphereStyle === "string"
-        ? value.sidebarAtmosphereStyle
-        : undefined,
-    sidebarAtmosphereMotion:
-      typeof value.sidebarAtmosphereMotion === "string"
-        ? value.sidebarAtmosphereMotion
         : undefined,
     language:
       typeof value.language === "string" ? value.language : undefined,

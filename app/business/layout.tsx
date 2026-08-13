@@ -25,9 +25,6 @@ type StoredPreferences = {
   density?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
-  sidebarAtmosphereMode?: string;
-  sidebarAtmosphereStyle?: string;
-  sidebarAtmosphereMotion?: string;
   language?: string;
 };
 
@@ -48,9 +45,6 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     density: get("density"),
     backgroundMotion: get("backgroundMotion"),
     wallpaperScene: get("wallpaperScene"),
-    sidebarAtmosphereMode: get("sidebarAtmosphereMode"),
-    sidebarAtmosphereStyle: get("sidebarAtmosphereStyle"),
-    sidebarAtmosphereMotion: get("sidebarAtmosphereMotion"),
     language: get("language"),
   };
 }

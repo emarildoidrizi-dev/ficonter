@@ -7,7 +7,8 @@ This release consolidates the latest complete FICONTER project and the accepted 
 - Performance and accuracy hardening
 - Shared browser Supabase client typing and Realtime callback corrections
 - Scene wallpapers and scroll-safe fixed background behavior
-- Sidebar atmospheres and appearance persistence
+- Sidebar atmosphere controls, effects and saved preferences removed permanently
+- Streamlined appearance persistence with real photographic wallpapers
 - Fixed desktop sidebar / independently scrolling workspace
 - Monthly Planner Recorded Activity and selectable breakdown views
 - Reliable Bill paid/unpaid behavior

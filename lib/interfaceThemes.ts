@@ -17,23 +17,6 @@ export const WALLPAPER_SCENE_VALUES = [
   "sand-dunes",
 ] as const;
 
-export const SIDEBAR_ATMOSPHERE_VALUES = [
-  "none",
-  "orbital",
-  "lightbeam",
-  "topography",
-  "architectural",
-  "particles",
-] as const;
-
-export const SIDEBAR_ATMOSPHERE_MODE_VALUES = ["auto", "manual"] as const;
-
-export const SIDEBAR_ATMOSPHERE_MOTION_VALUES = [
-  "animated",
-  "static",
-  "off",
-] as const;
-
 // Increment only when the platform intentionally changes its visual baseline.
 export const FIXED_INTERFACE_PROFILE_VERSION = "coastal-photography-v4";
 
@@ -42,12 +25,6 @@ export type BackgroundMotionPreference =
   (typeof BACKGROUND_MOTION_VALUES)[number];
 export type WallpaperScenePreference =
   (typeof WALLPAPER_SCENE_VALUES)[number];
-export type SidebarAtmosphereStyle =
-  (typeof SIDEBAR_ATMOSPHERE_VALUES)[number];
-export type SidebarAtmosphereMode =
-  (typeof SIDEBAR_ATMOSPHERE_MODE_VALUES)[number];
-export type SidebarAtmosphereMotion =
-  (typeof SIDEBAR_ATMOSPHERE_MOTION_VALUES)[number];
 export type ResolvedTheme = "light" | "dark";
 
 export const DARK_APPEARANCE_VALUES: AppearancePreference[] = [
@@ -90,43 +67,6 @@ export const WALLPAPER_SCENE_OPTIONS = [
   },
 ] as const satisfies ReadonlyArray<{
   value: WallpaperScenePreference;
-  label: string;
-  description: string;
-}>;
-
-export const SIDEBAR_ATMOSPHERE_OPTIONS = [
-  {
-    value: "none",
-    label: "None",
-    description: "Keep the sidebar completely clean.",
-  },
-  {
-    value: "orbital",
-    label: "Orbital lines",
-    description: "Soft circular geometry with a quiet premium feel.",
-  },
-  {
-    value: "lightbeam",
-    label: "Light beam",
-    description: "A calm vertical glow with elegant depth.",
-  },
-  {
-    value: "topography",
-    label: "Topography",
-    description: "Contour lines inspired by landscapes and maps.",
-  },
-  {
-    value: "architectural",
-    label: "Architectural",
-    description: "Linear structure with a refined futuristic character.",
-  },
-  {
-    value: "particles",
-    label: "Particles",
-    description: "Faint star-like particles with understated motion.",
-  },
-] as const satisfies ReadonlyArray<{
-  value: SidebarAtmosphereStyle;
   label: string;
   description: string;
 }>;
@@ -178,40 +118,4 @@ export function resolveAppearance(
 ): ResolvedTheme {
   if (appearance === "system") return prefersDark ? "dark" : "light";
   return DARK_APPEARANCE_VALUES.includes(appearance) ? "dark" : "light";
-}
-export function normalizeSidebarAtmosphereStyle(
-  value: string | null | undefined,
-): SidebarAtmosphereStyle {
-  return SIDEBAR_ATMOSPHERE_VALUES.includes(value as SidebarAtmosphereStyle)
-    ? (value as SidebarAtmosphereStyle)
-    : "none";
-}
-
-export function normalizeSidebarAtmosphereMode(
-  value: string | null | undefined,
-): SidebarAtmosphereMode {
-  return SIDEBAR_ATMOSPHERE_MODE_VALUES.includes(value as SidebarAtmosphereMode)
-    ? (value as SidebarAtmosphereMode)
-    : "auto";
-}
-
-export function normalizeSidebarAtmosphereMotion(
-  value: string | null | undefined,
-): SidebarAtmosphereMotion {
-  return SIDEBAR_ATMOSPHERE_MOTION_VALUES.includes(
-    value as SidebarAtmosphereMotion,
-  )
-    ? (value as SidebarAtmosphereMotion)
-    : "static";
-}
-
-export function resolveSidebarAtmosphereStyle(
-  appearance: AppearancePreference,
-  resolvedTheme: ResolvedTheme,
-  wallpaperScene: WallpaperScenePreference,
-  mode: SidebarAtmosphereMode,
-  manualStyle: SidebarAtmosphereStyle,
-): SidebarAtmosphereStyle {
-  if (mode === "manual") return manualStyle;
-  return "none";
 }

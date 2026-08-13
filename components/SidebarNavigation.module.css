@@ -42,16 +42,6 @@
 .progressVisible { opacity:1 }
 .progress span { display:block;width:35%;height:100%;border-radius:99px;background:#4f918f;animation:loading 1.2s ease-in-out infinite }
 @keyframes loading { from { transform:translateX(-100%) } to { transform:translateX(385%) } }
-.shellHeader::before { position:absolute;inset:0;z-index:-1;overflow:hidden;content:"";pointer-events: none;opacity:.13;background-repeat:no-repeat;transition:opacity .2s ease }
-:global(html[data-sidebar-atmosphere-style="orbital"]) .shellHeader::before { background:radial-gradient(circle at 20% 25%,rgba(75,145,143,.38) 0 2px,transparent 3px),radial-gradient(ellipse at 55% -30%,transparent 38%,rgba(183,147,87,.2) 39% 40%,transparent 41%) }
-:global(html[data-sidebar-atmosphere-style="lightbeam"]) .shellHeader::before { background:linear-gradient(108deg,transparent 18%,rgba(75,145,143,.18) 39%,transparent 58%);background-size:180% 100% }
-:global(html[data-sidebar-atmosphere-style="topography"]) .shellHeader::before { background:repeating-radial-gradient(ellipse at 76% 20%,transparent 0 15px,rgba(70,139,116,.2) 16px 17px,transparent 18px 29px) }
-:global(html[data-sidebar-atmosphere-style="architectural"]) .shellHeader::before { background:linear-gradient(90deg,transparent 49%,rgba(74,135,117,.1) 50%,transparent 51%),linear-gradient(0deg,transparent 49%,rgba(74,135,117,.08) 50%,transparent 51%);background-size:54px 54px }
-:global(html[data-sidebar-atmosphere-style="particles"]) .shellHeader::before { background-image:radial-gradient(circle,rgba(74,135,117,.36) 0 1px,transparent 1.5px);background-size:32px 24px }
-:global(html[data-sidebar-atmosphere-motion="animated"][data-sidebar-atmosphere-style="lightbeam"]) .shellHeader::before { animation:atmosphereDrift 10s ease-in-out infinite alternate }
-:global(html[data-sidebar-atmosphere-motion="off"]) .shellHeader::before { animation:none }
-@keyframes atmosphereDrift { to { background-position:100% 0 } }
-@media(prefers-reduced-motion:reduce){.shellHeader::before{animation:none!important}}
 @media(max-width:1100px){.switchBusiness span{display:none}.switchBusiness{width:54px;padding:0;justify-content:center}.accountButton{min-width:145px}.overviewLink,.settingsLink,.navGroup summary{padding-inline:12px}}
 @media (max-width: 900px){.shellHeader{position:sticky;top:0;padding:8px 12px;background:rgba(224,237,231,.88);backdrop-filter:blur(20px)}.topRow{min-height:58px}.navigation{display:none}.brandCard,.workspacePill,.accountButton,.headerActions>:global([class*="LanguageSelector_root"]) button,.headerActions>:global([class*="NotificationCenter_root"]) button{min-height:46px}.brandCard{padding-inline:10px}.brandCard :global(.brand)>span,.workspacePill,.accountIdentity,.switchBusiness{display:none}.headerActions{gap:6px}.accountButton{min-width:0;grid-template-columns:30px 16px;padding-inline:7px}.accountMenu{position:fixed;top:70px;right:12px}}
 @media(max-width:480px){.workspacePill{display:none}.headerActions>:global([class*="LanguageSelector_root"]){display:none}}

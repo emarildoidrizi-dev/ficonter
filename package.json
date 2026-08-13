@@ -33,7 +33,8 @@
     "verify:mobile-ui-phase2": "node scripts/verify-mobile-ui-phase2.mjs",
     "verify:mobile-ui-phase3": "node scripts/verify-mobile-ui-phase3.mjs",
     "verify:mobile-ui-phase4": "node scripts/verify-mobile-ui-phase4.mjs",
-    "verify:mobile-ui-phase5": "node scripts/verify-mobile-ui-phase5.mjs"
+    "verify:mobile-ui-phase5": "node scripts/verify-mobile-ui-phase5.mjs",
+    "verify:mobile-ui-phase6": "node scripts/verify-mobile-ui-phase6.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

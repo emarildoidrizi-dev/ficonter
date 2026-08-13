@@ -152,7 +152,7 @@ html[data-ficonter-native-app="true"] .app-main :where(
 }
 
 /* -------------------------------------------------------------------------- */
-/* DRAWER / NAVIGATION COMFORT                                                 */
+/* SHELL / NAVIGATION COMFORT                                                   */
 /* -------------------------------------------------------------------------- */
 
 html[data-ficonter-native-app="true"][data-ficonter-app-drawer="open"],
@@ -161,53 +161,15 @@ html[data-ficonter-native-app="true"][data-ficonter-app-drawer="open"] body {
   overscroll-behavior: none !important;
 }
 
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_bottomDock"] {
-  min-height: 72px;
-  padding: 7px;
-  transition: opacity 120ms ease, visibility 120ms ease;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_dockItem"] {
-  min-height: 58px;
-  gap: 5px;
-  font-size: 10.5px;
-  font-weight: 760;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_addButton"] {
-  width: 56px;
-  height: 56px;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_routeIdentity"] strong {
-  font-size: 16.5px;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawer"] {
-  width: min(
-    92vw,
-    390px,
-    calc(var(--ficonter-viewport-width, 100vw) - max(8px, env(safe-area-inset-right)))
-  );
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_workspaceSwitch"] {
-  min-height: 52px;
-  font-size: 12.5px;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawerLabel"] {
-  font-size: 9.5px;
+/* Shell V2 owns geometry. This layer only guarantees ergonomic minimums. */
+html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_dockItem"],
+html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_workspaceSwitch"],
+html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_signOutButton"] {
+  min-height: 48px;
 }
 
 html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawerLink"] {
-  min-height: 52px;
-  font-size: 13.5px;
-}
-
-html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawerIcon"] {
-  width: 36px;
-  height: 36px;
+  min-height: 76px;
 }
 
 /* -------------------------------------------------------------------------- */

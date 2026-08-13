@@ -6,6 +6,7 @@ import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLangua
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
+import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
@@ -71,6 +72,9 @@ export default async function DashboardLayout({
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const hasPaidTimeAwareWallpaper =
+    subscriptionPlanCode === "personal_pro" ||
+    subscriptionPlanCode === "business_pro";
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -86,6 +90,9 @@ export default async function DashboardLayout({
     >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...interfacePreferences} />
+      <TimeAwareWallpaperBootstrap
+        enabled={hasPaidTimeAwareWallpaper}
+      />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <BaseCurrencyBootstrap
         workspace="personal"

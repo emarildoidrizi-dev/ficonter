@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isFinancialDataScope, subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
@@ -13,6 +13,12 @@ import { calculateFinancialHealth, type FinancialHealthInputs } from "@/lib/weal
 import type { AiInsightsInputs } from "@/lib/wealth/aiInsights";
 import { calculateFinancialGps } from "@/lib/wealth/financialGps";
 import type { SetupAcknowledgements } from "@/lib/wealth/setupReadiness";
+import {
+  daypartForDate,
+  greetingForDaypart,
+  millisecondsUntilNextDaypart,
+  type Daypart,
+} from "@/lib/daypart";
 
 type Transaction = {
   id: string;
@@ -62,12 +68,6 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function greetingForHour(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -87,6 +87,7 @@ export function DashboardLiveOverview({
   const router = useRouter();
   const refreshTimer = useRef<number | null>(null);
   const supabase = useMemo(() => createClient(), []);
+  const [daypart, setDaypart] = useState<Daypart>(() => daypartForDate());
   const { baseCurrency } = useCurrencyDisplay();
   const { source, context } = useBaseCurrencySourceData(userId);
   const now = new Date();
@@ -101,6 +102,31 @@ export function DashboardLiveOverview({
     [initialBills, initialTransactions],
   );
   const { rateForDate } = useHistoricalReportingRates(historicalDates);
+
+  useEffect(() => {
+    let timer: number | null = null;
+
+    const syncDaypart = () => {
+      setDaypart(daypartForDate());
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(syncDaypart, millisecondsUntilNextDaypart());
+    };
+
+    const handleDaypartUpdate = (event: Event) => {
+      const next = (event as CustomEvent<{ daypart?: Daypart }>).detail?.daypart;
+      setDaypart(next ?? daypartForDate());
+    };
+
+    syncDaypart();
+    window.addEventListener("ficonter:daypart-updated", handleDaypartUpdate);
+    window.addEventListener("focus", syncDaypart);
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("ficonter:daypart-updated", handleDaypartUpdate);
+      window.removeEventListener("focus", syncDaypart);
+    };
+  }, []);
 
   useEffect(() => {
     const scheduleRefresh = () => {
@@ -204,7 +230,7 @@ export function DashboardLiveOverview({
   return (
     <CoastalOverview
       name={name}
-      greeting={greetingForHour(now.getHours())}
+      greeting={greetingForDaypart(daypart)}
       currency={baseCurrency}
       availableNow={actuals.netCashFlow}
       stillToPay={stillToPay}

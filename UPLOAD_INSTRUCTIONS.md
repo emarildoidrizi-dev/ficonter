@@ -11,7 +11,7 @@ This is a **complete repository package** for `redesign/ficonter-v2`.
 5. Delete every obsolete path listed in `FILES_TO_DELETE_AFTER_UPLOAD.txt` if it
    still exists.
 6. In GitHub Desktop, use the summary:
-   `fix(theme): guarantee readable surfaces and correct budget use`
+   `feat(wallpaper): add paid time-aware coastal day cycle`
 7. Click **Commit to redesign/ficonter-v2**, then **Push origin**.
 8. Wait for the Vercel Preview deployment to show **Ready** before testing.
 
@@ -30,6 +30,14 @@ The former Spending rhythm card is now Monthly budget use. It reports a real
 percentage only when a monthly budget exists; otherwise it explains that no
 budget is set and links to Budget setup. It never reports 0% for division by a
 zero budget.
+
+Paid customers now receive synchronized real coastal photographs for morning
+(00:00–11:59), afternoon (12:00–17:59) and evening (18:00–23:59), using the
+customer's local device time. The same schedule is active in Personal and
+Business. Free customers always keep one fixed Coastal Beach photograph.
+
+Appearance Settings shows the active plan behavior instead of conflicting
+manual scene or wallpaper-off controls.
 
 Do not combine this package with an older FICONTER ZIP after deployment; that
 could restore retired code.

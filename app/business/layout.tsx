@@ -8,6 +8,7 @@ import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLangua
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
+import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
@@ -66,6 +67,9 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const hasPaidTimeAwareWallpaper =
+    subscriptionPlanCode === "personal_pro" ||
+    subscriptionPlanCode === "business_pro";
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
     userId: user.id,
@@ -95,6 +99,9 @@ export default async function BusinessLayout({
     >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...preferences} />
+      <TimeAwareWallpaperBootstrap
+        enabled={hasPaidTimeAwareWallpaper}
+      />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <BaseCurrencyBootstrap
         workspace="business"

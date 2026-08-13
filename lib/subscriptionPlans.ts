@@ -583,6 +583,12 @@ export const SUBSCRIPTION_FEATURE_CATALOG = {
     minimumPlan: "personal_pro",
     lifecycle: "released",
   },
+  time_based_wallpapers: {
+    label: "Time-based photographic wallpapers",
+    category: "Account & customization",
+    minimumPlan: "personal_pro",
+    lifecycle: "released",
+  },
   animated_backgrounds: {
     label: "Animated backgrounds",
     category: "Account & customization",

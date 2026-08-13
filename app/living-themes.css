@@ -42,6 +42,51 @@ html[data-wallpaper-scene="sand-dunes"] {
   --living-accent: rgba(210, 137, 63, 0.18);
 }
 
+/* Plan-aware schedule: Free is fixed; paid plans follow the customer's local
+   clock on the exact same boundaries as the dashboard greeting. These rules
+   intentionally come after manual scene preferences so access is authoritative. */
+html[data-wallpaper-schedule="fixed"] {
+  --living-scene: url("/wallpapers/coastal-beach-real.webp");
+  --living-position: center center;
+  --living-accent: rgba(54, 151, 145, 0.17);
+}
+
+html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="morning"] {
+  --living-scene: url("/wallpapers/time-morning.webp");
+  --living-position: center center;
+  --living-accent: rgba(245, 194, 128, 0.17);
+  --living-scene-saturation: 0.9;
+  --living-scene-brightness: 1.04;
+}
+
+html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="afternoon"] {
+  --living-scene: url("/wallpapers/time-afternoon.webp");
+  --living-position: center center;
+  --living-accent: rgba(54, 151, 145, 0.17);
+  --living-scene-saturation: 0.88;
+  --living-scene-brightness: 1.01;
+}
+
+html[data-wallpaper-schedule="automatic"][data-wallpaper-daypart="evening"] {
+  --living-scene: url("/wallpapers/time-evening.webp");
+  --living-position: center center;
+  --living-accent: rgba(212, 137, 84, 0.18);
+  --living-scene-saturation: 0.86;
+  --living-scene-brightness: 0.82;
+}
+
+html[data-resolved-theme="light"][data-wallpaper-schedule="automatic"][data-wallpaper-daypart="evening"] {
+  --living-overlay: rgba(244, 240, 231, 0.66);
+  --living-edge-overlay: rgba(244, 240, 231, 0.48);
+  --living-scene-brightness: 0.9;
+}
+
+html[data-resolved-theme="dark"][data-wallpaper-schedule="automatic"] {
+  --living-overlay: rgba(6, 9, 12, 0.66);
+  --living-edge-overlay: rgba(6, 9, 12, 0.4);
+  --living-scene-brightness: 0.7;
+}
+
 body {
   background: var(--surface-canvas);
 }
@@ -57,7 +102,9 @@ body {
 }
 
 html:not([data-background-motion="off"]) .app-shell,
-html:not([data-background-motion="off"]) .app-main {
+html:not([data-background-motion="off"]) .app-main,
+html[data-wallpaper-schedule] .app-shell,
+html[data-wallpaper-schedule] .app-main {
   background: transparent !important;
 }
 
@@ -104,7 +151,7 @@ html:not([data-background-motion="off"]) .app-main {
   backdrop-filter: none;
 }
 
-html[data-background-motion="off"] .living-theme-backdrop {
+html[data-background-motion="off"]:not([data-wallpaper-schedule]) .living-theme-backdrop {
   display: none;
 }
 
@@ -114,11 +161,11 @@ html[data-background-motion="static"] .living-theme-scene {
 }
 
 /* A slightly stronger veil for bright scenes when the interface itself is dark. */
-html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"],
-html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"],
-html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"],
-html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"],
-html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"] {
+html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"]:not([data-wallpaper-schedule]),
+html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"]:not([data-wallpaper-schedule]),
+html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"]:not([data-wallpaper-schedule]),
+html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"]:not([data-wallpaper-schedule]),
+html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"]:not([data-wallpaper-schedule]) {
   --living-overlay: rgba(6, 9, 12, 0.68);
   --living-edge-overlay: rgba(6, 9, 12, 0.42);
   --living-scene-brightness: 0.68;

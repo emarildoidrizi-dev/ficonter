@@ -1,1 +1,1 @@
-fix(theme): guarantee readable surfaces and correct budget use
+feat(wallpaper): add paid time-aware coastal day cycle

@@ -49,9 +49,7 @@ import {
   type AccountExportTable,
 } from "@/lib/accountExport";
 import {
-  BACKGROUND_MOTION_OPTIONS,
   INTERFACE_THEME_OPTIONS,
-  WALLPAPER_SCENE_OPTIONS,
   normalizeAppearance,
   normalizeBackgroundMotion,
   normalizeWallpaperScene,
@@ -60,6 +58,7 @@ import {
   type BackgroundMotionPreference,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
+import { DAYPART_WALLPAPER_SCHEDULE } from "@/lib/daypart";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
 import {
   CURRENCY_CODES,
@@ -1454,6 +1453,9 @@ const canUseAppearanceThemes = hasSubscriptionFeature(
   settingsPlanCode,
   "appearance_themes",
 );
+const canUseTimeBasedWallpapers =
+  settingsPlanCode === "personal_pro" ||
+  settingsPlanCode === "business_pro";
 const canUsePrivatePdfExport = hasSubscriptionFeature(
   settingsPlanCode,
   "private_pdf_export",
@@ -1778,68 +1780,58 @@ const showSubscriptionManagement =
                 })}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Scene wallpaper</legend>
-              <p className={styles.themeHelp}>
-                Choose a real visual scene for the dashboard background. A theme-safe
-                readability veil protects headings, numbers and controls in every theme.
-              </p>
-              <div className={styles.wallpaperGrid}>
-                {WALLPAPER_SCENE_OPTIONS.map(({ value, label, description }) => (
-                  <label className={styles.wallpaperCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.wallpaperScene === value}
-                      onChange={() => {
-                        const next = { ...preferences, wallpaperScene: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.wallpaperPreview}
-                      data-wallpaper={value}
-                      aria-hidden="true"
-                    >
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Wallpaper motion</legend>
-              <p className={styles.themeHelp}>
-                Static is recommended for fast navigation. It keeps the real photograph
-                still and avoids continuous graphics work. Off hides the photograph.
-              </p>
-              <div className={styles.motionGrid}>
-                {BACKGROUND_MOTION_OPTIONS.map(({ value, label, description }) => (
-                  <label className={styles.motionCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.backgroundMotion === value}
-                      onChange={() => {
-                        const next = { ...preferences, backgroundMotion: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.motionPreview}
-                      data-motion={value}
-                      data-wallpaper={preferences.wallpaperScene}
-                      aria-hidden="true"
-                    >
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
+            <fieldset className={styles.optionGroup}>
+              <legend>Smart time-of-day wallpaper</legend>
+              {canUseTimeBasedWallpapers ? (
+                <>
+                  <p className={styles.themeHelp}>
+                    Your local device time keeps the greeting and real coastal photograph
+                    synchronized automatically. The image changes at 12:00 and 18:00.
+                  </p>
+                  <div className={styles.wallpaperGrid}>
+                    {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
+                      <article className={styles.wallpaperScheduleCard} key={value}>
+                        <span
+                          className={styles.wallpaperPreview}
+                          data-daypart={value}
+                          aria-hidden="true"
+                        >
+                          <i />
+                        </span>
+                        <strong>{label}</strong>
+                        <small>{hours} · {description}</small>
+                      </article>
+                    ))}
+                  </div>
+                  <div className={styles.infoStrip}>
+                    <Palette size={18} />
+                    <div>
+                      <strong>Automatic day cycle is active</strong>
+                      <span>Included with your paid plan and shared by Personal and Business workspaces.</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className={styles.themeHelp}>
+                    Free accounts use one fixed, optimized beach photograph. Automatic
+                    morning, afternoon and evening scenes are included with Personal Pro.
+                  </p>
+                  <div className={styles.wallpaperGrid}>
+                    <article className={styles.wallpaperScheduleCard}>
+                      <span
+                        className={styles.wallpaperPreview}
+                        data-daypart="fixed"
+                        aria-hidden="true"
+                      >
+                        <i />
+                      </span>
+                      <strong>Fixed Coastal Beach</strong>
+                      <small>Free plan · One consistent real beach photograph.</small>
+                    </article>
+                  </div>
+                </>
+              )}
             </fieldset>
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>

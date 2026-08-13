@@ -70,6 +70,18 @@ html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-
   background: linear-gradient(180deg, rgba(8, 25, 29, 0.66), rgba(9, 28, 31, 0.5));
 }
 
+/* The paid day schedule owns the scene after legacy/manual preferences have
+   loaded. Keep the veil tied to the active photograph in both workspaces. */
+html[data-wallpaper-schedule="automatic"] .living-theme-readability {
+  background:
+    linear-gradient(90deg, var(--living-overlay), var(--living-edge-overlay) 38%, var(--living-edge-overlay) 70%, var(--living-overlay)),
+    linear-gradient(180deg, var(--living-edge-overlay), transparent 32%, transparent 68%, var(--living-edge-overlay));
+}
+
+html[data-resolved-theme="dark"][data-wallpaper-schedule="automatic"] .living-theme-readability {
+  background: linear-gradient(180deg, rgba(6, 12, 17, 0.7), rgba(8, 19, 24, 0.54));
+}
+
 @media (min-width: 901px) {
   .app-shell {
     height: 100vh;

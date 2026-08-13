@@ -102,7 +102,7 @@ export function CoastalOverview({
 
       <header className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>{greeting}, {name}</span>
+          <span className={styles.eyebrow} suppressHydrationWarning>{greeting}, {name}</span>
           <h1>Your financial horizon</h1>
           <p>Everything important, calmly in view.</p>
         </div>

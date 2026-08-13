@@ -1,0 +1,331 @@
+/*
+ * FICONTER Scene Wallpapers v1
+ * Eight lightweight SVG scenes with optional slow motion and readability overlays.
+ */
+
+:root {
+  --living-scene: url("/wallpapers/coastal-island.svg");
+  --living-position: center center;
+  --living-overlay: rgba(245, 242, 236, 0.62);
+  --living-edge-overlay: rgba(245, 242, 236, 0.26);
+  --living-accent: rgba(183, 155, 108, 0.2);
+  --living-scene-opacity: 1;
+  --living-scene-saturation: 0.92;
+  --living-scene-brightness: 1.03;
+}
+
+html[data-wallpaper-scene="coastal-island"] {
+  --living-scene: url("/wallpapers/coastal-island.svg");
+  --living-position: center center;
+  --living-accent: rgba(54, 151, 145, 0.17);
+  --living-scene-saturation: 0.9;
+  --living-scene-brightness: 1.02;
+}
+
+html[data-resolved-theme="dark"] {
+  --living-overlay: rgba(7, 10, 13, 0.58);
+  --living-edge-overlay: rgba(7, 10, 13, 0.28);
+  --living-accent: rgba(54, 190, 177, 0.15);
+  --living-scene-saturation: 0.94;
+  --living-scene-brightness: 0.82;
+}
+
+html[data-wallpaper-scene="space-nebula"] {
+  --living-scene: url("/wallpapers/space-nebula.svg");
+  --living-position: center center;
+  --living-accent: rgba(87, 104, 255, 0.19);
+}
+
+html[data-wallpaper-scene="aurora"] {
+  --living-scene: url("/wallpapers/aurora.svg");
+  --living-position: center 42%;
+  --living-accent: rgba(53, 232, 179, 0.18);
+}
+
+html[data-wallpaper-scene="ocean-horizon"] {
+  --living-scene: url("/wallpapers/ocean-horizon.svg");
+  --living-position: center center;
+  --living-accent: rgba(47, 144, 176, 0.18);
+}
+
+html[data-wallpaper-scene="sand-dunes"] {
+  --living-scene: url("/wallpapers/sand-dunes.svg");
+  --living-position: center center;
+  --living-accent: rgba(210, 137, 63, 0.18);
+}
+
+html[data-wallpaper-scene="marble-glow"] {
+  --living-scene: url("/wallpapers/marble-glow.svg");
+  --living-position: center center;
+  --living-accent: rgba(180, 139, 85, 0.16);
+}
+
+html[data-wallpaper-scene="future-grid"] {
+  --living-scene: url("/wallpapers/future-grid.svg");
+  --living-position: center center;
+  --living-accent: rgba(62, 212, 213, 0.18);
+}
+
+html[data-wallpaper-scene="forest-mist"] {
+  --living-scene: url("/wallpapers/forest-mist.svg");
+  --living-position: center center;
+  --living-accent: rgba(72, 136, 106, 0.18);
+}
+
+html[data-wallpaper-scene="minimal-luxe"] {
+  --living-scene: url("/wallpapers/minimal-luxe.svg");
+  --living-position: center center;
+  --living-accent: rgba(183, 155, 108, 0.18);
+}
+
+body {
+  background: var(--surface-canvas);
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-main {
+  position: relative;
+  z-index: 2;
+}
+
+html:not([data-background-motion="off"]) .app-shell,
+html:not([data-background-motion="off"]) .app-main {
+  background: transparent !important;
+}
+
+.sidebar {
+  position: relative;
+  z-index: 4;
+}
+
+.living-theme-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--surface-canvas);
+  contain: paint;
+}
+
+.living-theme-scene,
+.living-theme-depth,
+.living-theme-light,
+.living-theme-grain,
+.living-theme-readability {
+  position: absolute;
+  inset: -4%;
+  display: block;
+}
+
+.living-theme-scene {
+  inset: -3%;
+  background-image: var(--living-scene);
+  background-repeat: no-repeat;
+  background-position: var(--living-position);
+  background-size: cover;
+  opacity: var(--living-scene-opacity);
+  filter:
+    saturate(var(--living-scene-saturation))
+    brightness(var(--living-scene-brightness));
+  transform: scale(1.035);
+  will-change: transform;
+}
+
+.living-theme-depth {
+  inset: -10%;
+  background-image: var(--living-scene);
+  background-repeat: no-repeat;
+  background-position: var(--living-position);
+  background-size: cover;
+  opacity: 0.2;
+  filter: blur(28px) saturate(1.12);
+  transform: scale(1.13);
+  mix-blend-mode: soft-light;
+  will-change: transform, opacity;
+}
+
+.living-theme-light {
+  inset: -22%;
+  background:
+    radial-gradient(circle at 22% 16%, var(--living-accent), transparent 31%),
+    radial-gradient(circle at 82% 78%, var(--living-accent), transparent 34%);
+  opacity: 0.72;
+  filter: blur(25px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.living-theme-grain {
+  inset: 0;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.55) 0 0.6px, transparent 0.8px),
+    radial-gradient(circle at 80% 65%, rgba(0,0,0,.3) 0 0.55px, transparent 0.8px);
+  background-size: 7px 7px, 9px 9px;
+  mix-blend-mode: soft-light;
+}
+
+.living-theme-readability {
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--living-overlay), var(--living-edge-overlay) 38%, var(--living-edge-overlay) 70%, var(--living-overlay)),
+    linear-gradient(180deg, var(--living-edge-overlay), transparent 32%, transparent 68%, var(--living-edge-overlay));
+  backdrop-filter: blur(0.6px);
+}
+
+html[data-background-motion="off"] .living-theme-backdrop {
+  display: none;
+}
+
+html[data-background-motion="animated"] .living-theme-scene {
+  animation: ficonter-scene-drift 54s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-depth {
+  animation: ficonter-depth-drift 67s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="animated"] .living-theme-light {
+  animation: ficonter-light-drift 38s ease-in-out infinite alternate;
+}
+
+html[data-background-motion="static"] .living-theme-scene,
+html[data-background-motion="static"] .living-theme-depth,
+html[data-background-motion="static"] .living-theme-light {
+  animation: none;
+}
+
+@keyframes ficonter-scene-drift {
+  0% { transform: scale(1.035) translate3d(-0.4%, -0.25%, 0); }
+  45% { transform: scale(1.075) translate3d(1.1%, 0.55%, 0); }
+  100% { transform: scale(1.055) translate3d(-0.2%, 1.1%, 0); }
+}
+
+@keyframes ficonter-depth-drift {
+  0% { transform: scale(1.13) translate3d(1.2%, 0, 0); opacity: 0.15; }
+  100% { transform: scale(1.18) translate3d(-1.6%, -1%, 0); opacity: 0.26; }
+}
+
+@keyframes ficonter-light-drift {
+  0% { transform: translate3d(-3%, -2%, 0) rotate(-2deg); opacity: 0.48; }
+  100% { transform: translate3d(4%, 3%, 0) rotate(3deg); opacity: 0.82; }
+}
+
+/* A slightly stronger veil for bright scenes when the interface itself is dark. */
+html[data-resolved-theme="dark"][data-wallpaper-scene="ocean-horizon"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="sand-dunes"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="marble-glow"],
+html[data-resolved-theme="dark"][data-wallpaper-scene="minimal-luxe"] {
+  --living-overlay: rgba(6, 9, 12, 0.68);
+  --living-edge-overlay: rgba(6, 9, 12, 0.42);
+  --living-scene-brightness: 0.68;
+}
+
+/* A stronger light veil keeps headings readable when a dark scene is used with a light theme. */
+html[data-resolved-theme="light"][data-wallpaper-scene="space-nebula"],
+html[data-resolved-theme="light"][data-wallpaper-scene="aurora"],
+html[data-resolved-theme="light"][data-wallpaper-scene="future-grid"] {
+  --living-overlay: rgba(247, 244, 238, 0.72);
+  --living-edge-overlay: rgba(247, 244, 238, 0.52);
+  --living-scene-brightness: 1.08;
+}
+
+@media (max-width: 900px) {
+  .living-theme-depth { display: none; }
+  .living-theme-scene { inset: -1%; transform: scale(1.02); }
+  .living-theme-readability {
+    background: linear-gradient(180deg, var(--living-overlay), var(--living-edge-overlay));
+  }
+  html[data-background-motion="animated"] .living-theme-scene {
+    animation-duration: 76s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .living-theme-scene,
+  .living-theme-depth,
+  .living-theme-light {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .living-theme-readability {
+    background: var(--living-overlay);
+    backdrop-filter: none;
+  }
+}
+
+/* FICONTER scene-wallpaper scroll safety
+   The fixed wallpaper remains outside document flow and never becomes the
+   scroll container. Desktop scrolls only the workspace; mobile uses normal
+   document scrolling. */
+.living-theme-backdrop {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100%;
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: none;
+}
+
+@media (min-width: 901px) {
+  html,
+  body {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden !important;
+  }
+
+  .app-main {
+    min-width: 0;
+    min-height: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-gutter: stable;
+  }
+}
+
+@media (max-width: 900px) {
+  html,
+  body {
+    min-height: 100%;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+  }
+
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-main {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto !important;
+    overflow: visible !important;
+    touch-action: pan-y;
+  }
+}

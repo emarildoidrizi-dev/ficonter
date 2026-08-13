@@ -1,0 +1,116 @@
+/* FICONTER V2 shared coastal shell.
+   The navigation structure is rebuilt in the shell components; this file owns
+   the shared canvas, spacing and warm sea-glass tokens used by every module. */
+
+html[data-resolved-theme="light"] .app-shell {
+  --text-primary: #183b4b;
+  --text-secondary: #60746e;
+  --text-tertiary: #7f8b82;
+  --surface-canvas: #dce9e3;
+  --surface-card: #eee9d9;
+  --surface-raised: #f4efdf;
+  --surface-subtle: #d8e6dc;
+  --surface-hover: #cbded4;
+  --surface-sidebar: #173f45;
+  --sidebar-text: #f8f2df;
+  --sidebar-muted: #cbdad1;
+  --border-subtle: rgba(111, 94, 63, 0.18);
+  --border-strong: rgba(111, 94, 63, 0.3);
+  --control-bg: rgba(244, 239, 223, 0.9);
+  --solid-bg: #236f70;
+  --solid-bg-hover: #185d61;
+  --solid-text: #fffaf0;
+  --focus-ring: rgba(43, 140, 135, 0.22);
+  --gold: #b79357;
+  --gold-soft: #e4d8bd;
+  --sage: #4b8469;
+  --sage-soft: #d1e2d8;
+  --burgundy: #ad6656;
+  --shadow: 0 22px 64px rgba(31, 66, 63, 0.12);
+}
+
+.app-shell {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  color: var(--text-primary);
+}
+
+.app-main {
+  width: min(100%, 1920px);
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.app-main :where(.panel, .card, .kpi) {
+  border-color: var(--border-subtle);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-raised) 92%, transparent),
+    color-mix(in srgb, var(--surface-card) 94%, var(--sage-soft) 6%)
+  );
+  box-shadow: 0 14px 42px rgba(39, 67, 66, 0.075);
+}
+
+.app-main :where(input, select, textarea) {
+  background: color-mix(in srgb, var(--control-bg) 92%, transparent);
+}
+
+html[data-wallpaper-scene="coastal-island"] .living-theme-readability {
+  background:
+    linear-gradient(180deg, rgba(223, 239, 233, 0.3), rgba(224, 232, 211, 0.22) 56%, rgba(222, 204, 172, 0.34)),
+    linear-gradient(90deg, rgba(228, 239, 232, 0.26), transparent 58%, rgba(235, 220, 189, 0.2));
+  backdrop-filter: blur(0.45px);
+}
+
+html[data-resolved-theme="dark"][data-wallpaper-scene="coastal-island"] .living-theme-readability {
+  background: linear-gradient(180deg, rgba(8, 25, 29, 0.66), rgba(9, 28, 31, 0.5));
+}
+
+@media (min-width: 901px) {
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-main {
+    height: auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: clamp(20px, 2.2vw, 34px) clamp(22px, 3vw, 48px) 48px;
+    scrollbar-gutter: stable;
+  }
+
+  .app-main::before {
+    left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .app-main {
+    min-height: 100dvh;
+    padding-top: 16px !important;
+    padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+  }
+
+  [class*="WorkspaceSwitcher_switcher"] {
+    top: 76px !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-main :where(.panel, .card, .kpi) {
+    background: var(--surface-card);
+  }
+}

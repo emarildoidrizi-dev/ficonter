@@ -27,6 +27,12 @@ expect(engine.includes("Financial Independence projections are planning estimate
 expect(component.includes("Planning estimate only") && component.includes("These are planning assumptions, not guarantees"), "UI contains a planning disclaimer");
 expect(component.includes("financial_independence_settings"), "Private assumptions are saved through the RLS table");
 expect(component.includes("get_financial_independence_inputs"), "One aggregate RPC powers refreshes");
+expect(
+  component.includes("normalizeNetWorthGrowthInputs(payload.netWorthGrowth)") &&
+    component.includes("normalizeSavingsIntelligenceInputs(payload.savingsIntelligence)") &&
+    component.includes("normalizeEmergencyFundInputs(payload.emergencyFund)"),
+  "Aggregate FI inputs are normalized before base-currency reconciliation",
+);
 expect(!component.includes('.from("transactions")'), "FI UI does not query transactions directly");
 expect(!component.includes('.from("debts")'), "FI UI does not query debts directly");
 expect(engine.includes("Current pace"), "Current contribution scenario is generated");

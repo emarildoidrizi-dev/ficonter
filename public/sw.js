@@ -1,8 +1,9 @@
-const CACHE_NAME = "ficonter-pwa-static-v1";
+const CACHE_NAME = "ficonter-pwa-static-v3";
 
 const PRECACHE_URLS = [
   "/offline.html",
   "/icon.svg",
+  "/ficonter-mark.svg",
   "/apple-icon.png",
   "/ficonter-app-icon.png",
   "/icons/ficonter-192.png",
@@ -64,6 +65,7 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/wallpapers/") ||
     url.pathname === "/icon.svg" ||
+    url.pathname === "/ficonter-mark.svg" ||
     url.pathname === "/apple-icon.png" ||
     url.pathname === "/ficonter-app-icon.png";
 

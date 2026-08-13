@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
-import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { PWAMobileDock } from "@/components/PWAMobileDock";
-import { MobileNavigationController } from "@/components/MobileNavigationController";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
+import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
@@ -20,16 +19,13 @@ import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "
 import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
 import { getSubscriptionUpgradeHref } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import "../business-interface.css";
 
 type StoredPreferences = {
   appearance?: string;
   density?: string;
-  layout?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
-  sidebarAtmosphereMode?: string;
-  sidebarAtmosphereStyle?: string;
-  sidebarAtmosphereMotion?: string;
   language?: string;
 };
 
@@ -48,12 +44,8 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   return {
     appearance: get("appearance"),
     density: get("density"),
-    layout: get("layout"),
     backgroundMotion: get("backgroundMotion"),
     wallpaperScene: get("wallpaperScene"),
-    sidebarAtmosphereMode: get("sidebarAtmosphereMode"),
-    sidebarAtmosphereStyle: get("sidebarAtmosphereStyle"),
-    sidebarAtmosphereMotion: get("sidebarAtmosphereMotion"),
     language: get("language"),
   };
 }
@@ -75,6 +67,9 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const hasPaidTimeAwareWallpaper =
+    subscriptionPlanCode === "personal_pro" ||
+    subscriptionPlanCode === "business_pro";
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
     userId: user.id,
@@ -104,6 +99,9 @@ export default async function BusinessLayout({
     >
     <div className="app-shell">
       <InterfacePreferencesBootstrap {...preferences} />
+      <TimeAwareWallpaperBootstrap
+        enabled={hasPaidTimeAwareWallpaper}
+      />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <BaseCurrencyBootstrap
         workspace="business"
@@ -128,7 +126,6 @@ export default async function BusinessLayout({
         )}
         businessName={business?.name ?? "Business workspace"}
       />
-            <MobileNavigationController workspace="business" />
       <BusinessSidebar
         businesses={businesses}
         business={business}
@@ -147,11 +144,16 @@ export default async function BusinessLayout({
           email: user.email ?? "",
         }}
       />
-      <main className="app-main">
-        <WorkspaceSwitcher current="business" subscriptionPlanCode={subscriptionPlanCode} />
-        {children}
-      </main>
-          <PWAMobileDock workspace="business" />
+      <main className="app-main business-interface">{children}</main>
+      <PWAMobileDock
+        workspace="business"
+        subscriptionPlanCode={subscriptionPlanCode}
+        canManage={
+          membership?.role === "owner" ||
+          membership?.role === "admin"
+        }
+        isPlatformAdmin={Boolean(admin)}
+      />
       </div>
     </CurrencyDisplayProvider>
   );

@@ -49,29 +49,16 @@ import {
   type AccountExportTable,
 } from "@/lib/accountExport";
 import {
-  BACKGROUND_MOTION_OPTIONS,
   INTERFACE_THEME_OPTIONS,
-  SIDEBAR_ATMOSPHERE_OPTIONS,
-  WALLPAPER_SCENE_OPTIONS,
   normalizeAppearance,
   normalizeBackgroundMotion,
-  normalizeSidebarAtmosphereMode,
-  normalizeSidebarAtmosphereMotion,
-  normalizeSidebarAtmosphereStyle,
   normalizeWallpaperScene,
   resolveAppearance,
-  resolveSidebarAtmosphereStyle,
   type AppearancePreference,
   type BackgroundMotionPreference,
-  type SidebarAtmosphereMode,
-  type SidebarAtmosphereMotion,
-  type SidebarAtmosphereStyle,
   type WallpaperScenePreference,
 } from "@/lib/interfaceThemes";
-import {
-  normalizeInterfaceLayout,
-  type InterfaceLayoutPreference,
-} from "@/lib/interfaceLayout";
+import { DAYPART_WALLPAPER_SCHEDULE } from "@/lib/daypart";
 import { normalizeLanguage, type FiconterLanguage } from "@/lib/i18n/config";
 import {
   CURRENCY_CODES,
@@ -122,12 +109,8 @@ type Preferences = {
   plannerStartBalance: string;
   density: "comfortable" | "compact";
   appearance: AppearancePreference;
-  layout: InterfaceLayoutPreference;
   backgroundMotion: BackgroundMotionPreference;
   wallpaperScene: WallpaperScenePreference;
-  sidebarAtmosphereMode: SidebarAtmosphereMode;
-  sidebarAtmosphereStyle: SidebarAtmosphereStyle;
-  sidebarAtmosphereMotion: SidebarAtmosphereMotion;
   language: FiconterLanguage;
   notifications: {
     billReminders: boolean;
@@ -222,7 +205,7 @@ const sections = [
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
-  { id: "appearance", label: "Appearance", description: "Theme, layout and density", icon: Palette },
+  { id: "appearance", label: "Appearance", description: "Theme, motion and density", icon: Palette },
   { id: "privacy", label: "Data & privacy", description: "Exports and account controls", icon: Database },
   { id: "subscription", label: "Subscription", description: "Plan and billing", icon: CreditCard },
 ] as const;
@@ -235,12 +218,8 @@ const defaultPreferences: Preferences = {
   plannerStartBalance: "manual",
   density: "comfortable",
   appearance: "light",
-  layout: "horizon",
-  backgroundMotion: "animated",
-  wallpaperScene: "space-nebula",
-  sidebarAtmosphereMode: "auto",
-  sidebarAtmosphereStyle: "none",
-  sidebarAtmosphereMotion: "animated",
+  backgroundMotion: "static",
+  wallpaperScene: "coastal-island",
   language: "en",
   notifications: {
     billReminders: true,
@@ -252,20 +231,31 @@ const defaultPreferences: Preferences = {
 };
 
 function readPreferences(metadata: Metadata): Preferences {
-  const stored =
+  const storedWithRetiredPreferences =
     metadata.ficonter_preferences &&
     typeof metadata.ficonter_preferences === "object"
-      ? (metadata.ficonter_preferences as Partial<Preferences>)
+      ? (metadata.ficonter_preferences as Partial<Preferences> & {
+          layout?: unknown;
+        })
       : {};
+  const { layout: _legacyLayout, ...activePreferences } =
+    storedWithRetiredPreferences;
+  const stored = { ...activePreferences } as Partial<Preferences> &
+    Record<string, unknown>;
+
+  for (const retiredKey of [
+    "sidebarAtmosphereMode",
+    "sidebarAtmosphereStyle",
+    "sidebarAtmosphereMotion",
+  ]) {
+    delete stored[retiredKey];
+  }
 
   return {
     ...defaultPreferences,
     ...stored,
     appearance: normalizeAppearance(
       typeof stored.appearance === "string" ? stored.appearance : undefined,
-    ),
-    layout: normalizeInterfaceLayout(
-      typeof stored.layout === "string" ? stored.layout : undefined,
     ),
     backgroundMotion: normalizeBackgroundMotion(
       typeof stored.backgroundMotion === "string"
@@ -275,21 +265,6 @@ function readPreferences(metadata: Metadata): Preferences {
     wallpaperScene: normalizeWallpaperScene(
       typeof stored.wallpaperScene === "string"
         ? stored.wallpaperScene
-        : undefined,
-    ),
-    sidebarAtmosphereMode: normalizeSidebarAtmosphereMode(
-      typeof stored.sidebarAtmosphereMode === "string"
-        ? stored.sidebarAtmosphereMode
-        : undefined,
-    ),
-    sidebarAtmosphereStyle: normalizeSidebarAtmosphereStyle(
-      typeof stored.sidebarAtmosphereStyle === "string"
-        ? stored.sidebarAtmosphereStyle
-        : undefined,
-    ),
-    sidebarAtmosphereMotion: normalizeSidebarAtmosphereMotion(
-      typeof stored.sidebarAtmosphereMotion === "string"
-        ? stored.sidebarAtmosphereMotion
         : undefined,
     ),
     language: normalizeLanguage(stored.language),
@@ -334,43 +309,26 @@ function applyInterface(preferences: Preferences) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const resolvedTheme = resolveAppearance(preferences.appearance, prefersDark);
-  const resolvedSidebarAtmosphere = resolveSidebarAtmosphereStyle(
-    preferences.appearance,
-    resolvedTheme,
-    preferences.wallpaperScene,
-    preferences.sidebarAtmosphereMode,
-    preferences.sidebarAtmosphereStyle,
-  );
 
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
-  root.dataset.layout = preferences.layout;
   root.dataset.backgroundMotion = preferences.backgroundMotion;
   root.dataset.wallpaperScene = preferences.wallpaperScene;
-  root.dataset.sidebarAtmosphereMode = preferences.sidebarAtmosphereMode;
-  root.dataset.sidebarAtmosphereStyle = resolvedSidebarAtmosphere;
-  root.dataset.sidebarAtmosphereMotion = preferences.sidebarAtmosphereMotion;
+  delete root.dataset.sidebarAtmosphereMode;
+  delete root.dataset.sidebarAtmosphereStyle;
+  delete root.dataset.sidebarAtmosphereMotion;
   root.style.colorScheme = resolvedTheme;
 
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
     localStorage.setItem("ficonter-density", preferences.density);
-    localStorage.setItem("ficonter-layout", preferences.layout);
+    localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", preferences.wallpaperScene);
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-mode",
-      preferences.sidebarAtmosphereMode,
-    );
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-style",
-      preferences.sidebarAtmosphereStyle,
-    );
-    localStorage.setItem(
-      "ficonter-sidebar-atmosphere-motion",
-      preferences.sidebarAtmosphereMotion,
-    );
+    localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-style");
+    localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
   } catch {
     // The interface still updates when browser storage is unavailable.
   }
@@ -1495,6 +1453,9 @@ const canUseAppearanceThemes = hasSubscriptionFeature(
   settingsPlanCode,
   "appearance_themes",
 );
+const canUseTimeBasedWallpapers =
+  settingsPlanCode === "personal_pro" ||
+  settingsPlanCode === "business_pro";
 const canUsePrivatePdfExport = hasSubscriptionFeature(
   settingsPlanCode,
   "private_pdf_export",
@@ -1819,222 +1780,58 @@ const showSubscriptionManagement =
                 })}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Scene wallpaper</legend>
-              <p className={styles.themeHelp}>
-                Choose a real visual scene for the dashboard background. A theme-safe
-                readability veil protects headings, numbers and controls in every theme.
-              </p>
-              <div className={styles.wallpaperGrid}>
-                {WALLPAPER_SCENE_OPTIONS.map(({ value, label, description }) => (
-                  <label className={styles.wallpaperCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.wallpaperScene === value}
-                      onChange={() => {
-                        const next = { ...preferences, wallpaperScene: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.wallpaperPreview}
-                      data-wallpaper={value}
-                      aria-hidden="true"
-                    >
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Wallpaper motion</legend>
-              <p className={styles.themeHelp}>
-                Animated uses a very slow cinematic drift. Static keeps the selected
-                scene still. Off restores the standard solid theme background.
-              </p>
-              <div className={styles.motionGrid}>
-                {BACKGROUND_MOTION_OPTIONS.map(({ value, label, description }) => (
-                  <label className={styles.motionCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.backgroundMotion === value}
-                      onChange={() => {
-                        const next = { ...preferences, backgroundMotion: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.motionPreview}
-                      data-motion={value}
-                      data-wallpaper={preferences.wallpaperScene}
-                      aria-hidden="true"
-                    >
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Sidebar atmosphere</legend>
-              <p className={styles.themeHelp}>
-                Use the empty sidebar area for a subtle visual treatment without repeating
-                navigation, cards, commands, or financial information.
-              </p>
-              <div className={styles.segmentedRow}>
-                <div className={styles.segmentedLabelBlock}>
-                  <strong>Wallpaper matching</strong>
-                  <small>
-                    Auto selects the most suitable atmosphere for the active scene wallpaper.
-                    Manual lets the customer choose any style.
-                  </small>
-                </div>
-                <div className={styles.segmented}>
-                  <label>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMode === "auto"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMode: "auto" as const,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span>Auto</span>
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMode === "manual"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMode: "manual" as const,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span>Manual</span>
-                  </label>
-                </div>
-              </div>
-              <div className={styles.sidebarAtmosphereGrid}>
-                {SIDEBAR_ATMOSPHERE_OPTIONS.map(({ value, label, description }) => (
-                  <label
-                    className={`${styles.sidebarAtmosphereCard}${
-                      preferences.sidebarAtmosphereMode === "auto"
-                        ? ` ${styles.sidebarAtmosphereCardDisabled}`
-                        : ""
-                    }`}
-                    key={value}
-                  >
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereStyle === value}
-                      disabled={preferences.sidebarAtmosphereMode === "auto"}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereStyle: value,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span
-                      className={styles.sidebarAtmospherePreview}
-                      data-sidebar-atmosphere={value}
-                      aria-hidden="true"
-                    >
-                      <i />
-                      <i />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-              {preferences.sidebarAtmosphereMode === "auto" ? (
-                <div className={styles.autoAtmosphereNote}>
-                  <span>Automatic match active</span>
-                  <strong>The sidebar follows the selected scene wallpaper.</strong>
-                </div>
-              ) : null}
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Sidebar atmosphere motion</legend>
-              <p className={styles.themeHelp}>
-                Animated moves extremely slowly. Static keeps the selected treatment still.
-                Off removes it while preserving the selected style.
-              </p>
-              <div className={styles.sidebarMotionGrid}>
-                {([
-                  ["animated", "Animated", "Slow premium movement with reduced-motion protection."],
-                  ["static", "Static", "Keep the visual visible without movement."],
-                  ["off", "Off", "Hide the sidebar visual completely."],
-                ] as const).map(([value, label, description]) => (
-                  <label className={styles.sidebarMotionCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.sidebarAtmosphereMotion === value}
-                      onChange={() => {
-                        const next = {
-                          ...preferences,
-                          sidebarAtmosphereMotion: value,
-                        };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.optionGroup} disabled={!canUseAppearanceThemes}>
-              <legend>Dashboard layout</legend>
-              <p className={styles.themeHelp}>
-                Choose the visual structure of the Overview. Horizon adds a live command strip,
-                Financial GPS board and journey rail. Classic preserves the original dashboard.
-              </p>
-              <div className={styles.layoutGrid}>
-                {([
-                  ["horizon", "Horizon", "Adaptive financial command centre with layered depth and live guidance."],
-                  ["classic", "Classic", "The original familiar FICONTER overview with standard cards."],
-                ] as const).map(([value, label, description]) => (
-                  <label className={styles.layoutCard} key={value}>
-                    <input
-                      type="radio"
-                      checked={preferences.layout === value}
-                      onChange={() => {
-                        const next = { ...preferences, layout: value };
-                        setPreferences(next);
-                        applyInterface(next);
-                      }}
-                    />
-                    <span className={styles.layoutPreview} data-layout={value} aria-hidden="true">
-                      <i />
-                      <b />
-                      <b />
-                      <b />
-                    </span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
-                  </label>
-                ))}
-              </div>
+            <fieldset className={styles.optionGroup}>
+              <legend>Smart time-of-day wallpaper</legend>
+              {canUseTimeBasedWallpapers ? (
+                <>
+                  <p className={styles.themeHelp}>
+                    Your local device time keeps the greeting and real coastal photograph
+                    synchronized automatically. The image changes at 12:00 and 18:00.
+                  </p>
+                  <div className={styles.wallpaperGrid}>
+                    {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
+                      <article className={styles.wallpaperScheduleCard} key={value}>
+                        <span
+                          className={styles.wallpaperPreview}
+                          data-daypart={value}
+                          aria-hidden="true"
+                        >
+                          <i />
+                        </span>
+                        <strong>{label}</strong>
+                        <small>{hours} · {description}</small>
+                      </article>
+                    ))}
+                  </div>
+                  <div className={styles.infoStrip}>
+                    <Palette size={18} />
+                    <div>
+                      <strong>Automatic day cycle is active</strong>
+                      <span>Included with your paid plan and shared by Personal and Business workspaces.</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className={styles.themeHelp}>
+                    Free accounts use one fixed, optimized beach photograph. Automatic
+                    morning, afternoon and evening scenes are included with Personal Pro.
+                  </p>
+                  <div className={styles.wallpaperGrid}>
+                    <article className={styles.wallpaperScheduleCard}>
+                      <span
+                        className={styles.wallpaperPreview}
+                        data-daypart="fixed"
+                        aria-hidden="true"
+                      >
+                        <i />
+                      </span>
+                      <strong>Fixed Coastal Beach</strong>
+                      <small>Free plan · One consistent real beach photograph.</small>
+                    </article>
+                  </div>
+                </>
+              )}
             </fieldset>
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>

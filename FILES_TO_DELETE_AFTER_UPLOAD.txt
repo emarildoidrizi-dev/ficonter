@@ -14,6 +14,8 @@ UPLOAD_INSTRUCTIONS_PLATFORM_HEALTH.txt
 SQL_ERROR_FIX_README.txt
 scripts/verify-living-themes.mjs
 scripts/verify-living-themes-v2.mjs
+scripts/verify-sidebar-atmospheres.mjs
 lib/lumeraRealtime.ts
+upload-to-repository/
 
 The active implementations live under components/, app/, and lib/ficonterRealtime.ts.

@@ -1,0 +1,55 @@
+.shellHeader { position:relative;z-index:110;width:100%;padding:12px clamp(18px,2.5vw,38px) 0;color:#223d4c;background:transparent;overscroll-behavior:contain }
+.topRow { min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:18px }
+.brandArea,.headerActions { display:flex;align-items:center;gap:10px;min-width:0 }
+.brandCard,.workspacePill,.switchBusiness { min-height:54px;display:inline-flex;align-items:center;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);backdrop-filter:blur(16px) }
+.brandCard { padding:5px 17px }
+.brandCard :global(.brand) { gap:11px }
+.brandCard :global(.brand)>span { color:#223d4c;font-family:inherit;font-size:19px;font-weight:900;letter-spacing:.02em;text-transform:uppercase }
+.brandCard :global(.brand) img { width:42px;height:42px;border-radius:12px }
+.workspacePill { gap:7px;padding:0 18px;color:#274352;font-size:14px;font-weight:650 }
+.headerActions>:global([class*="LanguageSelector_root"]) button { min-height:54px;padding-inline:18px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;font-size:14px;backdrop-filter:blur(16px) }
+.headerActions>:global([class*="NotificationCenter_root"]) { grid-template-columns:1fr }
+.headerActions>:global([class*="NotificationCenter_root"])>button:first-child { display:none }
+.headerActions>:global([class*="NotificationCenter_root"]) button { min-width:54px;min-height:54px;border-color:rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352 }
+.navigation { min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid rgba(112,100,69,.14);border-radius:17px;background:rgba(246,243,225,.87);box-shadow:0 14px 34px rgba(42,75,67,.08);backdrop-filter:blur(16px) }
+.overviewLink,.settingsLink,.navGroup summary { min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;color:#263f4d;font-size:13px;font-weight:800;cursor:pointer;list-style:none;transition:.16s ease }
+.navGroup summary::-webkit-details-marker { display:none }
+.overviewLink:hover,.settingsLink:hover,.navGroup summary:hover,.navGroup[open] summary,.activeLink,.groupActive { color:#315f63;border-color:rgba(76,128,109,.08);background:rgba(184,211,198,.58) }
+.navGroup { position:relative }
+.navGroup[open] summary svg { transform:rotate(180deg) }
+.groupMenu { position:absolute;top:calc(100% + 9px);left:50%;width:max-content;min-width:230px;max-width:290px;transform:translateX(-50%);padding:8px;border:1px solid rgba(112,100,69,.2);border-radius:16px;background:rgba(246,239,220,.98);color:#173b47;box-shadow:0 24px 65px rgba(17,50,54,.24);backdrop-filter:blur(18px) }
+.groupMenu a { display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:39px;padding:0 10px;border-radius:10px;color:#526861;font-size:12px;font-weight:750 }
+.groupMenu a:hover,.groupMenu .activeMenuLink { color:#173b47;background:rgba(75,132,105,.14) }
+.accountDock { position:relative;min-width:0 }
+.accountButton { min-width:170px;min-height:54px;display:grid;grid-template-columns:30px minmax(0,1fr) 16px;align-items:center;gap:8px;padding:4px 12px 4px 7px;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.84);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352;text-align:left }
+.accountButton:hover,.accountButtonActive { background:#f6f2df }
+.avatar { width:30px;height:30px;display:grid;place-items:center;overflow:hidden;border-radius:10px;background:#d9e5dd;color:#24434c;font-weight:900 }
+.avatar img { width:100%;height:100%;object-fit:cover }
+.accountIdentity { min-width:0;display:grid }
+.accountIdentity strong,.accountIdentity small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+.accountIdentity strong { max-width:130px;font-size:13px }
+.accountIdentity small { display:none }
+.switchBusiness { gap:8px;padding:0 17px;color:#274352;font-size:13px;font-weight:750 }
+.switchBusiness:hover { background:#f6f2df }
+.accountMenu { position:absolute;z-index:120;top:calc(100% + 10px);right:0;width:232px;padding:8px;border:1px solid rgba(112,100,69,.2);border-radius:16px;background:rgba(246,239,220,.99);color:#183b4b;box-shadow:0 24px 65px rgba(17,50,54,.25) }
+.accountMenu button { width:100%;min-height:40px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#526861;text-align:left;font-size:12px;font-weight:750 }
+.accountMenu button:hover { color:#183b4b;background:rgba(75,132,105,.13) }
+.accountMenuDivider { height:1px;margin:6px;background:rgba(112,100,69,.15) }
+.accountMenu .signOutItem { color:#a85d50 }
+.progress { position:absolute;right:0;bottom:-2px;left:0;height:2px;overflow:hidden;opacity:0 }
+.progressVisible { opacity:1 }
+.progress span { display:block;width:35%;height:100%;border-radius:99px;background:#4f918f;animation:loading 1.2s ease-in-out infinite }
+@keyframes loading { from { transform:translateX(-100%) } to { transform:translateX(385%) } }
+.shellHeader::before { position:absolute;inset:0;z-index:-1;overflow:hidden;content:"";pointer-events: none;opacity:.13;background-repeat:no-repeat;transition:opacity .2s ease }
+:global(html[data-sidebar-atmosphere-style="orbital"]) .shellHeader::before { background:radial-gradient(circle at 20% 25%,rgba(75,145,143,.38) 0 2px,transparent 3px),radial-gradient(ellipse at 55% -30%,transparent 38%,rgba(183,147,87,.2) 39% 40%,transparent 41%) }
+:global(html[data-sidebar-atmosphere-style="lightbeam"]) .shellHeader::before { background:linear-gradient(108deg,transparent 18%,rgba(75,145,143,.18) 39%,transparent 58%);background-size:180% 100% }
+:global(html[data-sidebar-atmosphere-style="topography"]) .shellHeader::before { background:repeating-radial-gradient(ellipse at 76% 20%,transparent 0 15px,rgba(70,139,116,.2) 16px 17px,transparent 18px 29px) }
+:global(html[data-sidebar-atmosphere-style="architectural"]) .shellHeader::before { background:linear-gradient(90deg,transparent 49%,rgba(74,135,117,.1) 50%,transparent 51%),linear-gradient(0deg,transparent 49%,rgba(74,135,117,.08) 50%,transparent 51%);background-size:54px 54px }
+:global(html[data-sidebar-atmosphere-style="particles"]) .shellHeader::before { background-image:radial-gradient(circle,rgba(74,135,117,.36) 0 1px,transparent 1.5px);background-size:32px 24px }
+:global(html[data-sidebar-atmosphere-motion="animated"][data-sidebar-atmosphere-style="lightbeam"]) .shellHeader::before { animation:atmosphereDrift 10s ease-in-out infinite alternate }
+:global(html[data-sidebar-atmosphere-motion="off"]) .shellHeader::before { animation:none }
+@keyframes atmosphereDrift { to { background-position:100% 0 } }
+@media(prefers-reduced-motion:reduce){.shellHeader::before{animation:none!important}}
+@media(max-width:1100px){.switchBusiness span{display:none}.switchBusiness{width:54px;padding:0;justify-content:center}.accountButton{min-width:145px}.overviewLink,.settingsLink,.navGroup summary{padding-inline:12px}}
+@media (max-width: 900px){.shellHeader{position:sticky;top:0;padding:8px 12px;background:rgba(224,237,231,.88);backdrop-filter:blur(20px)}.topRow{min-height:58px}.navigation{display:none}.brandCard,.workspacePill,.accountButton,.headerActions>:global([class*="LanguageSelector_root"]) button,.headerActions>:global([class*="NotificationCenter_root"]) button{min-height:46px}.brandCard{padding-inline:10px}.brandCard :global(.brand)>span,.workspacePill,.accountIdentity,.switchBusiness{display:none}.headerActions{gap:6px}.accountButton{min-width:0;grid-template-columns:30px 16px;padding-inline:7px}.accountMenu{position:fixed;top:70px;right:12px}}
+@media(max-width:480px){.workspacePill{display:none}.headerActions>:global([class*="LanguageSelector_root"]){display:none}}

@@ -1,1 +1,1 @@
-fix(overview): synchronize cash-flow columns with totals
+feat(landing): present Ficonter through real-life stories

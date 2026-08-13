@@ -1,1 +1,1 @@
-refactor(mobile): redesign financial modules for phone and tablet
+fix(mobile): finalize comfort ergonomics and real-device QA

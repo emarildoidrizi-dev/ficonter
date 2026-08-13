@@ -69,18 +69,12 @@
 }
 
 .headerMark {
-  display: grid;
+  display: block;
   width: 30px;
   height: 30px;
-  place-items: center;
-  border-radius: 10px;
-  color: var(--mobile-chrome-on-accent);
-  background: linear-gradient(145deg, #ead9a4, #c8ab63);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-  box-shadow: 0 5px 14px rgba(216, 189, 124, 0.16);
+  border-radius: 9px;
+  object-fit: cover;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
 }
 
 .routeIdentity {
@@ -363,18 +357,12 @@
 }
 
 .appMark {
-  display: grid;
+  display: block;
   width: 46px;
   height: 46px;
-  place-items: center;
-  border-radius: 15px;
-  color: var(--mobile-chrome-on-accent);
-  background: linear-gradient(145deg, #ead9a4, #c8ab63);
-  box-shadow: 0 8px 22px rgba(216, 189, 124, 0.16);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 23px;
-  font-weight: 700;
-  line-height: 1;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
 }
 
 .drawerHeader > div:nth-child(2) {

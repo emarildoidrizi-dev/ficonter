@@ -745,7 +745,14 @@ export function FiconterNativeAppChrome({
           aria-expanded={drawerOpen}
           aria-controls="ficonter-app-drawer"
         >
-          <span className={styles.headerMark} aria-hidden="true">F</span>
+          <img
+            className={styles.headerMark}
+            src="/ficonter-mark.svg"
+            alt=""
+            width={30}
+            height={30}
+            aria-hidden="true"
+          />
         </button>
 
         <div className={styles.routeIdentity}>
@@ -911,7 +918,14 @@ export function FiconterNativeAppChrome({
       >
         <div className={styles.sheetHandle} aria-hidden="true" />
         <div className={styles.drawerHeader}>
-          <div className={styles.appMark}>F</div>
+          <img
+            className={styles.appMark}
+            src="/ficonter-mark.svg"
+            alt=""
+            width={46}
+            height={46}
+            aria-hidden="true"
+          />
           <div>
             <span>FICONTER</span>
             <strong>All sections</strong>

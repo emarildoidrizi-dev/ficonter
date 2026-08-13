@@ -6,7 +6,7 @@
 html[data-ficonter-native-app="true"] {
   --mobile-page-x: 14px;
   --mobile-page-top: 78px;
-  --mobile-page-bottom: 92px;
+  --mobile-page-bottom: 148px;
   --mobile-ui-radius: 18px;
   --mobile-ui-radius-small: 14px;
   --mobile-ui-gap: 12px;
@@ -66,17 +66,34 @@ html[data-ficonter-native-app="true"] .app-main {
   overflow: visible !important;
   color: var(--mobile-text-primary) !important;
   background: transparent !important;
+  scroll-padding-bottom:
+    calc(var(--mobile-page-bottom) + env(safe-area-inset-bottom))
+    !important;
+}
+
+/* Phase 6.4 — fixed bottom navigation must never cover the final card.
+   The clearance deliberately exceeds the dock height so users can scroll the
+   last financial card fully above the dock, the raised + action, and iOS safe
+   area instead of having content finish underneath the navigation. */
+html[data-ficonter-native-app="true"] .app-main > :last-child {
+  margin-bottom: 12px !important;
 }
 
 html[data-ficonter-device="tablet"] .app-main {
   --mobile-page-x: 22px;
   --mobile-page-top: 86px;
-  --mobile-page-bottom: 98px;
+  --mobile-page-bottom: 148px;
   max-width: 980px !important;
 }
 
 html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
   padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] {
+    --mobile-page-bottom: 112px;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -578,5 +595,58 @@ html[data-ficonter-native-app="true"] .app-main :where(
   html[data-ficonter-native-app="true"] .app-main *::before,
   html[data-ficonter-native-app="true"] .app-main *::after {
     scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* PHASE 6.5 — MOBILE VERTICAL SCROLL AUTHORITY                                */
+/* -------------------------------------------------------------------------- */
+/* The document itself owns vertical scrolling. This explicitly reverses older
+   full-bleed/overscroll rules whenever the More sheet is closed, so Safari and
+   installed PWAs can always pan down through long financial modules. */
+html[data-ficonter-native-app="true"]:not([data-ficonter-app-drawer="open"]),
+html[data-ficonter-native-app="true"]:not([data-ficonter-app-drawer="open"]) body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y !important;
+}
+
+html[data-ficonter-native-app="true"]:not([data-ficonter-app-drawer="open"]) .app-shell,
+html[data-ficonter-native-app="true"]:not([data-ficonter-app-drawer="open"]) .app-main {
+  height: auto !important;
+  overflow-y: visible !important;
+  touch-action: pan-y !important;
+}
+
+/* Comfortable clearance above the fixed dock and its raised + action. */
+html[data-ficonter-native-app="true"] {
+  --mobile-page-bottom: 184px;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  padding-bottom:
+    calc(var(--mobile-page-bottom) + env(safe-area-inset-bottom))
+    !important;
+  scroll-padding-bottom:
+    calc(var(--mobile-page-bottom) + env(safe-area-inset-bottom))
+    !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main > :last-child {
+  margin-bottom: 20px !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] {
+    --mobile-page-bottom: 132px;
   }
 }

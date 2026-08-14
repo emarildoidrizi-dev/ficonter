@@ -242,6 +242,25 @@ function persistBrowserLanguage(language: FiconterLanguage) {
     `${LANGUAGE_COOKIE_NAME}=${language}; path=/; max-age=31536000; samesite=lax`;
 }
 
+function readBrowserLanguagePreference(): FiconterLanguage | null {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (isFiconterLanguage(stored)) return stored;
+
+    const cookieMatch = document.cookie.match(
+      new RegExp(`(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)`),
+    );
+
+    if (cookieMatch) {
+      return normalizeLanguage(decodeURIComponent(cookieMatch[1]));
+    }
+  } catch {
+    // Keep the server-provided preference when browser storage is unavailable.
+  }
+
+  return null;
+}
+
 export function LanguageProvider({
   initialLanguage = DEFAULT_LANGUAGE,
   children,
@@ -252,18 +271,11 @@ export function LanguageProvider({
   const [language, setLanguage] = useState<FiconterLanguage>(() =>
     normalizeLanguage(initialLanguage),
   );
-
   const supabase = useMemo(() => createClient(), []);
   const languageRef = useRef(language);
   const translatorRef = useRef<
     ReturnType<typeof createDocumentTranslator> | null
   >(null);
-
-  useEffect(() => {
-    languageRef.current = language;
-    persistBrowserLanguage(language);
-    translatorRef.current?.refresh();
-  }, [language]);
 
   useEffect(() => {
     const translator = createDocumentTranslator(
@@ -273,32 +285,64 @@ export function LanguageProvider({
     translatorRef.current = translator;
     translator.start();
 
-    try {
-      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      const cookieMatch = document.cookie.match(
-        new RegExp(`(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)`),
-      );
+    const browserPreference = readBrowserLanguagePreference();
 
-      const browserPreference = isFiconterLanguage(stored)
-        ? stored
-        : normalizeLanguage(
-            cookieMatch
-              ? decodeURIComponent(cookieMatch[1])
-              : undefined,
-          );
-
+    if (browserPreference) {
+      // Synchronize local storage and the cookie without first overwriting the
+      // user's existing public-site choice with the default language.
+      persistBrowserLanguage(browserPreference);
       if (browserPreference !== languageRef.current) {
+        languageRef.current = browserPreference;
         setLanguage(browserPreference);
       }
-    } catch {
-      // The default language remains active when browser storage is unavailable.
     }
 
+    function syncLanguage(nextLanguage: unknown) {
+      if (!isFiconterLanguage(nextLanguage)) return;
+      if (nextLanguage === languageRef.current) return;
+
+      languageRef.current = nextLanguage;
+      setLanguage(nextLanguage);
+    }
+
+    function syncFromStorage(event: StorageEvent) {
+      if (event.key !== LANGUAGE_STORAGE_KEY) return;
+      syncLanguage(event.newValue);
+    }
+
+    function syncFromLanguageEvent(event: Event) {
+      const detail = (event as CustomEvent<{ language?: unknown }>).detail;
+      syncLanguage(detail?.language);
+    }
+
+    function syncFromHistoryRestore() {
+      const browserPreference = readBrowserLanguagePreference();
+      if (browserPreference) syncLanguage(browserPreference);
+    }
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(
+      LANGUAGE_CHANGED_EVENT,
+      syncFromLanguageEvent as EventListener,
+    );
+    window.addEventListener("pageshow", syncFromHistoryRestore);
+
     return () => {
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(
+        LANGUAGE_CHANGED_EVENT,
+        syncFromLanguageEvent as EventListener,
+      );
+      window.removeEventListener("pageshow", syncFromHistoryRestore);
       translator.stop();
       translatorRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    languageRef.current = language;
+    translatorRef.current?.refresh();
+  }, [language]);
 
   const changeLanguage = useCallback(
     async (

@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
   Clock3,
+  ListChecks,
   Loader2,
   Repeat2,
   Settings2,
@@ -41,6 +43,24 @@ type PostingRow = {
   period_key: string;
   transaction_id: string | null;
 };
+
+const ENTRY_MODE_PRESENTATION = {
+  simple: {
+    description: "Quick add with shortcuts.",
+    badge: "10 sec",
+    icon: Zap,
+  },
+  guided: {
+    description: "Step-by-step flow.",
+    badge: "30 sec",
+    icon: ListChecks,
+  },
+  detailed: {
+    description: "Full form with all fields.",
+    badge: "Full",
+    icon: ClipboardList,
+  },
+} as const;
 
 function normalizeSavedTransaction(value: unknown) {
   if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
@@ -386,32 +406,39 @@ export function EffortlessEntryWorkspace({
       <section className={styles.modeCard} aria-labelledby="entry-style-title">
         <div className={styles.sectionHeading}>
           <span className={styles.iconBadge}>
-            <Settings2 size={17} />
+            <Settings2 size={18} />
           </span>
           <div>
-            <h4 id="entry-style-title">Choose the experience that feels easiest</h4>
-            <p>Each mode now uses a genuinely different workflow. Change it at any time.</p>
+            <h4 id="entry-style-title">Choose your mode</h4>
+            <p>Pick the easiest way to add a transaction.</p>
           </div>
         </div>
         <div className={styles.modeGrid}>
-          {ENTRY_MODE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={mode === option.value ? styles.modeActive : styles.modeButton}
-              onClick={() => void changeMode(option.value)}
-              aria-pressed={mode === option.value}
-              disabled={savingMode}
-            >
-              <div className={styles.modeButtonTop}>
-                <strong>{option.label}</strong>
-                <small>{option.effort}</small>
-              </div>
-              <span>{option.description}</span>
-              <em>{option.structure}</em>
-              {mode === option.value && <CheckCircle2 size={16} />}
-            </button>
-          ))}
+          {ENTRY_MODE_OPTIONS.map((option) => {
+            const presentation = ENTRY_MODE_PRESENTATION[option.value];
+            const ModeIcon = presentation.icon;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={mode === option.value ? styles.modeActive : styles.modeButton}
+                onClick={() => void changeMode(option.value)}
+                aria-pressed={mode === option.value}
+                disabled={savingMode}
+              >
+                <span className={styles.modeIcon} aria-hidden="true">
+                  <ModeIcon size={20} />
+                </span>
+                <span className={styles.modeCopy}>
+                  <strong>{option.label}</strong>
+                  <span>{presentation.description}</span>
+                </span>
+                <small className={styles.modeBadge}>{presentation.badge}</small>
+                <ChevronRight className={styles.modeChevron} size={20} aria-hidden="true" />
+              </button>
+            );
+          })}
         </div>
       </section>
 

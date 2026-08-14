@@ -981,15 +981,6 @@ export function TransactionForm({
         </div>
       )}
 
-      <div className="effortless-detailed-header">
-        <div>
-          <span>Full ledger entry</span>
-          <h4>Record the complete transaction</h4>
-          <p>Every available field is visible for precise control and reporting.</p>
-        </div>
-        <span className="effortless-detail-pill">Maximum detail</span>
-      </div>
-
       <div className="field">
         <label>Money movement</label>
         {typeSelector}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, CircleAlert, Plus, Target } from "lucide-react";
+import { Activity, ArrowRight, ChevronRight, CircleAlert, Plus, ReceiptText, Target, WalletCards } from "lucide-react";
 import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
 import type { FinancialHealthResult } from "@/lib/wealth/financialHealth";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
@@ -24,10 +24,9 @@ type Props = {
   monthLabel: string;
   monthIncome: number;
   monthSpent: number;
-  cashFlowBars: number[];
   financialHealth: FinancialHealthResult;
   upcomingBills: CoastalUpcomingBill[];
-  spendingRhythm: number;
+  spendingRhythm: number | null;
   spendingAmount: number;
   spendingBudget: number;
   financialGps: FinancialGpsResult;
@@ -55,7 +54,6 @@ export function CoastalOverview({
   monthLabel,
   monthIncome,
   monthSpent,
-  cashFlowBars,
   financialHealth,
   upcomingBills,
   spendingRhythm,
@@ -71,12 +69,27 @@ export function CoastalOverview({
     ? financialHealth.label
     : "Finish setup";
   const safeSavingCapacity = Math.max(0, leftAfterEverything);
+  const cashFlowScale = Math.max(monthIncome, monthSpent, 0);
+  const cashFlowColumns = [
+    { label: "Income", amount: Math.max(0, monthIncome), tone: "income" },
+    { label: "Spent", amount: Math.max(0, monthSpent), tone: "spent" },
+  ].map((column) => ({
+    ...column,
+    height: cashFlowScale > 0 ? (column.amount / cashFlowScale) * 100 : 0,
+  }));
   const comparisonInsight = previousMonthChange === null
     ? "A full month will unlock spending comparisons"
     : previousMonthChange <= 0
       ? `Spending is ${Math.abs(previousMonthChange).toFixed(0)}% lower this month`
       : `Spending is ${previousMonthChange.toFixed(0)}% higher this month`;
   const uniqueErrors = [...new Set(errorMessages.filter(Boolean))];
+  const hasSpendingBudget = spendingRhythm !== null && spendingBudget > 0;
+  const spendingProgress = hasSpendingBudget
+    ? Math.min(100, Math.max(0, spendingRhythm ?? 0))
+    : 0;
+  const spendingRhythmLabel = hasSpendingBudget
+    ? `${Math.round(spendingRhythm ?? 0)}% of the monthly spending budget used`
+    : "No monthly spending budget has been set";
 
   return (
     <div className={styles.overview}>
@@ -89,7 +102,7 @@ export function CoastalOverview({
 
       <header className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>{greeting}, {name}</span>
+          <span className={styles.eyebrow} suppressHydrationWarning>{greeting}, {name}</span>
           <h1>Your financial horizon</h1>
           <p>Everything important, calmly in view.</p>
         </div>
@@ -101,17 +114,33 @@ export function CoastalOverview({
 
       <section className={styles.cardGrid} aria-label="Financial overview">
         <article className={`${styles.card} ${styles.availableCard}`}>
-          <span className={styles.cardLabel}>Available now</span>
+          <Link className={styles.availableHeader} href="/dashboard/transactions" aria-label="Open account activity">
+            <span className={styles.availableHeaderIcon} aria-hidden="true"><WalletCards size={20} /></span>
+            <span className={styles.cardLabel}>Available now</span>
+            <ChevronRight className={styles.availableHeaderChevron} size={22} aria-hidden="true" />
+          </Link>
           <strong className={styles.availableAmount}>{formatCurrency(availableNow, currency)}</strong>
           <p className={styles.cardNote}>Across your active accounts</p>
+          <div className={styles.cardDivider} aria-hidden="true" />
           <div className={styles.miniStats}>
-            <div><span>Still to pay</span><strong>{formatCurrency(stillToPay, currency)}</strong></div>
-            <div><span>Left after everything</span><strong>{formatCurrency(leftAfterEverything, currency)}</strong></div>
+            <Link className={styles.miniStat} href="/dashboard/bills">
+              <span className={styles.miniStatIcon} aria-hidden="true"><ReceiptText size={19} /></span>
+              <span className={styles.miniStatCopy}><span>Still to pay</span><strong>{formatCurrency(stillToPay, currency)}</strong></span>
+              <ChevronRight className={styles.miniStatChevron} size={21} aria-hidden="true" />
+            </Link>
+            <Link className={styles.miniStat} href="/dashboard/budget">
+              <span className={styles.miniStatIcon} aria-hidden="true"><WalletCards size={19} /></span>
+              <span className={styles.miniStatCopy}><span>Left after everything</span><strong>{formatCurrency(leftAfterEverything, currency)}</strong></span>
+              <ChevronRight className={styles.miniStatChevron} size={21} aria-hidden="true" />
+            </Link>
           </div>
         </article>
 
         <article className={`${styles.card} ${styles.healthCard}`}>
-          <h2>Financial health</h2>
+          <div className={styles.healthHeader}>
+            <h2>Financial health</h2>
+            <span className={styles.healthInfo} aria-hidden="true"><Activity size={18} /></span>
+          </div>
           <div className={styles.healthLine}>
             <strong>{financialHealth.scoreAvailable ? score : "—"}</strong>
             <div><span>/100</span><p>{scoreLabel}</p></div>
@@ -128,9 +157,21 @@ export function CoastalOverview({
             <div><span>Income</span><strong>{formatCurrency(monthIncome, currency)}</strong></div>
             <div><span>Spent</span><strong>{formatCurrency(monthSpent, currency)}</strong></div>
           </div>
-          <div className={styles.cashBars} aria-label="Spending over the last six weeks">
-            {cashFlowBars.map((height, index) => (
-              <span key={index} style={{ height: `${Math.max(8, height)}%` }} />
+          <div
+            className={styles.cashComparison}
+            aria-label={`${monthLabel} income and spending, shown on the same scale`}
+          >
+            {cashFlowColumns.map((column) => (
+              <div className={styles.cashColumn} key={column.label}>
+                <div className={styles.cashColumnTrack}>
+                  <span
+                    data-tone={column.tone}
+                    style={{ height: `${column.height}%` }}
+                    title={`${column.label}: ${formatCurrency(column.amount, currency)}`}
+                  />
+                </div>
+                <small>{column.label}</small>
+              </div>
             ))}
           </div>
         </article>
@@ -150,12 +191,29 @@ export function CoastalOverview({
           </div>
         </article>
 
-        <article className={`${styles.card} ${styles.rhythmCard}`}>
-          <h2>Spending rhythm</h2>
-          <div className={styles.donut} style={{ "--progress": `${spendingRhythm * 3.6}deg` } as CSSProperties}>
-            <span>{Math.round(spendingRhythm)}%</span>
+        <article
+          className={`${styles.card} ${styles.rhythmCard}`}
+          data-budget-state={hasSpendingBudget ? "available" : "missing"}
+        >
+          <h2>Monthly budget use</h2>
+          <div
+            className={styles.donut}
+            role="img"
+            aria-label={spendingRhythmLabel}
+            style={{ "--progress": `${spendingProgress * 3.6}deg` } as CSSProperties}
+          >
+            <span>{hasSpendingBudget ? `${Math.round(spendingRhythm ?? 0)}%` : "—"}</span>
           </div>
-          <p>{formatCurrency(spendingAmount, currency)} of {formatCurrency(spendingBudget, currency)} monthly budget</p>
+          {hasSpendingBudget ? (
+            <p>{formatCurrency(spendingAmount, currency)} of {formatCurrency(spendingBudget, currency)} monthly budget</p>
+          ) : (
+            <div className={styles.missingBudget}>
+              <p>{formatCurrency(spendingAmount, currency)} spent this month · No monthly budget set</p>
+              <Link href="/dashboard/budget">
+                Set a monthly budget <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
         </article>
 
         <article className={`${styles.card} ${styles.insightsCard}`}>

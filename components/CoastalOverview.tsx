@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, ChevronRight, CircleAlert, Info, Plus, ReceiptText, Target, WalletCards } from "lucide-react";
+import { Activity, ArrowRight, ChevronRight, CircleAlert, Plus, ReceiptText, Target, WalletCards } from "lucide-react";
 import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
 import type { FinancialHealthResult } from "@/lib/wealth/financialHealth";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
@@ -114,9 +114,14 @@ export function CoastalOverview({
 
       <section className={styles.cardGrid} aria-label="Financial overview">
         <article className={`${styles.card} ${styles.availableCard}`}>
-          <span className={styles.cardLabel}>Available now</span>
+          <Link className={styles.availableHeader} href="/dashboard/transactions" aria-label="Open account activity">
+            <span className={styles.availableHeaderIcon} aria-hidden="true"><WalletCards size={20} /></span>
+            <span className={styles.cardLabel}>Available now</span>
+            <ChevronRight className={styles.availableHeaderChevron} size={22} aria-hidden="true" />
+          </Link>
           <strong className={styles.availableAmount}>{formatCurrency(availableNow, currency)}</strong>
           <p className={styles.cardNote}>Across your active accounts</p>
+          <div className={styles.cardDivider} aria-hidden="true" />
           <div className={styles.miniStats}>
             <Link className={styles.miniStat} href="/dashboard/bills">
               <span className={styles.miniStatIcon} aria-hidden="true"><ReceiptText size={19} /></span>
@@ -134,7 +139,7 @@ export function CoastalOverview({
         <article className={`${styles.card} ${styles.healthCard}`}>
           <div className={styles.healthHeader}>
             <h2>Financial health</h2>
-            <span className={styles.healthInfo} aria-hidden="true"><Info size={16} /></span>
+            <span className={styles.healthInfo} aria-hidden="true"><Activity size={18} /></span>
           </div>
           <div className={styles.healthLine}>
             <strong>{financialHealth.scoreAvailable ? score : "—"}</strong>

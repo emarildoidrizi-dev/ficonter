@@ -175,6 +175,9 @@
 /* Authenticated mobile header language control: globe-only trigger. */
 .icon {
   z-index: 90;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
 }
 .icon .trigger {
   width: 40px;
@@ -216,10 +219,54 @@
   color: #b9c5c0;
 }
 
+/* Mobile header language status is an overlay, never part of the trigger's
+   layout. This keeps the globe perfectly stationary while saving. */
+.icon .success,
+.icon .error {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 7px);
+  inset-inline-end: 0;
+  width: max-content;
+  max-width: min(156px, calc(100vw - 24px));
+  margin: 0;
+  padding: 4px 7px;
+  border: 1px solid rgba(216, 189, 124, 0.18);
+  border-radius: 999px;
+  background: rgba(18, 40, 32, 0.94);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  color: #dbe9e2;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.icon .error {
+  border-color: rgba(232, 137, 128, 0.30);
+  color: #ffd7d2;
+}
+
 @media (max-width: 360px) {
+  .icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+
   .icon .trigger {
     width: 36px;
     height: 36px;
     min-height: 36px;
+  }
+
+  .icon .success,
+  .icon .error {
+    max-width: 142px;
+    padding: 3px 6px;
+    font-size: 8.5px;
   }
 }

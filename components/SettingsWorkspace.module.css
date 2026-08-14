@@ -464,3 +464,26 @@
 .profileOnlyPanel {
   min-height: 0;
 }
+
+/* Mobile Settings drill-in navigation: the section list and section detail are
+   separate app views instead of one long stacked page. Desktop keeps the
+   existing two-column Settings workspace. */
+.mobileSectionBack{display:none}
+
+@media(max-width:1050px){
+  .workspace{scroll-margin-top:118px}
+  .mobileSectionBack{display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:12px;font-weight:800;cursor:pointer}
+  .mobileSectionBack:hover{background:var(--surface-hover)}
+  .workspace[data-settings-view="index"] .panel{display:none!important}
+  .workspace[data-settings-view="detail"] .navigation{display:none!important}
+  .workspace[data-settings-view="detail"] .panel{display:block!important;animation:settings-section-slide-in .24s cubic-bezier(.2,.72,.24,1) both}
+}
+
+@keyframes settings-section-slide-in{
+  from{opacity:.25;transform:translateX(32px)}
+  to{opacity:1;transform:translateX(0)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .workspace[data-settings-view="detail"] .panel{animation:none!important}
+}

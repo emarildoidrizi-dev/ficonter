@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
+  ArrowLeft,
   Bell,
   Camera,
   Check,
@@ -462,6 +463,10 @@ export function SettingsWorkspace({
   const [billingHistoryError, setBillingHistoryError] = useState("");
   const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const [sectionDetailOpen, setSectionDetailOpen] = useState(() =>
+    profileOnly || (isSectionId(initialSection) && initialSection !== "profile"),
+  );
   const [active, setActive] = useState<SectionId>(() => {
     if (profileOnly) return "profile";
     if (isSubscriptionExempt && initialSection === "subscription") return "security";
@@ -525,12 +530,16 @@ export function SettingsWorkspace({
   useEffect(() => {
     if (profileOnly) {
       setActive("profile");
+      setSectionDetailOpen(true);
       setMessage(null);
       setSaveFeedback({});
       return;
     }
 
-    if (!isSectionId(initialSection) || initialSection === "profile") return;
+    if (!isSectionId(initialSection) || initialSection === "profile") {
+      setSectionDetailOpen(false);
+      return;
+    }
 
     // Owner / Super Admin / Admin never enter the customer Subscription area.
     // Their access is role-based and does not require a plan or payment.
@@ -539,6 +548,7 @@ export function SettingsWorkspace({
         ? "security"
         : initialSection,
     );
+    setSectionDetailOpen(true);
     setMessage(null);
     setSaveFeedback({});
   }, [initialSection, isSubscriptionExempt, profileOnly]);
@@ -1497,8 +1507,36 @@ const showSubscriptionManagement =
     currentPlanCode === "business_pro");
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
+  function scrollSettingsToTop() {
+    window.requestAnimationFrame(() => {
+      workspaceRef.current?.scrollIntoView({
+        block: "start",
+        behavior: "smooth",
+      });
+    });
+  }
+
+  function openSettingsSection(id: SectionId) {
+    setActive(id);
+    setSectionDetailOpen(true);
+    setMessage(null);
+    setSaveFeedback({});
+    scrollSettingsToTop();
+  }
+
+  function closeSettingsSection() {
+    setSectionDetailOpen(false);
+    setMessage(null);
+    setSaveFeedback({});
+    scrollSettingsToTop();
+  }
+
   return (
-    <div className={`${styles.workspace} ${profileOnly ? styles.profileOnlyWorkspace : ""}`}>
+    <div
+      ref={workspaceRef}
+      data-settings-view={profileOnly || sectionDetailOpen ? "detail" : "index"}
+      className={`${styles.workspace} ${profileOnly ? styles.profileOnlyWorkspace : ""}`}
+    >
       {!profileOnly ? (
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
@@ -1512,7 +1550,13 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
+            <button
+              key={id}
+              type="button"
+              className={`${styles.sectionButton}${active === id && sectionDetailOpen ? ` ${styles.sectionActive}` : ""}`}
+              onClick={() => openSettingsSection(id)}
+              aria-label={`Open ${label}`}
+            >
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
@@ -1523,6 +1567,17 @@ const showSubscriptionManagement =
       ) : null}
 
       <main className={`${styles.panel} ${profileOnly ? styles.profileOnlyPanel : ""}`}>
+        {!profileOnly ? (
+          <button
+            type="button"
+            className={styles.mobileSectionBack}
+            onClick={closeSettingsSection}
+            aria-label="Back to Settings sections"
+          >
+            <ArrowLeft size={18} />
+            <span>Settings</span>
+          </button>
+        ) : null}
         <header className={styles.panelHeader}>
           <div><span className={styles.eyebrow}>{profileOnly ? "Private profile" : "Account preferences"}</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
           <div className={styles.secureBadge}><ShieldCheck size={16} />Private</div>

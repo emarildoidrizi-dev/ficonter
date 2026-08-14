@@ -790,3 +790,42 @@ html[data-ficonter-native-app="true"] .app-main :where(
     max-height: 94dvh !important;
   }
 }
+
+/* Settings app stack: show the index OR the chosen section on mobile, never
+   both one below the other. The detail view enters from the right. */
+html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_panel"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="detail"] [class*="SettingsWorkspace_navigation"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="detail"] [class*="SettingsWorkspace_panel"] {
+  display: block !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_navigation"] {
+  display: block !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_sectionList"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 7px !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_sectionButton"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  grid-template-columns: 36px minmax(0, 1fr) auto !important;
+  border-radius: 13px !important;
+  white-space: normal !important;
+}
+
+html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_sectionButton"] > :last-child:not(:first-child) {
+  display: block !important;
+}

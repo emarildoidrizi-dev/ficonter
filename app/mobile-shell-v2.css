@@ -866,5 +866,7 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overvie
 }
 
 html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overview"]::before {
-  top: -92px !important;
+  top: -112px !important;
+  height: 720px !important;
+  background-position: center top, center top !important;
 }

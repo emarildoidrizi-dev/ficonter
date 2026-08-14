@@ -1572,3 +1572,12 @@
     inset-inline-end: max(55px, calc(env(safe-area-inset-right) + 55px));
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE 04.31 — edge-clean header                                  */
+/* Remove the tiny exposed wedges at the lower header corners. The mobile      */
+/* header now meets the wallpaper flush from edge to edge.                     */
+/* -------------------------------------------------------------------------- */
+:global(html[data-ficonter-native-app="true"]) .header {
+  border-radius: 0 !important;
+}

@@ -806,8 +806,7 @@ html[data-ficonter-native-app="true"] [data-settings-view="detail"] [class*="Set
 }
 
 html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_navigation"] {
-  display: block !important;
-  overflow: visible !important;
+  display: none !important;
 }
 
 html[data-ficonter-native-app="true"] [data-settings-view="index"] [class*="SettingsWorkspace_sectionList"] {

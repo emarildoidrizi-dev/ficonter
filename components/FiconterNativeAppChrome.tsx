@@ -80,10 +80,15 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   email?: string;
+  avatarPath?: string;
   businessName?: string;
   businessProfiles?: BusinessProfileOption[];
   activeBusinessId?: string | null;
   subscriptionPlanCode: SubscriptionPlanCode;
+};
+
+type ProfileUpdatedDetail = {
+  profilePhotoPath?: string;
 };
 
 type IOSNavigator = Navigator & {
@@ -497,6 +502,7 @@ export function FiconterNativeAppChrome({
   workspace,
   displayName,
   email = "",
+  avatarPath = "",
   businessName = "",
   businessProfiles = [],
   activeBusinessId = null,
@@ -508,6 +514,8 @@ export function FiconterNativeAppChrome({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarPhotoPath, setAvatarPhotoPath] = useState(avatarPath);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -523,6 +531,8 @@ export function FiconterNativeAppChrome({
   const drawerRef = useRef<HTMLElement>(null);
   const accountSheetRef = useRef<HTMLElement>(null);
   const settingsSheetRef = useRef<HTMLElement>(null);
+  const previousPathRef = useRef<string | null>(null);
+  const currentPathRef = useRef(pathname);
 
   const routes =
     workspace === "business"
@@ -584,6 +594,53 @@ export function FiconterNativeAppChrome({
   const switchTargetHref = businessWorkspaceLocked
     ? getSubscriptionUpgradeHref("business_workspace")
     : switchHref;
+
+  useEffect(() => {
+    setAvatarPhotoPath(avatarPath);
+  }, [avatarPath]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAvatar() {
+      if (!avatarPhotoPath) {
+        if (active) setAvatarUrl("");
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(avatarPhotoPath, 60 * 60);
+
+      if (active) {
+        setAvatarUrl(error ? "" : data.signedUrl);
+      }
+    }
+
+    void loadAvatar();
+    return () => {
+      active = false;
+    };
+  }, [avatarPhotoPath, supabase]);
+
+  useEffect(() => {
+    function handleProfileUpdate(event: Event) {
+      const detail = (event as CustomEvent<ProfileUpdatedDetail>).detail;
+      if (typeof detail?.profilePhotoPath === "string") {
+        setAvatarPhotoPath(detail.profilePhotoPath);
+      }
+    }
+
+    window.addEventListener("ficonter:profile-updated", handleProfileUpdate);
+    return () =>
+      window.removeEventListener("ficonter:profile-updated", handleProfileUpdate);
+  }, []);
+
+  useEffect(() => {
+    if (currentPathRef.current === pathname) return;
+    previousPathRef.current = currentPathRef.current;
+    currentPathRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     synchronizeNativeAppMode();
@@ -866,6 +923,27 @@ export function FiconterNativeAppChrome({
     });
   }
 
+  function goHomeInstant() {
+    setDrawerOpen(false);
+    setAccountOpen(false);
+    setSettingsOpen(false);
+    document.documentElement.removeAttribute("data-ficonter-route-loading");
+
+    if (pathname === "/dashboard") {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+
+    router.prefetch("/dashboard");
+
+    if (previousPathRef.current === "/dashboard") {
+      router.back();
+      return;
+    }
+
+    router.push("/dashboard", { scroll: false });
+  }
+
   async function switchBusinessProfile(nextBusinessId: string) {
     if (
       workspace !== "business" ||
@@ -972,7 +1050,16 @@ export function FiconterNativeAppChrome({
           aria-controls="ficonter-account-sheet"
           onClick={openAccount}
         >
-          <span>{accountInitial}</span>
+          {avatarUrl ? (
+            <img
+              className={styles.workspaceAvatarImage}
+              src={avatarUrl}
+              alt=""
+              aria-hidden="true"
+            />
+          ) : (
+            <span>{accountInitial}</span>
+          )}
         </button>
 
         {workspace === "business" && businessProfiles.length ? (
@@ -1009,6 +1096,25 @@ export function FiconterNativeAppChrome({
             item,
             workspace,
           );
+
+          if (workspace === "personal" && item.href === "/dashboard") {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                className={`${styles.dockItem} ${
+                  active ? styles.dockActive : ""
+                }`}
+                aria-current={active ? "page" : undefined}
+                aria-label="Open Home instantly"
+                onPointerDown={() => router.prefetch("/dashboard")}
+                onClick={goHomeInstant}
+              >
+                <Icon size={21} aria-hidden={true} />
+                <span>{item.label}</span>
+              </button>
+            );
+          }
 
           return (
             <Link
@@ -1366,7 +1472,15 @@ export function FiconterNativeAppChrome({
         <div className={styles.sheetHandle} aria-hidden="true" />
         <div className={styles.accountSheetHeader}>
           <span className={styles.accountAvatar} aria-hidden="true">
-            {accountInitial}
+            {avatarUrl ? (
+              <img
+                className={styles.accountAvatarImage}
+                src={avatarUrl}
+                alt=""
+              />
+            ) : (
+              accountInitial
+            )}
           </span>
           <span className={styles.accountIdentity}>
             <small>PROFILE</small>

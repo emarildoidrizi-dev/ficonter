@@ -1510,3 +1510,25 @@
     transition: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE PROFILE AVATAR — show the saved profile photo in the        */
+/* top-right account control instead of duplicating it in Settings.             */
+/* -------------------------------------------------------------------------- */
+.workspaceAvatarImage,
+.accountAvatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.workspaceAvatarImage {
+  padding: 3px;
+}
+
+.accountAvatarImage {
+  padding: 2px;
+}

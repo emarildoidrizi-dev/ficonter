@@ -554,7 +554,7 @@
   .availableHeader {
     min-height: 50px;
     display: grid;
-    grid-template-columns: 46px minmax(0, 1fr) 24px;
+    grid-template-columns: 46px minmax(0, 1fr);
     align-items: center;
     gap: 12px;
     color: var(--text-primary);

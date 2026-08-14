@@ -117,7 +117,6 @@ export function CoastalOverview({
           <Link className={styles.availableHeader} href="/dashboard/transactions" aria-label="Open account activity">
             <span className={styles.availableHeaderIcon} aria-hidden="true"><WalletCards size={20} /></span>
             <span className={styles.cardLabel}>Available now</span>
-            <ChevronRight className={styles.availableHeaderChevron} size={22} aria-hidden="true" />
           </Link>
           <strong className={styles.availableAmount}>{formatCurrency(availableNow, currency)}</strong>
           <p className={styles.cardNote}>Across your active accounts</p>

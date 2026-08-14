@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   Plus,
   CreditCard,
+  Database,
   FileText,
   Goal,
   HandCoins,
@@ -23,6 +25,7 @@ import {
   Menu,
   MessageSquareText,
   PackageOpen,
+  Palette,
   ReceiptText,
   Settings2,
   ShieldCheck,
@@ -31,6 +34,7 @@ import {
   Target,
   TrendingUp,
   UserRound,
+  WalletCards,
   X,
 } from "lucide-react";
 import {
@@ -325,6 +329,39 @@ const businessRouteGroups: RouteGroup[] = [
   },
 ];
 
+const personalSettingsQuickRoutes = [
+  {
+    href: "/dashboard/settings?section=security",
+    label: "Account & security",
+    description: "Login, password and sessions",
+    icon: LockKeyhole,
+  },
+  {
+    href: "/dashboard/settings?section=financial",
+    label: "Financial preferences",
+    description: "Currency, formats and planner",
+    icon: WalletCards,
+  },
+  {
+    href: "/dashboard/settings?section=notifications",
+    label: "Notifications",
+    description: "Reminders and summaries",
+    icon: Bell,
+  },
+  {
+    href: "/dashboard/settings?section=appearance",
+    label: "Appearance",
+    description: "Theme, motion and density",
+    icon: Palette,
+  },
+  {
+    href: "/dashboard/settings?section=privacy",
+    label: "Data & privacy",
+    description: "Exports and account controls",
+    icon: Database,
+  },
+] as const;
+
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -470,6 +507,7 @@ export function FiconterNativeAppChrome({
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -478,10 +516,13 @@ export function FiconterNativeAppChrome({
   );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
   const accountCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const accountSheetRef = useRef<HTMLElement>(null);
+  const settingsSheetRef = useRef<HTMLElement>(null);
 
   const routes =
     workspace === "business"
@@ -515,10 +556,8 @@ export function FiconterNativeAppChrome({
     activeRoute(pathname, item, workspace),
   );
 
-  const settingsItem = personalRoutes[16];
   const settingsActive =
-    workspace === "personal" &&
-    activeRoute(pathname, settingsItem, workspace);
+    workspace === "personal" && settingsOpen;
 
   const addHref =
     workspace === "business"
@@ -617,6 +656,7 @@ export function FiconterNativeAppChrome({
   useEffect(() => {
     setDrawerOpen(false);
     setAccountOpen(false);
+    setSettingsOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -703,6 +743,45 @@ export function FiconterNativeAppChrome({
   }, [accountOpen]);
 
   useEffect(() => {
+    if (!settingsOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSettingsOpen(false);
+        window.requestAnimationFrame(() => {
+          settingsButtonRef.current?.focus({ preventScroll: true });
+        });
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        settingsSheetRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => !element.hasAttribute("inert"));
+
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [settingsOpen]);
+
+  useEffect(() => {
     document.documentElement.dataset.ficonterAccountMenu =
       accountOpen ? "open" : "closed";
 
@@ -716,6 +795,21 @@ export function FiconterNativeAppChrome({
       document.documentElement.dataset.ficonterAccountMenu = "closed";
     };
   }, [accountOpen]);
+
+  useEffect(() => {
+    document.documentElement.dataset.ficonterSettingsMenu =
+      settingsOpen ? "open" : "closed";
+
+    if (settingsOpen) {
+      window.requestAnimationFrame(() => {
+        settingsCloseButtonRef.current?.focus({ preventScroll: true });
+      });
+    }
+
+    return () => {
+      document.documentElement.dataset.ficonterSettingsMenu = "closed";
+    };
+  }, [settingsOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.ficonterAppDrawer =
@@ -735,6 +829,7 @@ export function FiconterNativeAppChrome({
 
   function openDrawer() {
     setAccountOpen(false);
+    setSettingsOpen(false);
     setDrawerOpen(true);
 
     routes.forEach((item, index) => {
@@ -746,8 +841,29 @@ export function FiconterNativeAppChrome({
 
   function openAccount() {
     setDrawerOpen(false);
+    setSettingsOpen(false);
     setAccountOpen(true);
     router.prefetch("/dashboard/profile");
+  }
+
+  function toggleSettings() {
+    if (settingsOpen) {
+      setSettingsOpen(false);
+      window.requestAnimationFrame(() => {
+        settingsButtonRef.current?.focus({ preventScroll: true });
+      });
+      return;
+    }
+
+    setDrawerOpen(false);
+    setAccountOpen(false);
+    setSettingsOpen(true);
+
+    personalSettingsQuickRoutes.forEach((item, index) => {
+      window.setTimeout(() => {
+        router.prefetch(item.href);
+      }, index * 35);
+    });
   }
 
   async function switchBusinessProfile(nextBusinessId: string) {
@@ -784,11 +900,13 @@ export function FiconterNativeAppChrome({
     setSigningOut(true);
     setDrawerOpen(false);
     setAccountOpen(false);
+    setSettingsOpen(false);
 
     const root = document.documentElement;
 
     root.dataset.ficonterAppDrawer = "closed";
     root.dataset.ficonterAccountMenu = "closed";
+    root.dataset.ficonterSettingsMenu = "closed";
     root.removeAttribute("data-ficonter-route-loading");
     root.removeAttribute("data-mobile-nav-open");
 
@@ -961,24 +1079,16 @@ export function FiconterNativeAppChrome({
 
         {workspace === "personal" ? (
           <button
+            ref={settingsButtonRef}
             type="button"
             className={`${styles.dockItem} ${
               settingsActive ? styles.dockActive : ""
             }`}
             aria-pressed={settingsActive}
-            aria-label={
-              settingsActive
-                ? "Close Settings and return to Overview"
-                : "Open Settings"
-            }
-            onClick={() => {
-              if (settingsActive) {
-                router.push("/dashboard");
-                return;
-              }
-
-              router.push(settingsItem.href);
-            }}
+            aria-label={settingsActive ? "Close Settings" : "Open Settings"}
+            aria-expanded={settingsOpen}
+            aria-controls="ficonter-settings-sheet"
+            onClick={toggleSettings}
           >
             <Settings2 size={21} aria-hidden={true} />
             <span>Settings</span>
@@ -1002,22 +1112,32 @@ export function FiconterNativeAppChrome({
       <button
         type="button"
         className={`${styles.backdrop} ${
-          drawerOpen || accountOpen ? styles.backdropOpen : ""
+          drawerOpen || accountOpen || settingsOpen ? styles.backdropOpen : ""
         }`}
         onClick={() => {
           const closingAccount = accountOpen;
+          const closingSettings = settingsOpen;
           setDrawerOpen(false);
           setAccountOpen(false);
+          setSettingsOpen(false);
           window.requestAnimationFrame(() => {
             if (closingAccount) {
               accountButtonRef.current?.focus({ preventScroll: true });
+            } else if (closingSettings) {
+              settingsButtonRef.current?.focus({ preventScroll: true });
             } else {
               menuButtonRef.current?.focus({ preventScroll: true });
             }
           });
         }}
-        aria-label={accountOpen ? "Close profile menu" : "Close app navigation"}
-        tabIndex={drawerOpen || accountOpen ? 0 : -1}
+        aria-label={
+          accountOpen
+            ? "Close profile menu"
+            : settingsOpen
+              ? "Close Settings"
+              : "Close app navigation"
+        }
+        tabIndex={drawerOpen || accountOpen || settingsOpen ? 0 : -1}
       />
 
       <aside
@@ -1166,6 +1286,69 @@ export function FiconterNativeAppChrome({
           ))}
         </nav>
 
+      </aside>
+
+      <aside
+        ref={settingsSheetRef}
+        id="ficonter-settings-sheet"
+        className={`${styles.accountSheet} ${styles.settingsSheet} ${
+          settingsOpen ? styles.accountSheetOpen : ""
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        aria-hidden={!settingsOpen}
+        inert={!settingsOpen}
+      >
+        <div className={styles.sheetHandle} aria-hidden="true" />
+        <div className={styles.accountSheetHeader}>
+          <span className={styles.settingsSheetMark} aria-hidden="true">
+            <Settings2 size={22} />
+          </span>
+          <span className={styles.accountIdentity}>
+            <small>PRIVATE PREFERENCES</small>
+            <strong>Settings</strong>
+            <small>Choose a section</small>
+          </span>
+          <button
+            ref={settingsCloseButtonRef}
+            type="button"
+            className={styles.accountSheetClose}
+            onClick={() => {
+              setSettingsOpen(false);
+              window.requestAnimationFrame(() => {
+                settingsButtonRef.current?.focus({ preventScroll: true });
+              });
+            }}
+            aria-label="Close Settings"
+          >
+            <X size={22} aria-hidden={true} />
+          </button>
+        </div>
+
+        <nav className={styles.settingsQuickList} aria-label="Settings sections">
+          {personalSettingsQuickRoutes.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={true}
+                className={styles.accountProfileLink}
+                onClick={() => setSettingsOpen(false)}
+              >
+                <span className={styles.accountProfileIcon}>
+                  <Icon size={20} aria-hidden={true} />
+                </span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <ChevronRight size={18} aria-hidden={true} />
+              </Link>
+            );
+          })}
+        </nav>
       </aside>
 
       <aside

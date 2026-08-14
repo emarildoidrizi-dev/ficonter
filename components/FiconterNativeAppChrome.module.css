@@ -1464,3 +1464,49 @@
     transition: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE INSTANT SETTINGS — dock button opens a local sheet          */
+/* This avoids a route transition just to reveal the Settings section list.    */
+/* -------------------------------------------------------------------------- */
+
+.settingsSheet {
+  max-height: min(78dvh, 640px) !important;
+  gap: 9px !important;
+}
+
+.settingsSheetMark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(216, 189, 124, 0.22);
+  border-radius: 15px;
+  color: var(--mobile-chrome-accent-text);
+  background:
+    linear-gradient(145deg, rgba(216, 189, 124, 0.11), rgba(216, 189, 124, 0.035)),
+    rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.settingsQuickList {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settingsQuickList .accountProfileLink {
+  min-height: 58px;
+}
+
+:global(html[data-ficonter-device="tablet"]) .settingsSheet {
+  max-height: min(72dvh, 650px) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settingsSheet,
+  .settingsSheetMark,
+  .settingsQuickList .accountProfileLink {
+    transition: none !important;
+  }
+}

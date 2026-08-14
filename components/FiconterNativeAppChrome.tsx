@@ -111,7 +111,7 @@ const personalRoutes: RouteItem[] = [
   {
     href: "/dashboard/transactions",
     label: "Activity",
-    title: "Transactions",
+    title: "Activity",
     icon: ReceiptText,
   },
   {

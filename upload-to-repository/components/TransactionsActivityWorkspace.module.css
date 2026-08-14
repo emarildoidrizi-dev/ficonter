@@ -1,0 +1,118 @@
+.activityWorkspace {
+  display: grid;
+  grid-template-columns: minmax(320px, .72fr) minmax(640px, 1.45fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.mobileSwitcher {
+  display: none;
+}
+
+.entryView,
+.ledgerView {
+  min-width: 0;
+}
+
+.ledgerDesktopHeading {
+  display: block;
+}
+
+@media (max-width: 1200px) {
+  .activityWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+:global(html[data-ficonter-native-app="true"]) .activityWorkspace {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSwitcher {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-raised) 95%, transparent);
+  box-shadow:
+    0 8px 24px color-mix(in srgb, var(--surface-sidebar) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent);
+}
+
+:global(html[data-ficonter-native-app="true"]) .tab,
+:global(html[data-ficonter-native-app="true"]) .activeTab {
+  min-width: 0;
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:global(html[data-ficonter-native-app="true"]) .activeTab {
+  border-color: color-mix(in srgb, var(--gold) 34%, var(--border-subtle));
+  color: var(--solid-text);
+  background: var(--solid-bg);
+  box-shadow:
+    0 5px 14px color-mix(in srgb, var(--surface-sidebar) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+}
+
+:global(html[data-ficonter-native-app="true"]) .tab:focus-visible,
+:global(html[data-ficonter-native-app="true"]) .activeTab:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  outline-offset: 2px;
+}
+
+:global(html[data-ficonter-native-app="true"]) .entryView,
+:global(html[data-ficonter-native-app="true"]) .ledgerView {
+  width: 100%;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileInactive {
+  display: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .ledgerDesktopHeading {
+  display: none;
+}
+
+:global(html[data-ficonter-native-app="true"]) .entryView :global(.panel),
+:global(html[data-ficonter-native-app="true"]) .ledgerView :global(.panel) {
+  margin: 0 !important;
+}
+
+@media (max-width: 390px) {
+  :global(html[data-ficonter-native-app="true"]) .mobileSwitcher {
+    margin-bottom: 12px;
+    border-radius: 16px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .tab,
+  :global(html[data-ficonter-native-app="true"]) .activeTab {
+    min-height: 48px;
+    gap: 7px;
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+}

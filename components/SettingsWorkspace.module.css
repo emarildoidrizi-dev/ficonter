@@ -454,3 +454,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Profile is intentionally separated from Settings on mobile and desktop. */
+.profileOnlyWorkspace {
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 980px;
+}
+
+.profileOnlyPanel {
+  min-height: 0;
+}

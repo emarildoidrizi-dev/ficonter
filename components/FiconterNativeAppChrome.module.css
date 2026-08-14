@@ -1256,3 +1256,211 @@
     min-height: calc(156px + env(safe-area-inset-top));
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE PROFILE SPLIT — account avatar is profile-only             */
+/* The avatar opens a compact account sheet with Profile + Sign out only.     */
+/* -------------------------------------------------------------------------- */
+
+.accountSheet {
+  display: none;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountSheet {
+  position: fixed;
+  z-index: 1910;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 100%;
+  max-height: min(52dvh, 430px);
+  min-height: 0;
+  padding:
+    8px
+    max(13px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(13px, env(safe-area-inset-left));
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(216, 189, 124, 0.17);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background:
+    radial-gradient(circle at 50% 0, rgba(216, 189, 124, 0.09), transparent 34%),
+    var(--mobile-chrome-surface);
+  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.42);
+  transform: translate3d(0, 105%, 0);
+  transition: transform 230ms cubic-bezier(0.2, 0.82, 0.2, 1);
+  backface-visibility: hidden;
+  scrollbar-width: none;
+}
+
+.accountSheet::-webkit-scrollbar {
+  display: none;
+}
+
+.accountSheetOpen {
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.accountSheetHeader {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 48px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 1px 1px 7px;
+}
+
+.accountSheetHeader .accountAvatar {
+  width: 48px;
+  height: 48px;
+  font-size: 17px;
+}
+
+.accountSheetHeader .accountIdentity strong {
+  margin-top: 2px;
+  font-size: 15px;
+}
+
+.accountSheetHeader .accountIdentity small:first-child {
+  margin-top: 0;
+  color: var(--mobile-chrome-accent);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.accountSheetClose {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: var(--mobile-chrome-text);
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.accountProfileLink,
+.accountSheetSignOut {
+  min-height: 62px;
+  border-radius: 17px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.accountProfileLink {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border: 1px solid rgba(216, 189, 124, 0.16);
+  color: var(--mobile-chrome-text);
+  background: rgba(216, 189, 124, 0.055);
+}
+
+.accountProfileIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(216, 189, 124, 0.2);
+  border-radius: 13px;
+  color: var(--mobile-chrome-accent-text);
+  background: rgba(216, 189, 124, 0.075);
+}
+
+.accountProfileLink > span:nth-child(2) {
+  min-width: 0;
+}
+
+.accountProfileLink strong,
+.accountProfileLink small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountProfileLink strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.accountProfileLink small {
+  margin-top: 4px;
+  color: var(--mobile-chrome-muted);
+  font-size: 10.5px;
+  font-weight: 580;
+}
+
+.accountProfileLink > svg {
+  color: var(--mobile-chrome-accent);
+}
+
+.accountSheetSignOut {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 20px auto;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 1px solid rgba(184, 79, 79, 0.26);
+  color: var(--mobile-chrome-danger-text);
+  background: rgba(132, 45, 45, 0.11);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 790;
+  cursor: pointer;
+}
+
+.accountSheetSignOut:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.accountSheetClose:focus-visible,
+.accountProfileLink:focus-visible,
+.accountSheetSignOut:focus-visible {
+  outline: 2px solid var(--mobile-chrome-focus);
+  outline-offset: 2px;
+}
+
+.accountSheetClose:active,
+.accountProfileLink:active,
+.accountSheetSignOut:active {
+  transform: scale(0.97);
+}
+
+:global(html[data-ficonter-device="tablet"]) .accountSheet {
+  right: 50%;
+  left: auto;
+  width: min(620px, calc(100vw - 34px));
+  border-radius: 28px 28px 0 0;
+  transform: translate3d(50%, 105%, 0);
+}
+
+:global(html[data-ficonter-device="tablet"]) .accountSheetOpen {
+  transform: translate3d(50%, 0, 0) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accountSheet,
+  .accountSheetClose,
+  .accountProfileLink,
+  .accountSheetSignOut {
+    transition: none !important;
+  }
+}

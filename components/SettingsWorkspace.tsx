@@ -169,6 +169,7 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
   isSubscriptionExempt?: boolean;
+  profileOnly?: boolean;
 };
 
 type DialogState =
@@ -447,6 +448,7 @@ export function SettingsWorkspace({
   subscription,
   requiredFeature = null,
   isSubscriptionExempt = false,
+  profileOnly = false,
 }: Props) {
   const { language, locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
@@ -460,13 +462,13 @@ export function SettingsWorkspace({
   const [billingHistoryError, setBillingHistoryError] = useState("");
   const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
-  const [active, setActive] = useState<SectionId>(() =>
-    isSubscriptionExempt && initialSection === "subscription"
-      ? "profile"
-      : isSectionId(initialSection)
-        ? initialSection
-        : "profile",
-  );
+  const [active, setActive] = useState<SectionId>(() => {
+    if (profileOnly) return "profile";
+    if (isSubscriptionExempt && initialSection === "subscription") return "security";
+    return isSectionId(initialSection) && initialSection !== "profile"
+      ? initialSection
+      : "security";
+  });
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
   const [profilePhoto, setProfilePhoto] = useState("");
@@ -521,18 +523,25 @@ export function SettingsWorkspace({
   >({});
 
   useEffect(() => {
-    if (!isSectionId(initialSection)) return;
+    if (profileOnly) {
+      setActive("profile");
+      setMessage(null);
+      setSaveFeedback({});
+      return;
+    }
+
+    if (!isSectionId(initialSection) || initialSection === "profile") return;
 
     // Owner / Super Admin / Admin never enter the customer Subscription area.
     // Their access is role-based and does not require a plan or payment.
     setActive(
       isSubscriptionExempt && initialSection === "subscription"
-        ? "profile"
+        ? "security"
         : initialSection,
     );
     setMessage(null);
     setSaveFeedback({});
-  }, [initialSection, isSubscriptionExempt]);
+  }, [initialSection, isSubscriptionExempt, profileOnly]);
 
   useEffect(() => {
     return () => {
@@ -1400,12 +1409,13 @@ export function SettingsWorkspace({
     }
   }
 
+  const settingsSections = sections.filter((section) => section.id !== "profile");
   const visibleSections = isSubscriptionExempt
-    ? sections.filter((section) => section.id !== "subscription")
-    : sections;
-  const activeSection =
-    visibleSections.find((section) => section.id === active) ??
-    visibleSections[0];
+    ? settingsSections.filter((section) => section.id !== "subscription")
+    : settingsSections;
+  const activeSection = profileOnly
+    ? sections.find((section) => section.id === "profile") ?? sections[0]
+    : visibleSections.find((section) => section.id === active) ?? visibleSections[0];
 const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
 const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
 
@@ -1488,7 +1498,8 @@ const showSubscriptionManagement =
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className={styles.workspace}>
+    <div className={`${styles.workspace} ${profileOnly ? styles.profileOnlyWorkspace : ""}`}>
+      {!profileOnly ? (
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
           <div className={styles.avatar}>
@@ -1509,10 +1520,11 @@ const showSubscriptionManagement =
           ))}
         </div>
       </aside>
+      ) : null}
 
-      <main className={styles.panel}>
+      <main className={`${styles.panel} ${profileOnly ? styles.profileOnlyPanel : ""}`}>
         <header className={styles.panelHeader}>
-          <div><span className={styles.eyebrow}>Account preferences</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
+          <div><span className={styles.eyebrow}>{profileOnly ? "Private profile" : "Account preferences"}</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
           <div className={styles.secureBadge}><ShieldCheck size={16} />Private</div>
         </header>
 

@@ -2,6 +2,18 @@
    Mobile-only application chrome. The shell is deliberately stable and
    independent from workspace wallpaper/theme changes. */
 
+:global(html[data-ficonter-native-app="true"]) {
+  --ficonter-native-header-height: 82px;
+  --ficonter-native-dock-height: 66px;
+}
+
+@media (max-width: 390px) {
+  :global(html[data-ficonter-native-app="true"]) {
+    --ficonter-native-header-height: 78px;
+    --ficonter-native-dock-height: 62px;
+  }
+}
+
 .header,
 .bottomDock,
 .drawer,
@@ -100,7 +112,7 @@
 }
 
 .routeIdentity strong {
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--mobile-chrome-text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
@@ -121,7 +133,7 @@
   border-radius: 50%;
   color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.07);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
   text-decoration: none;
@@ -424,10 +436,10 @@
   margin: 1px 0 8px;
   padding: 8px 14px;
   border: 1px solid rgba(216, 189, 124, 0.18);
-  border-radius: 17px;
+  border-radius: 15px;
   color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.065);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 730;
   line-height: 1.2;
   text-decoration: none;
@@ -673,7 +685,7 @@
   width: min(720px, calc(100vw - 44px));
   border: 1px solid rgba(216, 189, 124, 0.14);
   border-bottom: 0;
-  border-radius: 24px 24px 0 0;
+  border-radius: 20px 20px 0 0;
   transform: translateX(50%) translateZ(0);
 }
 
@@ -681,7 +693,7 @@
   right: 50%;
   left: auto;
   width: min(760px, calc(100vw - 34px));
-  border-radius: 30px 30px 0 0;
+  border-radius: 24px 24px 0 0;
   transform: translate3d(50%, 105%, 0);
 }
 
@@ -835,7 +847,7 @@
 .accountIdentity small {
   margin-top: 3px;
   color: var(--mobile-chrome-muted);
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 580;
 }
 
@@ -844,7 +856,7 @@
   min-height: 40px;
   grid-template-columns: 18px auto;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 0 10px;
   border: 1px solid rgba(184, 79, 79, 0.24);
   border-radius: 12px;
@@ -871,7 +883,7 @@
 .drawerBusinessSelector {
   display: grid;
   min-width: 0;
-  gap: 6px;
+  gap: 4px;
   margin: 0 0 8px;
   padding: 10px 12px;
   border: 1px solid rgba(216, 189, 124, 0.18);
@@ -947,17 +959,17 @@
 /* -------------------------------------------------------------------------- */
 
 :global(html[data-ficonter-native-app="true"]) .header {
-  min-height: calc(88px + env(safe-area-inset-top));
-  grid-template-columns: 58px minmax(0, 1fr) 54px;
-  gap: 14px;
+  min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
+  grid-template-columns: 46px minmax(0, 1fr) 44px;
+  gap: 10px;
   align-items: center;
   padding:
     env(safe-area-inset-top)
-    max(16px, env(safe-area-inset-right))
-    11px
-    max(16px, env(safe-area-inset-left));
+    max(12px, env(safe-area-inset-right))
+    7px
+    max(12px, env(safe-area-inset-left));
   border-bottom: 1px solid #c79f4d;
-  border-radius: 0 0 22px 22px;
+  border-radius: 0 0 18px 18px;
   background:
     radial-gradient(circle at 12% 0%, rgba(76, 112, 96, .20), transparent 28%),
     linear-gradient(115deg, #243b34 0%, #102c25 48%, #0b211c 100%);
@@ -967,8 +979,8 @@
 }
 
 .menuButton {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   overflow: hidden;
   border: 1px solid rgba(207, 168, 78, .74);
@@ -979,9 +991,9 @@
 }
 
 .headerMark {
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   box-shadow: none;
 }
 
@@ -992,7 +1004,7 @@
 .routeEyebrow {
   color: #e7cf91;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: .14em;
 }
@@ -1001,21 +1013,21 @@
   margin-top: 5px;
   color: #fffdf5;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 27px;
+  font-size: 21px;
   font-weight: 600;
   line-height: .98;
   letter-spacing: -.035em;
 }
 
 .workspaceBadge {
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #d2ad5b;
   color: #fffdf6;
   background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(0,0,0,.05));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 500;
 }
 
@@ -1033,17 +1045,17 @@
 }
 
 :global(html[data-ficonter-native-app="true"]) .bottomDock {
-  min-height: calc(86px + env(safe-area-inset-bottom));
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 76px minmax(0, 1fr) minmax(0, 1fr);
+  min-height: calc(var(--ficonter-native-dock-height) + env(safe-area-inset-bottom));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 60px minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
   gap: 0;
   padding:
-    10px
-    max(9px, env(safe-area-inset-right))
-    max(7px, env(safe-area-inset-bottom))
-    max(9px, env(safe-area-inset-left));
+    5px
+    max(6px, env(safe-area-inset-right))
+    max(4px, env(safe-area-inset-bottom))
+    max(6px, env(safe-area-inset-left));
   border-top: 1px solid #c69c44;
-  border-radius: 30px 30px 0 0;
+  border-radius: 24px 24px 0 0;
   background:
     radial-gradient(circle at 50% -30%, rgba(224, 192, 111, .11), transparent 26%),
     linear-gradient(108deg, #243a34 0%, #102a23 54%, #0b211c 100%);
@@ -1053,19 +1065,19 @@
 }
 
 .dockItem {
-  min-height: 67px;
-  gap: 6px;
-  padding: 6px 2px 3px;
+  min-height: 50px;
+  gap: 3px;
+  padding: 3px 2px 1px;
   border-radius: 15px;
   color: #c9d1cd;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
 }
 
 .dockItem svg {
-  width: 25px;
-  height: 25px;
+  width: 21px;
+  height: 21px;
   stroke-width: 1.8;
 }
 
@@ -1076,8 +1088,8 @@
 .dockActive::after {
   top: auto;
   bottom: 0;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background: #e1bd68;
   box-shadow: none;
 }
@@ -1088,10 +1100,10 @@
 }
 
 .addButton {
-  width: 68px;
-  height: 68px;
-  margin-top: -22px;
-  border: 6px solid #18332b;
+  width: 52px;
+  height: 52px;
+  margin-top: -14px;
+  border: 4px solid #18332b;
   color: #17362d;
   background: radial-gradient(circle at 32% 26%, #f7e7b1, #ddbd69 62%, #c49a43 100%);
   box-shadow:
@@ -1101,15 +1113,15 @@
 }
 
 .addButton svg {
-  width: 31px;
-  height: 31px;
+  width: 25px;
+  height: 25px;
   stroke-width: 1.7;
 }
 
 @media (max-width: 390px) {
   :global(html[data-ficonter-native-app="true"]) .header {
     min-height: calc(82px + env(safe-area-inset-top));
-    grid-template-columns: 52px minmax(0, 1fr) 48px;
+    grid-template-columns: 44px minmax(0, 1fr) 42px;
     gap: 11px;
     padding-right: max(13px, env(safe-area-inset-right));
     padding-left: max(13px, env(safe-area-inset-left));
@@ -1120,9 +1132,9 @@
   .routeEyebrow { font-size: 9.5px; }
   .routeIdentity strong { font-size: 23px; }
   .workspaceBadge { width: 48px; height: 48px; font-size: 21px; }
-  :global(html[data-ficonter-native-app="true"]) .bottomDock { grid-template-columns: 1fr 1fr 68px 1fr 1fr; }
-  .addButton { width: 62px; height: 62px; margin-top: -20px; }
-  .dockItem { font-size: 10.5px; }
+  :global(html[data-ficonter-native-app="true"]) .bottomDock { min-height: calc(var(--ficonter-native-dock-height) + env(safe-area-inset-bottom)); grid-template-columns: 1fr 1fr 58px 1fr 1fr; }
+  .addButton { width: 50px; height: 50px; margin-top: -12px; }
+  .dockItem { font-size: 9.5px; }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1132,22 +1144,22 @@
 /* -------------------------------------------------------------------------- */
 
 :global(html[data-ficonter-native-app="true"]) .header {
-  min-height: calc(112px + env(safe-area-inset-top));
-  grid-template-columns: 58px minmax(0, 1fr) 54px;
+  min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
+  grid-template-columns: 46px minmax(0, 1fr) 44px;
   align-items: start;
-  padding-top: calc(env(safe-area-inset-top) + 9px);
-  padding-bottom: 10px;
+  padding-top: calc(env(safe-area-inset-top) + 5px);
+  padding-bottom: 5px;
 }
 
 .brandMark {
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   place-items: center;
   align-self: start;
   overflow: hidden;
   border: 1px solid rgba(207, 168, 78, .74);
-  border-radius: 17px;
+  border-radius: 13px;
   background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(0,0,0,.10));
   box-shadow: 0 7px 18px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08);
 }
@@ -1166,7 +1178,7 @@
   min-height: 28px;
   place-items: center start;
   align-self: start;
-  margin-top: 8px;
+  margin-top: 4px;
   padding: 0;
   overflow: visible;
   border: 0;
@@ -1177,8 +1189,8 @@
 }
 
 .menuButton svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   stroke-width: 1.75;
 }
 
@@ -1194,66 +1206,66 @@
 
 @media (max-width: 390px) {
   :global(html[data-ficonter-native-app="true"]) .header {
-    min-height: calc(106px + env(safe-area-inset-top));
-    grid-template-columns: 52px minmax(0, 1fr) 48px;
-    padding-top: calc(env(safe-area-inset-top) + 8px);
-    padding-bottom: 9px;
+    min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
+    grid-template-columns: 44px minmax(0, 1fr) 42px;
+    padding-top: calc(env(safe-area-inset-top) + 4px);
+    padding-bottom: 4px;
   }
 
   .brandMark {
-    width: 52px;
-    height: 52px;
-    border-radius: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
   }
 
   .brandMark .headerMark {
-    width: 47px;
-    height: 47px;
-    border-radius: 13px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
   }
 
   .routeEyebrow {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .routeIdentity strong {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .menuButton {
-    width: 31px;
-    height: 25px;
-    min-width: 31px;
-    min-height: 25px;
-    margin-top: 6px;
+    width: 27px;
+    height: 22px;
+    min-width: 27px;
+    min-height: 22px;
+    margin-top: 3px;
   }
 
   .menuButton svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .workspaceBadge {
-    width: 48px;
-    height: 48px;
-    font-size: 21px;
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
   }
 
   .dockItem {
-    font-size: 11px;
+    font-size: 9.5px;
   }
 }
 
 
 /* Preserve the second business-profile row after the personal header grows. */
 :global(html[data-ficonter-native-app="true"]) .businessHeader {
-  min-height: calc(164px + env(safe-area-inset-top));
+  min-height: calc(136px + env(safe-area-inset-top));
   row-gap: 7px;
 }
 
 @media (max-width: 390px) {
   :global(html[data-ficonter-native-app="true"]) .businessHeader {
-    min-height: calc(156px + env(safe-area-inset-top));
+    min-height: calc(130px + env(safe-area-inset-top));
   }
 }
 
@@ -1541,20 +1553,20 @@
 .headerLanguage {
   position: absolute;
   z-index: 4;
-  top: calc(env(safe-area-inset-top) + 16px);
-  inset-inline-end: max(78px, calc(env(safe-area-inset-right) + 78px));
+  top: calc(env(safe-area-inset-top) + 8px);
+  inset-inline-end: max(64px, calc(env(safe-area-inset-right) + 64px));
 }
 
 @media (max-width: 390px) {
   .headerLanguage {
-    top: calc(env(safe-area-inset-top) + 14px);
-    inset-inline-end: max(68px, calc(env(safe-area-inset-right) + 68px));
+    top: calc(env(safe-area-inset-top) + 7px);
+    inset-inline-end: max(58px, calc(env(safe-area-inset-right) + 58px));
   }
 }
 
 @media (max-width: 360px) {
   .headerLanguage {
-    top: calc(env(safe-area-inset-top) + 14px);
-    inset-inline-end: max(64px, calc(env(safe-area-inset-right) + 64px));
+    top: calc(env(safe-area-inset-top) + 7px);
+    inset-inline-end: max(55px, calc(env(safe-area-inset-right) + 55px));
   }
 }

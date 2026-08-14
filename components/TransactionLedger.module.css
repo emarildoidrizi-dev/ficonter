@@ -398,3 +398,205 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE LEDGER SELECTION — long-press contextual actions            */
+/* Normal browsing stays clean. Long-press (~700ms) enters selection mode;     */
+/* subsequent taps add/remove rows. Desktop checkbox workflow remains intact.  */
+/* -------------------------------------------------------------------------- */
+.mobileSelectionBar,
+.mobileSelectionHint {
+  display: none;
+}
+
+:global(html[data-ficonter-native-app="true"]) .selectionBar {
+  display: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar {
+  position: sticky;
+  z-index: 8;
+  top: calc(var(--ficonter-native-header-height, 82px) + env(safe-area-inset-top) + 6px);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  margin: 0 0 9px;
+  padding: 6px 7px;
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--border-subtle));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-sidebar) 96%, transparent);
+  color: var(--solid-text);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--surface-sidebar) 20%, transparent);
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar > strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar button {
+  min-width: 0;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--solid-text);
+  background: rgba(255,255,255,.055);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar .mobileSelectionClose {
+  width: 34px;
+  padding: 0;
+  color: color-mix(in srgb, var(--solid-text) 82%, transparent);
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar .mobileSelectAll {
+  color: color-mix(in srgb, var(--gold) 86%, white 14%);
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar .mobileEditSelection:disabled {
+  opacity: .38;
+  cursor: default;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionBar .mobileDeleteSelection {
+  color: #ffb5ad;
+  background: rgba(156, 45, 45, .18);
+}
+
+:global(html[data-ficonter-native-app="true"]) .list {
+  gap: 5px !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .row {
+  min-height: 60px !important;
+  grid-template-columns: 4px minmax(0, 1fr) auto !important;
+  gap: 9px !important;
+  padding: 8px 10px !important;
+  border-radius: 13px !important;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+:global(html[data-ficonter-native-app="true"]) .rowCheckbox {
+  display: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .details {
+  grid-column: 2 !important;
+  align-self: center;
+}
+
+:global(html[data-ficonter-native-app="true"]) .details strong {
+  font-size: 13.5px !important;
+  line-height: 1.15;
+}
+
+:global(html[data-ficonter-native-app="true"]) .details span {
+  max-width: 100%;
+  margin-top: 3px !important;
+  overflow: hidden;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(html[data-ficonter-native-app="true"]) .amountBlock {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  text-align: right !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .amountBlock strong {
+  font-size: 12.5px !important;
+  white-space: nowrap;
+}
+
+:global(html[data-ficonter-native-app="true"]) .actions {
+  display: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionMode .row {
+  grid-template-columns: 24px 4px minmax(0, 1fr) auto !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionMode .rowCheckbox {
+  display: grid !important;
+  grid-column: 1 !important;
+  width: 24px !important;
+  height: 34px !important;
+  place-items: center;
+  align-self: center;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionMode .rowCheckbox input {
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0;
+  accent-color: var(--sage);
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionMode .details {
+  grid-column: 3 !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionMode .amountBlock {
+  grid-column: 4 !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .selectedRow {
+  border-color: color-mix(in srgb, var(--sage) 48%, var(--border-subtle)) !important;
+  background: color-mix(in srgb, var(--sage-soft) 68%, var(--surface-raised)) !important;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--sage) 82%, transparent) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .mobileSelectionHint {
+  display: block;
+  margin: 9px 0 3px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+@media (max-width: 390px) {
+  :global(html[data-ficonter-native-app="true"]) .mobileSelectionBar {
+    top: calc(var(--ficonter-native-header-height, 78px) + env(safe-area-inset-top) + 5px);
+    grid-template-columns: 32px minmax(0, 1fr) auto auto auto;
+    gap: 4px;
+    padding: 5px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .mobileSelectionBar button {
+    min-height: 32px;
+    padding-inline: 6px;
+    font-size: 9.5px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .row {
+    min-height: 58px !important;
+    padding: 7px 9px !important;
+  }
+}

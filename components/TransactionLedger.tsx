@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarRange,
   Download,
@@ -170,6 +170,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const [notice, setNotice] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressStartRef = useRef<{ id: string; x: number; y: number } | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   useEffect(() => {
     function handleCreated(event: Event) {
@@ -389,6 +392,60 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
     setDateTo("");
     setSelectedIds(new Set());
     setError("");
+  }
+
+  function isNativeMobileLedger() {
+    return typeof document !== "undefined" && document.documentElement.dataset.ficonterNativeApp === "true";
+  }
+
+  function cancelLongPress() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }
+
+  function startLongPress(id: string, pointerType: string, clientX: number, clientY: number) {
+    if (!isNativeMobileLedger() || pointerType === "mouse") return;
+    cancelLongPress();
+    longPressTriggeredRef.current = false;
+    longPressStartRef.current = { id, x: clientX, y: clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setSelectedIds((current) => {
+        if (current.has(id)) return current;
+        const next = new Set(current);
+        next.add(id);
+        return next;
+      });
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate?.(12);
+      }
+      longPressTimerRef.current = null;
+    }, 700);
+  }
+
+  function moveLongPress(clientX: number, clientY: number) {
+    const start = longPressStartRef.current;
+    if (!start || !longPressTimerRef.current) return;
+    if (Math.hypot(clientX - start.x, clientY - start.y) > 9) cancelLongPress();
+  }
+
+  function handleMobileRowClick(id: string) {
+    if (!isNativeMobileLedger()) return;
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+    if (selectedIds.size > 0) toggleTransaction(id);
+  }
+
+  function editSingleSelection() {
+    if (selectedTransactions.length !== 1) return;
+    const [transaction] = selectedTransactions;
+    setSelectedIds(new Set());
+    openEdit(transaction);
   }
 
   function toggleTransaction(id: string) {
@@ -820,6 +877,24 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       {notice && <div className={styles.notice}>{notice}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
+      {selectedTransactions.length > 0 && (
+        <div className={styles.mobileSelectionBar} role="toolbar" aria-label="Selected transaction actions">
+          <button type="button" className={styles.mobileSelectionClose} onClick={() => setSelectedIds(new Set())} aria-label="Exit selection mode">
+            <X size={17} aria-hidden="true" />
+          </button>
+          <strong>{selectedTransactions.length} selected</strong>
+          <button type="button" className={styles.mobileSelectAll} onClick={toggleAllVisible}>
+            {allVisibleSelected ? "Clear all" : "Select all"}
+          </button>
+          <button type="button" className={styles.mobileEditSelection} onClick={editSingleSelection} disabled={selectedTransactions.length !== 1}>
+            <Pencil size={15} aria-hidden="true" /> Edit
+          </button>
+          <button type="button" className={styles.mobileDeleteSelection} onClick={() => setBulkDeleteOpen(true)}>
+            <Trash2 size={15} aria-hidden="true" /> Delete
+          </button>
+        </div>
+      )}
+
       <div className={styles.selectionBar}>
         <label className={styles.selectAllControl}>
           <input
@@ -843,7 +918,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       </div>
 
       <div
-        className={`${styles.listViewport} ficonter-scroll-region`}
+        className={`${styles.listViewport} ${selectedTransactions.length > 0 ? styles.mobileSelectionMode : ""} ficonter-scroll-region`}
         tabIndex={visible.length > 10 ? 0 : undefined}
         aria-label="Transaction history. The newest ten transactions are visible first; scroll for older records."
       >
@@ -851,8 +926,17 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         {renderedVisible.map((transaction) => {
           const direction = directionOf(transaction.type);
           return (
-            <article className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`} key={transaction.id}>
-              <label className={styles.rowCheckbox}>
+            <article
+              className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`}
+              key={transaction.id}
+              onPointerDown={(event) => startLongPress(transaction.id, event.pointerType, event.clientX, event.clientY)}
+              onPointerMove={(event) => moveLongPress(event.clientX, event.clientY)}
+              onPointerUp={cancelLongPress}
+              onPointerCancel={cancelLongPress}
+              onPointerLeave={cancelLongPress}
+              onClick={() => handleMobileRowClick(transaction.id)}
+            >
+              <label className={styles.rowCheckbox} onClick={(event) => event.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={selectedIds.has(transaction.id)}
@@ -891,6 +975,10 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         })}
         </div>
       </div>
+      {selectedTransactions.length === 0 && visible.length > 0 ? (
+        <p className={styles.mobileSelectionHint}>Press and hold a transaction to select.</p>
+      ) : null}
+
       {visible.length > 10 ? (
         <div className={styles.scrollHint}>
           Rendering {Math.min(renderedVisible.length, visible.length)} of {visible.length} matching records

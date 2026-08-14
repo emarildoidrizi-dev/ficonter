@@ -620,9 +620,9 @@
   }
 
   .miniStats > .miniStat {
-    min-height: 82px;
+    min-height: 84px;
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) 24px;
+    grid-template-columns: 52px minmax(0, 1fr) 24px;
     align-items: center;
     gap: 13px;
     padding: 12px 13px;
@@ -640,15 +640,30 @@
   }
 
   .miniStatIcon {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     display: grid;
     place-items: center;
-    border: 1px solid color-mix(in srgb, var(--gold) 52%, var(--border-subtle));
-    border-radius: 50%;
-    color: color-mix(in srgb, var(--sage) 84%, var(--text-primary));
-    background: var(--surface-raised);
-    box-shadow: 0 5px 14px color-mix(in srgb, var(--surface-sidebar) 8%, transparent);
+    align-self: center;
+    justify-self: start;
+    border: 1px solid color-mix(in srgb, var(--border-strong) 48%, var(--border-subtle));
+    border-radius: 16px;
+    color: color-mix(in srgb, var(--sage) 88%, var(--text-primary));
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--sage-soft) 82%, var(--surface-raised)),
+      color-mix(in srgb, var(--surface-raised) 94%, transparent)
+    );
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
+      0 4px 12px color-mix(in srgb, var(--surface-sidebar) 6%, transparent);
+  }
+
+  .miniStatIcon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    stroke-width: 1.9;
   }
 
   .miniStatCopy {
@@ -659,7 +674,7 @@
 
   .miniStatCopy > span {
     display: block;
-    margin: 0 0 5px;
+    margin: 0 0 6px;
     overflow: hidden;
     color: var(--text-secondary);
     font-size: 14px;
@@ -767,7 +782,8 @@
   .addMoney { width: min(100%, 260px); }
   .availableCard { padding-inline: 17px; }
   .availableAmount { font-size: 43px; }
-  .miniStats > .miniStat { grid-template-columns: 44px minmax(0,1fr) 18px; gap: 10px; }
-  .miniStatIcon { width: 44px; height: 44px; }
+  .miniStats > .miniStat { grid-template-columns: 46px minmax(0,1fr) 18px; gap: 10px; }
+  .miniStatIcon { width: 46px; height: 46px; border-radius: 14px; }
+  .miniStatIcon svg { width: 20px; height: 20px; }
   .miniStatCopy > strong { font-size: 17px; }
 }

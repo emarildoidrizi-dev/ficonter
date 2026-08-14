@@ -1440,13 +1440,8 @@ export function FiconterNativeAppChrome({
             ref={settingsCloseButtonRef}
             type="button"
             className={styles.accountSheetClose}
-            onClick={() => {
-              setSettingsOpen(false);
-              window.requestAnimationFrame(() => {
-                settingsButtonRef.current?.focus({ preventScroll: true });
-              });
-            }}
-            aria-label="Close Settings"
+            onClick={goHomeInstant}
+            aria-label="Close Settings and go to Home"
           >
             <X size={22} aria-hidden={true} />
           </button>

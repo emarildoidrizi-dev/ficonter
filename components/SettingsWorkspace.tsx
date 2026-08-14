@@ -1525,9 +1525,10 @@ const showSubscriptionManagement =
   }
 
   function closeSettingsSection() {
-    // Mobile Settings uses the native-style quick menu as its section index.
-    // Keep the current detail mounted behind the sheet so closing the sheet
-    // never reveals the retired/blank Settings index page.
+    // Retire the detail view in the same interaction that opens the native
+    // Settings sheet. This makes the Back control disappear immediately
+    // instead of leaving the section mounted behind the quick menu.
+    setSectionDetailOpen(false);
     setMessage(null);
     setSaveFeedback({});
     window.dispatchEvent(new CustomEvent("ficonter:open-settings-menu"));

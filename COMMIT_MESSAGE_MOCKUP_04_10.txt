@@ -1,0 +1,1 @@
+fix(mobile): make Settings back return instantly to quick menu

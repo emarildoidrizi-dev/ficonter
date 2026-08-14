@@ -1,0 +1,1 @@
+fix(mobile): perfect overview balance row alignment

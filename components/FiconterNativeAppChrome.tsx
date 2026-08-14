@@ -637,6 +637,30 @@ export function FiconterNativeAppChrome({
   }, []);
 
   useEffect(() => {
+    function handleOpenSettingsMenu() {
+      setDrawerOpen(false);
+      setAccountOpen(false);
+      setSettingsOpen(true);
+
+      personalSettingsQuickRoutes.forEach((item, index) => {
+        window.setTimeout(() => {
+          router.prefetch(item.href);
+        }, index * 35);
+      });
+    }
+
+    window.addEventListener(
+      "ficonter:open-settings-menu",
+      handleOpenSettingsMenu,
+    );
+    return () =>
+      window.removeEventListener(
+        "ficonter:open-settings-menu",
+        handleOpenSettingsMenu,
+      );
+  }, [router]);
+
+  useEffect(() => {
     if (currentPathRef.current === pathname) return;
     previousPathRef.current = currentPathRef.current;
     currentPathRef.current = pathname;

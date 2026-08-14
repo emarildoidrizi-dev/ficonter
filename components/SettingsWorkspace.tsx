@@ -1525,10 +1525,12 @@ const showSubscriptionManagement =
   }
 
   function closeSettingsSection() {
-    setSectionDetailOpen(false);
+    // Mobile Settings uses the native-style quick menu as its section index.
+    // Keep the current detail mounted behind the sheet so closing the sheet
+    // never reveals the retired/blank Settings index page.
     setMessage(null);
     setSaveFeedback({});
-    scrollSettingsToTop();
+    window.dispatchEvent(new CustomEvent("ficonter:open-settings-menu"));
   }
 
   return (

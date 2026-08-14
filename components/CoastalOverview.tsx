@@ -124,12 +124,12 @@ export function CoastalOverview({
           <div className={styles.cardDivider} aria-hidden="true" />
           <div className={styles.miniStats}>
             <Link className={styles.miniStat} href="/dashboard/bills">
-              <span className={styles.miniStatIcon} aria-hidden="true"><Receipt size={21} strokeWidth={1.9} /></span>
+              <span className={styles.miniStatIcon} data-icon="still-to-pay" aria-hidden="true"><Receipt size={21} strokeWidth={1.9} /></span>
               <span className={styles.miniStatCopy}><span>Still to pay</span><strong>{formatCurrency(stillToPay, currency)}</strong></span>
               <ChevronRight className={styles.miniStatChevron} size={21} aria-hidden="true" />
             </Link>
             <Link className={styles.miniStat} href="/dashboard/budget">
-              <span className={styles.miniStatIcon} aria-hidden="true"><BarChart3 size={21} strokeWidth={1.9} /></span>
+              <span className={styles.miniStatIcon} data-icon="left-after" aria-hidden="true"><BarChart3 size={21} strokeWidth={1.9} /></span>
               <span className={styles.miniStatCopy}><span>Left after everything</span><strong>{formatCurrency(leftAfterEverything, currency)}</strong></span>
               <ChevronRight className={styles.miniStatChevron} size={21} aria-hidden="true" />
             </Link>

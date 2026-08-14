@@ -866,5 +866,5 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overvie
 }
 
 html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overview"]::before {
-  top: -28px !important;
+  top: -92px !important;
 }

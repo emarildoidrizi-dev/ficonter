@@ -398,9 +398,13 @@
 .modeIcon {
   width: 50px;
   height: 50px;
-  display: grid;
-  place-items: center;
+  display: block;
+  position: relative;
   place-self: center start;
+  flex: 0 0 50px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--gold) 34%, var(--line));
   border-radius: 16px;
   color: color-mix(in srgb, var(--sage) 88%, var(--text-primary));
@@ -415,13 +419,16 @@
 .modeIcon svg,
 .modeButton .modeIcon svg,
 .modeActive .modeIcon svg {
-  position: static;
-  top: auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   right: auto;
   width: 24px;
   height: 24px;
   display: block;
+  margin: 0;
   color: currentColor;
+  transform: translate(-50%, -50%);
 }
 
 .modeActive .modeIcon {
@@ -432,6 +439,21 @@
     color-mix(in srgb, var(--sage) 88%, var(--surface-sidebar) 12%)
   );
   border-color: color-mix(in srgb, var(--gold) 52%, var(--sage));
+}
+
+.modeButton[data-mode="simple"] .modeIcon svg,
+.modeActive[data-mode="simple"] .modeIcon svg {
+  transform: translate(calc(-50% + 0.5px), calc(-50% + 0.5px));
+}
+
+.modeButton[data-mode="guided"] .modeIcon svg,
+.modeActive[data-mode="guided"] .modeIcon svg {
+  transform: translate(calc(-50% + 0.25px), calc(-50% + 0.25px));
+}
+
+.modeButton[data-mode="detailed"] .modeIcon svg,
+.modeActive[data-mode="detailed"] .modeIcon svg {
+  transform: translate(calc(-50% + 0.75px), calc(-50% + 0.5px));
 }
 
 .modeCopy {
@@ -534,6 +556,7 @@
   .modeIcon {
     width: 52px;
     height: 52px;
+    flex-basis: 52px;
     border-radius: 18px;
   }
 
@@ -575,6 +598,7 @@
   .modeIcon {
     width: 48px;
     height: 48px;
+    flex-basis: 48px;
     border-radius: 16px;
   }
 

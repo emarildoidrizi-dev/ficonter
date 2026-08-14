@@ -423,6 +423,7 @@ export function EffortlessEntryWorkspace({
                 key={option.value}
                 type="button"
                 className={mode === option.value ? styles.modeActive : styles.modeButton}
+                data-mode={option.value}
                 onClick={() => void changeMode(option.value)}
                 aria-pressed={mode === option.value}
                 disabled={savingMode}

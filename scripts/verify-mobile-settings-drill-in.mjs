@@ -13,10 +13,10 @@ const checks = [
   ['back control exists', tsx.includes('mobileSectionBack') && tsx.includes('Back to Settings sections')],
   ['detail close handler exists', tsx.includes('closeSettingsSection')],
   ['settings top reset exists', tsx.includes('scrollSettingsToTop') && tsx.includes('scrollIntoView')],
-  ['mobile index hides detail', css.includes('.workspace[data-settings-view="index"] .panel{display:none!important}')],
+  ['mobile index is retired', css.includes('.workspace[data-settings-view="index"]{display:none!important}')],
   ['mobile detail hides index', css.includes('.workspace[data-settings-view="detail"] .navigation{display:none!important}')],
   ['slide animation exists', css.includes('@keyframes settings-section-slide-in')],
-  ['native shell index hides panel', mobile.includes('[data-settings-view="index"] [class*="SettingsWorkspace_panel"]')],
+  ['native shell index workspace is retired', mobile.includes('[class*="SettingsWorkspace_workspace"][data-settings-view="index"]') && mobile.includes('display: none !important')],
   ['native shell detail hides navigation', mobile.includes('[data-settings-view="detail"] [class*="SettingsWorkspace_navigation"]')],
   ['native shell restores vertical settings rows', mobile.includes('grid-template-columns: minmax(0, 1fr) !important')],
 ];

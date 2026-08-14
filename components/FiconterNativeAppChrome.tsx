@@ -883,17 +883,29 @@ export function FiconterNativeAppChrome({
         })}
 
         {workspace === "personal" ? (
-          <Link
-            href={settingsItem.href}
-            prefetch={true}
+          <button
+            type="button"
             className={`${styles.dockItem} ${
               settingsActive ? styles.dockActive : ""
             }`}
-            aria-current={settingsActive ? "page" : undefined}
+            aria-pressed={settingsActive}
+            aria-label={
+              settingsActive
+                ? "Close Settings and return to Overview"
+                : "Open Settings"
+            }
+            onClick={() => {
+              if (settingsActive) {
+                router.push("/dashboard");
+                return;
+              }
+
+              router.push(settingsItem.href);
+            }}
           >
             <Settings2 size={21} aria-hidden={true} />
             <span>Settings</span>
-          </Link>
+          </button>
         ) : (
           <button
             type="button"

@@ -659,7 +659,16 @@ html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
 
 html[data-ficonter-native-app="true"] {
   --mobile-page-x: 14px;
-  --mobile-page-top: 118px;
+  /* Keep content flush with the current compact native header. The previous
+     118px reservation belonged to the older tall shell and created a dead
+     strip between the fixed header and the Overview hero. */
+  --mobile-page-top: var(--ficonter-native-header-height, 82px);
+}
+
+/* Business has a second profile row, so it keeps the extra clearance it
+   genuinely needs without forcing that space onto the Personal workspace. */
+html[data-ficonter-native-app="true"]:has([class*="FiconterNativeAppChrome_businessHeader"]) {
+  --mobile-page-top: 136px;
 }
 
 html[data-ficonter-native-app="true"] .app-main {
@@ -721,7 +730,11 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthH
 
 @media (max-width: 390px) {
   html[data-ficonter-native-app="true"] {
-    --mobile-page-top: 112px;
+    --mobile-page-top: var(--ficonter-native-header-height, 78px);
+  }
+
+  html[data-ficonter-native-app="true"]:has([class*="FiconterNativeAppChrome_businessHeader"]) {
+    --mobile-page-top: 130px;
   }
 
   html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_hero"] h1 {
@@ -841,4 +854,17 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthC
   html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_availableAmount"] {
     font-size: 43px !important;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE 04.28 — CONTINUOUS OVERVIEW HERO                                    */
+/* The Overview wallpaper begins at the compact header edge; only the hero's  */
+/* intentional internal breathing room remains.                               */
+/* -------------------------------------------------------------------------- */
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overview"] {
+  margin-top: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overview"]::before {
+  top: -28px !important;
 }

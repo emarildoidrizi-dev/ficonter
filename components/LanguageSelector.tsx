@@ -7,7 +7,7 @@ import { translateMessage } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageProvider";
 import styles from "./LanguageSelector.module.css";
 
-type Variant = "compact" | "settings" | "public";
+type Variant = "compact" | "settings" | "public" | "icon";
 
 export function LanguageSelector({
   variant = "compact",
@@ -86,20 +86,25 @@ export function LanguageSelector({
         aria-expanded={open}
         aria-controls={menuId}
         title={t("chooseLanguage")}
-        data-language-world-control={variant === "public" ? "true" : undefined}
+        data-language-world-control={variant === "public" || variant === "icon" ? "true" : undefined}
         onClick={() => setOpen((value) => !value)}
         disabled={saving}
       >
         {saving ? (
-          <LoaderCircle size={variant === "public" ? 18 : 16} className={styles.spinner} />
+          <LoaderCircle
+            size={variant === "public" ? 18 : variant === "icon" ? 20 : 16}
+            className={styles.spinner}
+          />
         ) : (
           <Globe2
-            size={variant === "public" ? 19 : 16}
-            className={variant === "public" ? styles.worldIcon : undefined}
+            size={variant === "public" ? 19 : variant === "icon" ? 21 : 16}
+            className={variant === "public" || variant === "icon" ? styles.worldIcon : undefined}
           />
         )}
-        <span>{current.nativeName}</span>
-        <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
+        {variant !== "icon" ? <span>{current.nativeName}</span> : null}
+        {variant !== "icon" ? (
+          <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
+        ) : null}
       </button>
 
       {open ? (

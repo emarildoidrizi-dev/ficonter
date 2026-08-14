@@ -1,0 +1,1 @@
+fix(mobile): add header language globe and direct Home navigation

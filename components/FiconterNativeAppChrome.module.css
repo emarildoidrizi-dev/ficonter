@@ -1532,3 +1532,29 @@
 .accountAvatarImage {
   padding: 2px;
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* FICONTER MOBILE 04.11 — authenticated language globe                       */
+/* The globe sits beside the profile avatar without disturbing header rows.   */
+/* -------------------------------------------------------------------------- */
+.headerLanguage {
+  position: absolute;
+  z-index: 4;
+  top: calc(env(safe-area-inset-top) + 16px);
+  inset-inline-end: max(78px, calc(env(safe-area-inset-right) + 78px));
+}
+
+@media (max-width: 390px) {
+  .headerLanguage {
+    top: calc(env(safe-area-inset-top) + 14px);
+    inset-inline-end: max(68px, calc(env(safe-area-inset-right) + 68px));
+  }
+}
+
+@media (max-width: 360px) {
+  .headerLanguage {
+    top: calc(env(safe-area-inset-top) + 14px);
+    inset-inline-end: max(64px, calc(env(safe-area-inset-right) + 64px));
+  }
+}

@@ -8,6 +8,8 @@ const bootstrap = read("components/AuthenticatedLanguageBootstrap.tsx");
 const globalControl = read("components/GlobalLanguageControl.tsx");
 const landing = read("app/page.tsx");
 const config = read("lib/i18n/config.ts");
+const chrome = read("components/FiconterNativeAppChrome.tsx");
+const chromeCss = read("components/FiconterNativeAppChrome.module.css");
 
 const checks = [
   [provider.includes("readBrowserLanguagePreference()"), "provider reads the persisted browser language before replacing it"],
@@ -22,6 +24,9 @@ const checks = [
   [bootstrap.includes("browserLanguagePreference"), "authenticated bootstrap reads the public/login preference"],
   [bootstrap.includes("accountLanguage !== browserLanguage"), "public/login choice is mirrored to the authenticated account when needed"],
   [bootstrap.includes("normalizeLanguage(language), false"), "new devices inherit the account language back to public pages"],
+  [selector.includes('type Variant = "compact" | "settings" | "public" | "icon"'), "selector supports a globe-only authenticated header variant"],
+  [chrome.includes('<LanguageSelector variant="icon" />'), "authenticated mobile header renders the world language control"],
+  [chromeCss.includes('.headerLanguage'), "authenticated globe has a dedicated header position"],
   [["en", "de", "es", "sq", "ar", "pt", "it", "ru"].every((code) => config.includes(`\"${code}\"`)), "all eight launch languages remain available"],
 ];
 

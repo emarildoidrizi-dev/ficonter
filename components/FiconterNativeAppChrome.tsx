@@ -45,6 +45,7 @@ import {
   type ComponentType,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { LanguageSelector } from "./LanguageSelector";
 import { switchActiveBusinessAction } from "@/app/business/actions";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
@@ -97,9 +98,11 @@ type IOSNavigator = Navigator & {
 
 type DeviceClass = "phone" | "tablet" | "desktop";
 
+const PERSONAL_HOME_HREF = "/dashboard/overview";
+
 const personalRoutes: RouteItem[] = [
   {
-    href: "/dashboard",
+    href: PERSONAL_HOME_HREF,
     label: "Home",
     title: "Overview",
     icon: House,
@@ -475,7 +478,7 @@ function activeRoute(
       );
     }
 
-    return pathname === "/dashboard";
+    return pathname === "/dashboard" || pathname === PERSONAL_HOME_HREF;
   }
 
   return (
@@ -531,8 +534,6 @@ export function FiconterNativeAppChrome({
   const drawerRef = useRef<HTMLElement>(null);
   const accountSheetRef = useRef<HTMLElement>(null);
   const settingsSheetRef = useRef<HTMLElement>(null);
-  const previousPathRef = useRef<string | null>(null);
-  const currentPathRef = useRef(pathname);
 
   const routes =
     workspace === "business"
@@ -581,7 +582,7 @@ export function FiconterNativeAppChrome({
 
   const switchHref =
     workspace === "business"
-      ? "/dashboard"
+      ? PERSONAL_HOME_HREF
       : "/business/overview";
 
   const businessWorkspaceLocked =
@@ -660,11 +661,6 @@ export function FiconterNativeAppChrome({
       );
   }, [router]);
 
-  useEffect(() => {
-    if (currentPathRef.current === pathname) return;
-    previousPathRef.current = currentPathRef.current;
-    currentPathRef.current = pathname;
-  }, [pathname]);
 
   useEffect(() => {
     synchronizeNativeAppMode();
@@ -953,19 +949,15 @@ export function FiconterNativeAppChrome({
     setSettingsOpen(false);
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-    if (pathname === "/dashboard") {
+    // Home is /dashboard/overview. Avoid the legacy /dashboard redirect because
+    // it causes an unnecessary second navigation and loading-state flash.
+    if (pathname === PERSONAL_HOME_HREF || pathname === "/dashboard") {
       window.scrollTo({ top: 0, behavior: "auto" });
       return;
     }
 
-    router.prefetch("/dashboard");
-
-    if (previousPathRef.current === "/dashboard") {
-      router.back();
-      return;
-    }
-
-    router.push("/dashboard", { scroll: false });
+    router.prefetch(PERSONAL_HOME_HREF);
+    router.push(PERSONAL_HOME_HREF, { scroll: false });
   }
 
   async function switchBusinessProfile(nextBusinessId: string) {
@@ -1064,6 +1056,10 @@ export function FiconterNativeAppChrome({
           </button>
         </div>
 
+        <div className={styles.headerLanguage}>
+          <LanguageSelector variant="icon" />
+        </div>
+
         <button
           ref={accountButtonRef}
           type="button"
@@ -1121,7 +1117,7 @@ export function FiconterNativeAppChrome({
             workspace,
           );
 
-          if (workspace === "personal" && item.href === "/dashboard") {
+          if (workspace === "personal" && item.href === PERSONAL_HOME_HREF) {
             return (
               <button
                 key={item.href}
@@ -1131,7 +1127,7 @@ export function FiconterNativeAppChrome({
                 }`}
                 aria-current={active ? "page" : undefined}
                 aria-label="Open Home instantly"
-                onPointerDown={() => router.prefetch("/dashboard")}
+                onPointerDown={() => router.prefetch(PERSONAL_HOME_HREF)}
                 onClick={goHomeInstant}
               >
                 <Icon size={21} aria-hidden={true} />

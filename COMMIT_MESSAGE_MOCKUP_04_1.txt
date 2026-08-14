@@ -1,0 +1,1 @@
+feat(mobile): separate menu control and pin Settings to dock

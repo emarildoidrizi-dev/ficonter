@@ -659,7 +659,7 @@ html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
 
 html[data-ficonter-native-app="true"] {
   --mobile-page-x: 14px;
-  --mobile-page-top: 92px;
+  --mobile-page-top: 118px;
 }
 
 html[data-ficonter-native-app="true"] .app-main {
@@ -719,6 +719,6 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_healthH
 
 @media (max-width: 390px) {
   html[data-ficonter-native-app="true"] {
-    --mobile-page-top: 88px;
+    --mobile-page-top: 112px;
   }
 }

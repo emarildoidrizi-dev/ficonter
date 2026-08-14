@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   LockKeyhole,
   LogOut,
+  Menu,
   MessageSquareText,
   PackageOpen,
   ReceiptText,
@@ -288,7 +289,6 @@ const personalRouteGroups: RouteGroup[] = [
     routes: [
       personalRoutes[14],
       personalRoutes[15],
-      personalRoutes[16],
     ],
   },
 ];
@@ -503,6 +503,11 @@ export function FiconterNativeAppChrome({
   const moreActive = !primaryItems.some((item) =>
     activeRoute(pathname, item, workspace),
   );
+
+  const settingsItem = personalRoutes[16];
+  const settingsActive =
+    workspace === "personal" &&
+    activeRoute(pathname, settingsItem, workspace);
 
   const addHref =
     workspace === "business"
@@ -736,30 +741,32 @@ export function FiconterNativeAppChrome({
           workspace === "business" ? styles.businessHeader : ""
         }`}
       >
-        <button
-          ref={menuButtonRef}
-          type="button"
-          className={styles.menuButton}
-          onClick={openDrawer}
-          aria-label="Open app navigation"
-          aria-expanded={drawerOpen}
-          aria-controls="ficonter-app-drawer"
-        >
+        <div className={styles.brandMark} aria-hidden="true">
           <img
             className={styles.headerMark}
             src="/ficonter-app-icon.png"
             alt=""
             width={52}
             height={52}
-            aria-hidden="true"
           />
-        </button>
+        </div>
 
         <div className={styles.routeIdentity}>
           <span className={styles.routeEyebrow}>
             {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
           </span>
           <strong>{route.title}</strong>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className={styles.menuButton}
+            onClick={openDrawer}
+            aria-label="Open app navigation"
+            aria-expanded={drawerOpen}
+            aria-controls="ficonter-app-drawer"
+          >
+            <Menu size={26} aria-hidden={true} />
+          </button>
         </div>
 
         <button
@@ -875,18 +882,32 @@ export function FiconterNativeAppChrome({
           );
         })}
 
-        <button
-          type="button"
-          className={`${styles.dockItem} ${
-            moreActive ? styles.dockActive : ""
-          }`}
-          onClick={openDrawer}
-          aria-label="Open all sections"
-          aria-expanded={drawerOpen}
-        >
-          <LayoutGrid size={21} aria-hidden={true} />
-          <span>More</span>
-        </button>
+        {workspace === "personal" ? (
+          <Link
+            href={settingsItem.href}
+            prefetch={true}
+            className={`${styles.dockItem} ${
+              settingsActive ? styles.dockActive : ""
+            }`}
+            aria-current={settingsActive ? "page" : undefined}
+          >
+            <Settings2 size={21} aria-hidden={true} />
+            <span>Settings</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className={`${styles.dockItem} ${
+              moreActive ? styles.dockActive : ""
+            }`}
+            onClick={openDrawer}
+            aria-label="Open all sections"
+            aria-expanded={drawerOpen}
+          >
+            <LayoutGrid size={21} aria-hidden={true} />
+            <span>More</span>
+          </button>
+        )}
       </nav>
 
       <button

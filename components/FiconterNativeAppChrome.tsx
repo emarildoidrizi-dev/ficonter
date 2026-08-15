@@ -321,11 +321,10 @@ const personalRouteGroups: RouteGroup[] = [
     ],
   },
   {
-    label: "Tools & account",
+    label: "Tools",
     routes: [
       personalRoutes[14],
       personalRoutes[15],
-      personalRoutes[17],
     ],
   },
 ];
@@ -1301,6 +1300,16 @@ export function FiconterNativeAppChrome({
           >
             <span className={styles.accountActionIcon}><UserRound size={19} aria-hidden="true" /></span>
             <span><strong>Profile</strong><small>View and manage your profile</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </Link>
+          <Link
+            href="/dashboard/settings"
+            prefetch={true}
+            className={styles.accountAction}
+            onClick={() => setAccountOpen(false)}
+          >
+            <span className={styles.accountActionIcon}><Settings2 size={19} aria-hidden="true" /></span>
+            <span><strong>Settings</strong><small>Account, preferences and privacy</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
           <button

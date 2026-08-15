@@ -235,7 +235,8 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           <div className={styles.accountDock} ref={accountRef}>
             {accountMenuOpen ? (
               <div className={styles.accountMenu} role="menu" aria-label="Account menu">
-                <Link href="/dashboard/settings?section=profile" role="menuitem" onClick={() => trackRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></Link>
+                <Link href="/dashboard/profile" role="menuitem" onClick={() => trackRoute("/dashboard/profile")}><UserRound size={17} /><span>Profile</span></Link>
+                <Link href="/dashboard/settings" role="menuitem" onClick={() => trackRoute("/dashboard/settings")}><Settings2 size={17} /><span>Settings</span></Link>
                 <div className={styles.accountMenuDivider} />
                 <button type="button" role="menuitem" className={styles.signOutItem} onClick={signOut} disabled={signingOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
               </div>

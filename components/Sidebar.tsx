@@ -5,7 +5,7 @@ import {
   Activity, ArrowLeft, ArrowLeftRight, BriefcaseBusiness, ChartPie, ChevronDown, Compass,
   CreditCard, FileArchive, Landmark, LayoutDashboard,
   LockKeyhole, LogOut, MessageSquareText, PiggyBank, ReceiptText, Route,
-  ShieldCheck, Sparkles, Target, TrendingUp, UserRound, WalletCards,
+  Settings2, ShieldCheck, Sparkles, Target, TrendingUp, UserRound, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -91,7 +91,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   }, [isAdmin]);
 
   const avatarText = (displayName || accountEmail || "F").trim().slice(0, 1).toUpperCase();
-  const accountAreaActive = ["/dashboard/setup", "/dashboard/settings", "/dashboard/help", "/dashboard/inbox"]
+  const accountAreaActive = ["/dashboard/profile", "/dashboard/setup", "/dashboard/settings", "/dashboard/help", "/dashboard/inbox"]
     .some((href) => pathname.startsWith(href));
   const businessLocked = !hasSubscriptionFeature(subscriptionPlanCode, "business_workspace");
   const businessHref = businessLocked
@@ -256,7 +256,8 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
           <div className={styles.accountDock} ref={accountRef}>
             {menuOpen ? (
               <div className={styles.accountMenu} role="menu" aria-label="Account menu">
-                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></button>
+                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/profile")}><UserRound size={17} /><span>Profile</span></button>
+                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/settings")}><Settings2 size={17} /><span>Settings</span></button>
                 <div className={styles.accountMenuDivider} />
                 <button type="button" role="menuitem" className={styles.signOutItem} disabled={signingOut} onClick={signOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
               </div>

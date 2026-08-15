@@ -871,3 +871,28 @@ html[data-ficonter-native-app="true"] .app-main [class*="CoastalOverview_overvie
   height: 720px !important;
   background-position: center top, center top !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE 04.33 — iOS pull-down / overscroll cleanup                           */
+/* iOS Safari/PWA can expose the document root background while rubber-banding */
+/* at the top of the Overview. Keep the real header, but never reveal a second */
+/* green strip above/below it. The Overview scene remains the visible backdrop. */
+/* -------------------------------------------------------------------------- */
+@supports (-webkit-touch-callout: none) {
+  html[data-ficonter-native-app="true"]:has(.app-main [class*="CoastalOverview_overview"]):not([data-ficonter-app-drawer="open"]),
+  html[data-ficonter-native-app="true"]:has(.app-main [class*="CoastalOverview_overview"]):not([data-ficonter-app-drawer="open"]) body {
+    overscroll-behavior-y: none !important;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-canvas) 10%, transparent) 0%,
+        color-mix(in srgb, var(--surface-canvas) 24%, transparent) 58%,
+        var(--surface-canvas) 100%
+      ),
+      var(--living-scene) center top / cover no-repeat !important;
+  }
+
+  html[data-ficonter-native-app="true"]:has(.app-main [class*="CoastalOverview_overview"]):not([data-ficonter-app-drawer="open"]) body::before {
+    background: transparent !important;
+  }
+}

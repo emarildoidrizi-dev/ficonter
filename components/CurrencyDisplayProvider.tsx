@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -72,6 +73,7 @@ export function CurrencyDisplayProvider({
   const [rateSource, setRateSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const runtimeInitializedRef = useRef(false);
 
   const loadRate = useCallback(
     async (nextBase: CurrencyCode, forceRefresh = false) => {
@@ -164,6 +166,16 @@ export function CurrencyDisplayProvider({
       rate: latestRate ?? 1,
     });
 
+    // The provider is mounted around every dashboard route. Refreshing the
+    // router on the initial rate load can race against a user navigation and
+    // make the current screen appear to reload instead of changing routes.
+    // Initial state is already represented by the server-rendered layout, so
+    // only refresh after a later committed currency/rate change.
+    if (!runtimeInitializedRef.current) {
+      runtimeInitializedRef.current = true;
+      return;
+    }
+
     if (workspace === "personal") {
       router.refresh();
     }
@@ -225,9 +237,23 @@ export function useCurrencyDisplay(): CurrencyDisplayContextValue {
 
 export function useHistoricalReportingRates(dates: Array<string | null | undefined>) {
   const { reportingCurrency, baseCurrency, latestRate } = useCurrencyDisplay();
+
+  // Callers such as TransactionLedger can build a new `dates` array on every
+  // render. Depending on the array identity makes normalizedDates new on every
+  // render, which retriggers the rate-loading effect; that effect updates state
+  // and can create a render/fetch loop that starves client-side navigation.
+  // Use a primitive content key instead so equal date content is stable.
+  const normalizedDateKey = dates
+    .filter((date): date is string => Boolean(date))
+    .map((date) => date.slice(0, 10))
+    .sort()
+    .join("|");
   const normalizedDates = useMemo(
-    () => [...new Set(dates.filter((date): date is string => Boolean(date)).map((date) => date.slice(0, 10)))].sort(),
-    [dates],
+    () =>
+      normalizedDateKey
+        ? [...new Set(normalizedDateKey.split("|"))]
+        : [],
+    [normalizedDateKey],
   );
   const [rates, setRates] = useState<Record<string, number>>({});
 

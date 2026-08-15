@@ -261,8 +261,11 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     setSigningOut(true);
     const { error } = await supabase.auth.signOut();
     if (error) { setSigningOut(false); return; }
-    router.replace("/");
-    router.refresh();
+
+    // Authentication exit must not depend on the client router. A hard replace
+    // clears the dashboard shell and any pending route transition state in one
+    // deterministic step.
+    window.location.replace("/login");
   }
 
   return (

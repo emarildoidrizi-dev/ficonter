@@ -1,4 +1,4 @@
-const CACHE_NAME = "ficonter-pwa-static-v7-navigation-recovery";
+const CACHE_NAME = "ficonter-pwa-static-v7-runtime-recovery";
 
 const PRECACHE_URLS = [
   "/offline.html",

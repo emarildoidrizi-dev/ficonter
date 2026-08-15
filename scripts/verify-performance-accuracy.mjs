@@ -18,6 +18,8 @@ const monthlyCashActuals = read("lib/finance/monthlyCashActuals.ts");
 const bills = read("components/BillsManager.tsx");
 const currentUser = read("lib/auth/currentUser.ts");
 const adminAccess = read("lib/admin/access.ts");
+const currencyDisplay = read("components/CurrencyDisplayProvider.tsx");
+const sidebar = read("components/Sidebar.tsx");
 
 check("Shared precision helpers preserve six-decimal reporting amounts", money.includes("CONVERTED_AMOUNT_DECIMALS") && money.includes("toMinorUnits(value, decimals)"));
 check("Negative and positive rounding use a sign-safe implementation", money.includes("Math.abs(numeric) + Number.EPSILON"));
@@ -38,6 +40,22 @@ check("Planner excludes linked bill transactions from expenses", planner.include
 check("Bills use the authenticated cached exchange-rate endpoint", bills.includes("convertWithCachedRate") && !bills.includes("api.frankfurter"));
 check("Server dashboard auth is request-cached", currentUser.includes("cache(async () =>") && currentUser.includes("auth.getUser"));
 check("Admin role lookup is request-cached", adminAccess.includes("requireAdmin = cache(async () =>"));
+check(
+  "Historical currency date dependencies are content-stable",
+  currencyDisplay.includes("const normalizedDateKey = dates") &&
+    currencyDisplay.includes("[normalizedDateKey]") &&
+    !currencyDisplay.includes("[dates],"),
+);
+check(
+  "Initial currency bootstrap cannot race client navigation with router.refresh",
+  currencyDisplay.includes("runtimeInitializedRef") &&
+    currencyDisplay.includes("if (!runtimeInitializedRef.current)"),
+);
+check(
+  "Desktop sign-out uses a deterministic hard exit from the dashboard shell",
+  sidebar.includes('window.location.replace("/login")') &&
+    !sidebar.includes('router.replace("/");\n    router.refresh();'),
+);
 
 const dashboardPages = [
   "app/dashboard/overview/page.tsx",

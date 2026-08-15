@@ -242,19 +242,21 @@ html[data-resolved-theme="dark"] :where(.btn-primary, .hero-panel, .dark-section
 }
 
 html[data-density="comfortable"] {
-  --density-page-padding: 40px;
-  --density-section-gap: 24px;
-  --density-card-padding: 24px;
-  --density-control-height: 48px;
-  --density-row-padding: 13px;
+  --density-page-padding: 48px;
+  --density-section-gap: 28px;
+  --density-card-padding: 28px;
+  --density-control-height: 52px;
+  --density-row-padding: 16px;
+  --density-card-radius: 22px;
 }
 
 html[data-density="compact"] {
-  --density-page-padding: 22px;
-  --density-section-gap: 14px;
-  --density-card-padding: 16px;
-  --density-control-height: 40px;
-  --density-row-padding: 8px;
+  --density-page-padding: 16px;
+  --density-section-gap: 10px;
+  --density-card-padding: 12px;
+  --density-control-height: 36px;
+  --density-row-padding: 6px;
+  --density-card-radius: 14px;
 }
 
 html[data-density="compact"] .app-main {
@@ -266,47 +268,63 @@ html[data-density="comfortable"] .app-main {
 }
 
 html[data-density="compact"] .app-main :where(button, input:not([type="checkbox"]):not([type="radio"]), select) {
-  min-height: 38px;
+  min-height: 36px;
 }
 
 html[data-density="comfortable"] .app-main :where(button, input:not([type="checkbox"]):not([type="radio"]), select) {
-  min-height: 44px;
+  min-height: 50px;
 }
 
 html[data-density="compact"] .app-main :where(table th, table td) {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 html[data-density="comfortable"] .app-main :where(table th, table td) {
-  padding-top: 14px;
-  padding-bottom: 14px;
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 html[data-density="compact"] .app-main :where(
   article,
+  .panel,
+  .card,
+  .kpi,
   [class*="formCard"],
   [class*="billCard"],
   [class*="debtCard"],
   [class*="goalCard"],
   [class*="planCard"],
   [class*="privacyCard"],
-  [class*="summaryCard"]
+  [class*="summaryCard"],
+  [class*="metricCard"],
+  [class*="statCard"],
+  [class*="insightCard"],
+  [class*="tableCard"]
 ) {
-  padding: 14px !important;
+  padding: 10px !important;
+  border-radius: var(--density-card-radius) !important;
 }
 
 html[data-density="comfortable"] .app-main :where(
   article,
+  .panel,
+  .card,
+  .kpi,
   [class*="formCard"],
   [class*="billCard"],
   [class*="debtCard"],
   [class*="goalCard"],
   [class*="planCard"],
   [class*="privacyCard"],
-  [class*="summaryCard"]
+  [class*="summaryCard"],
+  [class*="metricCard"],
+  [class*="statCard"],
+  [class*="insightCard"],
+  [class*="tableCard"]
 ) {
-  padding: 22px !important;
+  padding: 28px !important;
+  border-radius: var(--density-card-radius) !important;
 }
 
 html[data-density="compact"] .app-main :where(
@@ -318,7 +336,7 @@ html[data-density="compact"] .app-main :where(
   [class*="optionGrid"],
   [class*="formGrid"]
 ) {
-  gap: 10px !important;
+  gap: 8px !important;
 }
 
 html[data-density="comfortable"] .app-main :where(
@@ -330,7 +348,25 @@ html[data-density="comfortable"] .app-main :where(
   [class*="optionGrid"],
   [class*="formGrid"]
 ) {
-  gap: 18px !important;
+  gap: 24px !important;
+}
+
+html[data-density="compact"] .app-main :where(
+  [class*="toolbar"],
+  [class*="headerActions"],
+  [class*="cardActions"],
+  [class*="inlineActions"]
+) {
+  gap: 6px !important;
+}
+
+html[data-density="comfortable"] .app-main :where(
+  [class*="toolbar"],
+  [class*="headerActions"],
+  [class*="cardActions"],
+  [class*="inlineActions"]
+) {
+  gap: 14px !important;
 }
 
 @media (max-width: 640px) {
@@ -1473,3 +1509,45 @@ html[dir="rtl"] :where(svg) {
   }
 }
 /* FICONTER MOBILE DRAWER LAYER HOTFIX — END */
+
+/* FICONTER LAYOUT DENSITY V1.24 — strong responsive separation */
+@media (max-width: 900px) {
+  html[data-density="comfortable"] .app-main {
+    padding-right: max(18px, env(safe-area-inset-right)) !important;
+    padding-left: max(18px, env(safe-area-inset-left)) !important;
+  }
+
+  html[data-density="compact"] .app-main {
+    padding-right: max(8px, env(safe-area-inset-right)) !important;
+    padding-left: max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  html[data-density="comfortable"] .app-main :where(button, input:not([type="checkbox"]):not([type="radio"]), select) {
+    min-height: 48px;
+  }
+
+  html[data-density="compact"] .app-main :where(button, input:not([type="checkbox"]):not([type="radio"]), select) {
+    min-height: 42px;
+  }
+
+  html[data-density="comfortable"] .app-main :where(
+    [class*="stack"],
+    [class*="summaryGrid"],
+    [class*="cardGrid"],
+    [class*="formGrid"],
+    [class*="optionGrid"]
+  ) {
+    gap: 18px !important;
+  }
+
+  html[data-density="compact"] .app-main :where(
+    [class*="stack"],
+    [class*="summaryGrid"],
+    [class*="cardGrid"],
+    [class*="formGrid"],
+    [class*="optionGrid"]
+  ) {
+    gap: 7px !important;
+  }
+}
+/* FICONTER LAYOUT DENSITY V1.24 — END */

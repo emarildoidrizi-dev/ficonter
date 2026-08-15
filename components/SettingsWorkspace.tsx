@@ -1935,8 +1935,8 @@ const showSubscriptionManagement =
               <legend>Layout density</legend>
               <div className={styles.densityGrid}>
                 {([
-                  ["comfortable", "Comfortable", "More breathing room, larger controls and spacious cards."],
-                  ["compact", "Compact", "Tighter spacing and more financial information visible at once."],
+                  ["comfortable", "Comfortable", "Larger cards, wider spacing and bigger controls for a calmer view."],
+                  ["compact", "Compact", "Much tighter cards, rows and spacing so substantially more information fits on screen."],
                 ] as const).map(([value, label, description]) => (
                   <label className={styles.densityCard} key={value}>
                     <input
@@ -1948,6 +1948,7 @@ const showSubscriptionManagement =
                       }}
                     />
                     <span className={styles.densityPreview} data-density={value} aria-hidden="true">
+                      <i />
                       <i />
                       <i />
                       <i />

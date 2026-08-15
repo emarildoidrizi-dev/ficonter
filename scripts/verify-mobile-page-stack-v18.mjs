@@ -20,7 +20,7 @@ const checks = [
   ['personal route includes query', sidebar.includes('useSearchParams') && sidebar.includes('routeKey')],
   ['business route includes query', business.includes('useSearchParams') && business.includes('routeKey')],
   ['settings mobile detail state', settings.includes('mobileDetailOpen') && settings.includes('data-mobile-detail')],
-  ['settings section uses client route', settings.includes('router.push(`/dashboard/settings?section=${id}`')],
+  ['settings section uses instant client history', settings.includes('window.history.pushState(null, "", target)') && settings.includes('setActive(id)')],
   ['settings detail is URL-addressable', settingsPage.includes('data-settings-detail')],
   ['settings list hides panel', css.includes('data-mobile-detail="false"') && css.includes('SettingsWorkspace_panel')],
   ['settings detail hides list', css.includes('data-mobile-detail="true"') && css.includes('SettingsWorkspace_navigation')],

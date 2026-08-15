@@ -37,7 +37,8 @@
     "verify:mobile-ui-phase6": "node scripts/verify-mobile-ui-phase6.mjs",
     "verify:mobile-responsive-v113": "node scripts/verify-responsive-navigation-v113.mjs",
     "verify:settings-speed-v115": "node scripts/verify-settings-speed-v115.mjs",
-    "verify:theme-governance-v118": "node scripts/verify-global-theme-governance-v118.mjs"
+    "verify:theme-governance-v118": "node scripts/verify-global-theme-governance-v118.mjs",
+    "verify:mobile-back-v119": "node scripts/verify-mobile-back-home-fallback-v119.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -514,7 +514,9 @@ export function FiconterNativeAppChrome({
   const accountCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const accountSheetRef = useRef<HTMLElement>(null);
-  const previousPathRef = useRef(pathname);
+  const navigationStackRef = useRef<string[]>([]);
+  const lastHrefRef = useRef<string | null>(null);
+  const navigatingBackRef = useRef(false);
   const [previousAppPath, setPreviousAppPath] = useState<string | null>(null);
 
   const routes = useMemo(
@@ -665,13 +667,33 @@ export function FiconterNativeAppChrome({
   }, [addHref, router, workspace]);
 
   useEffect(() => {
-    if (previousPathRef.current !== pathname) {
-      setPreviousAppPath(previousPathRef.current);
-      previousPathRef.current = pathname;
+    const previousHref = lastHrefRef.current;
+
+    if (previousHref === null) {
+      lastHrefRef.current = currentHref;
+    } else if (previousHref !== currentHref) {
+      if (navigatingBackRef.current) {
+        navigatingBackRef.current = false;
+      } else if (
+        previousHref.startsWith(
+          workspace === "business" ? "/business" : "/dashboard",
+        ) &&
+        previousHref !== currentHref
+      ) {
+        const stack = navigationStackRef.current;
+        if (stack[stack.length - 1] !== previousHref) {
+          stack.push(previousHref);
+        }
+      }
+
+      lastHrefRef.current = currentHref;
     }
+
+    const stack = navigationStackRef.current;
+    setPreviousAppPath(stack[stack.length - 1] ?? null);
     setDrawerOpen(false);
     setAccountOpen(false);
-  }, [pathname]);
+  }, [currentHref]);
 
   useEffect(() => {
     setSelectedBusinessId(activeBusinessId ?? "");
@@ -858,17 +880,32 @@ export function FiconterNativeAppChrome({
     setAccountOpen(false);
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-    if (
-      previousAppPath &&
-      previousAppPath !== pathname &&
-      (previousAppPath.startsWith("/dashboard") ||
-        previousAppPath.startsWith("/business"))
+    const stack = navigationStackRef.current;
+    const workspacePrefix =
+      workspace === "business" ? "/business" : "/dashboard";
+    let target = stack.pop() ?? null;
+
+    while (
+      target &&
+      (target === currentHref || !target.startsWith(workspacePrefix))
     ) {
-      router.prefetch(previousAppPath);
-      router.push(previousAppPath, { scroll: false });
+      target = stack.pop() ?? null;
+    }
+
+    if (target) {
+      navigatingBackRef.current = true;
+      setPreviousAppPath(stack[stack.length - 1] ?? null);
+      router.prefetch(target);
+      router.push(target, { scroll: false });
       return;
     }
 
+    navigationStackRef.current = [];
+    setPreviousAppPath(null);
+
+    if (currentHref === fallbackBackHref) return;
+
+    navigatingBackRef.current = true;
     router.prefetch(fallbackBackHref);
     router.push(fallbackBackHref, { scroll: false });
   }

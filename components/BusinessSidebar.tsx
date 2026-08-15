@@ -56,8 +56,6 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const supabase = useMemo(() => createClient(), []);
   const headerRef = useRef<HTMLElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-  const previousPathRef = useRef(routeKey);
-  const [previousAppPath, setPreviousAppPath] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -76,16 +74,6 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const mobileRootPaths = new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"]);
   const showBackCommand = !mobileRootPaths.has(pathname);
   const fallbackBackHref = "/business/overview";
-
-  useEffect(() => {
-    const previous = previousPathRef.current;
-    if (previous !== routeKey) {
-      if (previous.startsWith("/dashboard") || previous.startsWith("/business")) {
-        setPreviousAppPath(previous);
-      }
-      previousPathRef.current = routeKey;
-    }
-  }, [routeKey]);
 
   useEffect(() => {
     setSelectedBusinessId(business?.id ?? "");
@@ -174,20 +162,21 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           ? parsed.filter((item): item is string => typeof item === "string")
           : [];
 
-        if (stack.length >= 2 && stack[stack.length - 1] === routeKey) {
-          return stack[stack.length - 2];
-        }
-
         const currentIndex = stack.lastIndexOf(routeKey);
-        if (currentIndex > 0) return stack[currentIndex - 1];
+        if (currentIndex > 0) {
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const candidate = stack[index];
+            if (candidate?.startsWith("/business")) return candidate;
+          }
+        }
       } catch {
-        // Fall through to the local previous route / workspace overview.
+        // Fall through to the workspace Overview.
       }
     }
 
-    return previousAppPath && previousAppPath !== routeKey
-      ? previousAppPath
-      : fallbackBackHref;
+    // No valid FICONTER page remains in the internal stack.
+    // The Back command must terminate safely at this workspace's Overview.
+    return fallbackBackHref;
   }
 
   function goBackInstant() {
@@ -195,10 +184,14 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     setOpenGroup(null);
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-    const target = resolveBackTarget();
     const currentRoute = `${window.location.pathname}${window.location.search}`;
+    const resolvedTarget = resolveBackTarget();
+    const target =
+      resolvedTarget && resolvedTarget !== currentRoute
+        ? resolvedTarget
+        : fallbackBackHref;
 
-    if (!target || target === currentRoute) return;
+    if (target === currentRoute) return;
 
     router.prefetch(target);
     router.push(target, { scroll: false });

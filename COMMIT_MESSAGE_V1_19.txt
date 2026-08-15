@@ -1,0 +1,1 @@
+fix(mobile): send exhausted back navigation to workspace overview

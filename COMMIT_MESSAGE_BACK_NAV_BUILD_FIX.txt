@@ -1,0 +1,1 @@
+fix(mobile): narrow back route before client navigation

@@ -854,12 +854,12 @@ export function FiconterNativeAppChrome({
     setAccountOpen(false);
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-    const previousIsInsideApp = Boolean(
+    if (
       previousAppPath &&
-      (previousAppPath.startsWith("/dashboard") || previousAppPath.startsWith("/business")),
-    );
-
-    if (previousIsInsideApp && previousAppPath !== pathname) {
+      previousAppPath !== pathname &&
+      (previousAppPath.startsWith("/dashboard") ||
+        previousAppPath.startsWith("/business"))
+    ) {
       router.prefetch(previousAppPath);
       router.push(previousAppPath, { scroll: false });
       return;

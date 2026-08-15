@@ -39,7 +39,8 @@
     "verify:settings-speed-v115": "node scripts/verify-settings-speed-v115.mjs",
     "verify:theme-governance-v118": "node scripts/verify-global-theme-governance-v118.mjs",
     "verify:mobile-back-v119": "node scripts/verify-mobile-back-home-fallback-v119.mjs",
-    "verify:wallpaper-governance-v122": "node scripts/verify-wallpaper-role-governance-v122.mjs"
+    "verify:wallpaper-governance-v122": "node scripts/verify-wallpaper-role-governance-v122.mjs",
+    "verify:explicit-save": "node scripts/verify-explicit-save-governance-v123.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

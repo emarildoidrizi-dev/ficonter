@@ -1404,3 +1404,9 @@
   color: var(--burgundy) !important;
   background: color-mix(in srgb, var(--burgundy) 12%, var(--danger-soft)) !important;
 }
+
+
+/* V1.23 — business selection is a draft until explicitly applied. */
+.businessProfileApply,.drawerBusinessApply{min-height:32px;padding:0 10px;border:1px solid var(--ficonter-chrome-border,var(--border-subtle));border-radius:9px;background:var(--accent-primary);color:var(--accent-contrast);font:inherit;font-size:9px;font-weight:900;cursor:pointer}.businessProfileApply:disabled,.drawerBusinessApply:disabled{opacity:.45;cursor:default}.drawerBusinessApply{width:100%;margin-top:7px}
+/* V1.23 — reserve a compact column for the explicit business Apply action. */
+.businessProfileBar{grid-template-columns:30px auto minmax(0,1fr) auto 18px}

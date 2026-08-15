@@ -6,6 +6,7 @@ import {
   Clock3,
   Loader2,
   Repeat2,
+  Save,
   Settings2,
   Sparkles,
   Star,
@@ -57,6 +58,8 @@ export function EffortlessEntryWorkspace({
   const quickAddRequestedRef = useRef(directAdd);
   const formSectionRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EntryMode>(directAdd ? "simple" : "guided");
+  const [draftMode, setDraftMode] = useState<EntryMode>(directAdd ? "simple" : "guided");
+  const [savedMode, setSavedMode] = useState<EntryMode>("guided");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
   const [postedTemplateIds, setPostedTemplateIds] = useState<Set<string>>(
@@ -75,6 +78,8 @@ export function EffortlessEntryWorkspace({
     quickAddRequestedRef.current = true;
     setActivePreset(null);
     setMode("simple");
+    setDraftMode("simple");
+    setDraftMode("simple");
 
     window.setTimeout(() => {
       formSectionRef.current?.scrollIntoView({
@@ -97,6 +102,7 @@ export function EffortlessEntryWorkspace({
     quickAddRequestedRef.current = true;
     setActivePreset(null);
     setMode("simple");
+    setDraftMode("simple");
 
     const frame = window.requestAnimationFrame(() => {
       const amountInput = document.getElementById(
@@ -160,15 +166,18 @@ export function EffortlessEntryWorkspace({
         );
       }
 
-      const savedMode = preferencesResult.data?.entry_mode;
+      const persistedMode = preferencesResult.data?.entry_mode;
+      const normalizedSavedMode: EntryMode =
+        persistedMode === "simple" || persistedMode === "guided" || persistedMode === "detailed"
+          ? persistedMode
+          : "guided";
+      setSavedMode(normalizedSavedMode);
       if (quickAddRequestedRef.current) {
         setMode("simple");
-      } else if (
-        savedMode === "simple" ||
-        savedMode === "guided" ||
-        savedMode === "detailed"
-      ) {
-        setMode(savedMode);
+        setDraftMode("simple");
+      } else {
+        setMode(normalizedSavedMode);
+        setDraftMode(normalizedSavedMode);
       }
 
       setTemplates((templatesResult.data ?? []) as TransactionTemplate[]);
@@ -250,10 +259,16 @@ export function EffortlessEntryWorkspace({
     [dueTemplates],
   );
 
-  async function changeMode(nextMode: EntryMode) {
-    if (nextMode === mode || savingMode) return;
-    const previousMode = mode;
-    setMode(nextMode);
+  function changeMode(nextMode: EntryMode) {
+    if (savingMode || nextMode === draftMode) return;
+    setDraftMode(nextMode);
+    setError("");
+    setNotice("Entry style is a draft. Select Save entry style to apply it.");
+    window.setTimeout(() => setNotice(""), 2200);
+  }
+
+  async function saveMode() {
+    if (savingMode || draftMode === savedMode) return;
     setSavingMode(true);
     setError("");
 
@@ -267,14 +282,18 @@ export function EffortlessEntryWorkspace({
       const { error: preferenceError } = await supabase
         .from("money_entry_preferences")
         .upsert(
-          { user_id: user.id, entry_mode: nextMode },
+          { user_id: user.id, entry_mode: draftMode },
           { onConflict: "user_id" },
         );
       if (preferenceError) throw preferenceError;
-      setNotice(`${ENTRY_MODE_OPTIONS.find((option) => option.value === nextMode)?.label} entry is now active.`);
+
+      setSavedMode(draftMode);
+      setMode(draftMode);
+      setNotice(`${ENTRY_MODE_OPTIONS.find((option) => option.value === draftMode)?.label} entry saved.`);
       window.setTimeout(() => setNotice(""), 2600);
     } catch (modeError) {
-      setMode(previousMode);
+      setDraftMode(savedMode);
+      setMode(savedMode);
       setError(
         modeError instanceof Error
           ? modeError.message
@@ -417,9 +436,9 @@ export function EffortlessEntryWorkspace({
             <button
               key={option.value}
               type="button"
-              className={mode === option.value ? styles.modeActive : styles.modeButton}
-              onClick={() => void changeMode(option.value)}
-              aria-pressed={mode === option.value}
+              className={draftMode === option.value ? styles.modeActive : styles.modeButton}
+              onClick={() => changeMode(option.value)}
+              aria-pressed={draftMode === option.value}
               disabled={savingMode}
             >
               <div className={styles.modeButtonTop}>
@@ -428,9 +447,21 @@ export function EffortlessEntryWorkspace({
               </div>
               <span>{option.description}</span>
               <em>{option.structure}</em>
-              {mode === option.value && <CheckCircle2 size={16} />}
+              {draftMode === option.value && <CheckCircle2 size={16} />}
             </button>
           ))}
+        </div>
+        <div className={styles.modeSaveRow}>
+          <span>{draftMode === savedMode ? "Saved entry style" : "Unsaved entry style"}</span>
+          <button
+            type="button"
+            className={styles.confirmAllButton}
+            disabled={savingMode || draftMode === savedMode}
+            onClick={() => void saveMode()}
+          >
+            <Save size={15} aria-hidden="true" />
+            {savingMode ? "Saving…" : "Save entry style"}
+          </button>
         </div>
       </section>
 

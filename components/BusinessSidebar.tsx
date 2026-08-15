@@ -8,7 +8,7 @@ import {
   ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
 import { switchActiveBusinessAction } from "@/app/business/actions";
@@ -76,9 +76,17 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const fallbackBackHref = "/business/overview";
 
   useEffect(() => {
+    if (pendingBusinessId) {
+      if (business?.id === pendingBusinessId) {
+        setSelectedBusinessId(business.id);
+        setPendingBusinessId("");
+      }
+      return;
+    }
+
+    // Route changes discard an un-applied business selection.
     setSelectedBusinessId(business?.id ?? "");
-    if (pendingBusinessId && business?.id === pendingBusinessId) setPendingBusinessId("");
-  }, [business?.id, pendingBusinessId]);
+  }, [business?.id, pathname, pendingBusinessId]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -133,11 +141,10 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     return () => window.clearTimeout(fallbackId);
   }, [business?.id, pendingBusinessId]);
 
-  async function switchBusiness(event: ChangeEvent<HTMLSelectElement>) {
-    const nextBusinessId = event.target.value;
+  async function applyBusinessSwitch() {
+    const nextBusinessId = selectedBusinessId;
     if (!nextBusinessId || nextBusinessId === business?.id || switching || switchTransitionPending) return;
-    const previousBusinessId = selectedBusinessId || business?.id || "";
-    setSelectedBusinessId(nextBusinessId);
+    const previousBusinessId = business?.id || "";
     setSwitching(true);
     setSwitchError("");
     const result = await switchActiveBusinessAction(nextBusinessId);
@@ -239,12 +246,20 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
             {businessLogoUrl ? <img src={businessLogoUrl} alt="" /> : <Building2 size={17} />}
           </span>
           {business ? (
-            <label className={styles.businessSelector}>
+            <div className={styles.businessSelector}>
               <span>Active business</span>
-              <select value={selectedBusinessId || business.id} onChange={switchBusiness} disabled={switching || switchTransitionPending} aria-label="Select active business">
+              <select value={selectedBusinessId || business.id} onChange={(event) => setSelectedBusinessId(event.target.value)} disabled={switching || switchTransitionPending} aria-label="Select active business">
                 {activeBusinesses.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
               </select>
-            </label>
+              <button
+                type="button"
+                className={styles.applyBusinessButton}
+                disabled={switching || switchTransitionPending || !selectedBusinessId || selectedBusinessId === business.id}
+                onClick={() => void applyBusinessSwitch()}
+              >
+                {switching || switchTransitionPending ? "Applying…" : "Apply"}
+              </button>
+            </div>
           ) : <Link className={styles.createLink} href="/business/setup">Create business</Link>}
           {pendingBusinessId ? <small className={styles.status}>Updating…</small> : null}
           {switchError ? <small className={styles.switchError}>{switchError}</small> : null}

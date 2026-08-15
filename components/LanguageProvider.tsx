@@ -17,7 +17,6 @@ import {
   LANGUAGE_COOKIE_NAME,
   LANGUAGE_STORAGE_KEY,
   getLanguageOption,
-  isFiconterLanguage,
   normalizeLanguage,
   type FiconterLanguage,
 } from "@/lib/i18n/config";
@@ -258,7 +257,6 @@ export function LanguageProvider({
   const translatorRef = useRef<
     ReturnType<typeof createDocumentTranslator> | null
   >(null);
-  const accountPersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     languageRef.current = language;
@@ -281,26 +279,9 @@ export function LanguageProvider({
     translatorRef.current = translator;
     translator.start();
 
-    try {
-      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      const cookieMatch = document.cookie.match(
-        new RegExp(`(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)`),
-      );
-
-      const browserPreference = isFiconterLanguage(stored)
-        ? stored
-        : normalizeLanguage(
-            cookieMatch
-              ? decodeURIComponent(cookieMatch[1])
-              : undefined,
-          );
-
-      if (browserPreference !== languageRef.current) {
-        setLanguage(browserPreference);
-      }
-    } catch {
-      // The default language remains active when browser storage is unavailable.
-    }
+    // initialLanguage is the committed source of truth. Browser storage is
+    // updated only after an explicit Save action and is never allowed to
+    // override the committed server/cookie value on mount.
 
     return () => {
       translator.stop();
@@ -315,25 +296,29 @@ export function LanguageProvider({
     ) => {
       const normalized = normalizeLanguage(nextLanguage);
 
-      setLanguage(normalized);
-      persistBrowserLanguage(normalized);
+      const applyCommittedLanguage = () => {
+        setLanguage(normalized);
+        persistBrowserLanguage(normalized);
+        window.dispatchEvent(
+          new CustomEvent(LANGUAGE_CHANGED_EVENT, {
+            detail: { language: normalized },
+          }),
+        );
+      };
 
-      window.dispatchEvent(
-        new CustomEvent(LANGUAGE_CHANGED_EVENT, {
-          detail: { language: normalized },
-        }),
-      );
+      if (!persistAccount) {
+        applyCommittedLanguage();
+        return;
+      }
 
-      if (!persistAccount) return;
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const persistAccountLanguage = async () => {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+      if (userError) throw userError;
 
-        if (userError || !user) return;
-
+      if (user) {
         const metadata = user.user_metadata ?? {};
         const existingPreferences =
           metadata.ficonter_preferences &&
@@ -352,16 +337,12 @@ export function LanguageProvider({
         });
 
         if (error) throw error;
-      };
+      }
 
-      // Save account choices in tap order without blocking the immediate UI
-      // update. Rapid language changes therefore still persist the final choice.
-      const persistenceTask = accountPersistenceQueueRef.current
-        .catch(() => undefined)
-        .then(persistAccountLanguage);
-
-      accountPersistenceQueueRef.current = persistenceTask.catch(() => undefined);
-      await persistenceTask;
+      // The interface changes only after the explicit Save action has
+      // successfully committed the preference (or there is no signed-in
+      // account to persist).
+      applyCommittedLanguage();
     },
     [supabase],
   );

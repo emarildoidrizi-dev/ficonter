@@ -60,3 +60,7 @@
   .headerActions>:global([class*="NotificationCenter_root"]) button{min-width:40px;width:40px}
   .accountButton{min-width:53px;padding-inline:4px}.mobileBackButton{width:38px;flex-basis:38px}
 }
+
+.applyBusinessButton{min-height:28px;padding:0 9px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--accent-primary);color:var(--accent-contrast);font-size:9px;font-weight:900;cursor:pointer}.applyBusinessButton:disabled{opacity:.45;cursor:default}@media(max-width:560px){.applyBusinessButton{display:none}}
+/* V1.23 — keep draft business selector compact beside its explicit Apply action. */
+.businessSelector{grid-template-columns:minmax(0,1fr) auto;column-gap:6px;align-items:center}.businessSelector>span{grid-column:1/-1}.businessSelector select{grid-column:1}.businessSelector .applyBusinessButton{grid-column:2}

@@ -70,19 +70,16 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const [budgetSaving,setBudgetSaving]=useState(false);
   const [startBalanceBehavior,setStartBalanceBehavior]=useState("manual");
   const [breakdownView,setBreakdownView]=useState<BreakdownView>("ring");
+  const [startBalanceDraft,setStartBalanceDraft]=useState("");
   const refreshTimerRef=useRef<number|null>(null);
   const refreshInFlightRef=useRef<Promise<void>|null>(null);
   const refreshQueuedRef=useRef(false);
 
   useEffect(()=>{ if(!notice)return; const t=setTimeout(()=>setNotice(""),3500); return()=>clearTimeout(t)},[notice]);
-  useEffect(()=>{
-    const saved=window.localStorage.getItem("ficonter:planner-breakdown-view");
-    if(saved==="ring"||saved==="bars"||saved==="tiles")setBreakdownView(saved);
-  },[]);
-
   function chooseBreakdownView(view:BreakdownView){
+    // View-only preference: keep it local to this visit. It is not persisted
+    // unless FICONTER later exposes an explicit Save control for it.
     setBreakdownView(view);
-    window.localStorage.setItem("ficonter:planner-breakdown-view",view);
   }
 
   useEffect(()=>{
@@ -200,6 +197,9 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const spendingBudget=plan
     ? canonicalAmountInBaseCurrency(plan.spending_budget,currencyContext)
     : 0;
+  useEffect(()=>{
+    setStartBalanceDraft(String(startBalance));
+  },[month,startBalance]);
   const paidBillTxIds=useMemo(()=>new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[financeBills]);
   const monthTx=useMemo(()=>financeTransactions.filter(t=>inMonth(transactionActivityDate(t),month)),[financeTransactions,month]);
   const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
@@ -267,7 +267,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     if(error)setNotice(error.message);
     else{
       setPlans(c=>[data as Plan,...c.filter(x=>x.month!==month)]);
-      setNotice("Starting balance updated.");
+      setStartBalanceDraft(String(entered));
+      setNotice("Starting balance saved.");
       notifyFiconterDataChange("all");
     }
   }
@@ -302,7 +303,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your complete monthly activity and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
     {notice&&<div className={styles.notice}>{notice}</div>}
     <div className={styles.topGrid}>
-      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>{baseCurrency}</strong></label><label>Start balance<input key={`${month}-${startBalance}`} defaultValue={startBalance} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onBlur={e=>saveStartBalance(e.target.value)}/></label></article>
+      <article className={styles.overview}><h3>Overview</h3><label>Start date<strong>01 {monthTitle(month)}</strong></label><label>End date<strong>{new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()} {monthTitle(month)}</strong></label><label>Currency<strong>{baseCurrency}</strong></label><label>Start balance<input value={startBalanceDraft} type="number" step="0.01" disabled={!plan&&startBalanceBehavior==="zero"} onChange={e=>setStartBalanceDraft(e.target.value)}/><button type="button" disabled={!plan&&startBalanceBehavior==="zero"} onClick={()=>void saveStartBalance(startBalanceDraft)}>Save start balance</button></label></article>
       <article className={styles.donutCard}><h3>Available Capital</h3><div className={styles.ring} style={{"--progress":`${Math.max(0,Math.min(100,availableCash?Math.max(leftToBudget,0)/availableCash*100:0))}%`} as React.CSSProperties}><strong>{showAdvancedPosition?money(left):"Personal Pro"}</strong></div>{!showAdvancedPosition?<button type="button" onClick={()=>window.location.assign("/dashboard/settings?section=subscription&required=planner_left_after_everything_paid")}><LockKeyhole size={14}/> Unlock final balance</button>:null}</article>
       <article className={styles.bars}><h3>Recorded activity</h3>{sections.map(s=>{const max=Math.max(...sections.map(section=>actual(section.key)),1);return <div key={s.key}><span>{s.title}</span><i><em style={{width:`${actual(s.key)/max*100}%`}}/></i><strong>{money(actual(s.key))}</strong></div>})}</article>
       <article className={styles.breakdown}>

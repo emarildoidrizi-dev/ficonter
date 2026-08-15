@@ -40,3 +40,10 @@ This release consolidates the latest complete FICONTER project and the accepted 
 - TypeScript/TSX syntax transpilation passed across the repository.
 - Security, financial-engine, support, import, appearance and synchronization checks passed.
 - A complete dependency installation and `next build` could not be executed in the packaging environment because its npm registry did not provide `@supabase/ssr`. Vercel must perform the authoritative production build.
+
+## V1.23 — Explicit Save Governance
+- Enforced draft-first editing across Settings, language, Planner start balance, Effortless Entry preference, support status and business selection.
+- Removed direct save-on-blur and save-on-selection behavior from audited editable controls.
+- Theme/density changes now apply globally only after Save succeeds.
+- Added explicit Save/Apply actions and draft-discard behavior.
+- Added 21-check explicit-save governance verification suite.

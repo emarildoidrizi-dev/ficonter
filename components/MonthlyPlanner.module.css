@@ -536,3 +536,32 @@
   .monthlyBudgetForm > div { grid-template-columns: minmax(0,1fr) auto; }
   .monthlyBudgetForm button { grid-column: 1 / -1; min-height: 40px; }
 }
+
+/* V1.23 — explicit-save start balance control. */
+.overview label:has(input) {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.overview label:has(input) input {
+  min-height: 34px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 9px;
+  background: var(--control-bg, #f7f3ed);
+  color: var(--text-primary, #222524);
+}
+.overview label:has(input) button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle, #ddd5c9);
+  border-radius: 9px;
+  background: var(--accent-primary, #25302a);
+  color: var(--accent-contrast, #fff);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.overview label:has(input) button:disabled {
+  opacity: .5;
+  cursor: default;
+}

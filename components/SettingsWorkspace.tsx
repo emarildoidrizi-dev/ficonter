@@ -157,6 +157,7 @@ type SaveFeedback = {
 
 type SaveFeedbackKey =
   | "profile"
+  | "security"
   | "baseCurrency"
   | "financialPreferences"
   | "notifications"
@@ -491,7 +492,14 @@ export function SettingsWorkspace({
   const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const [savedPreferences, setSavedPreferences] = useState<Preferences>(() => readPreferences(metadata));
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrency(
+      initialBaseCurrency || readPreferences(metadata).currency,
+      DEFAULT_BASE_CURRENCY,
+    ),
+  );
+  const [savedBaseCurrency, setSavedBaseCurrency] = useState<CurrencyCode>(() =>
     normalizeCurrency(
       initialBaseCurrency || readPreferences(metadata).currency,
       DEFAULT_BASE_CURRENCY,
@@ -511,6 +519,7 @@ export function SettingsWorkspace({
     [locale],
   );
   const [rememberDevice, setRememberDevice] = useState(false);
+  const [savedRememberDevice, setSavedRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -628,12 +637,15 @@ export function SettingsWorkspace({
     setPreferences((current) =>
       current.language === language ? current : { ...current, language },
     );
+    setSavedPreferences((current) =>
+      current.language === language ? current : { ...current, language },
+    );
   }, [language]);
 
   useEffect(() => {
-    setBaseCurrency(
-      normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY),
-    );
+    const normalized = normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY);
+    setBaseCurrency(normalized);
+    setSavedBaseCurrency(normalized);
   }, [initialBaseCurrency]);
 
   useEffect(() => {
@@ -669,8 +681,22 @@ export function SettingsWorkspace({
       .map((item) => item.trim());
     const trusted = cookies.includes("ficonter_trusted_device=1");
     setRememberDevice(trusted);
-    applyInterface(preferences);
+    setSavedRememberDevice(trusted);
+    applyInterface(savedPreferences);
   }, []);
+
+  useEffect(() => {
+    // Settings edits are drafts until an explicit Save action succeeds.
+    // Moving to another section discards any unconfirmed changes.
+    setPreferences(savedPreferences);
+    setBaseCurrency(savedBaseCurrency);
+    setRememberDevice(savedRememberDevice);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage(null);
+    setSaveFeedback({});
+  }, [active]);
 
   useEffect(() => {
     let mounted = true;
@@ -996,6 +1022,7 @@ export function SettingsWorkspace({
     try {
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
+      setSavedPreferences(next);
       applyInterface(next);
       window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
       showLocalSaveFeedback(feedbackKey, "success", text);
@@ -1046,7 +1073,9 @@ export function SettingsWorkspace({
       });
 
       setBaseCurrency(normalized);
+      setSavedBaseCurrency(normalized);
       setPreferences(nextPreferences);
+      setSavedPreferences(nextPreferences);
 
       try {
         localStorage.setItem(
@@ -1090,10 +1119,17 @@ export function SettingsWorkspace({
     }
   }
 
-  async function saveRememberDevice(enabled: boolean) {
-    setRememberDevice(enabled);
-    saveTrustedDevicePreference(enabled);
-    showSuccess(enabled ? "This device will keep you signed in." : "Persistent login was disabled for this device.");
+  function saveRememberDevice() {
+    clearSaveFeedback("security");
+    saveTrustedDevicePreference(rememberDevice);
+    setSavedRememberDevice(rememberDevice);
+    showLocalSaveFeedback(
+      "security",
+      "success",
+      rememberDevice
+        ? "Persistent login preference saved."
+        : "Persistent login preference disabled.",
+    );
   }
 
   async function signOutOtherSessions() {
@@ -1640,7 +1676,13 @@ const showSubscriptionManagement =
             </form>
             <div className={styles.formCard}>
               <div className={styles.cardHeading}><Smartphone size={19} /><div><h3>Remember this device</h3><p>Keep your login active only on a private device.</p></div></div>
-              <Toggle checked={rememberDevice} onChange={saveRememberDevice} label="Persistent login on this device" />
+              <Toggle checked={rememberDevice} onChange={setRememberDevice} label="Persistent login on this device" />
+              <div className={styles.actions}>
+                {localSaveFeedback("security")}
+                <button type="button" className={styles.primaryButton} onClick={saveRememberDevice}>
+                  <Save size={16} />Save device preference
+                </button>
+              </div>
             </div>
             <div className={styles.formCard}>
               <div className={styles.cardHeading}><Monitor size={19} /><div><h3>Active sessions</h3><p>Supabase exposes the current browser session to the app. Other sessions can be revoked securely.</p></div></div>
@@ -1810,7 +1852,7 @@ const showSubscriptionManagement =
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
-                high-contrast text and controls for reliable readability.
+                high-contrast text and controls for reliable readability. Your selection remains a draft until you click Save appearance.
               </p>
               <div className={styles.optionGrid}>
                 {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => {
@@ -1837,7 +1879,6 @@ const showSubscriptionManagement =
                           if (isLockedTheme) return;
                           const next = { ...preferences, appearance: value };
                           setPreferences(next);
-                          applyInterface(next);
                         }}
                       />
                       <span
@@ -1904,7 +1945,6 @@ const showSubscriptionManagement =
                       onChange={() => {
                         const next = { ...preferences, density: value };
                         setPreferences(next);
-                        applyInterface(next);
                       }}
                     />
                     <span className={styles.densityPreview} data-density={value} aria-hidden="true">

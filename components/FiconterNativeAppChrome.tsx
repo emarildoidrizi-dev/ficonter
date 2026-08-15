@@ -698,7 +698,7 @@ export function FiconterNativeAppChrome({
   useEffect(() => {
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
-  }, [activeBusinessId]);
+  }, [activeBusinessId, pathname]);
 
   useEffect(() => {
     let active = true;
@@ -847,7 +847,8 @@ export function FiconterNativeAppChrome({
     router.prefetch("/dashboard/profile");
   }
 
-  async function switchBusinessProfile(nextBusinessId: string) {
+  async function applyBusinessProfile() {
+    const nextBusinessId = selectedBusinessId;
     if (
       workspace !== "business" ||
       !nextBusinessId ||
@@ -857,8 +858,7 @@ export function FiconterNativeAppChrome({
       return;
     }
 
-    const previousBusinessId = selectedBusinessId || activeBusinessId || "";
-    setSelectedBusinessId(nextBusinessId);
+    const previousBusinessId = activeBusinessId || "";
     setSwitchingBusiness(true);
     setBusinessSwitchError("");
 
@@ -1005,14 +1005,14 @@ export function FiconterNativeAppChrome({
         </button>
 
         {workspace === "business" && businessProfiles.length ? (
-          <label className={styles.businessProfileBar}>
+          <div className={styles.businessProfileBar}>
             <span className={styles.businessProfileIcon} aria-hidden="true">
               <Building2 size={16} />
             </span>
             <span className={styles.businessProfileLabel}>Active business</span>
             <select
               value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
-              onChange={(event) => void switchBusinessProfile(event.target.value)}
+              onChange={(event) => setSelectedBusinessId(event.target.value)}
               disabled={switchingBusiness}
               aria-label="Change active business profile"
             >
@@ -1022,8 +1022,16 @@ export function FiconterNativeAppChrome({
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className={styles.businessProfileApply}
+              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
+              onClick={() => void applyBusinessProfile()}
+            >
+              {switchingBusiness ? "Applying…" : "Apply"}
+            </button>
             <ChevronRight className={styles.businessProfileChevron} size={16} aria-hidden="true" />
-          </label>
+          </div>
         ) : null}
       </header>
 
@@ -1182,11 +1190,11 @@ export function FiconterNativeAppChrome({
         </div>
 
         {workspace === "business" && businessProfiles.length ? (
-          <label className={styles.drawerBusinessSelector}>
+          <div className={styles.drawerBusinessSelector}>
             <span>Business profile</span>
             <select
               value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
-              onChange={(event) => void switchBusinessProfile(event.target.value)}
+              onChange={(event) => setSelectedBusinessId(event.target.value)}
               disabled={switchingBusiness}
               aria-label="Change active business profile"
             >
@@ -1196,9 +1204,16 @@ export function FiconterNativeAppChrome({
                 </option>
               ))}
             </select>
-            {switchingBusiness ? <small>Updating business…</small> : null}
+            <button
+              type="button"
+              className={styles.drawerBusinessApply}
+              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
+              onClick={() => void applyBusinessProfile()}
+            >
+              {switchingBusiness ? "Applying…" : "Apply business"}
+            </button>
             {businessSwitchError ? <small className={styles.businessProfileError}>{businessSwitchError}</small> : null}
-          </label>
+          </div>
         ) : null}
 
         <Link

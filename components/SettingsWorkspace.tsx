@@ -1421,7 +1421,7 @@ export function SettingsWorkspace({
     if (!isNativePhone) return;
 
     const sectionFromUrl = searchParams.get("section");
-    const nextSection =
+    const nextSection: SectionId | null =
       isSectionId(sectionFromUrl ?? undefined) &&
       !(isSubscriptionExempt && sectionFromUrl === "subscription") &&
       sectionFromUrl !== "profile"
@@ -1429,7 +1429,7 @@ export function SettingsWorkspace({
         : null;
 
     if (nextSection) {
-      setActive((current) => (current === nextSection ? current : nextSection));
+      setActive(nextSection);
       setMobileDetailOpen(true);
       return;
     }

@@ -1,0 +1,1 @@
+fix(build): narrow Settings section state for Vercel typecheck

@@ -566,10 +566,16 @@ export function FiconterNativeAppChrome({
     activeRoute(pathname, item, workspace),
   );
 
-  const addHref =
+  const transactionsHref =
     workspace === "business"
-      ? "/business/transactions?add=1"
-      : "/dashboard/transactions?add=1";
+      ? "/business/transactions"
+      : "/dashboard/transactions";
+
+  const addHref = `${transactionsHref}?add=1`;
+  const quickAddEventName =
+    workspace === "business"
+      ? "ficonter:business-quick-add-transaction"
+      : "ficonter:quick-add-transaction";
 
   const currentSearch = searchParams.toString();
   const currentHref = currentSearch ? `${pathname}?${currentSearch}` : pathname;
@@ -1018,7 +1024,16 @@ export function FiconterNativeAppChrome({
           aria-label="Add transaction"
           title="Add transaction"
           onClick={() => {
-            if (currentHref === addHref) return;
+            if (pathname === transactionsHref) {
+              if (currentHref !== addHref) {
+                router.replace(addHref, { scroll: false });
+              }
+              window.requestAnimationFrame(() => {
+                window.dispatchEvent(new Event(quickAddEventName));
+              });
+              return;
+            }
+
             router.prefetch(addHref);
             router.push(addHref, { scroll: false });
           }}

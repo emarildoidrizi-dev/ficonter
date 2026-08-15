@@ -21,6 +21,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-fixed-sidebar.mjs',
   'verify-global-theme-governance-v118.mjs',
   'verify-interface-themes.mjs',
+  'verify-instant-theme-preview-v134.mjs',
   'verify-layout-density-v124.mjs',
   'verify-localization.mjs',
   'verify-manual-debt-payments.mjs',

@@ -312,12 +312,15 @@ function currentDeviceLabel() {
   return `${browser} on ${platform}`;
 }
 
-function applyInterface(preferences: Preferences) {
+function applyInterfaceDom(preferences: Preferences) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const resolvedTheme = resolveAppearance(preferences.appearance, prefersDark);
 
+  // One synchronous DOM commit is the source of truth for the live preview.
+  // Colour palette and V1.33 typography both read these same root attributes,
+  // so they update in the same browser style recalculation with no refresh.
   root.dataset.theme = preferences.appearance;
   root.dataset.resolvedTheme = resolvedTheme;
   root.dataset.density = preferences.density;
@@ -332,6 +335,16 @@ function applyInterface(preferences: Preferences) {
   delete root.dataset.sidebarAtmosphereStyle;
   delete root.dataset.sidebarAtmosphereMotion;
   root.style.colorScheme = resolvedTheme;
+}
+
+function applyInterfacePreview(preferences: Preferences) {
+  // Preview deliberately does not touch localStorage or Supabase.
+  // Save appearance remains the only persistence boundary.
+  applyInterfaceDom(preferences);
+}
+
+function applyInterface(preferences: Preferences) {
+  applyInterfaceDom(preferences);
 
   try {
     localStorage.setItem("ficonter-appearance", preferences.appearance);
@@ -508,6 +521,7 @@ export function SettingsWorkspace({
   const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
   const [savedPreferences, setSavedPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const savedPreferencesRef = useRef(savedPreferences);
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(() =>
     normalizeCurrency(
       initialBaseCurrency || readPreferences(metadata).currency,
@@ -697,12 +711,26 @@ export function SettingsWorkspace({
     const trusted = cookies.includes("ficonter_trusted_device=1");
     setRememberDevice(trusted);
     setSavedRememberDevice(trusted);
+    savedPreferencesRef.current = savedPreferences;
     applyInterface(savedPreferences);
+  }, []);
+
+  useEffect(() => {
+    savedPreferencesRef.current = savedPreferences;
+  }, [savedPreferences]);
+
+  useEffect(() => () => {
+    // If Settings is left while Appearance is only being previewed, restore the
+    // last committed interface immediately. This preserves explicit Save.
+    applyInterfacePreview(savedPreferencesRef.current);
   }, []);
 
   useEffect(() => {
     // Settings edits are drafts until an explicit Save action succeeds.
     // Moving to another section discards any unconfirmed changes.
+    if (active !== "appearance") {
+      applyInterfacePreview(savedPreferences);
+    }
     setPreferences(savedPreferences);
     setBaseCurrency(savedBaseCurrency);
     setRememberDevice(savedRememberDevice);
@@ -1038,6 +1066,7 @@ export function SettingsWorkspace({
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
       setSavedPreferences(next);
+      savedPreferencesRef.current = next;
       applyInterface(next);
       window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
       showLocalSaveFeedback(feedbackKey, "success", text);
@@ -1866,7 +1895,7 @@ const showSubscriptionManagement =
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
-                high-contrast text and controls for reliable readability. Your selection remains a draft until you click Save appearance.
+                high-contrast text and controls for reliable readability. Theme colours and typography preview instantly; Save appearance is only required to keep the change.
               </p>
               <div className={styles.optionGrid}>
                 {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => {
@@ -1892,6 +1921,10 @@ const showSubscriptionManagement =
                         onChange={() => {
                           if (isLockedTheme) return;
                           const next = { ...preferences, appearance: value };
+                          // Apply the root theme attributes synchronously inside the
+                          // click handler. The palette and typography therefore switch
+                          // together before any network request or page refresh.
+                          applyInterfacePreview(next);
                           setPreferences(next);
                         }}
                       />

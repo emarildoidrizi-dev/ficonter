@@ -50,8 +50,8 @@ expect(
   "typography uses the existing theme source of truth instead of a second state",
 );
 expect(
-  sw.includes("theme-typography-v133"),
-  "PWA cache is versioned for the typography release",
+  sw.includes("theme-typography-v133") || sw.includes("instant-theme-preview-v134"),
+  "PWA cache is versioned for the typography release or a newer theme runtime",
 );
 
 console.log("FICONTER V1.33 theme-synchronised typography verification passed.");

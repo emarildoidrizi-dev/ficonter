@@ -16,7 +16,7 @@ const mobileChrome = read('components/FiconterNativeAppChrome.tsx');
 const checks = [
   ['Settings keeps committed preference snapshot', settings.includes('savedPreferences') && settings.includes('setSavedPreferences(next)')],
   ['Settings discards drafts when section changes', settings.includes('Moving to another section discards any unconfirmed changes') && settings.includes('setPreferences(savedPreferences)')],
-  ['Theme selection no longer applies globally before Save', !settings.includes('setPreferences(next);\n                          applyInterface(next);')],
+  ['Theme selection previews immediately without persistence', settings.includes('applyInterfacePreview(next);') && settings.includes('Preview deliberately does not touch localStorage or Supabase')],
   ['Density selection no longer applies globally before Save', !settings.includes('setPreferences(next);\n                        applyInterface(next);')],
   ['Remember-device toggle is draft only', settings.includes('onChange={setRememberDevice}')],
   ['Remember-device preference has explicit Save', settings.includes('Save device preference') && settings.includes('saveTrustedDevicePreference(rememberDevice)')],

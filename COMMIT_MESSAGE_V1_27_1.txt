@@ -1,0 +1,1 @@
+fix(runtime): recover global navigation and keep safe language auto-confirm

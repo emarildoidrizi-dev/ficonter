@@ -26,6 +26,6 @@ assert(accountExport.includes('CURRENT_BRAND_WORDMARK = "FICONTER"'), 'PDF expor
 assert(accountExport.includes('CURRENT_BRAND_DESCRIPTOR = "FINANCIAL CONTROL CENTER"'), 'PDF exports use the current brand descriptor.');
 assert(!accountExport.includes('context.fillText("F", MARGIN + 23, 56)'), 'Legacy synthetic circle-F PDF emblem has been removed.');
 assert(hash(brand) === hash(icon), 'Primary current emblem assets are synchronized.');
-assert(sw.includes('ficonter-pwa-static-v6-current-brand'), 'PWA static cache is versioned so stale brand assets are replaced.');
+assert(sw.includes('ficonter-pwa-static-v7-navigation-recovery'), 'PWA static cache is versioned so stale brand assets are replaced.');
 
 console.log('Export branding V1.26 verification passed.');

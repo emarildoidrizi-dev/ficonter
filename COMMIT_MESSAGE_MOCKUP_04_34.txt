@@ -1,0 +1,1 @@
+fix(mobile): remove duplicate top header on personal overview

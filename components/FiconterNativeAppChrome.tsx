@@ -550,6 +550,10 @@ export function FiconterNativeAppChrome({
     [pathname, routes, workspace],
   );
 
+  const hideTopHeader =
+    workspace === "personal" &&
+    (pathname === "/dashboard" || pathname === PERSONAL_HOME_HREF);
+
   const identity =
     workspace === "business"
       ? businessName.trim() || "Business workspace"
@@ -740,6 +744,27 @@ export function FiconterNativeAppChrome({
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
   }, [activeBusinessId]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (hideTopHeader) {
+      root.dataset.ficonterTopHeader = "hidden";
+      root.style.setProperty("--ficonter-native-header-height", "0px");
+      return () => {
+        root.dataset.ficonterTopHeader = "visible";
+        root.style.removeProperty("--ficonter-native-header-height");
+      };
+    }
+
+    root.dataset.ficonterTopHeader = "visible";
+    root.style.removeProperty("--ficonter-native-header-height");
+
+    return () => {
+      root.dataset.ficonterTopHeader = "visible";
+      root.style.removeProperty("--ficonter-native-header-height");
+    };
+  }, [hideTopHeader]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -1023,6 +1048,7 @@ export function FiconterNativeAppChrome({
 
   return (
     <>
+      {!hideTopHeader ? (
       <header
         className={`${styles.header} ${
           workspace === "business" ? styles.businessHeader : ""
@@ -1104,6 +1130,7 @@ export function FiconterNativeAppChrome({
           </label>
         ) : null}
       </header>
+      ) : null}
 
       <nav
         className={styles.bottomDock}

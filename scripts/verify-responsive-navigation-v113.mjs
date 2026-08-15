@@ -18,12 +18,12 @@ const checks = [
   ['tablet keeps settings navigation visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_navigation') && pageStack.includes('display: grid !important;')],
   ['tablet keeps settings detail panel visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_panel') && pageStack.includes('display: block !important;')],
   ['legacy second transition stylesheet stays unloaded', !read('app/layout.tsx').includes('mobile-screen-stack.css')],
-  ['Profile is removed from Settings section list', !sectionBlock.includes('id: "profile"')],
-  ['Profile is not accepted as a Settings section id', !sectionIdBlock.includes('"profile"')],
-  ['Settings defaults to Account & security', settings.includes(': "security",') && settings.includes('? "security"')],
-  ['legacy Settings profile URL redirects to dedicated Profile page', settingsPage.includes('if (section === "profile")') && settingsPage.includes('redirect("/dashboard/profile")')],
-  ['Settings copy no longer advertises profile management', settingsPage.includes('Manage account security and Ficonter preferences') && !settingsPage.includes('Manage your profile, account security')],
-  ['Profile page links to account Settings without claiming Settings owns Profile', profilePage.includes('Open account settings') && !profilePage.includes('Edit profile & account settings')],
+  ['Profile is restored to the Settings section list', sectionBlock.includes('id: "profile"') && sectionBlock.indexOf('id: "profile"') < sectionBlock.indexOf('id: "security"')],
+  ['Profile is accepted as a Settings section id', sectionIdBlock.includes('"profile"')],
+  ['Settings defaults to Account & security when no section is requested', settings.includes(': "security",') && settings.includes('? "security"')],
+  ['Settings profile URL stays inside Settings', !settingsPage.includes('if (section === "profile")') && settingsPage.includes('"profile"')],
+  ['Settings copy includes profile management again', settingsPage.includes('Manage your profile, account security')],
+  ['Dedicated Profile page links directly to the restored Settings profile section', profilePage.includes('/dashboard/settings?section=profile') && profilePage.includes('Open account settings')],
 ];
 
 let passed = 0;

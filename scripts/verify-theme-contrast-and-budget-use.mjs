@@ -20,6 +20,8 @@ const overview = read("components/CoastalOverview.tsx");
 const overviewCss = read("components/CoastalOverview.module.css");
 const businessCss = read("components/BusinessOverview.module.css");
 const coastalShell = read("app/coastal-shell.css");
+const planner = read("components/MonthlyPlanner.tsx");
+const plannerCss = read("components/MonthlyPlanner.module.css");
 
 expect(contrastGuard, "const MIN_CONTRAST = 4.5", "The global text guard must enforce WCAG AA contrast.");
 expect(contrastGuard, "backgroundImageColors", "The global text guard must account for gradient surfaces.");
@@ -37,8 +39,13 @@ for (const token of ["--surface-card", "--text-primary", "--text-secondary", "--
 }
 expect(overviewCss, "var(--surface-raised)", "The Personal overview must theme its raised inner surfaces.");
 
+expect(planner, "cardHeaderMetric", "Monthly Planner section headers must use the compact metric header.");
+expect(planner, "Actual</span>", "Monthly Planner section headers must surface the actual total.");
+expect(plannerCss, "--planner-section-accent", "Monthly Planner section headers must use restrained category accents.");
+expect(plannerCss, "var(--surface-raised", "Monthly Planner section headers must inherit the active theme surface.");
+expect(plannerCss, "var(--text-primary", "Monthly Planner section header text and amounts must inherit readable theme foregrounds.");
 if (/\.card\s*\{[^}]*rgba\(247,\s*243,\s*225/s.test(overviewCss)) {
   throw new Error("The Personal overview still contains the old light-only card surface.");
 }
 
-console.log("FICONTER theme contrast and monthly budget use: 18 checks passed.");
+console.log("FICONTER theme contrast and monthly budget use: 23 checks passed.");

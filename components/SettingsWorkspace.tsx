@@ -193,6 +193,7 @@ function isSectionId(value: string | undefined): value is SectionId {
   return Boolean(
     value &&
       [
+        "profile",
         "security",
         "financial",
         "notifications",
@@ -204,6 +205,7 @@ function isSectionId(value: string | undefined): value is SectionId {
 }
 
 const sections = [
+  { id: "profile", label: "Profile", description: "Profile photo", icon: CircleUserRound },
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
@@ -1463,8 +1465,7 @@ export function SettingsWorkspace({
 
     if (
       isSectionId(sectionFromUrl) &&
-      !(isSubscriptionExempt && sectionFromUrl === "subscription") &&
-      sectionFromUrl !== "profile"
+      !(isSubscriptionExempt && sectionFromUrl === "subscription")
     ) {
       nextSection = sectionFromUrl;
     }

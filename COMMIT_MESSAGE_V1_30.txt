@@ -1,0 +1,1 @@
+feat(planner): refine section headers and restore Profile settings

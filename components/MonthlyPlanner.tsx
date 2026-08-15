@@ -226,6 +226,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const totalIncome=synchronizedCashActuals.income;
   const incomeCardTotal=addMoney(startBalance,totalIncome);
   const goalInvestments=sumMoney(monthTx.filter(isGoalInvestment).map(transaction=>transaction.amount_eur));
+  const totalGoalInvested=sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.current_amount,currencyContext)));
+  const totalGoalTarget=sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.target_amount,currencyContext)));
   const totalOut=synchronizedCashActuals.outflow;
   const budgetUsedPercent=spendingBudget>0?Math.max(0,totalOut/spendingBudget*100):null;
   const budgetRemaining=spendingBudget>0?subtractMoney(spendingBudget,totalOut):0;
@@ -466,7 +468,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
             key={s.key}
           >
             <header className={styles.cleanCardHeader}>
-              <h3>{s.title}</h3>
+              <div className={styles.cardHeaderIdentity}>
+                <span className={styles.cardHeaderMarker} aria-hidden="true" />
+                <h3>{s.title}</h3>
+              </div>
+              <div className={styles.cardHeaderMetric}>
+                <span>Actual</span>
+                <strong>{money(sectionActualTotal)}</strong>
+              </div>
             </header>
 
             {isCompact ? (
@@ -550,10 +559,19 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       })}
 
     <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
-      <header className={styles.cleanCardHeader}><h3>Goals</h3></header>
+      <header className={styles.cleanCardHeader}>
+        <div className={styles.cardHeaderIdentity}>
+          <span className={styles.cardHeaderMarker} aria-hidden="true" />
+          <h3>Goals</h3>
+        </div>
+        <div className={styles.cardHeaderMetric}>
+          <span>Invested</span>
+          <strong>{money(totalGoalInvested)}</strong>
+        </div>
+      </header>
       {(() => {
-        const invested = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.current_amount,currencyContext)));
-        const target = sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.target_amount,currencyContext)));
+        const invested = totalGoalInvested;
+        const target = totalGoalTarget;
         const progress = target ? Math.min(100, invested / target * 100) : 0;
         return <div className={styles.goalSummaryBody}>
           <div className={styles.goalSummaryAmounts}>

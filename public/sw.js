@@ -1,4 +1,4 @@
-const CACHE_NAME = "ficonter-pwa-static-v8-nav-theme-v129";
+const CACHE_NAME = "ficonter-pwa-static-v9-planner-profile-v130";
 
 const PRECACHE_URLS = [
   "/offline.html",

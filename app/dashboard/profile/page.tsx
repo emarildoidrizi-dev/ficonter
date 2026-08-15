@@ -47,7 +47,7 @@ export default async function ProfilePage() {
           <div><dt>Account</dt><dd>FICONTER</dd></div>
         </dl>
 
-        <Link className="fui-profile-edit" href="/dashboard/settings">
+        <Link className="fui-profile-edit" href="/dashboard/settings?section=profile">
           <Settings2 size={17} /> Open account settings
         </Link>
       </div>

@@ -150,3 +150,61 @@
   .compact .trigger { width: 38px; padding: 0; }
   .settings .menu { inset-inline-start: 14px; width: calc(100% - 28px); }
 }
+
+/* V1.16 — compact header language picker
+   Keep the global language control small, readable and fully usable on phones. */
+.compact .menu {
+  width: min(236px, calc(100vw - 24px));
+  max-height: min(344px, calc(100dvh - 112px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 5px;
+  border-radius: 12px;
+}
+.compact .menu button {
+  min-height: 40px;
+  padding: 5px 8px;
+  gap: 8px;
+  border-radius: 8px;
+}
+.compact .menu button span {
+  gap: 0;
+  min-width: 0;
+}
+.compact .menu strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+.compact .menu small {
+  margin-top: 1px;
+  font-size: 9.5px;
+  line-height: 1.2;
+}
+.compact .menu svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  .compact .menu {
+    top: calc(100% + 6px);
+    width: min(214px, calc(100vw - 20px));
+    max-height: min(304px, calc(100dvh - 108px));
+    padding: 4px;
+    border-radius: 11px;
+  }
+
+  .compact .menu button {
+    min-height: 36px;
+    padding: 4px 7px;
+    gap: 7px;
+  }
+
+  .compact .menu strong {
+    font-size: 11.5px;
+  }
+
+  .compact .menu small {
+    font-size: 9px;
+  }
+}

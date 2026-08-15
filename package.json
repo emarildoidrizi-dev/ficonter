@@ -41,7 +41,8 @@
     "verify:mobile-back-v119": "node scripts/verify-mobile-back-home-fallback-v119.mjs",
     "verify:wallpaper-governance-v122": "node scripts/verify-wallpaper-role-governance-v122.mjs",
     "verify:explicit-save": "node scripts/verify-explicit-save-governance-v123.mjs",
-    "verify:layout-density-v124": "node scripts/verify-layout-density-v124.mjs"
+    "verify:layout-density-v124": "node scripts/verify-layout-density-v124.mjs",
+    "verify:export-branding-v126": "node scripts/verify-export-branding-v126.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

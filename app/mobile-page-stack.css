@@ -20,12 +20,12 @@
 
   html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="forward"]
     .app-main > * {
-    animation: ficonter-mobile-page-forward 320ms cubic-bezier(0.22, 0.78, 0.2, 1) both !important;
+    animation: ficonter-mobile-page-forward 220ms cubic-bezier(0.2, 0.86, 0.2, 1) both !important;
   }
 
   html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="back"]
     .app-main > * {
-    animation: ficonter-mobile-page-back 280ms cubic-bezier(0.22, 0.78, 0.2, 1) both !important;
+    animation: ficonter-mobile-page-back 200ms cubic-bezier(0.2, 0.86, 0.2, 1) both !important;
   }
 
   @keyframes ficonter-mobile-page-forward {
@@ -157,4 +157,17 @@ html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
 html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
   [class*="SettingsWorkspace_sectionButton"] {
   transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease !important;
+}
+
+/* V1.15 — immediate phone interaction feedback. */
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+  [class*="SettingsWorkspace_sectionButton"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease, transform 80ms ease !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+  [class*="SettingsWorkspace_sectionButton"]:active {
+  transform: scale(0.985);
 }

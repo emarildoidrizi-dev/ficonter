@@ -35,7 +35,8 @@
     "verify:mobile-ui-phase4": "node scripts/verify-mobile-ui-phase4.mjs",
     "verify:mobile-ui-phase5": "node scripts/verify-mobile-ui-phase5.mjs",
     "verify:mobile-ui-phase6": "node scripts/verify-mobile-ui-phase6.mjs",
-    "verify:mobile-responsive-v113": "node scripts/verify-responsive-navigation-v113.mjs"
+    "verify:mobile-responsive-v113": "node scripts/verify-responsive-navigation-v113.mjs",
+    "verify:settings-speed-v115": "node scripts/verify-settings-speed-v115.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

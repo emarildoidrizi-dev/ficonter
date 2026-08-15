@@ -252,6 +252,12 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
 
     if (!target || target === currentRoute) return;
 
+    const targetUrl = new URL(target, window.location.origin);
+    if (targetUrl.pathname === window.location.pathname) {
+      window.history.back();
+      return;
+    }
+
     router.prefetch(target);
     router.push(target, { scroll: false });
   }

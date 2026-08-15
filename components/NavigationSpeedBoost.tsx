@@ -189,7 +189,7 @@ export function NavigationSpeedBoost({
       transitionTimer.current = window.setTimeout(() => {
         root.removeAttribute("data-ficonter-nav-transition");
         transitionTimer.current = null;
-      }, direction === "back" ? 300 : 340);
+      }, direction === "back" ? 220 : 240);
     }
 
     previousRouteKey.current = routeKey;

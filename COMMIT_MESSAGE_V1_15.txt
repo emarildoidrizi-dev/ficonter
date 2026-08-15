@@ -1,0 +1,1 @@
+perf(mobile): make Settings section switching instant and smooth

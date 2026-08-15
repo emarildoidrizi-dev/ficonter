@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
@@ -449,7 +449,7 @@ export function SettingsWorkspace({
   isSubscriptionExempt = false,
 }: Props) {
   const { language, locale } = useLanguage();
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
@@ -1410,6 +1410,33 @@ export function SettingsWorkspace({
     }
   }
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const isNativePhone =
+      root.dataset.ficonterNativeApp === "true" &&
+      root.dataset.ficonterDevice === "phone";
+
+    if (!isNativePhone) return;
+
+    const sectionFromUrl = searchParams.get("section");
+    const nextSection =
+      isSectionId(sectionFromUrl ?? undefined) &&
+      !(isSubscriptionExempt && sectionFromUrl === "subscription") &&
+      sectionFromUrl !== "profile"
+        ? sectionFromUrl
+        : null;
+
+    if (nextSection) {
+      setActive((current) => (current === nextSection ? current : nextSection));
+      setMobileDetailOpen(true);
+      return;
+    }
+
+    setMobileDetailOpen(false);
+  }, [isSubscriptionExempt, searchParams]);
+
   function openSettingsSection(id: SectionId) {
     setMessage(null);
     setSaveFeedback({});
@@ -1423,12 +1450,14 @@ export function SettingsWorkspace({
       const target = `/dashboard/settings?section=${id}`;
       const current = `${window.location.pathname}${window.location.search}`;
 
-      // Phone navigation is route-driven: one tap, one route change, one slide.
-      // Tablets/iPads deliberately stay in the in-page Settings workspace below.
-      if (current === target) return;
+      if (current === target && active === id && mobileDetailOpen) return;
 
-      router.prefetch(target);
-      router.push(target, { scroll: false });
+      // All Settings sections are already mounted in this client workspace.
+      // Switch the visible screen immediately, then update browser history
+      // without asking the server to rebuild the Settings route.
+      setActive(id);
+      setMobileDetailOpen(true);
+      window.history.pushState(null, "", target);
       return;
     }
 
@@ -1539,7 +1568,12 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => openSettingsSection(id)}>
+            <button
+              key={id}
+              type="button"
+              className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`}
+              onClick={() => openSettingsSection(id)}
+            >
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />

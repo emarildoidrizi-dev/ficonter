@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Globe2, Save } from "lucide-react";
+import { Check, ChevronDown, Globe2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
@@ -19,8 +19,6 @@ export function LanguageSelector({
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [draftLanguage, setDraftLanguage] = useState<FiconterLanguage>(language);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
   const latestSelectionRef = useRef(0);
   const current = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0];
@@ -28,14 +26,12 @@ export function LanguageSelector({
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setDraftLanguage(language);
         setOpen(false);
       }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setDraftLanguage(language);
         setOpen(false);
       }
     }
@@ -46,49 +42,38 @@ export function LanguageSelector({
       document.removeEventListener("mousedown", closeOnOutside);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [language]);
+  }, []);
 
-  useEffect(() => {
-    if (!open) setDraftLanguage(language);
-  }, [language, open]);
-
-  function selectLanguage(nextLanguage: FiconterLanguage) {
-    setDraftLanguage(nextLanguage);
-    setMessage(null);
-  }
-
-  async function saveLanguage() {
-    if (saving) return;
-    if (draftLanguage === language) {
+  async function selectLanguage(nextLanguage: FiconterLanguage) {
+    if (nextLanguage === language) {
       setOpen(false);
       return;
     }
 
     const selectionId = latestSelectionRef.current + 1;
     latestSelectionRef.current = selectionId;
-    setSaving(true);
+
+    // Language selection is the deliberate exception to FICONTER's explicit-
+    // save rule: choosing an option is itself the confirmation action.
+    setOpen(false);
     setMessage(null);
 
     try {
-      await changeLanguage(draftLanguage, true);
+      await changeLanguage(nextLanguage, true);
       if (latestSelectionRef.current !== selectionId) return;
-      setOpen(false);
       setMessage({
         type: "success",
-        text: translateMessage(draftLanguage, "languageSaved"),
+        text: translateMessage(nextLanguage, "languageSaved"),
       });
       window.setTimeout(() => {
         if (latestSelectionRef.current === selectionId) setMessage(null);
       }, 1800);
     } catch {
       if (latestSelectionRef.current !== selectionId) return;
-      setDraftLanguage(language);
       setMessage({
         type: "error",
         text: translateMessage(language, "languageSaveFailed"),
       });
-    } finally {
-      if (latestSelectionRef.current === selectionId) setSaving(false);
     }
   }
 
@@ -114,12 +99,7 @@ export function LanguageSelector({
         aria-label={t("chooseLanguage")}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() =>
-          setOpen((value) => {
-            if (!value) setDraftLanguage(language);
-            return !value;
-          })
-        }
+        onClick={() => setOpen((value) => !value)}
       >
         <Globe2 size={16} />
         <span>{current.nativeName}</span>
@@ -132,9 +112,9 @@ export function LanguageSelector({
             <button
               type="button"
               role="option"
-              aria-selected={option.code === draftLanguage}
+              aria-selected={option.code === language}
               key={option.code}
-              onClick={() => selectLanguage(option.code)}
+              onClick={() => void selectLanguage(option.code)}
               lang={option.locale}
               dir={option.direction}
             >
@@ -142,20 +122,9 @@ export function LanguageSelector({
                 <strong>{option.nativeName}</strong>
                 <small>{option.englishName}</small>
               </span>
-              {option.code === draftLanguage ? <Check size={16} /> : null}
+              {option.code === language ? <Check size={16} /> : null}
             </button>
           ))}
-          <div className={styles.menuActions}>
-            <button
-              type="button"
-              className={styles.saveLanguage}
-              disabled={saving || draftLanguage === language}
-              onClick={() => void saveLanguage()}
-            >
-              <Save size={14} />
-              {saving ? t("saving") : t("saveLanguage")}
-            </button>
-          </div>
         </div>
       ) : null}
 

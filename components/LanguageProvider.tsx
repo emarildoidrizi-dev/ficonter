@@ -279,9 +279,9 @@ export function LanguageProvider({
     translatorRef.current = translator;
     translator.start();
 
-    // initialLanguage is the committed source of truth. Browser storage is
-    // updated only after an explicit Save action and is never allowed to
-    // override the committed server/cookie value on mount.
+    // initialLanguage is the committed source of truth on first load. After
+    // that, choosing a language is itself the confirmation action and updates
+    // browser/account persistence immediately.
 
     return () => {
       translator.stop();
@@ -295,54 +295,60 @@ export function LanguageProvider({
       persistAccount = true,
     ) => {
       const normalized = normalizeLanguage(nextLanguage);
+      const previous = languageRef.current;
 
-      const applyCommittedLanguage = () => {
-        setLanguage(normalized);
-        persistBrowserLanguage(normalized);
+      const applyCommittedLanguage = (committed: FiconterLanguage) => {
+        languageRef.current = committed;
+        setLanguage(committed);
+        persistBrowserLanguage(committed);
         window.dispatchEvent(
           new CustomEvent(LANGUAGE_CHANGED_EVENT, {
-            detail: { language: normalized },
+            detail: { language: committed },
           }),
         );
       };
 
-      if (!persistAccount) {
-        applyCommittedLanguage();
-        return;
-      }
+      // Language is the deliberate exception to the platform-wide explicit-
+      // save rule. Selecting it is the confirmation, so update the interface
+      // immediately and persist the account preference in the same action.
+      applyCommittedLanguage(normalized);
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      if (!persistAccount) return;
 
-      if (userError) throw userError;
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (user) {
-        const metadata = user.user_metadata ?? {};
-        const existingPreferences =
-          metadata.ficonter_preferences &&
-          typeof metadata.ficonter_preferences === "object"
-            ? (metadata.ficonter_preferences as Record<string, unknown>)
-            : {};
+        if (userError) throw userError;
 
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            ...metadata,
-            ficonter_preferences: {
-              ...existingPreferences,
-              language: normalized,
+        if (user) {
+          const metadata = user.user_metadata ?? {};
+          const existingPreferences =
+            metadata.ficonter_preferences &&
+            typeof metadata.ficonter_preferences === "object"
+              ? (metadata.ficonter_preferences as Record<string, unknown>)
+              : {};
+
+          const { error } = await supabase.auth.updateUser({
+            data: {
+              ...metadata,
+              ficonter_preferences: {
+                ...existingPreferences,
+                language: normalized,
+              },
             },
-          },
-        });
+          });
 
-        if (error) throw error;
+          if (error) throw error;
+        }
+      } catch (error) {
+        // If account persistence fails, restore the last confirmed language so
+        // browser state and account state cannot silently diverge.
+        applyCommittedLanguage(previous);
+        throw error;
       }
-
-      // The interface changes only after the explicit Save action has
-      // successfully committed the preference (or there is no signed-in
-      // account to persist).
-      applyCommittedLanguage();
     },
     [supabase],
   );

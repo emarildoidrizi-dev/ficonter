@@ -266,8 +266,6 @@ const requiredFiles = [
   "app/dashboard/gps/page.tsx",
   "components/FinancialGps.tsx",
   "components/FinancialGps.module.css",
-  "components/FinancialGpsSummary.tsx",
-  "components/FinancialGpsSummary.module.css",
   "lib/wealth/financialGps.ts",
 ];
 for (const relativePath of requiredFiles) {
@@ -286,8 +284,15 @@ const overview = fs.readFileSync(
   path.join(root, "components/DashboardLiveOverview.tsx"),
   "utf8",
 );
-assert.match(overview, /FinancialGpsSummary/);
-assert.match(overview, /get_ai_insights_inputs/);
+assert.match(overview, /calculateFinancialGps\(gpsInputs, initialSetupAcknowledgements\)/);
+assert.match(overview, /financialGps=\{financialGps\}/);
+
+const overviewPage = fs.readFileSync(
+  path.join(root, "app/dashboard/overview/page.tsx"),
+  "utf8",
+);
+assert.match(overviewPage, /rpc\("get_ai_insights_inputs"\)/);
+assert.match(overviewPage, /readSetupAcknowledgements/);
 
 const component = fs.readFileSync(
   path.join(root, "components/FinancialGps.tsx"),
@@ -297,4 +302,4 @@ assert.match(component, /One clear priority/);
 assert.match(component, /never moves money/i);
 assert.match(component, /postgres_changes/);
 
-console.log("Financial GPS verification passed: 32 checks.");
+console.log("Financial GPS verification passed against the current unified Overview integration.");

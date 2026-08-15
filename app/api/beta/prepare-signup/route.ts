@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   }
 
   const codeHash = hashCode(code);
-  const service = createServiceClient() as any;
+  const service = createServiceClient();
   const nowIso = new Date().toISOString();
 
   const { data: invite, error: inviteError } = await service

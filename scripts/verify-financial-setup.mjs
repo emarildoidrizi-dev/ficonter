@@ -171,8 +171,6 @@ const requiredFiles = [
   "app/dashboard/setup/page.tsx",
   "components/FinancialSetupGuide.tsx",
   "components/FinancialSetupGuide.module.css",
-  "components/FinancialSetupSummary.tsx",
-  "components/FinancialSetupSummary.module.css",
   "lib/wealth/setupReadiness.ts",
 ];
 for (const relativePath of requiredFiles) {
@@ -183,11 +181,15 @@ const dashboardSource = fs.readFileSync(
   path.join(root, "components/DashboardLiveOverview.tsx"),
   "utf8",
 );
-assert.match(dashboardSource, /FinancialSetupSummary/);
+assert.match(dashboardSource, /initialSetupAcknowledgements/);
+assert.match(dashboardSource, /calculateFinancialGps\(gpsInputs, initialSetupAcknowledgements\)/);
 
-const sidebarSource = fs.readFileSync(path.join(root, "components/Sidebar.tsx"), "utf8");
-assert.match(sidebarSource, /Financial setup/);
-assert.match(sidebarSource, /\/dashboard\/setup/);
+const overviewPageSource = fs.readFileSync(
+  path.join(root, "app/dashboard/overview/page.tsx"),
+  "utf8",
+);
+assert.match(overviewPageSource, /readSetupAcknowledgements/);
+assert.match(overviewPageSource, /initialSetupAcknowledgements=/);
 
 const transactionPage = fs.readFileSync(
   path.join(root, "app/dashboard/transactions/page.tsx"),
@@ -196,4 +198,4 @@ const transactionPage = fs.readFileSync(
 assert.match(transactionPage, /setupTransactionType/);
 assert.match(transactionPage, /initialType=\{initialType\}/);
 
-console.log("Financial setup verification passed: 27 checks.");
+console.log("Financial setup verification passed against the current unified Overview integration.");

@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export function isSameOriginRequest(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
@@ -22,4 +22,18 @@ export function noStoreHeaders() {
     "Cache-Control": "private, no-store, max-age=0",
     "X-Content-Type-Options": "nosniff",
   };
+}
+
+
+export function noStoreJson<T>(body: T, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers);
+
+  for (const [key, value] of Object.entries(noStoreHeaders())) {
+    headers.set(key, value);
+  }
+
+  return NextResponse.json(body, {
+    ...init,
+    headers,
+  });
 }

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const service = createServiceClient() as any;
+  const service = createServiceClient();
   const { data, error } = await service.rpc(
     "activate_ficonter_beta_for_existing_user",
     {

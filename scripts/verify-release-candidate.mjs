@@ -5,6 +5,9 @@ import { spawnSync } from "node:child_process";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
+
+// Only current release suites live directly under scripts/. Superseded
+// architecture checks are retained under scripts/historical/ for reference.
 const scripts = readdirSync(here)
   .filter((name) => name.startsWith("verify-") && name.endsWith(".mjs"))
   .filter((name) => name !== "verify-release-candidate.mjs")
@@ -27,4 +30,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`\nFICONTER Release Candidate verification passed (${scripts.length} suites).`);
+console.log(`\nFICONTER Release Candidate verification passed (${scripts.length} current suites).`);

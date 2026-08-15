@@ -38,6 +38,11 @@ const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padS
 const monthTitle=(m:string)=>new Date(`${m}-01T12:00:00`).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 const inMonth=(date:string|null,m:string)=>Boolean(date?.startsWith(m));
 const isGoalInvestment=(tx:Tx)=>tx.description.startsWith("Goal investment ·");
+const realtimeRowId=(row:unknown):string|null=>{
+  if(!row||typeof row!=="object"||!("id" in row))return null;
+  const id=(row as {id?:unknown}).id;
+  return typeof id==="string"?id:null;
+};
 const isBillTransaction=(tx:Tx)=>{
   const source=(tx.exchange_rate_source??"").trim().toLowerCase();
   return source==="automatic bill schedule"||source==="bill conversion";
@@ -152,11 +157,11 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   },[schedulePlannerRefresh]);
   useEffect(()=>{
     const channel=supabase.channel(`planner-${userId}`)
-      .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},p=>setTransactions(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Tx,...c.filter(x=>x.id!==(p.new as any).id)]))
-      .on("postgres_changes",{event:"*",schema:"public",table:"bills",filter:`user_id=eq.${userId}`},p=>setBills(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Bill,...c.filter(x=>x.id!==(p.new as any).id)]))
-      .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_plans",filter:`user_id=eq.${userId}`},p=>setPlans(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Plan,...c.filter(x=>x.id!==(p.new as any).id)]))
-      .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_items",filter:`user_id=eq.${userId}`},p=>setItems(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Item,...c.filter(x=>x.id!==(p.new as any).id)]))
-      .on("postgres_changes",{event:"*",schema:"public",table:"goals",filter:`user_id=eq.${userId}`},p=>setGoals(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==(p.old as any).id):[p.new as Goal,...c.filter(x=>x.id!==(p.new as any).id)]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},p=>setTransactions(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Tx,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"bills",filter:`user_id=eq.${userId}`},p=>setBills(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Bill,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_plans",filter:`user_id=eq.${userId}`},p=>setPlans(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Plan,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_items",filter:`user_id=eq.${userId}`},p=>setItems(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Item,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
+      .on("postgres_changes",{event:"*",schema:"public",table:"goals",filter:`user_id=eq.${userId}`},p=>setGoals(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Goal,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
       .subscribe();
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);

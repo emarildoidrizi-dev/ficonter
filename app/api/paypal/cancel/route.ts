@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { isSameOriginRequest, noStoreJson } from "@/lib/security/request";
 export const runtime = "nodejs";
 
 type PayPalSubscription = {
@@ -131,13 +132,20 @@ function isFutureDate(value: string | null | undefined) {
   return Number.isFinite(timestamp) && timestamp > Date.now();
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return noStoreJson(
+      { error: "This request could not be verified." },
+      { status: 403 },
+    );
+  }
+
   try {
     const requestOrigin = new URL(request.url).origin;
     const suppliedOrigin = request.headers.get("origin");
 
     if (suppliedOrigin && suppliedOrigin !== requestOrigin) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid request origin." },
         { status: 403 },
       );
@@ -150,7 +158,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Authentication required." },
         { status: 401 },
       );
@@ -159,7 +167,7 @@ export async function POST(request: Request) {
     const { admin: adminAccount } = await requireAdmin();
 
     if (adminAccount) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "Administrative accounts do not require subscriptions.",
@@ -186,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     if (!subscription) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "No subscription was found for this account." },
         { status: 404 },
       );
@@ -196,7 +204,7 @@ export async function POST(request: Request) {
       subscription.plan_code !== "personal_pro" &&
       subscription.plan_code !== "business_pro"
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "This account does not have a paid FICONTER plan.",
@@ -212,7 +220,7 @@ export async function POST(request: Request) {
         subscription.paypal_subscription_id,
       )
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "This subscription is not managed by PayPal.",
@@ -222,7 +230,7 @@ export async function POST(request: Request) {
     }
 
     if (subscription.cancel_at_period_end === true) {
-      return NextResponse.json({
+      return noStoreJson({
         success: true,
         alreadyCanceled: true,
         cancelAtPeriodEnd: true,
@@ -262,7 +270,7 @@ export async function POST(request: Request) {
       paypalSubscription.status !== "CANCELLED" &&
       !isFutureDate(currentPeriodEnd)
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "The paid-through date could not be verified. The subscription was not canceled.",
@@ -296,7 +304,7 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       cancelAtPeriodEnd: true,
       currentPeriodEnd,
@@ -309,7 +317,7 @@ export async function POST(request: Request) {
       error,
     );
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         error:
           "Unable to cancel the subscription right now.",

@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { noStoreJson } from "@/lib/security/request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -299,7 +299,7 @@ export async function GET(
         transactionId,
       )
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid transaction ID." },
         { status: 400 },
       );
@@ -312,7 +312,7 @@ export async function GET(
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Authentication required." },
         { status: 401 },
       );
@@ -322,7 +322,7 @@ export async function GET(
       await requireAdmin();
 
     if (adminAccount) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "Administrative accounts do not use customer billing.",
@@ -354,7 +354,7 @@ export async function GET(
       typeof subscription.paypal_subscription_id !==
         "string"
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "No PayPal subscription was found.",
@@ -407,7 +407,7 @@ export async function GET(
     );
 
     if (!transaction) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "This transaction does not belong to the current Ficonter subscription.",
@@ -592,7 +592,7 @@ export async function GET(
       error,
     );
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         error:
           "The billing PDF could not be generated right now.",

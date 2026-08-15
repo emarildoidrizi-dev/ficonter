@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+import { isSameOriginRequest, noStoreJson } from "@/lib/security/request";
 const PAYPAL_PLAN_ENV = {
   personal_pro: {
     monthly: "PAYPAL_PLAN_PERSONAL_MONTHLY",
@@ -23,7 +24,14 @@ function isPaidInterval(value: unknown): value is PaidInterval {
   return value === "monthly" || value === "annual";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return noStoreJson(
+      { error: "This request could not be verified." },
+      { status: 403 },
+    );
+  }
+
   try {
     const supabase = await createClient();
 
@@ -32,7 +40,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Authentication required." },
         { status: 401 },
       );
@@ -44,7 +52,7 @@ export async function POST(request: Request) {
     };
 
     if (!isPaidPlan(body.planCode) || !isPaidInterval(body.billingInterval)) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid subscription plan." },
         { status: 400 },
       );
@@ -56,15 +64,15 @@ export async function POST(request: Request) {
     const planId = process.env[environmentVariable]?.trim();
 
     if (!planId) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "PayPal plan is not configured." },
         { status: 500 },
       );
     }
 
-    return NextResponse.json({ planId });
+    return noStoreJson({ planId });
   } catch {
-    return NextResponse.json(
+    return noStoreJson(
       { error: "Unable to prepare PayPal checkout." },
       { status: 500 },
     );

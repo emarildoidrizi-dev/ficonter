@@ -20,6 +20,7 @@ function check(label, condition) {
 }
 
 const sidebar = read("components/Sidebar.tsx");
+const mobileChrome = read("components/FiconterNativeAppChrome.tsx");
 const modal = read("components/ContactSupportModal.tsx");
 const modalCss = read("components/ContactSupportModal.module.css");
 const supportRoute = read("app/api/support/requests/route.ts");
@@ -28,9 +29,9 @@ const adminMessages = read("app/api/admin/support/[id]/messages/route.ts");
 const inbox = read("components/SupportInbox.tsx");
 const sql = read("supabase/contact_support_center.sql");
 
-check("Profile menu exposes Help", sidebar.includes("<span>Help</span>"));
-check("Profile menu exposes Contact Us", sidebar.includes("<span>Contact Us</span>"));
-check("Sidebar opens the private modal", sidebar.includes("ContactSupportModal"));
+check("Profile menu stays limited to account controls", !sidebar.includes("<span>Help</span>") && !sidebar.includes("<span>Contact Us</span>"));
+check("Mobile More menu exposes in-app Messages", mobileChrome.includes('href: "/dashboard/inbox"') && mobileChrome.includes('label: "Messages"'));
+check("Sidebar keeps the private contact modal bridge", sidebar.includes("ContactSupportModal") && sidebar.includes("OPEN_CONTACT_EVENT"));
 check("Contact modal uses a document portal", modal.includes('createPortal(modal, document.body)'));
 check("Contact modal is accessible", modal.includes('aria-modal="true"') && modal.includes('role="dialog"'));
 check("Contact modal supports Enter confirmation", modal.includes('data-enter-confirm="true"'));

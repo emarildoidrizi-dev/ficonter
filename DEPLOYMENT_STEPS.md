@@ -1,24 +1,13 @@
-# FICONTER Release Candidate 1 — Deployment
+# FICONTER V1.21 — Deployment gate
 
-## Recommended method
+1. Back up the current branch.
+2. Upload the complete V1.21 repository package.
+3. Commit: `fix(release): harden FICONTER and finalize pre-release QA`
+4. Push to Vercel Preview first.
+5. Require a green Vercel production compile/typecheck.
+6. Test login, Overview, Transactions, Add Transaction (+), Planner, More, Profile/Settings, language, theme, Back navigation, Business switching, and Admin authorization.
+7. Test one real save/edit/delete cycle with a disposable test record.
+8. Confirm mobile phone and tablet/iPad behavior separately.
+9. If all checks pass, promote/merge and freeze the release.
 
-Use this package as the complete repository state rather than stacking another partial hotfix ZIP.
-
-1. Create a backup branch from the current GitHub `main` branch.
-2. Extract the Release Candidate ZIP locally.
-3. Replace the repository contents with the extracted `ficonter-main` contents.
-4. Delete the obsolete files listed in `FILES_TO_DELETE_AFTER_UPLOAD.txt` if they still exist.
-5. Commit and push to a preview branch first.
-6. Wait for Vercel to complete the production compilation.
-7. Run the acceptance checks in `CONSOLIDATION_REPORT.md`.
-8. Merge the preview branch into `main` only after the checks pass.
-
-## Commit message
-
-```text
-chore(platform): consolidate FICONTER release candidate 1
-```
-
-## Supabase
-
-No new consolidation SQL is required. Do not rerun migrations blindly. Confirm that the existing production database already contains the required Bill and Debt functions described in `CONSOLIDATION_REPORT.md`.
+No new SQL migration is required by V1.21.

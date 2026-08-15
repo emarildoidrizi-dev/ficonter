@@ -5,7 +5,6 @@ const speed = read('components/NavigationSpeedBoost.tsx');
 const settings = read('components/SettingsWorkspace.tsx');
 const settingsPage = read('app/dashboard/settings/page.tsx');
 const pageStack = read('app/mobile-page-stack.css');
-const screenStack = read('app/mobile-screen-stack.css');
 const profilePage = read('app/dashboard/profile/page.tsx');
 
 const sectionBlock = settings.slice(settings.indexOf('const sections = ['), settings.indexOf('] as const;', settings.indexOf('const sections = [')) + 11);
@@ -18,7 +17,7 @@ const checks = [
   ['phone replacement CSS is device-class scoped', pageStack.includes('data-ficonter-device="phone"') && pageStack.includes('data-mobile-detail="true"')],
   ['tablet keeps settings navigation visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_navigation') && pageStack.includes('display: grid !important;')],
   ['tablet keeps settings detail panel visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_panel') && pageStack.includes('display: block !important;')],
-  ['legacy screen-stack animations are phone-only if loaded', screenStack.includes('data-ficonter-device="phone"][data-ficonter-nav-transition="active"]')],
+  ['legacy second transition stylesheet stays unloaded', !read('app/layout.tsx').includes('mobile-screen-stack.css')],
   ['Profile is removed from Settings section list', !sectionBlock.includes('id: "profile"')],
   ['Profile is not accepted as a Settings section id', !sectionIdBlock.includes('"profile"')],
   ['Settings defaults to Account & security', settings.includes(': "security",') && settings.includes('? "security"')],

@@ -117,6 +117,7 @@ export default async function BusinessLayout({
       <FiconterNativeAppChrome
         workspace="business"
         subscriptionPlanCode={subscriptionPlanCode}
+        isAdmin={Boolean(admin)}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??

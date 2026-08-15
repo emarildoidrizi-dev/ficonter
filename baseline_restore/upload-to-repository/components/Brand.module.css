@@ -1,0 +1,67 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: block;
+  border-radius: 12px;
+  filter: drop-shadow(0 7px 16px rgba(0, 0, 0, 0.14));
+}
+
+.wordmark {
+  overflow: hidden;
+  color: inherit;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.sidebar) .mark {
+  width: 46px;
+  height: 46px;
+  flex-basis: 46px;
+  border-radius: 13px;
+}
+
+:global(.sidebar) .wordmark {
+  color: #fff8e8;
+  font-size: 20px;
+}
+
+:global(.auth-art) .mark {
+  width: 58px;
+  height: 58px;
+  flex-basis: 58px;
+  border-radius: 16px;
+}
+
+:global(.auth-art) .wordmark {
+  color: #f1d79b;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .mark {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .wordmark {
+    font-size: 17px;
+  }
+}

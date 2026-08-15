@@ -1,0 +1,9 @@
+.control {
+  position: fixed;
+  z-index: 200;
+  top: 18px;
+  inset-inline-end: 18px;
+}
+@media (max-width: 640px) {
+  .control { top: 12px; inset-inline-end: 12px; }
+}

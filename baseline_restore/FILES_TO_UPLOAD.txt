@@ -1,0 +1,4 @@
+UPLOAD THE COMPLETE CONTENTS OF THIS REPOSITORY PACKAGE.
+
+This is not a partial hotfix. All application, component, library, public asset,
+script and Supabase migration folders belong to the consolidated release.

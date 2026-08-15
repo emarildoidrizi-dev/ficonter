@@ -1,0 +1,457 @@
+.workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.heroCopy,
+.progressCard,
+.statusPanel,
+.step,
+.explanation {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  box-shadow: 0 14px 40px rgba(31, 35, 38, 0.04);
+}
+
+.heroCopy {
+  padding: 28px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(183, 155, 108, 0.16), transparent 38%),
+    var(--surface-card);
+}
+
+.eyebrow {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.heroCopy h2 {
+  max-width: 720px;
+  margin: 10px 0 12px;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.05;
+}
+
+.heroCopy p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.progressCard {
+  display: grid;
+  align-content: center;
+  gap: 15px;
+  padding: 26px;
+  border-radius: 24px;
+}
+
+.progressTop {
+  display: grid;
+  gap: 18px;
+}
+
+.progressTop > div:first-child {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.progressTop span,
+.progressCard small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.progressTop > div:first-child strong {
+  color: var(--gold);
+  font-size: 31px;
+  line-height: 1;
+}
+
+.scoreState {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  background: var(--surface-subtle);
+}
+
+.scoreState svg {
+  color: var(--gold);
+}
+
+.scoreState[data-ready="true"] svg {
+  color: var(--sage);
+}
+
+.scoreState strong {
+  color: var(--text-primary);
+}
+
+.progressTrack {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--gold-soft);
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--sage));
+  transition: width 220ms ease;
+}
+
+.error,
+.success {
+  padding: 13px 15px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.error {
+  border: 1px solid rgba(146, 91, 91, 0.28);
+  background: var(--danger-soft);
+  color: var(--burgundy);
+}
+
+.success {
+  border: 1px solid rgba(96, 120, 111, 0.25);
+  background: var(--success-soft);
+  color: var(--sage);
+}
+
+.statusPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-radius: 18px;
+}
+
+.statusPanel > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.statusPanel > div > svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.statusPanel strong,
+.statusPanel span {
+  display: block;
+}
+
+.statusPanel strong {
+  font-size: 14px;
+}
+
+.statusPanel span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.refreshButton,
+.moduleLink,
+.confirmButton {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.refreshButton {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.refreshButton:hover:not(:disabled),
+.refreshButton:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.spinning {
+  animation: spin 700ms linear infinite;
+}
+
+.steps {
+  display: grid;
+  gap: 12px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 34px 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 19px 20px;
+  border-radius: 18px;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.step:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.step[data-complete="true"] {
+  border-color: rgba(96, 120, 111, 0.26);
+  background:
+    linear-gradient(rgba(96, 120, 111, 0.025), rgba(96, 120, 111, 0.025)),
+    var(--surface-card);
+}
+
+.stepNumber,
+.stepIcon {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.stepNumber {
+  width: 34px;
+  height: 34px;
+  margin-top: 5px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.step[data-complete="true"] .stepNumber {
+  border-color: rgba(96, 120, 111, 0.3);
+  background: var(--success-soft);
+  color: var(--sage);
+}
+
+.stepIcon {
+  width: 44px;
+  height: 44px;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.stepBody {
+  min-width: 0;
+}
+
+.stepHeading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.stepHeading h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.stepHeading p {
+  max-width: 780px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.badge {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.step[data-complete="true"] .badge {
+  border-color: rgba(96, 120, 111, 0.25);
+  background: var(--success-soft);
+  color: var(--sage);
+}
+
+.stepActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.moduleLink {
+  border: 0;
+  background: var(--solid-bg);
+  color: var(--solid-text);
+}
+
+.moduleLink:hover,
+.moduleLink:focus-visible {
+  background: var(--solid-bg-hover);
+  outline: none;
+}
+
+.confirmButton {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.confirmButton:hover:not(:disabled),
+.confirmButton:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.confirmButton[data-selected="true"] {
+  border-color: rgba(96, 120, 111, 0.32);
+  background: var(--success-soft);
+  color: var(--sage);
+}
+
+.confirmButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.explanation {
+  padding: 20px;
+  border-radius: 18px;
+}
+
+.explanation > div {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+}
+
+.explanation svg {
+  flex: 0 0 auto;
+  color: var(--sage);
+}
+
+.explanation strong {
+  font-size: 13px;
+}
+
+.explanation p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .heroCopy,
+  .progressCard {
+    padding: 21px;
+  }
+
+  .statusPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .refreshButton {
+    width: 100%;
+  }
+
+  .step {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .stepIcon {
+    display: none;
+  }
+
+  .stepHeading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .badge {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .progressTop > div:first-child {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .step {
+    padding: 16px;
+  }
+
+  .stepActions,
+  .moduleLink,
+  .confirmButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step,
+  .progressTrack span {
+    transition: none;
+  }
+
+  .spinning {
+    animation: none;
+  }
+}

@@ -1,0 +1,216 @@
+/*
+ * FICONTER premium themes.
+ * Each palette preserves high-contrast text, controls and status colors.
+ * This file loads after globals.css so it can safely override shared tokens.
+ */
+
+html[data-theme="midnight"] {
+  color-scheme: dark;
+  --text-primary: #f7f4ee;
+  --text-secondary: #cbd3dc;
+  --text-tertiary: #9ba8b5;
+  --surface-canvas: #0b1420;
+  --surface-card: #121f2d;
+  --surface-raised: #192a3b;
+  --surface-subtle: #203348;
+  --surface-hover: #2a4057;
+  --surface-sidebar: #07101a;
+  --sidebar-text: #fff8ec;
+  --sidebar-muted: #bac6d2;
+  --border-subtle: #32475e;
+  --border-strong: #4b6681;
+  --control-bg: #162638;
+  --solid-bg: #d8b978;
+  --solid-bg-hover: #e5cb96;
+  --solid-text: #101923;
+  --focus-ring: rgba(216, 185, 120, 0.28);
+  --success-soft: #17372f;
+  --danger-soft: #3b252d;
+  --warning-soft: #3d3323;
+  --charcoal: #d8e0e7;
+  --gold: #d8b978;
+  --gold-soft: #3b3223;
+  --sage: #83c3af;
+  --sage-soft: #193b33;
+  --burgundy: #ec9da6;
+  --shadow: 0 26px 76px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="emerald"] {
+  color-scheme: dark;
+  --text-primary: #f6f3e9;
+  --text-secondary: #cad6ce;
+  --text-tertiary: #9caf9f;
+  --surface-canvas: #0c1712;
+  --surface-card: #13231c;
+  --surface-raised: #1a3026;
+  --surface-subtle: #223d31;
+  --surface-hover: #2c4b3d;
+  --surface-sidebar: #07100c;
+  --sidebar-text: #fff9ec;
+  --sidebar-muted: #bdcbbf;
+  --border-subtle: #345345;
+  --border-strong: #4e705f;
+  --control-bg: #172a21;
+  --solid-bg: #cbb77c;
+  --solid-bg-hover: #dccb96;
+  --solid-text: #111a15;
+  --focus-ring: rgba(203, 183, 124, 0.28);
+  --success-soft: #1c4233;
+  --danger-soft: #3a2529;
+  --warning-soft: #3b3322;
+  --charcoal: #d9e4dc;
+  --gold: #cbb77c;
+  --gold-soft: #393322;
+  --sage: #8bc9aa;
+  --sage-soft: #1b3e30;
+  --burgundy: #e69b9f;
+  --shadow: 0 26px 76px rgba(0, 0, 0, 0.36);
+}
+
+html[data-theme="bordeaux"] {
+  color-scheme: dark;
+  --text-primary: #fff7f2;
+  --text-secondary: #dbc9ce;
+  --text-tertiary: #b29aa2;
+  --surface-canvas: #1a0e14;
+  --surface-card: #26171e;
+  --surface-raised: #34212a;
+  --surface-subtle: #412a35;
+  --surface-hover: #503542;
+  --surface-sidebar: #10070c;
+  --sidebar-text: #fff8f0;
+  --sidebar-muted: #d3bec5;
+  --border-subtle: #5b3b48;
+  --border-strong: #795060;
+  --control-bg: #2d1b23;
+  --solid-bg: #d3ad78;
+  --solid-bg-hover: #e3c493;
+  --solid-text: #211218;
+  --focus-ring: rgba(211, 173, 120, 0.28);
+  --success-soft: #243b31;
+  --danger-soft: #4a252e;
+  --warning-soft: #44321f;
+  --charcoal: #e4d5d8;
+  --gold: #d3ad78;
+  --gold-soft: #493522;
+  --sage: #9bc3ae;
+  --sage-soft: #263c32;
+  --burgundy: #f0a3ae;
+  --shadow: 0 26px 76px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="ocean"] {
+  color-scheme: light;
+  --text-primary: #172d34;
+  --text-secondary: #536d75;
+  --text-tertiary: #71878e;
+  --surface-canvas: #eaf2f4;
+  --surface-card: #fbfdfd;
+  --surface-raised: #ffffff;
+  --surface-subtle: #f1f7f8;
+  --surface-hover: #e1edef;
+  --surface-sidebar: #14313a;
+  --sidebar-text: #f8fdfe;
+  --sidebar-muted: #c7d9dd;
+  --border-subtle: #cbdcdf;
+  --border-strong: #aec7cc;
+  --control-bg: #ffffff;
+  --solid-bg: #173c47;
+  --solid-bg-hover: #245361;
+  --solid-text: #ffffff;
+  --focus-ring: rgba(47, 120, 134, 0.2);
+  --success-soft: #dceee8;
+  --danger-soft: #f8e6e7;
+  --warning-soft: #f3ebdc;
+  --charcoal: #27434b;
+  --gold: #2f7886;
+  --gold-soft: #d5e9ec;
+  --sage: #4e8273;
+  --sage-soft: #d9e9e4;
+  --burgundy: #9b555d;
+  --shadow: 0 24px 70px rgba(20, 49, 58, 0.1);
+}
+
+html[data-theme="sandstone"] {
+  color-scheme: light;
+  --text-primary: #2d251f;
+  --text-secondary: #685e55;
+  --text-tertiary: #877a6e;
+  --surface-canvas: #eee5d7;
+  --surface-card: #fcf8f1;
+  --surface-raised: #ffffff;
+  --surface-subtle: #f6efe5;
+  --surface-hover: #e8dccb;
+  --surface-sidebar: #382e26;
+  --sidebar-text: #fffaf2;
+  --sidebar-muted: #d9ccbd;
+  --border-subtle: #d8cbbb;
+  --border-strong: #c4b39f;
+  --control-bg: #ffffff;
+  --solid-bg: #382e26;
+  --solid-bg-hover: #514237;
+  --solid-text: #ffffff;
+  --focus-ring: rgba(169, 121, 66, 0.2);
+  --success-soft: #e2ede5;
+  --danger-soft: #f6e4e2;
+  --warning-soft: #f3e7d4;
+  --charcoal: #44382f;
+  --gold: #a97942;
+  --gold-soft: #ead9c2;
+  --sage: #607d6c;
+  --sage-soft: #dce8df;
+  --burgundy: #95575a;
+  --shadow: 0 24px 70px rgba(70, 52, 37, 0.11);
+}
+
+/* Theme-wide readability safeguards. */
+html[data-theme="midnight"] body,
+html[data-theme="emerald"] body,
+html[data-theme="bordeaux"] body,
+html[data-theme="ocean"] body,
+html[data-theme="sandstone"] body,
+html[data-theme="midnight"] .app-main,
+html[data-theme="emerald"] .app-main,
+html[data-theme="bordeaux"] .app-main,
+html[data-theme="ocean"] .app-main,
+html[data-theme="sandstone"] .app-main {
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+html[data-theme="midnight"] :where(input, select, textarea),
+html[data-theme="emerald"] :where(input, select, textarea),
+html[data-theme="bordeaux"] :where(input, select, textarea),
+html[data-theme="ocean"] :where(input, select, textarea),
+html[data-theme="sandstone"] :where(input, select, textarea) {
+  background-color: var(--control-bg);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+html[data-theme="midnight"] :where(input, textarea)::placeholder,
+html[data-theme="emerald"] :where(input, textarea)::placeholder,
+html[data-theme="bordeaux"] :where(input, textarea)::placeholder,
+html[data-theme="ocean"] :where(input, textarea)::placeholder,
+html[data-theme="sandstone"] :where(input, textarea)::placeholder {
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+
+html[data-theme="midnight"] .sidebar,
+html[data-theme="emerald"] .sidebar,
+html[data-theme="bordeaux"] .sidebar,
+html[data-theme="ocean"] .sidebar,
+html[data-theme="sandstone"] .sidebar {
+  background: var(--surface-sidebar);
+  color: var(--sidebar-text);
+}
+
+html[data-theme="midnight"] :focus-visible,
+html[data-theme="emerald"] :focus-visible,
+html[data-theme="bordeaux"] :focus-visible,
+html[data-theme="ocean"] :focus-visible,
+html[data-theme="sandstone"] :focus-visible {
+  outline-color: var(--gold);
+}

@@ -1,0 +1,104 @@
+name: Export live Supabase schema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: export-live-supabase-schema
+  cancel-in-progress: false
+
+jobs:
+  export-schema:
+    name: Export schema and database types
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate database secret
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is missing."
+            exit 1
+          fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Export live public schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p live-supabase-export
+
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            --schema public \
+            --file live-supabase-export/production-schema.sql
+
+      - name: Generate live TypeScript database types
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          supabase gen types typescript \
+            --db-url "$SUPABASE_DB_URL" \
+            --schema public \
+            > live-supabase-export/database.types.ts
+
+      - name: Create export metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          {
+            echo "FICONTER live Supabase schema export"
+            echo "Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Repository: $GITHUB_REPOSITORY"
+            echo "Commit: $GITHUB_SHA"
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Contains:"
+            echo "- production-schema.sql"
+            echo "- database.types.ts"
+            echo
+            echo "Does not contain customer table data."
+          } > live-supabase-export/EXPORT_INFO.txt
+
+      - name: Validate export files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -s live-supabase-export/production-schema.sql
+          test -s live-supabase-export/database.types.ts
+          test -s live-supabase-export/EXPORT_INFO.txt
+
+          if grep -R --line-number --fixed-strings \
+            "$SUPABASE_DB_URL" live-supabase-export; then
+            echo "::error::The database URL unexpectedly appeared in the export."
+            exit 1
+          fi
+
+          echo "Schema bytes: $(wc -c < live-supabase-export/production-schema.sql)"
+          echo "Types bytes: $(wc -c < live-supabase-export/database.types.ts)"
+
+      - name: Upload temporary export artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ficonter-live-supabase-schema
+          path: live-supabase-export/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 9

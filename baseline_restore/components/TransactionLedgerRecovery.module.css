@@ -1,0 +1,109 @@
+.toolbarTop{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:10px;margin-bottom:10px}
+.toolbar{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.toolbar select,.searchBox,.secondaryAction,.exportButton{height:44px;border:1px solid #ddd6cb;border-radius:12px;background:#fcfaf7;color:#25282a}
+.toolbar select{padding:0 12px}
+.searchBox{display:flex;align-items:center;gap:9px;padding:0 12px}
+.searchBox input{border:0;outline:0;background:transparent;width:100%;font:inherit}
+.secondaryAction,.exportButton{display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;font-weight:800;cursor:pointer}
+.secondaryAction:hover{border-color:#b69a6a;background:#f4ede1}
+.exportButton{background:#202427;color:#fff;border-color:#202427}
+.exportButton:disabled{opacity:.45;cursor:not-allowed}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.summary>div{position:relative;padding:13px 14px;border:1px solid #e6dfd5;border-radius:14px;background:#f8f5ef}
+.summary svg{position:absolute;right:13px;top:13px;color:#b69a6a}
+.summary span,.amountBlock span,.details span,.balanceBlock span{display:block;color:#77736d;font-size:12px}
+.summary strong{display:block;margin-top:5px;padding-right:22px}
+.recordCount{text-align:right;color:#77736d;font-size:13px;margin:4px 0 10px}
+.list{display:grid;gap:9px}
+.row{display:grid;grid-template-columns:4px minmax(180px,1fr) minmax(120px,auto) minmax(130px,auto) auto;align-items:center;gap:15px;padding:14px;border:1px solid #e4ddd3;border-radius:15px;background:#fff;transition:.18s ease}
+.row:hover{transform:translateY(-1px);border-color:#c6aa79;box-shadow:0 8px 24px rgba(40,35,28,.07)}
+.incomeMark,.expenseMark{align-self:stretch;border-radius:999px}
+.incomeMark{background:#617a70}
+.expenseMark{background:#925b5b}
+.details strong{display:block;color:#25282a}
+.details span{margin-top:5px}
+.amountBlock,.balanceBlock{text-align:right}
+.amountBlock strong,.balanceBlock strong{white-space:nowrap}
+.positive{color:#557268}
+.negative{color:#925b5b}
+.actions{display:flex;gap:7px}
+.actions button{display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;border:1px solid #ddd6cb;border-radius:10px;background:#fcfaf7;color:#4b4b48;font-weight:700;cursor:pointer}
+.actions button:hover{border-color:#b69a6a;background:#f1e8d8}
+.actions .deleteButton:hover{border-color:#925b5b;background:#f6e6e6;color:#925b5b}
+.empty{padding:34px;text-align:center;color:#77736d}
+.error,.notice{margin:10px 0;padding:11px 13px;border-radius:11px}
+.error{background:#f3e2e2;color:#8b4d4d}
+.notice{background:#dfe9e4;color:#446358}
+.backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(25,27,28,.62);backdrop-filter:blur(7px)}
+.modal{position:relative;width:min(620px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:30px;border-radius:24px;background:#fcfaf7;box-shadow:0 35px 100px rgba(0,0,0,.3)}
+.smallModal{width:min(470px,100%)}
+.modal small{color:#a58a5d;font-weight:800;letter-spacing:.13em}
+.modal h3{margin:8px 38px 17px 0;font-family:Georgia,serif;font-size:34px;font-weight:500}
+.modal p{color:#77736d;line-height:1.6}
+.close{position:absolute;top:18px;right:18px;width:36px;height:36px;display:grid;place-items:center;border:1px solid #ddd6cb;border-radius:50%;background:transparent}
+.modal form label{display:grid;gap:7px;margin-bottom:12px;font-weight:700}
+.modal input,.modal select{height:46px;padding:0 12px;border:1px solid #ddd6cb;border-radius:11px;background:white;font:inherit}
+.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.modalActions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.modalActions button{height:42px;padding:0 17px;border:1px solid #d8d0c4;border-radius:11px;background:#fff;font-weight:800}
+.modalActions .primaryButton{border-color:#202427;background:#202427;color:#fff}
+.modalActions .dangerButton{border-color:#925b5b;background:#925b5b;color:#fff}
+@media(max-width:1250px){.summary{grid-template-columns:repeat(2,1fr)}
+.row{grid-template-columns:4px 1fr auto auto}
+.balanceBlock{grid-column:2;text-align:left}
+.actions{grid-column:3/5;justify-content:flex-end}
+}
+@media(max-width:900px){.toolbarTop{grid-template-columns:1fr 1fr}
+.searchBox{grid-column:1/3}
+.toolbar{grid-template-columns:1fr 1fr}
+.row{grid-template-columns:4px 1fr auto}
+.balanceBlock{grid-column:2;text-align:left}
+.amountBlock{grid-column:3;grid-row:1/3}
+.actions{grid-column:2/4;justify-content:flex-end}
+}
+@media(max-width:650px){.toolbarTop,.toolbar,.summary,.formGrid{grid-template-columns:1fr}
+.searchBox{grid-column:auto}
+.row{grid-template-columns:4px 1fr}
+.amountBlock,.balanceBlock{text-align:left;grid-column:2;grid-row:auto}
+.actions{grid-column:2;justify-content:flex-start}
+.actions button{flex:1;justify-content:center}
+.modal{padding:25px 19px}
+.modalActions{flex-direction:column-reverse}
+.modalActions button{width:100%}
+}
+
+
+.toolbarFive{grid-template-columns:repeat(5,minmax(120px,1fr))}
+.neutralMark{align-self:stretch;border-radius:999px;background:#b69a6a}
+.currencyTotals{display:flex;flex-direction:column;gap:3px}
+.currencyTotals>span{font-size:inherit;color:inherit}
+@media(max-width:1250px){.toolbarFive{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:900px){.toolbarFive{grid-template-columns:1fr 1fr}
+}
+@media(max-width:650px){.toolbarFive{grid-template-columns:1fr}
+}
+
+.fxPreview{margin:8px 0 14px;padding:12px 14px;border:1px solid #dfd5c7;border-radius:12px;background:#f7f1e7;color:#5f5b55;font-size:13px}
+
+/* FICONTER DARK MODE CONTRAST SYSTEM v2 */
+:global(html[data-resolved-theme="dark"]) .searchBox,
+:global(html[data-resolved-theme="dark"]) .secondaryAction,
+:global(html[data-resolved-theme="dark"]) .summary > div,
+:global(html[data-resolved-theme="dark"]) .row,
+:global(html[data-resolved-theme="dark"]) .modal,
+:global(html[data-resolved-theme="dark"]) .actions button,
+:global(html[data-resolved-theme="dark"]) .modalActions button,
+:global(html[data-resolved-theme="dark"]) .fxPreview {
+  background: var(--surface-card) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+:global(html[data-resolved-theme="dark"]) .toolbar select,
+:global(html[data-resolved-theme="dark"]) .modal input,
+:global(html[data-resolved-theme="dark"]) .modal select { background: var(--control-bg) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) .row:hover { background: var(--surface-raised) !important; border-color: #715f45 !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details strong,.summary strong,.amountBlock strong,.balanceBlock strong,.modal h3) { color: var(--text-primary) !important; }
+:global(html[data-resolved-theme="dark"]) :is(.details span,.summary span,.amountBlock span,.balanceBlock span,.recordCount,.modal p,.empty,.fxPreview) { color: var(--text-secondary) !important; }
+:global(html[data-resolved-theme="dark"]) .positive { color: #a7c9b7 !important; }
+:global(html[data-resolved-theme="dark"]) .negative { color: #e5a09d !important; }

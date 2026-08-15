@@ -19,6 +19,7 @@ type Props = {
   density?: string | null;
   backgroundMotion?: string | null;
   wallpaperScene?: string | null;
+  wallpaperAccessEnabled?: boolean;
 };
 
 function normalizeDensity(value: string | null | undefined): DensityPreference {
@@ -78,6 +79,7 @@ export function InterfacePreferencesBootstrap({
   density,
   backgroundMotion,
   wallpaperScene,
+  wallpaperAccessEnabled = false,
 }: Props) {
   useLayoutEffect(() => {
     function readStorage(key: string) {
@@ -100,9 +102,11 @@ export function InterfacePreferencesBootstrap({
     let currentBackgroundMotion = normalizeBackgroundMotion(
       readStorage("ficonter-background-motion") ?? backgroundMotion,
     );
-    let currentWallpaperScene = normalizeWallpaperScene(
-      readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
-    );
+    let currentWallpaperScene = wallpaperAccessEnabled
+      ? normalizeWallpaperScene(
+          readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
+        )
+      : "coastal-island";
 
     if (requiresProfileMigration) {
       currentAppearance = "light";
@@ -137,7 +141,10 @@ export function InterfacePreferencesBootstrap({
       if (event.key === "ficonter-background-motion") {
         currentBackgroundMotion = normalizeBackgroundMotion(event.newValue);
       }
-      if (event.key === "ficonter-wallpaper-scene") {
+      if (
+        wallpaperAccessEnabled &&
+        event.key === "ficonter-wallpaper-scene"
+      ) {
         currentWallpaperScene = normalizeWallpaperScene(event.newValue);
       }
 
@@ -168,9 +175,11 @@ export function InterfacePreferencesBootstrap({
       currentBackgroundMotion = normalizeBackgroundMotion(
         detail?.backgroundMotion ?? currentBackgroundMotion,
       );
-      currentWallpaperScene = normalizeWallpaperScene(
-        detail?.wallpaperScene ?? currentWallpaperScene,
-      );
+      currentWallpaperScene = wallpaperAccessEnabled
+        ? normalizeWallpaperScene(
+            detail?.wallpaperScene ?? currentWallpaperScene,
+          )
+        : "coastal-island";
       applyCurrent();
     };
 
@@ -189,7 +198,13 @@ export function InterfacePreferencesBootstrap({
         handlePreferencesUpdated,
       );
     };
-  }, [appearance, backgroundMotion, density, wallpaperScene]);
+  }, [
+    appearance,
+    backgroundMotion,
+    density,
+    wallpaperAccessEnabled,
+    wallpaperScene,
+  ]);
 
   return null;
 }

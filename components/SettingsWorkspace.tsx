@@ -171,6 +171,7 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
   isSubscriptionExempt?: boolean;
+  canManageWallpapers?: boolean;
 };
 
 type DialogState =
@@ -447,6 +448,7 @@ export function SettingsWorkspace({
   subscription,
   requiredFeature = null,
   isSubscriptionExempt = false,
+  canManageWallpapers = false,
 }: Props) {
   const { language, locale } = useLanguage();
   const searchParams = useSearchParams();
@@ -1523,9 +1525,7 @@ const canUseAppearanceThemes = hasSubscriptionFeature(
   settingsPlanCode,
   "appearance_themes",
 );
-const canUseTimeBasedWallpapers =
-  settingsPlanCode === "personal_pro" ||
-  settingsPlanCode === "business_pro";
+const canUseTimeBasedWallpapers = canManageWallpapers;
 const canUsePrivatePdfExport = hasSubscriptionFeature(
   settingsPlanCode,
   "private_pdf_export",
@@ -1855,59 +1855,41 @@ const showSubscriptionManagement =
                 })}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
-              <legend>Smart time-of-day wallpaper</legend>
-              {canUseTimeBasedWallpapers ? (
-                <>
-                  <p className={styles.themeHelp}>
-                    Your local device time keeps the greeting and real coastal photograph
-                    synchronized automatically. The image changes at 12:00 and 18:00.
-                  </p>
-                  <div className={styles.wallpaperGrid}>
-                    {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
-                      <article className={styles.wallpaperScheduleCard} key={value}>
-                        <span
-                          className={styles.wallpaperPreview}
-                          data-daypart={value}
-                          aria-hidden="true"
-                        >
-                          <i />
-                        </span>
-                        <strong>{label}</strong>
-                        <small>{hours} · {description}</small>
-                      </article>
-                    ))}
-                  </div>
-                  <div className={styles.infoStrip}>
-                    <Palette size={18} />
-                    <div>
-                      <strong>Automatic day cycle is active</strong>
-                      <span>Included with your paid plan and shared by Personal and Business workspaces.</span>
+            {canManageWallpapers ? (
+              <fieldset className={styles.optionGroup} data-owner-wallpaper-controls="true">
+                <legend>Smart time-of-day wallpaper</legend>
+                {canUseTimeBasedWallpapers ? (
+                  <>
+                    <p className={styles.themeHelp}>
+                      Your local device time keeps the greeting and real coastal photograph
+                      synchronized automatically. The image changes at 12:00 and 18:00.
+                    </p>
+                    <div className={styles.wallpaperGrid}>
+                      {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
+                        <article className={styles.wallpaperScheduleCard} key={value}>
+                          <span
+                            className={styles.wallpaperPreview}
+                            data-daypart={value}
+                            aria-hidden="true"
+                          >
+                            <i />
+                          </span>
+                          <strong>{label}</strong>
+                          <small>{hours} · {description}</small>
+                        </article>
+                      ))}
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className={styles.themeHelp}>
-                    Free accounts use one fixed, optimized beach photograph. Automatic
-                    morning, afternoon and evening scenes are included with Personal Pro.
-                  </p>
-                  <div className={styles.wallpaperGrid}>
-                    <article className={styles.wallpaperScheduleCard}>
-                      <span
-                        className={styles.wallpaperPreview}
-                        data-daypart="fixed"
-                        aria-hidden="true"
-                      >
-                        <i />
-                      </span>
-                      <strong>Fixed Coastal Beach</strong>
-                      <small>Free plan · One consistent real beach photograph.</small>
-                    </article>
-                  </div>
-                </>
-              )}
-            </fieldset>
+                    <div className={styles.infoStrip}>
+                      <Palette size={18} />
+                      <div>
+                        <strong>Automatic day cycle is active</strong>
+                        <span>Owner / Super Admin only · shared by Personal and Business workspaces.</span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </fieldset>
+            ) : null}
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>
               <div className={styles.densityGrid}>

@@ -52,6 +52,7 @@ export default async function SettingsPage({
 
   const { admin } = await requireAdmin();
   const isSubscriptionExempt = Boolean(admin);
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const query = await searchParams;
   const section = Array.isArray(query?.section)
@@ -166,6 +167,7 @@ export default async function SettingsPage({
         subscription={isSubscriptionExempt ? null : displaySubscription}
         requiredFeature={requiredFeature}
         isSubscriptionExempt={isSubscriptionExempt}
+        canManageWallpapers={canManageWallpapers}
       />
       </div>
     </section>

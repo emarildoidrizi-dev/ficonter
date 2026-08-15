@@ -66,9 +66,8 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const hasPaidTimeAwareWallpaper =
-    subscriptionPlanCode === "personal_pro" ||
-    subscriptionPlanCode === "business_pro";
+  // Platform Owner and Super Admin are the only roles allowed to use wallpapers.
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
     userId: user.id,
@@ -97,9 +96,12 @@ export default async function BusinessLayout({
       reportingCurrency={workspaceCurrency}
     >
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...preferences} />
+      <InterfacePreferencesBootstrap
+        {...preferences}
+        wallpaperAccessEnabled={canManageWallpapers}
+      />
       <TimeAwareWallpaperBootstrap
-        enabled={hasPaidTimeAwareWallpaper}
+        enabled={canManageWallpapers}
       />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <BaseCurrencyBootstrap

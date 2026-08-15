@@ -71,9 +71,8 @@ export default async function DashboardLayout({
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const hasPaidTimeAwareWallpaper =
-    subscriptionPlanCode === "personal_pro" ||
-    subscriptionPlanCode === "business_pro";
+  // Owner and Super Admin are the only roles allowed to use wallpaper controls.
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -88,9 +87,12 @@ export default async function DashboardLayout({
       reportingCurrency="EUR"
     >
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...interfacePreferences} />
+      <InterfacePreferencesBootstrap
+        {...interfacePreferences}
+        wallpaperAccessEnabled={canManageWallpapers}
+      />
       <TimeAwareWallpaperBootstrap
-        enabled={hasPaidTimeAwareWallpaper}
+        enabled={canManageWallpapers}
       />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <BaseCurrencyBootstrap

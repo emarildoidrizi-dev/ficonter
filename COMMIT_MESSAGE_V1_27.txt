@@ -1,0 +1,1 @@
+feat(i18n): make language selection confirm and persist immediately

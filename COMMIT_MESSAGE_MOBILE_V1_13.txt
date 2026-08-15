@@ -1,0 +1,1 @@
+fix(responsive): limit slide navigation to phones and remove Profile from Settings

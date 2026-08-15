@@ -191,7 +191,6 @@ function isSectionId(value: string | undefined): value is SectionId {
   return Boolean(
     value &&
       [
-        "profile",
         "security",
         "financial",
         "notifications",
@@ -203,7 +202,6 @@ function isSectionId(value: string | undefined): value is SectionId {
 }
 
 const sections = [
-  { id: "profile", label: "Profile", description: "Identity and profile photo", icon: UserRound },
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
@@ -406,7 +404,7 @@ function readEmailIdentity(
 
 function emailChangeRedirectUrl() {
   if (typeof window === "undefined") return undefined;
-  const next = encodeURIComponent("/dashboard/settings?section=profile");
+  const next = encodeURIComponent("/dashboard/profile");
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 
@@ -465,10 +463,10 @@ export function SettingsWorkspace({
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
     isSubscriptionExempt && initialSection === "subscription"
-      ? "profile"
+      ? "security"
       : isSectionId(initialSection)
         ? initialSection
-        : "profile",
+        : "security",
   );
   const [mobileDetailOpen, setMobileDetailOpen] = useState(() =>
     isSectionId(initialSection) &&
@@ -537,7 +535,7 @@ export function SettingsWorkspace({
     // Their access is role-based and does not require a plan or payment.
     const nextSection =
       isSubscriptionExempt && initialSection === "subscription"
-        ? "profile"
+        ? "security"
         : initialSection;
 
     setActive(nextSection);
@@ -1416,16 +1414,17 @@ export function SettingsWorkspace({
     setMessage(null);
     setSaveFeedback({});
 
-    const isNativeMobile =
-      typeof document !== "undefined" &&
-      document.documentElement.dataset.ficonterNativeApp === "true";
+    const root = typeof document !== "undefined" ? document.documentElement : null;
+    const isNativePhone =
+      root?.dataset.ficonterNativeApp === "true" &&
+      root.dataset.ficonterDevice === "phone";
 
-    if (isNativeMobile) {
+    if (isNativePhone) {
       const target = `/dashboard/settings?section=${id}`;
       const current = `${window.location.pathname}${window.location.search}`;
 
-      // Mobile navigation is route-driven: one tap, one route change, one slide.
-      // Do not update the child view locally before Next.js completes the route.
+      // Phone navigation is route-driven: one tap, one route change, one slide.
+      // Tablets/iPads deliberately stay in the in-page Settings workspace below.
       if (current === target) return;
 
       router.prefetch(target);
@@ -1433,6 +1432,9 @@ export function SettingsWorkspace({
       return;
     }
 
+    // Tablet/iPad/desktop-class Settings switches locally with no route delay
+    // and no page-stack animation.
+    if (active === id) return;
     setActive(id);
   }
 

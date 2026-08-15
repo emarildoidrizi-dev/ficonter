@@ -100,9 +100,10 @@ function allowsBackgroundPrefetch() {
 }
 
 function isNativePhoneApp() {
+  const root = document.documentElement;
   return (
-    document.documentElement.dataset.ficonterNativeApp ===
-    "true"
+    root.dataset.ficonterNativeApp === "true" &&
+    root.dataset.ficonterDevice === "phone"
   );
 }
 

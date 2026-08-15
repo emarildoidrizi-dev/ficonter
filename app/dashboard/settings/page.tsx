@@ -64,7 +64,6 @@ export default async function SettingsPage({
     ? requiredValue
     : null;
   const hasExplicitSettingsSection = [
-    "profile",
     "security",
     "financial",
     "notifications",
@@ -73,8 +72,12 @@ export default async function SettingsPage({
     "subscription",
   ].includes(section ?? "");
 
+  if (section === "profile") {
+    redirect("/dashboard/profile");
+  }
+
   if (isSubscriptionExempt && section === "subscription") {
-    redirect("/dashboard/settings?section=profile");
+    redirect("/dashboard/settings?section=security");
   }
 
   const [
@@ -136,24 +139,13 @@ export default async function SettingsPage({
       }`}
       data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
-      {isSubscriptionExempt ? (
-        <style>{`
-          .ficonter-subscription-exempt-settings
-            aside[aria-label="Settings sections"]
-            > div:nth-child(2)
-            > button:nth-child(7) {
-              display: none !important;
-            }
-        `}</style>
-      ) : null}
-
       <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage your profile, account security and Ficonter preferences from
-            one private workspace.
+            Manage account security and Ficonter preferences from one private
+            workspace.
           </p>
         </div>
       </div>

@@ -51,12 +51,12 @@ html[data-ficonter-native-app="true"] .app-main.business-interface {
 
 /* Newly opened modules enter from the right. A back navigation brings the
    previous screen in from the left, matching a conventional mobile stack. */
-html[data-ficonter-native-app="true"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="forward"]
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="forward"]
   .app-main > * {
   animation: ficonter-screen-enter-forward 280ms cubic-bezier(0.2, 0.82, 0.2, 1) both !important;
 }
 
-html[data-ficonter-native-app="true"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="back"]
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="back"]
   .app-main > * {
   animation: ficonter-screen-enter-back 260ms cubic-bezier(0.2, 0.82, 0.2, 1) both !important;
 }
@@ -229,7 +229,7 @@ html[data-ficonter-native-app="true"][data-ficonter-keyboard="open"] .app-main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-ficonter-native-app="true"][data-ficonter-nav-transition="active"] .app-main > * {
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"] .app-main > * {
     animation: none !important;
   }
 

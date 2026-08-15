@@ -45,3 +45,46 @@
 @media(max-width:1100px){.switchBusiness span{display:none}.switchBusiness{width:54px;padding:0;justify-content:center}.accountButton{min-width:145px}.overviewLink,.settingsLink,.navGroup summary{padding-inline:12px}}
 @media (max-width: 900px){.shellHeader{position:sticky;top:0;padding:8px 12px;background:rgba(224,237,231,.88);backdrop-filter:blur(20px)}.topRow{min-height:58px}.navigation{display:none}.brandCard,.workspacePill,.accountButton,.headerActions>:global([class*="LanguageSelector_root"]) button,.headerActions>:global([class*="NotificationCenter_root"]) button{min-height:46px}.brandCard{padding-inline:10px}.brandCard :global(.brand)>span,.workspacePill,.accountIdentity,.switchBusiness{display:none}.headerActions{gap:6px}.accountButton{min-width:0;grid-template-columns:30px 16px;padding-inline:7px}.accountMenu{position:fixed;top:70px;right:12px}}
 @media(max-width:480px){.workspacePill{display:none}.headerActions>:global([class*="LanguageSelector_root"]){display:none}}
+
+
+/* MOBILE HEADER V1.4 — keep this light utility header as the only app header. */
+.mobileBackButton{display:none}
+@media(max-width:900px){
+  .shellHeader{
+    position:sticky;top:0;z-index:1850;display:block!important;
+    padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));
+    background:rgba(232,242,237,.92);
+    border-bottom:1px solid rgba(112,100,69,.10);
+    box-shadow:0 4px 18px rgba(31,49,44,.045);
+    backdrop-filter:blur(20px) saturate(120%);-webkit-backdrop-filter:blur(20px) saturate(120%);
+  }
+  .topRow{min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:7px}
+  .brandArea{gap:6px;flex:0 0 auto}
+  .brandCard{width:58px;min-width:58px;min-height:54px;padding:5px;justify-content:center;border-radius:15px}
+  .brandCard :global(.brand){display:grid;place-items:center;width:100%;height:100%}
+  .brandCard :global(.brand) img{width:42px;height:42px;border-radius:12px}
+  .brandCard :global(.brand)>span,.workspacePill,.accountIdentity,.switchBusiness{display:none!important}
+  .headerActions{margin-left:auto;gap:5px;min-width:0}
+  .headerActions>:global([class*="LanguageSelector_root"]){display:block!important}
+  .headerActions>:global([class*="LanguageSelector_root"]) button{min-width:46px;min-height:46px;padding-inline:8px;border-radius:14px}
+  .headerActions>:global([class*="NotificationCenter_root"]){display:grid!important;grid-template-columns:46px 46px!important;gap:5px}
+  .headerActions>:global([class*="NotificationCenter_root"])>button:first-child{display:grid!important}
+  .headerActions>:global([class*="NotificationCenter_root"]) button{min-width:46px;min-height:46px;border-radius:14px}
+  .accountButton{min-width:58px;min-height:46px;grid-template-columns:30px 16px;gap:4px;padding:4px 6px;border-radius:14px}
+  .avatar{width:30px;height:30px;border-radius:10px}
+  .accountMenu{position:fixed;top:calc(env(safe-area-inset-top) + 70px);right:max(10px,env(safe-area-inset-right));width:210px}
+  .mobileBackButton{display:grid;width:42px;height:46px;place-items:center;flex:0 0 42px;padding:0;border:1px solid rgba(112,100,69,.15);border-radius:14px;background:rgba(245,242,224,.94);box-shadow:0 10px 30px rgba(47,81,72,.08);color:#274352}
+  .mobileBackButton:active{transform:scale(.96)}
+  .mobileBackButton:focus-visible{outline:2px solid #b69753;outline-offset:2px}
+}
+@media(max-width:390px){
+  .shellHeader{padding-inline:max(7px,env(safe-area-inset-left))}
+  .topRow{gap:4px}
+  .brandArea,.headerActions{gap:4px}
+  .brandCard{width:54px;min-width:54px}
+  .headerActions>:global([class*="LanguageSelector_root"]) button{min-width:42px;width:42px;padding-inline:5px}
+  .headerActions>:global([class*="NotificationCenter_root"]){grid-template-columns:40px 40px!important;gap:4px}
+  .headerActions>:global([class*="NotificationCenter_root"]) button{min-width:40px;width:40px}
+  .accountButton{min-width:53px;padding-inline:4px}
+  .mobileBackButton{width:38px;flex-basis:38px}
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Archive, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
+  Archive, ArrowLeft, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
   LayoutDashboard, LogOut, PackageOpen, Settings2, ShieldCheck,
   ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
@@ -54,6 +54,8 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const supabase = useMemo(() => createClient(), []);
   const headerRef = useRef<HTMLElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+  const previousPathRef = useRef(pathname);
+  const [previousAppPath, setPreviousAppPath] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -69,6 +71,19 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     : "";
   const activeBusinesses = businesses.filter((item) => item.status !== "archived");
   const archivedCount = businesses.length - activeBusinesses.length;
+  const mobileRootPaths = new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"]);
+  const showBackCommand = !mobileRootPaths.has(pathname);
+  const fallbackBackHref = "/business/overview";
+
+  useEffect(() => {
+    const previous = previousPathRef.current;
+    if (previous !== pathname) {
+      if (previous.startsWith("/dashboard") || previous.startsWith("/business")) {
+        setPreviousAppPath(previous);
+      }
+      previousPathRef.current = pathname;
+    }
+  }, [pathname]);
 
   useEffect(() => {
     setSelectedBusinessId(business?.id ?? "");
@@ -147,6 +162,19 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     startSwitchTransition(() => router.refresh());
   }
 
+  function goBackInstant() {
+    setAccountMenuOpen(false);
+    setOpenGroup(null);
+    document.documentElement.removeAttribute("data-ficonter-route-loading");
+
+    const target = previousAppPath && previousAppPath !== pathname
+      ? previousAppPath
+      : fallbackBackHref;
+
+    router.prefetch(target);
+    router.push(target, { scroll: false });
+  }
+
   async function signOut(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     if (signingOut) return;
@@ -168,7 +196,19 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     <header className={styles.shellHeader} ref={headerRef}>
       <div className={styles.topRow}>
         <div className={styles.brandArea}>
-          <div className={styles.brandCard}><Brand href="/business/overview" /></div>
+          {showBackCommand ? (
+            <button
+              type="button"
+              className={styles.mobileBackButton}
+              onPointerDown={() => router.prefetch(previousAppPath || fallbackBackHref)}
+              onClick={goBackInstant}
+              aria-label="Go back"
+              title="Back"
+            >
+              <ArrowLeft size={21} aria-hidden="true" />
+            </button>
+          ) : null}
+          <div className={styles.brandCard}><Brand interactive={false} /></div>
           <span className={styles.workspacePill}><Building2 size={15} />Business<ChevronDown size={14} /></span>
         </div>
 
@@ -196,7 +236,6 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
             {accountMenuOpen ? (
               <div className={styles.accountMenu} role="menu" aria-label="Account menu">
                 <Link href="/dashboard/settings?section=profile" role="menuitem" onClick={() => trackRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></Link>
-                <Link href="/business/manage" role="menuitem" onClick={() => trackRoute("/business/manage")}><Settings2 size={17} /><span>Manage businesses</span></Link>
                 <div className={styles.accountMenuDivider} />
                 <button type="button" role="menuitem" className={styles.signOutItem} onClick={signOut} disabled={signingOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
               </div>

@@ -50,7 +50,7 @@ expect(
   "Navigation prefetch must not warm the retired standalone Profile route.",
 );
 expect(
-  sw.includes("ficonter-pwa-static-v10-profile-settings-v131"),
+  /ficonter-pwa-static-v\d+[^"\n]*v1(?:31|3[2-9]|[4-9]\d)/.test(sw),
   "PWA cache must be versioned for the Profile routing change.",
 );
 

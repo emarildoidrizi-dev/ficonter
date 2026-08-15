@@ -1,0 +1,1 @@
+feat(appearance): add saved global surface opacity control

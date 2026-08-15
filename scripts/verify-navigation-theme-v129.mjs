@@ -91,7 +91,7 @@ check(
 );
 check(
   "PWA cache generation is bumped so installed apps receive V1.29 assets",
-  /ficonter-pwa-static-v\d+[^"\n]*(?:v129|v130|v131)/.test(serviceWorker),
+  /ficonter-pwa-static-v\d+[^"\n]*v1(?:29|3\d)/.test(serviceWorker),
 );
 
 for (const item of checks) {

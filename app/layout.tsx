@@ -30,6 +30,9 @@ import {
   BACKGROUND_MOTION_VALUES,
   DARK_APPEARANCE_VALUES,
   FIXED_INTERFACE_PROFILE_VERSION,
+  SURFACE_OPACITY_DEFAULT,
+  SURFACE_OPACITY_MAX,
+  SURFACE_OPACITY_MIN,
   WALLPAPER_SCENE_VALUES,
 } from "@/lib/interfaceThemes";
 
@@ -97,16 +100,25 @@ const interfacePreferenceScript = `
     var density = localStorage.getItem("ficonter-density") || "comfortable";
     var backgroundMotion = localStorage.getItem("ficonter-background-motion") || "static";
     var wallpaperScene = localStorage.getItem("ficonter-wallpaper-scene") || "coastal-island";
+    var storedSurfaceOpacityRaw = localStorage.getItem("ficonter-surface-opacity");
+    var storedSurfaceOpacity = storedSurfaceOpacityRaw === null
+      ? Number.NaN
+      : Number(storedSurfaceOpacityRaw);
+    var surfaceOpacity = Number.isFinite(storedSurfaceOpacity)
+      ? Math.min(${SURFACE_OPACITY_MAX}, Math.max(${SURFACE_OPACITY_MIN}, Math.round(storedSurfaceOpacity / 5) * 5))
+      : ${SURFACE_OPACITY_DEFAULT};
 
     if (profileVersion !== ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)}) {
       appearance = "light";
       density = "comfortable";
       backgroundMotion = "static";
       wallpaperScene = "coastal-island";
+      surfaceOpacity = ${SURFACE_OPACITY_DEFAULT};
       localStorage.setItem("ficonter-appearance", appearance);
       localStorage.setItem("ficonter-density", density);
       localStorage.setItem("ficonter-background-motion", backgroundMotion);
       localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
+      localStorage.setItem("ficonter-surface-opacity", String(surfaceOpacity));
       localStorage.setItem("ficonter-interface-profile-version", ${JSON.stringify(FIXED_INTERFACE_PROFILE_VERSION)});
     }
 
@@ -125,6 +137,16 @@ const interfacePreferenceScript = `
     root.dataset.density = density;
     root.dataset.backgroundMotion = backgroundMotion;
     root.dataset.wallpaperScene = wallpaperScene;
+    var inWorkspace =
+      window.location.pathname === "/dashboard" ||
+      window.location.pathname.indexOf("/dashboard/") === 0 ||
+      window.location.pathname === "/business" ||
+      window.location.pathname.indexOf("/business/") === 0;
+    root.dataset.surfaceOpacity = String(inWorkspace ? surfaceOpacity : 100);
+    root.style.setProperty(
+      "--ficonter-surface-opacity",
+      String(inWorkspace ? surfaceOpacity : 100) + "%"
+    );
     delete root.dataset.sidebarAtmosphereMode;
     delete root.dataset.sidebarAtmosphereStyle;
     delete root.dataset.sidebarAtmosphereMotion;

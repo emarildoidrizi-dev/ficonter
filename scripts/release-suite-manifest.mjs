@@ -58,6 +58,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-scene-wallpapers.mjs',
   'verify-settings-save-feedback.mjs',
   'verify-settings-speed-v115.mjs',
+  'verify-surface-opacity-v132.mjs',
   'verify-sidebar-atmosphere-removal.mjs',
   'verify-support-conversation-deletion.mjs',
   'verify-support-messaging-documents.mjs',

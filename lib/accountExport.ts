@@ -635,6 +635,7 @@ export async function createAccountPdf(payload: AccountExportPayload): Promise<B
     ["Week starts", titleCase(payload.preferences.weekStart)],
     ["Appearance", titleCase(payload.preferences.appearance)],
     ["Layout density", titleCase(payload.preferences.density)],
+    ["Surface opacity", `${Number(payload.preferences.surfaceOpacity ?? 100)}%`],
     ["Export schema", payload.schema_version],
   ]);
 

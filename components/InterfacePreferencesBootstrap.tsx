@@ -6,6 +6,7 @@ import {
   normalizeAppearance,
   normalizeBackgroundMotion,
   normalizeWallpaperScene,
+  normalizeSurfaceOpacity,
   resolveAppearance,
   type AppearancePreference,
   type BackgroundMotionPreference,
@@ -19,6 +20,7 @@ type Props = {
   density?: string | null;
   backgroundMotion?: string | null;
   wallpaperScene?: string | null;
+  surfaceOpacity?: number | string | null;
   wallpaperAccessEnabled?: boolean;
 };
 
@@ -46,6 +48,7 @@ function applyPreferences(
   density: DensityPreference,
   backgroundMotion: BackgroundMotionPreference,
   wallpaperScene: WallpaperScenePreference,
+  surfaceOpacity: number,
 ) {
   const root = document.documentElement;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -56,6 +59,8 @@ function applyPreferences(
   root.dataset.density = density;
   root.dataset.backgroundMotion = backgroundMotion;
   root.dataset.wallpaperScene = wallpaperScene;
+  root.dataset.surfaceOpacity = String(surfaceOpacity);
+  root.style.setProperty("--ficonter-surface-opacity", `${surfaceOpacity}%`);
   root.style.colorScheme = resolvedTheme;
   removeLegacySidebarAtmosphere();
 
@@ -65,6 +70,7 @@ function applyPreferences(
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
+    localStorage.setItem("ficonter-surface-opacity", String(surfaceOpacity));
     localStorage.setItem(
       "ficonter-interface-profile-version",
       FIXED_INTERFACE_PROFILE_VERSION,
@@ -79,6 +85,7 @@ export function InterfacePreferencesBootstrap({
   density,
   backgroundMotion,
   wallpaperScene,
+  surfaceOpacity,
   wallpaperAccessEnabled = false,
 }: Props) {
   useLayoutEffect(() => {
@@ -107,12 +114,16 @@ export function InterfacePreferencesBootstrap({
           readStorage("ficonter-wallpaper-scene") ?? wallpaperScene,
         )
       : "coastal-island";
+    let currentSurfaceOpacity = normalizeSurfaceOpacity(
+      readStorage("ficonter-surface-opacity") ?? surfaceOpacity,
+    );
 
     if (requiresProfileMigration) {
       currentAppearance = "light";
       currentDensity = "comfortable";
       currentBackgroundMotion = "static";
       currentWallpaperScene = "coastal-island";
+      currentSurfaceOpacity = 100;
     }
 
     const applyCurrent = () =>
@@ -121,6 +132,7 @@ export function InterfacePreferencesBootstrap({
         currentDensity,
         currentBackgroundMotion,
         currentWallpaperScene,
+        currentSurfaceOpacity,
       );
 
     applyCurrent();
@@ -147,12 +159,16 @@ export function InterfacePreferencesBootstrap({
       ) {
         currentWallpaperScene = normalizeWallpaperScene(event.newValue);
       }
+      if (event.key === "ficonter-surface-opacity") {
+        currentSurfaceOpacity = normalizeSurfaceOpacity(event.newValue);
+      }
 
       if (
         event.key === "ficonter-appearance" ||
         event.key === "ficonter-density" ||
         event.key === "ficonter-background-motion" ||
-        event.key === "ficonter-wallpaper-scene"
+        event.key === "ficonter-wallpaper-scene" ||
+        event.key === "ficonter-surface-opacity"
       ) {
         applyCurrent();
       }
@@ -165,6 +181,7 @@ export function InterfacePreferencesBootstrap({
           density?: string;
           backgroundMotion?: string;
           wallpaperScene?: string;
+          surfaceOpacity?: number;
         }>
       ).detail;
 
@@ -180,6 +197,9 @@ export function InterfacePreferencesBootstrap({
             detail?.wallpaperScene ?? currentWallpaperScene,
           )
         : "coastal-island";
+      currentSurfaceOpacity = normalizeSurfaceOpacity(
+        detail?.surfaceOpacity ?? currentSurfaceOpacity,
+      );
       applyCurrent();
     };
 
@@ -204,6 +224,7 @@ export function InterfacePreferencesBootstrap({
     density,
     wallpaperAccessEnabled,
     wallpaperScene,
+    surfaceOpacity,
   ]);
 
   return null;

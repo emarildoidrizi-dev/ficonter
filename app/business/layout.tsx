@@ -25,6 +25,7 @@ type StoredPreferences = {
   density?: string;
   backgroundMotion?: string;
   wallpaperScene?: string;
+  surfaceOpacity?: number;
   language?: string;
 };
 
@@ -45,6 +46,12 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
     density: get("density"),
     backgroundMotion: get("backgroundMotion"),
     wallpaperScene: get("wallpaperScene"),
+    surfaceOpacity:
+      typeof value.surfaceOpacity === "number"
+        ? value.surfaceOpacity
+        : typeof value.surfaceOpacity === "string"
+          ? Number(value.surfaceOpacity)
+          : undefined,
     language: get("language"),
   };
 }

@@ -55,6 +55,7 @@ import {
   normalizeAppearance,
   normalizeBackgroundMotion,
   normalizeWallpaperScene,
+  normalizeSurfaceOpacity,
   resolveAppearance,
   type AppearancePreference,
   type BackgroundMotionPreference,
@@ -113,6 +114,7 @@ type Preferences = {
   appearance: AppearancePreference;
   backgroundMotion: BackgroundMotionPreference;
   wallpaperScene: WallpaperScenePreference;
+  surfaceOpacity: number;
   language: FiconterLanguage;
   notifications: {
     billReminders: boolean;
@@ -224,6 +226,7 @@ const defaultPreferences: Preferences = {
   appearance: "light",
   backgroundMotion: "static",
   wallpaperScene: "coastal-island",
+  surfaceOpacity: 100,
   language: "en",
   notifications: {
     billReminders: true,
@@ -271,6 +274,7 @@ function readPreferences(metadata: Metadata): Preferences {
         ? stored.wallpaperScene
         : undefined,
     ),
+    surfaceOpacity: normalizeSurfaceOpacity(stored.surfaceOpacity),
     language: normalizeLanguage(stored.language),
     notifications: {
       ...defaultPreferences.notifications,
@@ -319,6 +323,11 @@ function applyInterface(preferences: Preferences) {
   root.dataset.density = preferences.density;
   root.dataset.backgroundMotion = preferences.backgroundMotion;
   root.dataset.wallpaperScene = preferences.wallpaperScene;
+  root.dataset.surfaceOpacity = String(preferences.surfaceOpacity);
+  root.style.setProperty(
+    "--ficonter-surface-opacity",
+    `${normalizeSurfaceOpacity(preferences.surfaceOpacity)}%`,
+  );
   delete root.dataset.sidebarAtmosphereMode;
   delete root.dataset.sidebarAtmosphereStyle;
   delete root.dataset.sidebarAtmosphereMotion;
@@ -330,6 +339,10 @@ function applyInterface(preferences: Preferences) {
     localStorage.removeItem("ficonter-layout");
     localStorage.setItem("ficonter-background-motion", preferences.backgroundMotion);
     localStorage.setItem("ficonter-wallpaper-scene", preferences.wallpaperScene);
+    localStorage.setItem(
+      "ficonter-surface-opacity",
+      String(normalizeSurfaceOpacity(preferences.surfaceOpacity)),
+    );
     localStorage.removeItem("ficonter-sidebar-atmosphere-mode");
     localStorage.removeItem("ficonter-sidebar-atmosphere-style");
     localStorage.removeItem("ficonter-sidebar-atmosphere-motion");
@@ -1932,6 +1945,42 @@ const showSubscriptionManagement =
                 ) : null}
               </fieldset>
             ) : null}
+            <fieldset className={styles.optionGroup}>
+              <legend>Surface opacity</legend>
+              <p className={styles.themeHelp}>
+                Adjust how transparent cards, bars, banners, panels and drawers appear. Text, numbers, icons and logos remain fully opaque. The change stays a preview until you click Save appearance.
+              </p>
+              <div className={styles.opacityControl}>
+                <div className={styles.opacityHeader}>
+                  <span>Surface opacity</span>
+                  <output aria-live="polite">{preferences.surfaceOpacity}%</output>
+                </div>
+                <input
+                  className={styles.opacityRange}
+                  type="range"
+                  min="55"
+                  max="100"
+                  step="5"
+                  value={preferences.surfaceOpacity}
+                  aria-label="Surface opacity"
+                  onChange={(event) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      surfaceOpacity: normalizeSurfaceOpacity(event.target.value),
+                    }))
+                  }
+                />
+                <div
+                  className={styles.opacityPreview}
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--surface-raised-solid, #ffffff) ${preferences.surfaceOpacity}%, transparent)`,
+                  }}
+                >
+                  <strong>Surface preview</strong>
+                  <small>Cards · bars · banners · panels · drawers</small>
+                </div>
+              </div>
+            </fieldset>
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>
               <div className={styles.densityGrid}>

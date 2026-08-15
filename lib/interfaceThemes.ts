@@ -27,6 +27,19 @@ export type WallpaperScenePreference =
   (typeof WALLPAPER_SCENE_VALUES)[number];
 export type ResolvedTheme = "light" | "dark";
 
+export const SURFACE_OPACITY_MIN = 55;
+export const SURFACE_OPACITY_MAX = 100;
+export const SURFACE_OPACITY_DEFAULT = 100;
+
+export function normalizeSurfaceOpacity(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return SURFACE_OPACITY_DEFAULT;
+  return Math.min(
+    SURFACE_OPACITY_MAX,
+    Math.max(SURFACE_OPACITY_MIN, Math.round(parsed / 5) * 5),
+  );
+}
+
 export const DARK_APPEARANCE_VALUES: AppearancePreference[] = [
   "dark",
   "midnight",

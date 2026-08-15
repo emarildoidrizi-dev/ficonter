@@ -454,3 +454,58 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* FICONTER MOBILE SETTINGS SCREEN REPLACEMENT V1.9
+   On mobile, Settings is a real parent/child screen stack:
+   - menu screen: navigation only
+   - detail screen: selected section only
+   Never render the selected section beneath the Settings menu. */
+@media (max-width: 900px) {
+  :global(html[data-ficonter-native-app="true"]) .workspace {
+    display: block !important;
+    grid-template-columns: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="false"] .navigation {
+    display: block !important;
+    width: 100% !important;
+    position: static !important;
+    animation: ficonter-settings-parent-in 260ms cubic-bezier(.22,.78,.2,1) both;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="false"] .panel {
+    display: none !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="true"] .navigation {
+    display: none !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="true"] .panel {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    animation: ficonter-settings-detail-in 300ms cubic-bezier(.22,.78,.2,1) both;
+  }
+
+  @keyframes ficonter-settings-detail-in {
+    from { opacity: .98; transform: translate3d(100%,0,0); }
+    to { opacity: 1; transform: translate3d(0,0,0); }
+  }
+
+  @keyframes ficonter-settings-parent-in {
+    from { opacity: .98; transform: translate3d(-28%,0,0); }
+    to { opacity: 1; transform: translate3d(0,0,0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="false"] .navigation,
+  :global(html[data-ficonter-native-app="true"]) .workspace[data-mobile-detail="true"] .panel {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,792 @@
+/* FICONTER MOBILE MODULE LAYOUTS — PHASE 4
+   This file is intentionally mobile-only. It reorganizes application modules
+   after the Phase 1–3 shell/navigation work without changing desktop layout. */
+
+html[data-ficonter-native-app="true"] {
+  --mobile-content-max: 760px;
+  --mobile-module-gap: 14px;
+  --mobile-card-padding: 18px;
+  --mobile-card-radius: 20px;
+  --mobile-row-radius: 17px;
+}
+
+html[data-ficonter-native-app="true"] .app-main > * {
+  width: min(100%, var(--mobile-content-max)) !important;
+  margin-inline: auto !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  [class*="pageHeader"],
+  [class*="hero"]
+) {
+  min-width: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  [class*="summaryGrid"],
+  [class*="metricGrid"],
+  [class*="kpiGrid"]
+) > * {
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* OVERVIEW                                                                    */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_hero"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+  padding: 2px 2px 8px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_hero"] h1 {
+  max-width: 100% !important;
+  font-size: 30px !important;
+  line-height: 1.08 !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_hero"] p {
+  margin-top: 8px !important;
+  font-size: 14px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_addMoney"] {
+  width: 100% !important;
+  min-height: 52px !important;
+  margin: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_cardGrid"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--mobile-module-gap) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_card"] {
+  grid-column: auto !important;
+  min-height: 0 !important;
+  padding: var(--mobile-card-padding) !important;
+  border-radius: var(--mobile-card-radius) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_availableAmount"] {
+  margin-top: 16px !important;
+  font-size: clamp(34px, 10vw, 44px) !important;
+  line-height: 1 !important;
+  overflow-wrap: anywhere;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_miniStats"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  margin-top: 18px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_miniStats"] > div {
+  padding: 13px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_healthLine"] {
+  margin-top: 20px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_healthLine"] > strong {
+  font-size: 44px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_healthTrack"] {
+  margin-top: 22px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_upcomingItem"] {
+  grid-template-columns: 38px minmax(0, 1fr) !important;
+  row-gap: 4px !important;
+  padding-block: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CoastalOverview_upcomingItem"] > b {
+  grid-column: 2 !important;
+  justify-self: start !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TRANSACTIONS                                                                */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_toolbarTop"],
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_toolbar"] {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_searchBox"] {
+  grid-column: 1 / -1 !important;
+  min-height: 52px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_summary"] {
+  display: flex !important;
+  gap: 10px !important;
+  margin-inline: -13px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_summary"]::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_summary"] > div {
+  min-width: min(72vw, 245px) !important;
+  flex: 0 0 min(72vw, 245px) !important;
+  padding: 16px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_dateRangeCard"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 14px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_dateRangeHeading"] {
+  grid-column: auto !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_selectionBar"] {
+  align-items: stretch !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_bulkActions"] {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  margin-left: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_listViewport"] {
+  max-height: none !important;
+  padding-right: 0 !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_row"] {
+  display: grid !important;
+  grid-template-columns: 24px 4px minmax(0, 1fr) auto !important;
+  gap: 8px 10px !important;
+  min-height: 0 !important;
+  padding: 14px !important;
+  border-radius: var(--mobile-row-radius) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_details"] {
+  min-width: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_amountBlock"] {
+  grid-column: 4 !important;
+  grid-row: 1 / 3 !important;
+  align-self: center !important;
+  text-align: right !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_balanceBlock"] {
+  grid-column: 3 / -1 !important;
+  text-align: left !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_actions"] {
+  grid-column: 3 / -1 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="TransactionLedger_actions"] button {
+  width: 100% !important;
+  min-height: 44px !important;
+  justify-content: center !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MONTHLY PLANNER                                                             */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_header"] {
+  align-items: stretch !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_monthNav"] {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: 50px minmax(0, 1fr) 50px !important;
+  gap: 8px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_topGrid"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_sectionGrid"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_bottomGrid"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--mobile-module-gap) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_topGrid"] > *,
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_sectionGrid"] > *,
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_bottomGrid"] > * {
+  grid-column: auto !important;
+  min-width: 0 !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_overview"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_cashFlow"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_tableCard"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_goalSummaryCard"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_monthlyBudgetCard"] {
+  min-height: 0 !important;
+  padding: var(--mobile-card-padding) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownHeader"] {
+  align-items: stretch !important;
+  flex-direction: column !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownControls"] {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownControls"] button {
+  min-height: 42px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownTiles"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_expenseViewport"] {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_expenseHead"],
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_expenseRow"] {
+  min-width: 520px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_monthlyBudgetForm"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BILLS / CREDIT CARDS / DEBT / GOALS                                         */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_summaryGrid"],
+  [class*="CreditCardsManager_summaryGrid"],
+  [class*="DebtManager_summaryGrid"]
+) {
+  display: flex !important;
+  gap: 10px !important;
+  margin-inline: -13px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_summaryGrid"],
+  [class*="CreditCardsManager_summaryGrid"],
+  [class*="DebtManager_summaryGrid"]
+)::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_summaryGrid"],
+  [class*="CreditCardsManager_summaryGrid"],
+  [class*="DebtManager_summaryGrid"]
+) > * {
+  min-width: min(72vw, 250px) !important;
+  flex: 0 0 min(72vw, 250px) !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_formGrid"],
+  [class*="CreditCardsManager_formGrid"],
+  [class*="CreditCardsManager_modalGrid"],
+  [class*="DebtManager_formGrid"],
+  [class*="DebtManager_automationGrid"],
+  [class*="BillsManager_automationGrid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_billList"],
+  [class*="CreditCardsManager_cardGrid"],
+  [class*="DebtManager_debtGrid"],
+  [class*="GoalsManager_grid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--mobile-module-gap) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_billCard"],
+  [class*="CreditCardsManager_creditCard"],
+  [class*="DebtManager_debtCard"],
+  [class*="GoalsManager_card"]
+) {
+  min-width: 0 !important;
+  padding: var(--mobile-card-padding) !important;
+  border-radius: var(--mobile-card-radius) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_cardActions"],
+  [class*="CreditCardsManager_cardActions"],
+  [class*="DebtManager_cardActions"],
+  [class*="GoalsManager_cardCommands"]
+) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BillsManager_cardActions"],
+  [class*="CreditCardsManager_cardActions"],
+  [class*="DebtManager_cardActions"],
+  [class*="GoalsManager_cardCommands"]
+) > * {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CreditCardsManager_balancePanel"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CreditCardsManager_statementGrid"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="CreditCardsManager_actionGrid"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="GoalsManager_summary"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="GoalsManager_amounts"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="GoalsManager_deadlineFields"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SAVINGS / CASH FLOW / NET WORTH / GPS                                       */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_pageHeader"],
+  [class*="CashFlowIntelligence_pageHeader"],
+  [class*="NetWorthLive_pageHeader"]
+) {
+  align-items: stretch !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_headerActions"],
+  [class*="FinancialGps_headerActions"]
+) {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_metricGrid"],
+  [class*="CashFlowIntelligence_metricGrid"],
+  [class*="FinancialGps_metricGrid"],
+  [class*="NetWorthLive_cards"]
+) {
+  display: flex !important;
+  gap: 10px !important;
+  margin-inline: -13px !important;
+  padding: 0 13px 9px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_metricGrid"],
+  [class*="CashFlowIntelligence_metricGrid"],
+  [class*="FinancialGps_metricGrid"],
+  [class*="NetWorthLive_cards"]
+)::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_metricGrid"],
+  [class*="CashFlowIntelligence_metricGrid"],
+  [class*="FinancialGps_metricGrid"],
+  [class*="NetWorthLive_cards"]
+) > * {
+  min-width: min(74vw, 260px) !important;
+  flex: 0 0 min(74vw, 260px) !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SavingsIntelligence_twoColumn"],
+  [class*="SavingsIntelligence_twoColumnWide"],
+  [class*="CashFlowIntelligence_twoColumn"],
+  [class*="FinancialGps_primaryGrid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--mobile-module-gap) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="FinancialGps_hero"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+  padding: var(--mobile-card-padding) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="FinancialGps_journey"] {
+  display: flex !important;
+  gap: 9px !important;
+  margin-inline: -4px !important;
+  padding: 0 4px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"] [class*="FinancialGps_journeyStep"] {
+  min-width: 156px !important;
+  flex: 0 0 156px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"] [class*="FinancialGps_actionPath"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SETTINGS                                                                    */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_workspace"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 12px !important;
+  margin-top: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_navigation"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  border-radius: 18px !important;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_navigation"]::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_sectionList"] {
+  width: max-content !important;
+  min-width: 100% !important;
+  display: flex !important;
+  gap: 7px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_sectionButton"] {
+  width: auto !important;
+  min-width: max-content !important;
+  grid-template-columns: 28px auto !important;
+  padding: 9px 12px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_sectionButton"] > :last-child:not(:first-child) {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_panel"] {
+  min-height: 0 !important;
+  padding: var(--mobile-card-padding) !important;
+  border-radius: var(--mobile-card-radius) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SettingsWorkspace_formGrid"],
+  [class*="SettingsWorkspace_infoGrid"],
+  [class*="SettingsWorkspace_densityGrid"],
+  [class*="SettingsWorkspace_subscriptionPlanGrid"],
+  [class*="SettingsWorkspace_subscriptionFoundationGrid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_optionGrid"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_wallpaperGrid"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_exportActions"],
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_inlineActions"],
+html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_actions"] {
+  align-items: stretch !important;
+  flex-direction: column !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="SettingsWorkspace_exportActions"],
+  [class*="SettingsWorkspace_inlineActions"],
+  [class*="SettingsWorkspace_actions"]
+) > * {
+  width: 100% !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BUSINESS WORKSPACE MODULES                                                  */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BusinessTransactionLedger_summary"],
+  [class*="BusinessSales_summaryGrid"],
+  [class*="BusinessManager_summaryGrid"],
+  [class*="BusinessInventory_summaryGrid"],
+  [class*="BusinessSuppliers_summaryGrid"],
+  [class*="BusinessReports_kpiGrid"]
+) {
+  display: flex !important;
+  gap: 10px !important;
+  margin-inline: -13px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BusinessTransactionLedger_summary"],
+  [class*="BusinessSales_summaryGrid"],
+  [class*="BusinessManager_summaryGrid"],
+  [class*="BusinessInventory_summaryGrid"],
+  [class*="BusinessSuppliers_summaryGrid"],
+  [class*="BusinessReports_kpiGrid"]
+) > * {
+  min-width: min(72vw, 250px) !important;
+  flex: 0 0 min(72vw, 250px) !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BusinessTransactionLedger_formGrid"],
+  [class*="BusinessSales_formGrid"],
+  [class*="BusinessManager_formGrid"],
+  [class*="BusinessInventory_formGrid"],
+  [class*="BusinessInventory_modalGrid"],
+  [class*="BusinessSuppliers_formGrid"],
+  [class*="BusinessSuppliers_modalGrid"],
+  [class*="BusinessCostControl_formGrid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BusinessSales_salesList"],
+  [class*="BusinessManager_businessGrid"],
+  [class*="BusinessInventory_itemGrid"],
+  [class*="BusinessSuppliers_supplierGrid"],
+  [class*="BusinessCostControl_recurringGrid"]
+) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--mobile-module-gap) !important;
+}
+
+html[data-ficonter-native-app="true"] :where(
+  [class*="BusinessTransactionLedger_row"],
+  [class*="BusinessSales_saleRow"],
+  [class*="BusinessInventory_itemCard"],
+  [class*="BusinessSuppliers_supplierCard"],
+  [class*="BusinessManager_businessCard"]
+) {
+  min-width: 0 !important;
+  border-radius: var(--mobile-row-radius) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="BusinessReports_twoColumn"],
+html[data-ficonter-native-app="true"] [class*="BusinessReports_productColumns"],
+html[data-ficonter-native-app="true"] [class*="BusinessCostControl_twoColumn"],
+html[data-ficonter-native-app="true"] [class*="BusinessCostControl_threeColumn"],
+html[data-ficonter-native-app="true"] [class*="BusinessCostControl_structureGrid"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="BusinessReports_table"] {
+  min-width: 620px !important;
+}
+
+html[data-ficonter-native-app="true"] [class*="BusinessReports_statementPanel"] {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE BOTTOM-SHEET MODALS                                                  */
+/* -------------------------------------------------------------------------- */
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  [class*="backdrop"],
+  [class*="modalBackdrop"]
+) {
+  align-items: end !important;
+  padding: max(8px, env(safe-area-inset-top)) 0 0 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  [class*="_modal__"],
+  [class*="_confirmModal__"]
+) {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: calc(92dvh - env(safe-area-inset-top)) !important;
+  margin: 0 !important;
+  padding: 22px 18px calc(20px + env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  border-radius: 26px 26px 0 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* NARROW PHONES                                                               */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 430px) {
+  html[data-ficonter-native-app="true"] {
+    --mobile-card-padding: 16px;
+    --mobile-module-gap: 12px;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="CoastalOverview_miniStats"],
+  html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownTiles"],
+  html[data-ficonter-native-app="true"] [class*="CreditCardsManager_statementGrid"],
+  html[data-ficonter-native-app="true"] [class*="GoalsManager_summary"],
+  html[data-ficonter-native-app="true"] [class*="GoalsManager_amounts"],
+  html[data-ficonter-native-app="true"] [class*="SettingsWorkspace_optionGrid"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_toolbarTop"],
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_toolbar"],
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_bulkActions"],
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_actions"],
+  html[data-ficonter-native-app="true"] [class*="BillsManager_cardActions"],
+  html[data-ficonter-native-app="true"] [class*="CreditCardsManager_cardActions"],
+  html[data-ficonter-native-app="true"] [class*="CreditCardsManager_actionGrid"],
+  html[data-ficonter-native-app="true"] [class*="DebtManager_cardActions"],
+  html[data-ficonter-native-app="true"] [class*="GoalsManager_cardCommands"],
+  html[data-ficonter-native-app="true"] [class*="SavingsIntelligence_headerActions"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_row"] {
+    grid-template-columns: 24px 4px minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_amountBlock"],
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_balanceBlock"],
+  html[data-ficonter-native-app="true"] [class*="TransactionLedger_actions"] {
+    grid-column: 3 !important;
+    grid-row: auto !important;
+    text-align: left !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* TABLET / LANDSCAPE                                                          */
+/* -------------------------------------------------------------------------- */
+
+@media (min-width: 700px) {
+  html[data-ficonter-native-app="true"] {
+    --mobile-content-max: 920px;
+    --mobile-card-padding: 20px;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="CoastalOverview_cardGrid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="CoastalOverview_availableCard"],
+  html[data-ficonter-native-app="true"] [class*="CoastalOverview_cashCard"] {
+    grid-column: 1 / -1 !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="MonthlyPlanner_breakdownTiles"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="BillsManager_billList"],
+    [class*="CreditCardsManager_cardGrid"],
+    [class*="DebtManager_debtGrid"],
+    [class*="GoalsManager_grid"],
+    [class*="BusinessManager_businessGrid"],
+    [class*="BusinessInventory_itemGrid"],
+    [class*="BusinessSuppliers_supplierGrid"]
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SavingsIntelligence_twoColumn"],
+    [class*="SavingsIntelligence_twoColumnWide"],
+    [class*="CashFlowIntelligence_twoColumn"],
+    [class*="FinancialGps_primaryGrid"],
+    [class*="BusinessReports_twoColumn"],
+    [class*="BusinessCostControl_twoColumn"]
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main :where(
+    [class*="_modal__"],
+    [class*="_confirmModal__"]
+  ) {
+    max-height: 94dvh !important;
+  }
+}

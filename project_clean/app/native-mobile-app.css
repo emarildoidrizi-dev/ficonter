@@ -1,0 +1,1147 @@
+/* FICONTER MOBILE APPLICATION PRESENTATION LAYER
+   Active for FICONTER dashboard/business phone and tablet layouts in
+   browser or standalone mode. Desktop presentation remains unchanged. */
+
+html[data-ficonter-native-app="true"] {
+  /* Phase 2: deterministic mobile semantic tokens. These tokens inherit the
+     selected FICONTER theme instead of forcing a second, dark-only palette. */
+  --mobile-text-primary: var(--text-primary);
+  --mobile-text-secondary: var(--text-secondary);
+  --mobile-text-tertiary: var(--text-tertiary);
+  --mobile-canvas: var(--surface-canvas);
+  --mobile-surface: var(--surface-card);
+  --mobile-surface-raised: var(--surface-raised);
+  --mobile-surface-subtle: var(--surface-subtle);
+  --mobile-control-bg: var(--control-bg);
+  --mobile-border: var(--border-subtle);
+  --mobile-border-strong: var(--border-strong);
+  --mobile-accent: var(--gold);
+  --mobile-focus-ring: var(--focus-ring);
+  --mobile-solid-bg: var(--solid-bg);
+  --mobile-solid-text: var(--solid-text);
+  --mobile-danger-soft: var(--danger-soft);
+  --mobile-success-soft: var(--success-soft);
+  --mobile-warning-soft: var(--warning-soft);
+
+  /* Compatibility aliases for the existing mobile layout rules. */
+  --native-canvas: var(--mobile-canvas);
+  --native-surface: var(--mobile-surface);
+  --native-surface-raised: var(--mobile-surface-raised);
+  --native-border: var(--mobile-border);
+  --native-text: var(--mobile-text-primary);
+  --native-muted: var(--mobile-text-secondary);
+  --native-gold: var(--mobile-accent);
+  --native-danger: #b85f67;
+  --native-success: #4f8068;
+
+  /* The application chrome deliberately stays visually constant while the
+     workspace content follows the user's selected theme. */
+  --mobile-chrome-bg: #0a1411;
+  --mobile-chrome-surface: #0b1511;
+  --mobile-chrome-text: #f8f4e9;
+  --mobile-chrome-muted: #b8c1bb;
+  --mobile-chrome-accent: #d8bd7c;
+  --mobile-chrome-accent-text: #efe2ba;
+  --mobile-chrome-on-accent: #101914;
+  --mobile-chrome-focus: #f3dfa4;
+  --mobile-chrome-danger-text: #f3d7d7;
+  --mobile-chrome-danger-icon: #f1c4c4;
+
+  /* One mobile type scale. Module-specific hero values may opt out, but page
+     headings and controls no longer compete across several responsive layers. */
+  --mobile-page-title-size: 30px;
+  --mobile-section-title-size: 23px;
+  --mobile-card-title-size: 18px;
+  --mobile-body-size: 15px;
+  --mobile-control-text-size: 16px;
+
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  background: var(--mobile-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html[data-ficonter-native-app="true"][data-resolved-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-ficonter-native-app="true"][data-resolved-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-ficonter-native-app="true"],
+html[data-ficonter-native-app="true"] body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+  background:
+    radial-gradient(
+      circle at 50% -10%,
+      color-mix(in srgb, var(--mobile-accent) 10%, transparent),
+      transparent 31%
+    ),
+    var(--mobile-canvas);
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-app-drawer="open"] {
+  overflow: hidden;
+}
+
+html[data-ficonter-native-app="true"] body {
+  min-height: 100dvh;
+  color: var(--native-text);
+  overscroll-behavior-y: contain;
+}
+
+html[data-ficonter-native-app="true"] body::before {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 90% 12%,
+      color-mix(in srgb, var(--mobile-accent) 9%, transparent),
+      transparent 23%
+    ),
+    var(--mobile-canvas);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"] .app-shell {
+  /* Resolve the mobile aliases on the same element as the workspace theme
+     tokens. This preserves Coastal light tokens and every premium dark theme. */
+  --mobile-text-primary: var(--text-primary);
+  --mobile-text-secondary: var(--text-secondary);
+  --mobile-text-tertiary: var(--text-tertiary);
+  --mobile-canvas: var(--surface-canvas);
+  --mobile-surface: var(--surface-card);
+  --mobile-surface-raised: var(--surface-raised);
+  --mobile-surface-subtle: var(--surface-subtle);
+  --mobile-control-bg: var(--control-bg);
+  --mobile-border: var(--border-subtle);
+  --mobile-border-strong: var(--border-strong);
+  --mobile-accent: var(--gold);
+  --mobile-focus-ring: var(--focus-ring);
+  --mobile-solid-bg: var(--solid-bg);
+  --mobile-solid-text: var(--solid-text);
+
+  --native-canvas: var(--mobile-canvas);
+  --native-surface: var(--mobile-surface);
+  --native-surface-raised: var(--mobile-surface-raised);
+  --native-border: var(--mobile-border);
+  --native-text: var(--mobile-text-primary);
+  --native-muted: var(--mobile-text-secondary);
+  --native-gold: var(--mobile-accent);
+
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  overflow: visible !important;
+  color: var(--mobile-text-primary);
+}
+
+html[data-ficonter-native-app="true"] .sidebar,
+html[data-ficonter-native-app="true"]
+  [class*="SidebarNavigation_shellHeader"],
+html[data-ficonter-native-app="true"]
+  [class*="BusinessSidebar_shellHeader"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  padding:
+    calc(88px + env(safe-area-inset-top))
+    max(13px, env(safe-area-inset-right))
+    calc(105px + env(safe-area-inset-bottom))
+    max(13px, env(safe-area-inset-left))
+    !important;
+  overflow: visible !important;
+  color: var(--mobile-text-primary) !important;
+  background: transparent !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main::before {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="WorkspaceSwitcher_switcher"] {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .topbar {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main,
+html[data-ficonter-native-app="true"] .app-main * {
+  box-sizing: border-box;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(h1, h2, h3, h4, strong, b) {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: -0.018em !important;
+  text-wrap: balance;
+}
+
+html[data-ficonter-native-app="true"] .app-main h1 {
+  color: var(--mobile-text-primary) !important;
+  font-size: var(--mobile-page-title-size) !important;
+  line-height: 1.08 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main h2 {
+  color: var(--mobile-text-primary) !important;
+  font-size: var(--mobile-section-title-size) !important;
+  line-height: 1.15 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main h3 {
+  color: var(--mobile-text-primary) !important;
+  font-size: var(--mobile-card-title-size) !important;
+  line-height: 1.2 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(h4, h5, h6, legend) {
+  color: var(--mobile-text-primary) !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(p, li, label, td, th, input, select, textarea, button) {
+  font-size: var(--mobile-body-size);
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(th, label, legend) {
+  color: var(--mobile-text-primary);
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(p, small, span) {
+  line-height: 1.48;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(.panel, .kpi, article, section[class*="card"], div[class*="card"]) {
+  border-color: var(--mobile-border) !important;
+  border-radius: 22px !important;
+  color: var(--mobile-text-primary) !important;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--mobile-surface-raised) 96%, transparent),
+      color-mix(in srgb, var(--mobile-surface) 97%, var(--mobile-surface-subtle) 3%)
+    )
+    !important;
+  box-shadow:
+    0 16px 40px color-mix(in srgb, var(--mobile-text-primary) 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--mobile-surface-raised) 28%, transparent)
+    !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(button, .btn, a[class*="button"]) {
+  min-height: 50px;
+  border-radius: 16px !important;
+  touch-action: manipulation;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box !important;
+  min-height: 52px !important;
+  padding: 14px 15px !important;
+  border: 1px solid var(--mobile-border) !important;
+  border-radius: 16px !important;
+  color: var(--mobile-text-primary) !important;
+  -webkit-text-fill-color: var(--mobile-text-primary);
+  caret-color: var(--mobile-text-primary);
+  background: color-mix(in srgb, var(--mobile-control-bg) 96%, transparent) !important;
+  font-size: var(--mobile-control-text-size) !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main textarea {
+  min-height: 120px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input, textarea)::placeholder {
+  color: var(--mobile-text-tertiary) !important;
+  -webkit-text-fill-color: var(--mobile-text-tertiary) !important;
+  opacity: 1 !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main option {
+  color: var(--mobile-text-primary);
+  background: var(--mobile-surface-raised);
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input, select, textarea):disabled {
+  color: var(--mobile-text-tertiary) !important;
+  -webkit-text-fill-color: var(--mobile-text-tertiary) !important;
+  opacity: 0.72;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(.cards, .grid, .kpis, [class*="Grid"], [class*="grid"]) {
+  min-width: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="modal"], [role="dialog"]) {
+  max-width: 100% !important;
+  max-height: calc(100dvh - env(safe-area-inset-top)) !important;
+  border-radius: 26px 26px 0 0 !important;
+}
+
+/* Stable typography: remove previous business-name fitting transforms. */
+html[data-ficonter-native-app="true"]
+  [class*="AutoFitSingleLineText"] {
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* Business app home: remove the website masthead entirely. */
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_shell"] {
+  display: grid !important;
+  gap: 15px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_hero"] {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_hero"]
+  > div:first-child {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"] {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"]
+  > a {
+  display: inline-flex !important;
+  min-height: 56px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 18px !important;
+  color: var(--mobile-chrome-on-accent) !important;
+  background: linear-gradient(145deg, #ead79f, #cbb16f) !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_heroActions"]
+  > a:first-child {
+  color: var(--mobile-text-primary) !important;
+  background: var(--mobile-surface-raised) !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"] {
+  display: flex !important;
+  gap: 11px !important;
+  margin: 0 -13px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]
+  > article {
+  min-width: min(78vw, 300px) !important;
+  min-height: 150px !important;
+  flex: 0 0 min(78vw, 300px) !important;
+  padding: 19px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_kpis"]
+  strong {
+  margin-top: 24px !important;
+  font-size: 28px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_panel"],
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costPanel"] {
+  padding: 19px !important;
+  border-radius: 24px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costSnapshot"] {
+  display: flex !important;
+  gap: 10px !important;
+  margin: 0 -4px !important;
+  padding: 0 4px 7px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_costSnapshot"]
+  > div {
+  min-width: 190px !important;
+  flex: 0 0 190px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="BusinessOverview_row"] {
+  min-height: 88px !important;
+  padding: 16px 0 !important;
+}
+
+/* Personal app home: horizontal command cards and vertical financial feed. */
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_strip"] {
+  display: flex !important;
+  gap: 11px !important;
+  margin: 0 -13px 15px !important;
+  padding: 0 13px 8px !important;
+  overflow-x: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_item"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_progressItem"] {
+  min-width: min(76vw, 285px) !important;
+  min-height: 145px !important;
+  flex: 0 0 min(76vw, 285px) !important;
+  align-items: flex-start !important;
+  padding: 18px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 22px !important;
+  background: var(--native-surface) !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_commandButton"] {
+  min-width: 170px !important;
+  min-height: 145px !important;
+  flex: 0 0 170px !important;
+  border-radius: 22px !important;
+  scroll-snap-align: start;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonCommandStrip_commandButton"]
+  kbd {
+  display: none !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_board"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-areas:
+    "cash"
+    "allocation"
+    "gps" !important;
+  gap: 14px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_cashFlowCard"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_allocationCard"],
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_gpsCard"] {
+  grid-column: auto !important;
+  min-height: 0 !important;
+  padding: 20px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_heroNumber"] {
+  font-size: 40px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="HorizonOverviewBoard_gpsContent"]
+  h2 {
+  max-width: 100% !important;
+  font-size: 31px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_shell"] {
+  padding: 19px 17px !important;
+  border-radius: 24px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_heading"] {
+  align-items: flex-start !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_rail"] {
+  display: flex !important;
+  gap: 10px !important;
+  margin: 0 -4px !important;
+  padding: 4px 4px 12px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialJourneyRail_stage"] {
+  min-width: 150px !important;
+  flex: 0 0 150px !important;
+  scroll-snap-align: start;
+}
+
+/* Financial health becomes a compact app card. */
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_module"] {
+  display: grid !important;
+  gap: 13px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_card"] {
+  width: 100% !important;
+  grid-template-columns: 88px minmax(0, 1fr) !important;
+  gap: 15px !important;
+  padding: 18px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_gauge"] {
+  width: 86px !important;
+  height: 86px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  [class*="FinancialHealthScore_factorList"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Transactions and lists are presented as touch cards. */
+html[data-ficonter-native-app="true"]
+  [class*="transactionRow"],
+html[data-ficonter-native-app="true"]
+  [class*="TransactionLedger_row"],
+html[data-ficonter-native-app="true"]
+  [class*="BillsManager_bill"],
+html[data-ficonter-native-app="true"]
+  [class*="SavingsIntelligence_transaction"] {
+  min-height: 86px !important;
+  margin-bottom: 9px !important;
+  padding: 15px !important;
+  border: 1px solid var(--native-border) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+/* Desktop tables remain usable through a native horizontal viewport. */
+html[data-ficonter-native-app="true"] .app-main table {
+  min-width: 700px;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="tableWrap"], [class*="tableContainer"]) {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  border-radius: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* All forms use one vertical app column. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(
+    [class*="formGrid"],
+    [class*="fields"],
+    [class*="fieldGrid"],
+    [class*="optionGrid"],
+    [class*="settingsGrid"]
+  ) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 13px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="formActions"], [class*="modalActions"]) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where([class*="formActions"], [class*="modalActions"])
+  > * {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+/* Remove page movement caused by scaling or heading transitions. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(h1, h2, h3, [class*="hero"], [class*="title"]) {
+  transform: none !important;
+  animation: none !important;
+  transition-property:
+    color, background-color, border-color, opacity !important;
+}
+
+@media (orientation: landscape) {
+  html[data-ficonter-native-app="true"] .app-main {
+    padding:
+      calc(72px + env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      calc(92px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left))
+      !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-shell {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .sidebar {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_heroActions"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_kpis"]
+    > article {
+    min-width: min(40vw, 300px) !important;
+    flex-basis: min(40vw, 300px) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonCommandStrip_item"],
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonCommandStrip_progressItem"] {
+    min-width: min(42vw, 285px) !important;
+    flex-basis: min(42vw, 285px) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="HorizonOverviewBoard_board"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "cash allocation"
+      "gps gps" !important;
+  }
+}
+
+@media (max-width: 350px) {
+  html[data-ficonter-native-app="true"]
+    [class*="BusinessOverview_heroActions"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="FinancialHealthScore_card"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* FICONTER NATIVE APP FULL-BLEED SCREEN — BEGIN */
+
+/*
+  The installed application canvas must cover the complete physical display.
+  Interactive content remains inside safe-area padding, while Ficonter's own
+  background extends beneath the notch, status bar and home indicator.
+*/
+html[data-ficonter-native-app="true"] {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: clip !important;
+  background-color: var(--native-canvas, #08110e) !important;
+  overscroll-behavior: none;
+}
+
+html[data-ficonter-native-app="true"] body {
+  position: relative;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: clip !important;
+  background-color: var(--native-canvas, #08110e) !important;
+  overscroll-behavior: none;
+}
+
+/* Extends one physical pixel beyond the viewport to eliminate iOS seam lines. */
+html[data-ficonter-native-app="true"] body::before {
+  position: fixed !important;
+  z-index: -10 !important;
+  inset: -2px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: calc(100dvh + 4px) !important;
+  background:
+    radial-gradient(
+      circle at 88% 8%,
+      rgba(216, 189, 124, 0.1),
+      transparent 25%
+    ),
+    linear-gradient(
+      180deg,
+      #08110e 0%,
+      #091311 48%,
+      #07100d 100%
+    ) !important;
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"] body > div,
+html[data-ficonter-native-app="true"] .app-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overscroll-behavior-y: contain;
+}
+
+/*
+  Do not allow page-level containers inherited from the website to constrain
+  the installed app to a centered desktop-width canvas.
+*/
+html[data-ficonter-native-app="true"] .app-main > :where(
+  main,
+  section,
+  div
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Keep safe content padding while the application canvas itself stays edge-to-edge. */
+html[data-ficonter-native-app="true"] .app-main {
+  padding-top:
+    calc(88px + max(env(safe-area-inset-top), 0px))
+    !important;
+  padding-right:
+    max(13px, env(safe-area-inset-right))
+    !important;
+  padding-bottom:
+    calc(105px + max(env(safe-area-inset-bottom), 0px))
+    !important;
+  padding-left:
+    max(13px, env(safe-area-inset-left))
+    !important;
+}
+
+/* Prevent bright pull-to-refresh / rubber-band gaps around the native app. */
+html[data-ficonter-native-app="true"],
+html[data-ficonter-native-app="true"] body,
+html[data-ficonter-native-app="true"] .app-shell,
+html[data-ficonter-native-app="true"] .app-main {
+  scrollbar-color:
+    rgba(216, 189, 124, 0.34)
+    transparent;
+}
+
+@media (orientation: landscape) {
+  html[data-ficonter-native-app="true"] .app-main {
+    min-height: 100dvh !important;
+    padding-top:
+      calc(70px + max(env(safe-area-inset-top), 0px))
+      !important;
+    padding-right:
+      max(14px, env(safe-area-inset-right))
+      !important;
+    padding-bottom:
+      calc(88px + max(env(safe-area-inset-bottom), 0px))
+      !important;
+    padding-left:
+      max(14px, env(safe-area-inset-left))
+      !important;
+  }
+}
+
+/* FICONTER NATIVE APP FULL-BLEED SCREEN — END */
+
+/* FICONTER NATIVE APP NAVIGATION PERFORMANCE — BEGIN */
+
+html[data-ficonter-native-app="true"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-ficonter-native-app="true"]
+  :where(a, button) {
+  touch-action: manipulation;
+}
+
+html[data-ficonter-native-app="true"]
+  body::after {
+  content: "";
+  position: fixed;
+  z-index: 2600;
+  top: 0;
+  right: 100%;
+  left: 0;
+  height: 3px;
+  opacity: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #d8bd7c 34%,
+      #f3dfa4 66%,
+      transparent
+    );
+  transform: translate3d(-40%, 0, 0);
+  pointer-events: none;
+}
+
+html[data-ficonter-native-app="true"]
+  [data-ficonter-route-loading="true"] {
+  cursor: progress;
+}
+
+html[data-ficonter-native-app="true"]
+  body:has(
+    html[data-ficonter-route-loading="true"]
+  )::after {
+  opacity: 1;
+}
+
+/*
+  Safari does not support matching an html ancestor through body:has()
+  consistently in every installed-app release, so this direct selector
+  is the authoritative loading indicator.
+*/
+html[data-ficonter-native-app="true"][data-ficonter-route-loading="true"]
+  body::after {
+  right: 0;
+  opacity: 1;
+  animation:
+    ficonter-native-route-progress
+    900ms
+    ease-in-out
+    infinite;
+}
+
+@keyframes ficonter-native-route-progress {
+  0% {
+    transform: translate3d(-65%, 0, 0);
+  }
+  55% {
+    transform: translate3d(15%, 0, 0);
+  }
+  100% {
+    transform: translate3d(75%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ficonter-native-app="true"][data-ficonter-route-loading="true"]
+    body::after {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* FICONTER NATIVE APP NAVIGATION PERFORMANCE — END */
+
+/* FICONTER ADAPTIVE TABLET SHELL V3 - BEGIN */
+
+html[data-ficonter-device="tablet"] .app-main {
+  padding-right:
+    max(22px, env(safe-area-inset-right))
+    !important;
+  padding-left:
+    max(22px, env(safe-area-inset-left))
+    !important;
+}
+
+html[data-ficonter-device="tablet"] .app-main > * {
+  width: min(100%, 1180px) !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+html[data-ficonter-device="tablet"] .app-shell {
+  --mobile-page-title-size: clamp(31px, 4.2vw, 38px);
+  --mobile-section-title-size: clamp(23px, 3.2vw, 27px);
+}
+
+html[data-ficonter-device="tablet"]
+  [class*="BusinessOverview_heroActions"] {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr))
+    !important;
+}
+
+html[data-ficonter-device="tablet"]
+  [class*="BusinessOverview_kpis"] {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr))
+    !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-device="tablet"]
+  [class*="BusinessOverview_kpis"]
+  > article {
+  width: auto !important;
+  min-width: 0 !important;
+  flex: none !important;
+}
+
+html[data-ficonter-device="tablet"]
+  [class*="BusinessOverview_costSnapshot"] {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr))
+    !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-device="tablet"] .app-main
+  :where(
+    [class*="tableWrap"],
+    [class*="TableWrap"],
+    [class*="tableContainer"],
+    [class*="TableContainer"],
+    [class*="ledger"],
+    [class*="Ledger"]
+  ) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main {
+    padding-top:
+      calc(70px + env(safe-area-inset-top))
+      !important;
+    padding-bottom:
+      calc(84px + env(safe-area-inset-bottom))
+      !important;
+  }
+}
+
+/* FICONTER ADAPTIVE TABLET SHELL V3 - END */
+
+
+/* Native app control tuning: keep date/select controls compact and readable. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(select, input[type="date"], input[type="datetime-local"]) {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-date-and-time-value {
+  min-height: 56px;
+  text-align: left;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-datetime-edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-calendar-picker-indicator {
+  margin-left: 10px;
+}
+
+/* FICONTER native iOS date-control containment — V6.1
+   iOS gives date/datetime controls an intrinsic width/height that can ignore
+   generic mobile sizing. These rules neutralize that intrinsic sizing only
+   for the native app while preserving the native picker on tap. */
+html[data-ficonter-native-app="true"] .app-main
+  :where(.field, [class*="field"], [class*="formGrid"], [class*="transaction-form-grid"]) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"]) {
+  display: block !important;
+  inline-size: 100% !important;
+  width: 100% !important;
+  min-inline-size: 0 !important;
+  min-width: 0 !important;
+  max-inline-size: 100% !important;
+  max-width: 100% !important;
+  block-size: 56px !important;
+  height: 56px !important;
+  min-block-size: 56px !important;
+  min-height: 56px !important;
+  max-block-size: 56px !important;
+  max-height: 56px !important;
+  box-sizing: border-box !important;
+  padding: 0 14px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  line-height: normal !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-date-and-time-value {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 54px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-datetime-edit {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main
+  :where(input[type="date"], input[type="datetime-local"])::-webkit-calendar-picker-indicator {
+  flex: 0 0 auto !important;
+  margin: 0 0 0 auto !important;
+  padding: 6px !important;
+}
+
+/* Phase 6.1: Business mobile shell has a persistent active-business selector. */
+html[data-ficonter-native-app="true"] .app-main.business-interface {
+  padding-top:
+    calc(140px + max(env(safe-area-inset-top), 0px))
+    !important;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main.business-interface {
+    padding-top:
+      calc(116px + max(env(safe-area-inset-top), 0px))
+      !important;
+  }
+}

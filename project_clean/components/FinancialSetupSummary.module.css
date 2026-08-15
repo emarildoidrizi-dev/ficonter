@@ -1,0 +1,160 @@
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(183, 155, 108, 0.14), transparent 34%),
+    var(--surface-card);
+  box-shadow: 0 14px 38px rgba(31, 35, 38, 0.045);
+}
+
+.icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.content {
+  min-width: 0;
+}
+
+.headingRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.headingRow h2 {
+  margin: 3px 0 0;
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.headingRow > strong {
+  color: var(--gold);
+  font-size: 20px;
+}
+
+.eyebrow {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.progress {
+  height: 8px;
+  margin: 12px 0 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--gold-soft);
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--sage));
+  transition: width 220ms ease;
+}
+
+.details {
+  display: grid;
+  gap: 7px;
+}
+
+.details p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.statusLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.statusLine svg {
+  color: var(--sage);
+}
+
+.statusLine strong {
+  color: var(--text-primary);
+}
+
+.separator {
+  color: var(--border-strong);
+}
+
+.action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
+}
+
+.action:hover,
+.action:focus-visible {
+  border-color: var(--gold);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+@media (max-width: 760px) {
+  .card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .card {
+    align-items: start;
+    padding: 17px;
+  }
+
+  .headingRow {
+    align-items: start;
+  }
+
+  .headingRow h2 {
+    font-size: 18px;
+  }
+
+  .headingRow > strong {
+    font-size: 17px;
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "name": "ficonter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs",
+    "verify:phase2-health": "node scripts/verify-phase2-financial-health.mjs",
+    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-net-worth-growth && npm run verify:phase2-cash-flow && npm run verify:phase2-emergency-fund && npm run verify:phase2-savings && npm run verify:phase2-financial-independence && npm run verify:wealth-empty-state && npm run verify:phase2-ai && npm run verify:support && npm run verify:support-platform && npm run verify:financial-consistency",
+    "verify:phase2-wealth": "node scripts/verify-phase2-wealth-score.mjs",
+    "verify:phase2-cash-flow": "node scripts/verify-phase2-cash-flow.mjs",
+    "verify:phase2-emergency-fund": "node scripts/verify-phase2-emergency-fund.mjs",
+    "verify:phase2-savings": "node scripts/verify-phase2-savings.mjs",
+    "verify:phase2-net-worth-growth": "node scripts/verify-phase2-net-worth-growth.mjs",
+    "verify:phase2-financial-independence": "node scripts/verify-phase2-financial-independence.mjs",
+    "verify:wealth-empty-state": "node scripts/verify-wealth-empty-state.mjs",
+    "verify:phase2-ai": "node scripts/verify-phase2-ai-insights.mjs",
+    "verify:support": "node scripts/verify-contact-support.mjs",
+    "verify:support-platform": "node scripts/verify-support-messaging-documents.mjs",
+    "verify:financial-setup": "node scripts/verify-financial-setup.mjs",
+    "verify:performance-accuracy": "node scripts/verify-performance-accuracy.mjs",
+    "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-theme-contrast-and-budget-use.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmosphere-removal.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-fixed-redesign-layout.mjs",
+    "verify:release-candidate": "node scripts/verify-release-candidate.mjs",
+    "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs",
+    "verify:localization": "node scripts/verify-localization.mjs",
+    "verify:monthly-budget": "node scripts/verify-monthly-spending-budget.mjs",
+    "verify:credit-cards": "node scripts/verify-credit-card-management.mjs",
+    "verify:database-contract": "node scripts/verify-database-contract.mjs",
+    "verify:hardening": "node scripts/verify-release-candidate.mjs",
+    "verify:mobile-ui-phase2": "node scripts/verify-mobile-ui-phase2.mjs",
+    "verify:mobile-ui-phase3": "node scripts/verify-mobile-ui-phase3.mjs",
+    "verify:mobile-ui-phase4": "node scripts/verify-mobile-ui-phase4.mjs",
+    "verify:mobile-ui-phase5": "node scripts/verify-mobile-ui-phase5.mjs",
+    "verify:mobile-ui-phase6": "node scripts/verify-mobile-ui-phase6.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "lucide-react": "^0.468.0",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "unpdf": "1.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.0.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

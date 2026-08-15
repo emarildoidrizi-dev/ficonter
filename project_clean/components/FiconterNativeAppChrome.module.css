@@ -1,0 +1,952 @@
+/* FICONTER MOBILE SHELL V2 — QUIET CONTROL
+   Mobile-only application chrome. The shell is deliberately stable and
+   independent from workspace wallpaper/theme changes. */
+
+.header,
+.bottomDock,
+.drawer,
+.backdrop {
+  display: none;
+}
+
+.header,
+.bottomDock,
+.drawer,
+.backdrop,
+.header *,
+.bottomDock *,
+.drawer * {
+  box-sizing: border-box;
+}
+
+:global(html[data-ficonter-native-app="true"]) .header {
+  position: fixed;
+  z-index: 1800;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: grid;
+  min-height: calc(64px + env(safe-area-inset-top));
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 11px;
+  padding:
+    env(safe-area-inset-top)
+    max(12px, env(safe-area-inset-right))
+    8px
+    max(12px, env(safe-area-inset-left));
+  border-bottom: 1px solid rgba(216, 189, 124, 0.13);
+  background: color-mix(in srgb, var(--mobile-chrome-bg) 96%, transparent);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  transform: translateZ(0);
+}
+
+.menuButton,
+.workspaceBadge,
+.drawerHeader button,
+.dockItem,
+.addButton,
+.signOutButton {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.menuButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  align-self: center;
+  border: 1px solid rgba(216, 189, 124, 0.26);
+  border-radius: 15px;
+  color: var(--mobile-chrome-accent);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  font: inherit;
+  cursor: pointer;
+}
+
+.headerMark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  object-fit: cover;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+}
+
+.routeIdentity {
+  min-width: 0;
+  align-self: center;
+}
+
+.routeIdentity span,
+.routeIdentity strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.routeEyebrow {
+  color: var(--mobile-chrome-muted);
+  font-size: 9px;
+  font-weight: 820;
+  line-height: 1;
+  letter-spacing: 0.115em;
+}
+
+.routeIdentity strong {
+  margin-top: 5px;
+  color: var(--mobile-chrome-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 780;
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+}
+
+.workspaceBadge {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  align-self: center;
+  justify-self: end;
+  border: 1px solid rgba(216, 189, 124, 0.24);
+  border-radius: 50%;
+  color: var(--mobile-chrome-accent-text);
+  background: rgba(216, 189, 124, 0.07);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.workspaceBadge > svg {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 17px;
+  height: 17px;
+  padding: 3px;
+  border: 2px solid var(--mobile-chrome-bg);
+  border-radius: 50%;
+  color: var(--mobile-chrome-on-accent);
+  background: var(--mobile-chrome-accent);
+}
+
+.menuButton:active,
+.workspaceBadge:active,
+.drawerHeader button:active,
+.dockItem:active,
+.addButton:active,
+.drawerLink:active,
+.workspaceSwitch:active {
+  transform: scale(0.96);
+}
+
+.menuButton:focus-visible,
+.workspaceBadge:focus-visible,
+.drawerHeader button:focus-visible,
+.dockItem:focus-visible,
+.addButton:focus-visible,
+.drawerLink:focus-visible,
+.workspaceSwitch:focus-visible,
+.signOutButton:focus-visible {
+  outline: 2px solid var(--mobile-chrome-focus);
+  outline-offset: 2px;
+}
+
+/* Edge-anchored bottom navigation. It is intentionally not a floating pill:
+   the user gets more reliable thumb targets and more usable screen width. */
+:global(html[data-ficonter-native-app="true"]) .bottomDock {
+  position: fixed;
+  z-index: 1790;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 1px;
+  padding:
+    6px
+    max(8px, env(safe-area-inset-right))
+    max(6px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+  border-top: 1px solid rgba(216, 189, 124, 0.14);
+  background: color-mix(in srgb, var(--mobile-chrome-bg) 97%, transparent);
+  box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  transform: translateZ(0);
+}
+
+.dockItem {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--mobile-chrome-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 720;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 130ms ease, background 130ms ease, transform 100ms ease;
+}
+
+.dockItem span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dockItem svg {
+  width: 21px;
+  height: 21px;
+  transition: color 130ms ease, transform 130ms ease;
+}
+
+.dockActive {
+  color: var(--mobile-chrome-text);
+}
+
+.dockActive::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--mobile-chrome-accent);
+  box-shadow: 0 0 0 4px rgba(216, 189, 124, 0.08);
+  transform: translateX(-50%);
+}
+
+.dockActive svg {
+  color: var(--mobile-chrome-accent);
+  transform: translateY(-1px);
+}
+
+.addButton {
+  position: relative;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  align-self: start;
+  justify-self: center;
+  margin-top: -13px;
+  border: 4px solid var(--mobile-chrome-bg);
+  border-radius: 50%;
+  color: var(--mobile-chrome-on-accent);
+  background: linear-gradient(145deg, #f0dda6, #c8a95d);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    0 5px 18px rgba(216, 189, 124, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 100ms ease, filter 100ms ease;
+}
+
+.addButton svg {
+  width: 27px;
+  height: 27px;
+}
+
+.addButton:active {
+  transform: scale(0.92);
+  filter: brightness(0.96);
+}
+
+/* More menu: bottom sheet instead of a side drawer. */
+:global(html[data-ficonter-native-app="true"]) .backdrop {
+  position: fixed;
+  z-index: 1880;
+  inset: 0;
+  display: block;
+  width: 100%;
+  min-height: 100dvh;
+  border: 0;
+  opacity: 0;
+  visibility: hidden;
+  background: rgba(1, 7, 5, 0.56);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.backdropOpen {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawer {
+  position: fixed;
+  z-index: 1900;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 100%;
+  max-width: none;
+  max-height: min(88dvh, 790px);
+  min-height: 0;
+  padding:
+    8px
+    max(13px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(13px, env(safe-area-inset-left));
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(216, 189, 124, 0.15);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background:
+    radial-gradient(circle at 50% 0, rgba(216, 189, 124, 0.08), transparent 28%),
+    var(--mobile-chrome-surface);
+  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.42);
+  transform: translate3d(0, 105%, 0);
+  transition: transform 230ms cubic-bezier(0.2, 0.82, 0.2, 1);
+  backface-visibility: hidden;
+  scrollbar-width: none;
+}
+
+.drawer::-webkit-scrollbar {
+  display: none;
+}
+
+.drawerOpen {
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.sheetHandle {
+  width: 42px;
+  height: 4px;
+  flex: 0 0 auto;
+  margin: 2px auto 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.drawerHeader {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 2px 1px 12px;
+}
+
+.appMark {
+  display: block;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+.drawerHeader > div:nth-child(2) {
+  min-width: 0;
+}
+
+.drawerHeader span,
+.drawerHeader strong,
+.drawerHeader small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerHeader span {
+  color: var(--mobile-chrome-accent);
+  font-size: 9px;
+  font-weight: 860;
+  letter-spacing: 0.14em;
+}
+
+.drawerHeader strong {
+  margin-top: 3px;
+  color: var(--mobile-chrome-text);
+  font-size: 17px;
+  font-weight: 790;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.drawerHeader small {
+  margin-top: 3px;
+  color: var(--mobile-chrome-muted);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.drawerHeader button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: var(--mobile-chrome-text);
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  cursor: pointer;
+}
+
+.workspaceSwitch {
+  display: grid;
+  min-height: 54px;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  margin: 1px 0 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(216, 189, 124, 0.18);
+  border-radius: 17px;
+  color: var(--mobile-chrome-accent-text);
+  background: rgba(216, 189, 124, 0.065);
+  font-size: 12px;
+  font-weight: 730;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.workspaceSwitch > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerNavigation {
+  display: grid;
+  gap: 5px;
+  padding-bottom: 5px;
+}
+
+.drawerGroup {
+  display: grid;
+  gap: 7px;
+}
+
+.drawerLabel {
+  margin: 13px 5px 1px;
+  color: var(--mobile-chrome-muted);
+  font-size: 9px;
+  font-weight: 840;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.drawerGroupLinks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.drawerLink {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 82px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 11px 30px 11px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 17px;
+  color: var(--mobile-chrome-muted);
+  background: rgba(255, 255, 255, 0.032);
+  font-size: 12.5px;
+  font-weight: 710;
+  line-height: 1.22;
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 100ms ease;
+}
+
+.drawerIcon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--mobile-chrome-accent-text);
+  background: rgba(216, 189, 124, 0.08);
+}
+
+.drawerLinkLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawerLinkStatus {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  color: var(--mobile-chrome-accent);
+}
+
+.activeDot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mobile-chrome-accent);
+  box-shadow: 0 0 0 4px rgba(216, 189, 124, 0.08);
+}
+
+.drawerLinkActive {
+  border-color: rgba(216, 189, 124, 0.28);
+  color: var(--mobile-chrome-text);
+  background: rgba(216, 189, 124, 0.075);
+}
+
+.drawerLinkActive .drawerIcon {
+  color: var(--mobile-chrome-on-accent);
+  background: var(--mobile-chrome-accent);
+}
+
+.drawerFooter {
+  margin-top: 15px;
+  padding-top: 4px;
+}
+
+.signOutButton {
+  display: grid;
+  width: 100%;
+  min-height: 52px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 7px;
+  border: 1px solid rgba(184, 79, 79, 0.28);
+  border-radius: 16px;
+  color: var(--mobile-chrome-danger-text);
+  background: rgba(132, 45, 45, 0.1);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 740;
+  text-align: left;
+  cursor: pointer;
+}
+
+.signOutButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.signOutIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--mobile-chrome-danger-icon);
+  background: rgba(184, 79, 79, 0.13);
+}
+
+@media (max-width: 360px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    gap: 8px;
+    padding-right: max(9px, env(safe-area-inset-right));
+    padding-left: max(9px, env(safe-area-inset-left));
+  }
+
+  .menuButton,
+  .workspaceBadge {
+    width: 42px;
+    height: 42px;
+  }
+
+  .routeIdentity strong {
+    font-size: 15px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 58px minmax(0, 1fr) minmax(0, 1fr);
+    padding-right: max(5px, env(safe-area-inset-right));
+    padding-left: max(5px, env(safe-area-inset-left));
+  }
+
+  .dockItem {
+    font-size: 8.8px;
+  }
+
+  .addButton {
+    width: 52px;
+    height: 52px;
+  }
+
+  .drawerGroupLinks {
+    gap: 7px;
+  }
+
+  .drawerLink {
+    min-height: 76px;
+    padding-right: 27px;
+    font-size: 11.8px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  :global(html[data-ficonter-native-app="true"]) .header {
+    min-height: calc(54px + env(safe-area-inset-top));
+    padding-bottom: 5px;
+  }
+
+  .menuButton,
+  .workspaceBadge {
+    width: 40px;
+    height: 40px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .bottomDock {
+    min-height: calc(60px + env(safe-area-inset-bottom));
+    padding-top: 3px;
+  }
+
+  .dockItem {
+    min-height: 49px;
+  }
+
+  .addButton {
+    width: 48px;
+    height: 48px;
+    margin-top: -9px;
+  }
+
+  :global(html[data-ficonter-native-app="true"]) .drawer {
+    max-height: 96dvh;
+  }
+
+  .drawerGroupLinks {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .drawerLink {
+    min-height: 70px;
+  }
+}
+
+:global(html[data-ficonter-device="tablet"]) .header {
+  min-height: calc(68px + env(safe-area-inset-top));
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  padding-right: max(22px, env(safe-area-inset-right));
+  padding-left: max(22px, env(safe-area-inset-left));
+}
+
+:global(html[data-ficonter-device="tablet"]) .routeIdentity strong {
+  font-size: 18px;
+}
+
+:global(html[data-ficonter-device="tablet"]) .bottomDock {
+  right: 50%;
+  left: auto;
+  width: min(720px, calc(100vw - 44px));
+  border: 1px solid rgba(216, 189, 124, 0.14);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  transform: translateX(50%) translateZ(0);
+}
+
+:global(html[data-ficonter-device="tablet"]) .drawer {
+  right: 50%;
+  left: auto;
+  width: min(760px, calc(100vw - 34px));
+  border-radius: 30px 30px 0 0;
+  transform: translate3d(50%, 105%, 0);
+}
+
+:global(html[data-ficonter-device="tablet"]) .drawerOpen {
+  transform: translate3d(50%, 0, 0) !important;
+}
+
+:global(html[data-ficonter-device="tablet"]) .drawerGroupLinks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .backdrop,
+  .dockItem,
+  .addButton,
+  .drawerLink,
+  .menuButton,
+  .workspaceBadge {
+    transition: none !important;
+  }
+}
+
+/* Phase 6.1 — account and business-profile controls stay at the top. */
+:global(html[data-ficonter-native-app="true"]) .businessHeader {
+  min-height: calc(116px + env(safe-area-inset-top));
+  align-items: center;
+  row-gap: 7px;
+}
+
+.workspaceBadge {
+  font: inherit;
+  cursor: pointer;
+}
+
+.businessProfileBar {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 42px;
+  grid-column: 1 / -1;
+  grid-template-columns: 30px auto minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 7px;
+  border: 1px solid rgba(216, 189, 124, 0.18);
+  border-radius: 14px;
+  color: var(--mobile-chrome-text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.businessProfileIcon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--mobile-chrome-accent-text);
+  background: rgba(216, 189, 124, 0.09);
+}
+
+.businessProfileLabel {
+  color: var(--mobile-chrome-muted);
+  font-size: 10px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.businessProfileBar select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 24px 0 4px;
+  border: 0;
+  outline: 0;
+  color: var(--mobile-chrome-text);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.businessProfileBar select:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.businessProfileBar select option,
+.drawerBusinessSelector select option {
+  color: #f8f4e9;
+  background: #0b1511;
+}
+
+.businessProfileChevron {
+  color: var(--mobile-chrome-accent);
+  pointer-events: none;
+  transform: rotate(90deg);
+}
+
+.accountPanel {
+  display: grid;
+  min-width: 0;
+  min-height: 62px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 1px 0 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.accountAvatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(216, 189, 124, 0.22);
+  border-radius: 50%;
+  color: var(--mobile-chrome-on-accent);
+  background: linear-gradient(145deg, #ead9a4, #c8ab63);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.accountIdentity {
+  display: block;
+  min-width: 0;
+}
+
+.accountIdentity strong,
+.accountIdentity small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountIdentity strong {
+  color: var(--mobile-chrome-text);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.accountIdentity small {
+  margin-top: 3px;
+  color: var(--mobile-chrome-muted);
+  font-size: 10.5px;
+  font-weight: 580;
+}
+
+.accountSignOut {
+  display: inline-grid;
+  min-height: 40px;
+  grid-template-columns: 18px auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(184, 79, 79, 0.24);
+  border-radius: 12px;
+  color: var(--mobile-chrome-danger-text);
+  background: rgba(132, 45, 45, 0.1);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.accountSignOut:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.accountSignOut:focus-visible,
+.businessProfileBar select:focus-visible,
+.drawerBusinessSelector select:focus-visible {
+  outline: 2px solid var(--mobile-chrome-focus);
+  outline-offset: 2px;
+}
+
+.drawerBusinessSelector {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(216, 189, 124, 0.18);
+  border-radius: 16px;
+  background: rgba(216, 189, 124, 0.055);
+}
+
+.drawerBusinessSelector > span {
+  color: var(--mobile-chrome-muted);
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.drawerBusinessSelector select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  color: var(--mobile-chrome-text);
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 730;
+}
+
+.drawerBusinessSelector small {
+  color: var(--mobile-chrome-muted);
+  font-size: 10px;
+}
+
+.businessProfileError {
+  color: #f1b7b7 !important;
+}
+
+@media (max-width: 360px) {
+  .businessProfileLabel {
+    display: none;
+  }
+
+  .businessProfileBar {
+    grid-template-columns: 30px minmax(0, 1fr) 18px;
+  }
+
+  .accountSignOut span {
+    display: none;
+  }
+
+  .accountSignOut {
+    width: 40px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  :global(html[data-ficonter-native-app="true"]) .businessHeader {
+    min-height: calc(96px + env(safe-area-inset-top));
+    row-gap: 4px;
+  }
+
+  .businessProfileBar {
+    min-height: 36px;
+  }
+}
+
+.workspaceAvatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  object-position: center;
+}

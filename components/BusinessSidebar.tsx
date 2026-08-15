@@ -238,7 +238,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
             </button>
           ) : null}
           <div className={styles.brandCard}><Brand interactive={false} /></div>
-          <span className={styles.workspacePill}><Building2 size={15} />Business<ChevronDown size={14} /></span>
+          <span className={styles.workspacePill}><Building2 size={15} />Business</span>
         </div>
 
         <div className={styles.businessIdentity}>

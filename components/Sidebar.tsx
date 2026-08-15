@@ -282,7 +282,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
             </button>
           ) : null}
           <div className={styles.brandCard}><Brand interactive={false} /></div>
-          <span className={styles.workspacePill}><WalletCards size={15} />Personal<ChevronDown size={14} /></span>
+          <span className={styles.workspacePill}><WalletCards size={15} />Personal</span>
         </div>
         <div className={styles.headerActions}>
           <LanguageSelector />

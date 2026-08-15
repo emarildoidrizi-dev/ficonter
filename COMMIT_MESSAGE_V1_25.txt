@@ -1,0 +1,1 @@
+fix(navigation): remove inactive workspace dropdown chevrons

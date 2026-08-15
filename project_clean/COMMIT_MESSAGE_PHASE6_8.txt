@@ -1,1 +1,0 @@
-feat(mobile): add profile and logout menu to account control

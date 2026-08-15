@@ -1420,13 +1420,16 @@ export function SettingsWorkspace({
 
     if (!isNativePhone) return;
 
-    const sectionFromUrl = searchParams.get("section");
-    const nextSection: SectionId | null =
-      isSectionId(sectionFromUrl ?? undefined) &&
+    const sectionFromUrl = searchParams.get("section") ?? undefined;
+    let nextSection: SectionId | null = null;
+
+    if (
+      isSectionId(sectionFromUrl) &&
       !(isSubscriptionExempt && sectionFromUrl === "subscription") &&
       sectionFromUrl !== "profile"
-        ? sectionFromUrl
-        : null;
+    ) {
+      nextSection = sectionFromUrl;
+    }
 
     if (nextSection) {
       setActive(nextSection);

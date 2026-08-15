@@ -1,0 +1,1 @@
+fix(build): correctly narrow Settings URL section to SectionId

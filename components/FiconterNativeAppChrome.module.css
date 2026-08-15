@@ -1267,3 +1267,140 @@
 :global(html[data-ficonter-native-app="true"]) .header {
   display: none !important;
 }
+
+/* ========================================================================== 
+   MOBILE UNIFIED V1.20 — THEME-AWARE MORE / ACCOUNT SHEETS
+   The More drawer and account sheet are part of the application chrome and
+   must consume the same semantic theme tokens as the active workspace.
+   No fixed emerald/dark palette is allowed to survive a theme change.
+   ========================================================================== */
+
+:global(html[data-ficonter-native-app="true"]) .drawer {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(
+      circle at 50% 0,
+      color-mix(in srgb, var(--gold) 9%, transparent),
+      transparent 30%
+    ),
+    color-mix(in srgb, var(--surface-card) 98%, transparent) !important;
+  box-shadow: 0 -20px 64px color-mix(in srgb, var(--text-primary) 16%, transparent) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .sheetHandle {
+  background: var(--border-strong) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerHeader span,
+:global(html[data-ficonter-native-app="true"]) .accountSheetHeader > div > span {
+  color: var(--gold) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerHeader strong,
+:global(html[data-ficonter-native-app="true"]) .accountSheetHeader > div > strong {
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerHeader small,
+:global(html[data-ficonter-native-app="true"]) .accountSheetHeader > div > small,
+:global(html[data-ficonter-native-app="true"]) .drawerLabel,
+:global(html[data-ficonter-native-app="true"]) .drawerBusinessSelector > span,
+:global(html[data-ficonter-native-app="true"]) .drawerBusinessSelector small,
+:global(html[data-ficonter-native-app="true"]) .accountAction small {
+  color: var(--text-secondary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerHeader button,
+:global(html[data-ficonter-native-app="true"]) .accountSheetClose {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  background: var(--surface-subtle) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .workspaceSwitch,
+:global(html[data-ficonter-native-app="true"]) .drawerBusinessSelector {
+  border-color: color-mix(in srgb, var(--gold) 34%, var(--border-subtle)) !important;
+  color: var(--text-primary) !important;
+  background: color-mix(in srgb, var(--gold) 9%, var(--surface-subtle)) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .workspaceSwitch svg {
+  color: var(--gold) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerBusinessSelector select {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  background: var(--control-bg) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerBusinessSelector select option {
+  color: var(--text-primary) !important;
+  background: var(--surface-raised) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerLink,
+:global(html[data-ficonter-native-app="true"]) .accountPanel,
+:global(html[data-ficonter-native-app="true"]) .accountAction {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  background: var(--surface-raised) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerLink:hover,
+:global(html[data-ficonter-native-app="true"]) .drawerLink:focus-visible,
+:global(html[data-ficonter-native-app="true"]) .accountAction:hover,
+:global(html[data-ficonter-native-app="true"]) .accountAction:focus-visible {
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+  background: var(--surface-hover) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerIcon,
+:global(html[data-ficonter-native-app="true"]) .accountActionIcon {
+  color: var(--gold) !important;
+  background: color-mix(in srgb, var(--gold) 11%, var(--surface-subtle)) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerLinkStatus {
+  color: var(--gold) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .activeDot {
+  background: var(--gold) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 13%, transparent) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerLinkActive {
+  border-color: color-mix(in srgb, var(--gold) 48%, var(--border-subtle)) !important;
+  color: var(--text-primary) !important;
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface-raised)) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .drawerLinkActive .drawerIcon {
+  color: var(--solid-text) !important;
+  background: var(--gold) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountIdentity strong,
+:global(html[data-ficonter-native-app="true"]) .accountAction {
+  color: var(--text-primary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountIdentity small {
+  color: var(--text-secondary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .signOutButton,
+:global(html[data-ficonter-native-app="true"]) .accountSignOut,
+:global(html[data-ficonter-native-app="true"]) .accountActionDanger {
+  border-color: color-mix(in srgb, var(--burgundy) 42%, var(--border-subtle)) !important;
+  color: var(--burgundy) !important;
+  background: var(--danger-soft) !important;
+}
+
+:global(html[data-ficonter-native-app="true"]) .accountActionDanger .accountActionIcon {
+  color: var(--burgundy) !important;
+  background: color-mix(in srgb, var(--burgundy) 12%, var(--danger-soft)) !important;
+}

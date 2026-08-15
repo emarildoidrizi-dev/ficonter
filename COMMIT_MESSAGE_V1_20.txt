@@ -1,0 +1,1 @@
+fix(theme): make More menu inherit the active interface theme

@@ -190,3 +190,17 @@ html[data-theme] :where(
     transition-duration: 0ms;
   }
 }
+
+/* V1.20: More/account sheets are first-class theme surfaces.  This global
+   safeguard loads after historical mobile layers so an old fixed green shell
+   can never override the selected interface palette. */
+html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawer"] {
+  --mobile-chrome-bg: var(--surface-card);
+  --mobile-chrome-surface: var(--surface-raised);
+  --mobile-chrome-text: var(--text-primary);
+  --mobile-chrome-muted: var(--text-secondary);
+  --mobile-chrome-accent: var(--gold);
+  --mobile-chrome-accent-text: var(--gold);
+  --mobile-chrome-on-accent: var(--solid-text);
+  --mobile-chrome-focus: var(--gold);
+}

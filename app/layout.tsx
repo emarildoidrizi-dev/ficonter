@@ -10,6 +10,7 @@ import "./mobile-comfort.css";
 import "./mobile-shell-v2.css";
 import "./mobile-unified-v1.css";
 import "./mobile-page-stack.css";
+import "./theme-governance.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

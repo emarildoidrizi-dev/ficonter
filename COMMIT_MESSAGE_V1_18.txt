@@ -1,0 +1,1 @@
+feat(theme): apply selected appearance across the entire FICONTER interface

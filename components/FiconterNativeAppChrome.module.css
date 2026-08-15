@@ -1167,27 +1167,25 @@
 }
 
 /* ========================================================================== 
-   MOBILE UNIFIED V1.5 — LIGHT CHROME LOCK
-   The approved FICONTER mobile shell keeps the wallpaper/content visually
-   continuous. Header and bottom navigation are permanently light/translucent,
-   independent of the selected content theme. Personal, Business and Admin all
-   use the same chrome rule.
+   MOBILE UNIFIED V1.18 — THEME-AWARE CHROME GOVERNANCE
+   The chrome remains light/translucent in structure, but its actual surfaces,
+   text, icons, borders and active states inherit the selected FICONTER theme.
    ========================================================================== */
 
 :global(html[data-ficonter-native-app="true"]) .header {
-  border-bottom: 1px solid rgba(23, 50, 60, 0.08) !important;
-  background: rgba(251, 250, 246, 0.90) !important;
-  box-shadow: 0 4px 18px rgba(31, 49, 44, 0.06) !important;
-  color: #17323c !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  background: color-mix(in srgb, var(--surface-raised) 90%, transparent) !important;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--text-primary) 7%, transparent) !important;
+  color: var(--text-primary) !important;
   backdrop-filter: blur(20px) saturate(118%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(118%) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .bottomDock {
-  border-top: 1px solid rgba(23, 50, 60, 0.09) !important;
-  background: rgba(251, 250, 246, 0.94) !important;
-  box-shadow: 0 -4px 18px rgba(31, 49, 44, 0.055) !important;
-  color: #17323c !important;
+  border-top: 1px solid var(--border-subtle) !important;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent) !important;
+  box-shadow: 0 -4px 18px color-mix(in srgb, var(--text-primary) 7%, transparent) !important;
+  color: var(--text-primary) !important;
   backdrop-filter: blur(22px) saturate(120%) !important;
   -webkit-backdrop-filter: blur(22px) saturate(120%) !important;
 }
@@ -1196,48 +1194,48 @@
 :global(html[data-ficonter-native-app="true"]) .backButton,
 :global(html[data-ficonter-native-app="true"]) .workspaceBadge,
 :global(html[data-ficonter-native-app="true"]) .businessProfileBar {
-  border-color: rgba(182, 151, 83, 0.24) !important;
-  background: rgba(255, 253, 247, 0.82) !important;
-  box-shadow: 0 3px 12px rgba(31, 49, 44, 0.045) !important;
+  border-color: var(--border-subtle) !important;
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent) !important;
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--text-primary) 6%, transparent) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .routeEyebrow,
 :global(html[data-ficonter-native-app="true"]) .businessProfileLabel {
-  color: #667771 !important;
+  color: var(--text-secondary) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .routeIdentity strong,
 :global(html[data-ficonter-native-app="true"]) .backButton,
 :global(html[data-ficonter-native-app="true"]) .businessProfileBar,
 :global(html[data-ficonter-native-app="true"]) .businessProfileBar select {
-  color: #17323c !important;
+  color: var(--text-primary) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .dockItem {
-  color: #697772 !important;
+  color: var(--text-secondary) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .dockActive {
-  color: #17323c !important;
+  color: var(--text-primary) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .dockActive svg {
-  color: #b69753 !important;
+  color: var(--gold) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .dockActive::after {
-  background: #b69753 !important;
-  box-shadow: 0 0 0 4px rgba(182, 151, 83, 0.10) !important;
+  background: var(--gold) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 12%, transparent) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .addButton {
-  border-color: #fbfaf6 !important;
-  color: #17312d !important;
-  background: linear-gradient(145deg, #f0dda6, #c8a95d) !important;
+  border-color: var(--surface-raised) !important;
+  color: var(--solid-text) !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--gold) 68%, white), var(--gold)) !important;
   box-shadow:
-    0 8px 22px rgba(31, 49, 44, 0.14),
-    0 3px 12px rgba(182, 151, 83, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+    0 8px 22px color-mix(in srgb, var(--text-primary) 14%, transparent),
+    0 3px 12px color-mix(in srgb, var(--gold) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 55%, transparent) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .backButton {
@@ -1245,18 +1243,18 @@
   opacity: 1 !important;
 }
 
-:global(html[data-ficonter-native-app="true"]) .businessProfileIcon {
-  color: #9a7b38 !important;
-  background: rgba(198, 164, 95, 0.11) !important;
+:global(html[data-ficonter-native-app="true"]) .businessProfileIcon,
+:global(html[data-ficonter-native-app="true"]) .businessProfileChevron {
+  color: var(--gold) !important;
 }
 
-:global(html[data-ficonter-native-app="true"]) .businessProfileChevron {
-  color: #9a7b38 !important;
+:global(html[data-ficonter-native-app="true"]) .businessProfileIcon {
+  background: color-mix(in srgb, var(--gold) 12%, transparent) !important;
 }
 
 :global(html[data-ficonter-native-app="true"]) .businessProfileBar select option {
-  color: #17323c !important;
-  background: #fbfaf6 !important;
+  color: var(--text-primary) !important;
+  background: var(--surface-raised) !important;
 }
 
 /* ========================================================================== 

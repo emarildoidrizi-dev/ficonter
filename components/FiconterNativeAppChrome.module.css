@@ -1258,3 +1258,14 @@
   color: #17323c !important;
   background: #fbfaf6 !important;
 }
+
+/* ========================================================================== 
+   MOBILE UNIFIED V1.6 — REMOVE DUPLICATE ROUTE HEADER PERMANENTLY
+   The Sidebar / BusinessSidebar light utility header is the single mobile
+   header authority. FiconterNativeAppChrome remains responsible for the
+   bottom dock / More drawer only; its legacy route header must never render
+   on phone/tablet layouts.
+   ========================================================================== */
+:global(html[data-ficonter-native-app="true"]) .header {
+  display: none !important;
+}

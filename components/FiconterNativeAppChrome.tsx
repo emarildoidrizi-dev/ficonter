@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   BarChart3,
@@ -497,6 +497,7 @@ export function FiconterNativeAppChrome({
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -567,13 +568,11 @@ export function FiconterNativeAppChrome({
 
   const addHref =
     workspace === "business"
-      ? "/business/transactions"
-      : "/dashboard/transactions";
+      ? "/business/transactions?add=1"
+      : "/dashboard/transactions?add=1";
 
-  const isTransactionRoute =
-    workspace === "business"
-      ? pathname === "/business/transactions"
-      : pathname === "/dashboard/transactions";
+  const currentSearch = searchParams.toString();
+  const currentHref = currentSearch ? `${pathname}?${currentSearch}` : pathname;
 
   const switchHref =
     workspace === "business"
@@ -1016,25 +1015,12 @@ export function FiconterNativeAppChrome({
         <button
           type="button"
           className={styles.addButton}
-          aria-label={
-            workspace === "business"
-              ? "Add business transaction"
-              : "Quick add transaction"
-          }
+          aria-label="Add transaction"
+          title="Add transaction"
           onClick={() => {
-            if (workspace === "business") {
-              if (pathname !== addHref) router.push(addHref, { scroll: false });
-              return;
-            }
-
-            if (isTransactionRoute) {
-              window.dispatchEvent(
-                new CustomEvent("ficonter:quick-add-transaction"),
-              );
-              return;
-            }
-
-            router.push(`${addHref}#quick-add`);
+            if (currentHref === addHref) return;
+            router.prefetch(addHref);
+            router.push(addHref, { scroll: false });
           }}
         >
           <CirclePlus size={27} aria-hidden={true} />

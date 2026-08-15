@@ -75,6 +75,7 @@ export function BusinessTransactionLedger({
   initialCategories,
   initialCostCentres,
   initialSuppliers,
+  initialAdd = false,
 }: {
   userId: string;
   business: Business;
@@ -82,6 +83,7 @@ export function BusinessTransactionLedger({
   initialCategories: BusinessCostCategory[];
   initialCostCentres: BusinessCostCentre[];
   initialSuppliers: BusinessSupplier[];
+  initialAdd?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -98,7 +100,7 @@ export function BusinessTransactionLedger({
     cost_nature: firstCategory?.default_nature ?? "variable",
   }));
   const [editing, setEditing] = useState<BusinessTransaction | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(initialAdd);
   const [deleting, setDeleting] = useState<BusinessTransaction | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -107,6 +109,16 @@ export function BusinessTransactionLedger({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const amountInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!initialAdd) return;
+    setShowForm(true);
+    const frame = window.requestAnimationFrame(() => {
+      amountInputRef.current?.focus({ preventScroll: true });
+      amountInputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialAdd]);
 
   useEffect(() => {
     if (!notice) return;

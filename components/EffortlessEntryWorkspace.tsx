@@ -28,12 +28,12 @@ import {
 import { formatCurrency } from "@/lib/financialOptions";
 import { TransactionForm } from "./TransactionForm";
 import styles from "./EffortlessEntryWorkspace.module.css";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   initialTransactions: TransactionForPreset[];
   initialType?: "expense" | "income" | "saving";
   allowMultiCurrency?: boolean;
+  directAdd?: boolean;
 };
 
 type PostingRow = {
@@ -51,11 +51,12 @@ export function EffortlessEntryWorkspace({
   initialTransactions,
   initialType = "expense",
   allowMultiCurrency = true,
+  directAdd = false,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const quickAddRequestedRef = useRef(false);
+  const quickAddRequestedRef = useRef(directAdd);
   const formSectionRef = useRef<HTMLElement | null>(null);
-  const [mode, setMode] = useState<EntryMode>("guided");
+  const [mode, setMode] = useState<EntryMode>(directAdd ? "simple" : "guided");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
   const [postedTemplateIds, setPostedTemplateIds] = useState<Set<string>>(
@@ -89,6 +90,24 @@ export function EffortlessEntryWorkspace({
       amountInput?.select();
     }, 160);
   }, []);
+
+  useEffect(() => {
+    if (!directAdd) return;
+
+    quickAddRequestedRef.current = true;
+    setActivePreset(null);
+    setMode("simple");
+
+    const frame = window.requestAnimationFrame(() => {
+      const amountInput = document.getElementById(
+        "simple-amount",
+      ) as HTMLInputElement | null;
+      amountInput?.focus({ preventScroll: true });
+      amountInput?.select();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [directAdd]);
 
   useEffect(() => {
     let mounted = true;

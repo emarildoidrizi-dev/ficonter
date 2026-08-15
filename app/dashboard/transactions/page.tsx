@@ -10,6 +10,7 @@ export const revalidate = 0;
 type TransactionsPageProps = {
   searchParams?: Promise<{
     setup?: string | string[];
+    add?: string | string[];
   }>;
 };
 
@@ -25,6 +26,8 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
 
   const query = await searchParams;
   const setupValue = Array.isArray(query?.setup) ? query.setup[0] : query?.setup;
+  const addValue = Array.isArray(query?.add) ? query.add[0] : query?.add;
+  const directAdd = addValue === "1";
   const initialType = setupTransactionType(setupValue);
 
   const [allowMultiCurrency, allowPdfExport] = await Promise.all([
@@ -47,13 +50,14 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
         </div>
       </header>
       <MobileTransactionsLayout
-        initialView={setupValue ? "add" : "ledger"}
+        initialView={directAdd || setupValue ? "add" : "ledger"}
         entry={
           <div className="panel transaction-entry-panel transaction-effortless-panel">
             <EffortlessEntryWorkspace
               initialTransactions={data ?? []}
               initialType={initialType}
               allowMultiCurrency={allowMultiCurrency}
+              directAdd={directAdd}
             />
           </div>
         }

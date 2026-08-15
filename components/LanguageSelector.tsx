@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Globe2, LoaderCircle } from "lucide-react";
+import { Check, ChevronDown, Globe2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
@@ -19,8 +19,8 @@ export function LanguageSelector({
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
+  const latestSelectionRef = useRef(0);
   const current = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0];
 
   useEffect(() => {
@@ -40,25 +40,35 @@ export function LanguageSelector({
     };
   }, []);
 
-  async function selectLanguage(nextLanguage: FiconterLanguage) {
-    if (saving || nextLanguage === language) {
-      setOpen(false);
-      return;
-    }
-
-    setSaving(true);
-    setMessage(null);
+  function selectLanguage(nextLanguage: FiconterLanguage) {
     setOpen(false);
 
-    try {
-      await changeLanguage(nextLanguage, true);
-      setMessage({ type: "success", text: translateMessage(nextLanguage, "languageSaved") });
-      window.setTimeout(() => setMessage(null), 2600);
-    } catch {
-      setMessage({ type: "error", text: translateMessage(nextLanguage, "languageSaveFailed") });
-    } finally {
-      setSaving(false);
-    }
+    if (nextLanguage === language) return;
+
+    const selectionId = latestSelectionRef.current + 1;
+    latestSelectionRef.current = selectionId;
+    setMessage(null);
+
+    // changeLanguage updates the interface immediately. Account persistence
+    // continues in the background so the control never waits on the network.
+    void changeLanguage(nextLanguage, true)
+      .then(() => {
+        if (latestSelectionRef.current !== selectionId) return;
+        setMessage({
+          type: "success",
+          text: translateMessage(nextLanguage, "languageSaved"),
+        });
+        window.setTimeout(() => {
+          if (latestSelectionRef.current === selectionId) setMessage(null);
+        }, 1800);
+      })
+      .catch(() => {
+        if (latestSelectionRef.current !== selectionId) return;
+        setMessage({
+          type: "error",
+          text: translateMessage(nextLanguage, "languageSaveFailed"),
+        });
+      });
   }
 
   return (
@@ -84,9 +94,8 @@ export function LanguageSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        disabled={saving}
       >
-        {saving ? <LoaderCircle size={16} className={styles.spinner} /> : <Globe2 size={16} />}
+        <Globe2 size={16} />
         <span>{current.nativeName}</span>
         <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
       </button>

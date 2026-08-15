@@ -258,11 +258,19 @@ export function LanguageProvider({
   const translatorRef = useRef<
     ReturnType<typeof createDocumentTranslator> | null
   >(null);
+  const accountPersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     languageRef.current = language;
     persistBrowserLanguage(language);
-    translatorRef.current?.refresh();
+
+    // Let the selected control paint first, then translate the document on the
+    // next frame. This removes the feeling that the language button is waiting.
+    const frame = window.requestAnimationFrame(() => {
+      translatorRef.current?.refresh();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [language]);
 
   useEffect(() => {
@@ -318,31 +326,42 @@ export function LanguageProvider({
 
       if (!persistAccount) return;
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const persistAccountLanguage = async () => {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) return;
+        if (userError || !user) return;
 
-      const metadata = user.user_metadata ?? {};
-      const existingPreferences =
-        metadata.ficonter_preferences &&
-        typeof metadata.ficonter_preferences === "object"
-          ? (metadata.ficonter_preferences as Record<string, unknown>)
-          : {};
+        const metadata = user.user_metadata ?? {};
+        const existingPreferences =
+          metadata.ficonter_preferences &&
+          typeof metadata.ficonter_preferences === "object"
+            ? (metadata.ficonter_preferences as Record<string, unknown>)
+            : {};
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          ...metadata,
-          ficonter_preferences: {
-            ...existingPreferences,
-            language: normalized,
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            ...metadata,
+            ficonter_preferences: {
+              ...existingPreferences,
+              language: normalized,
+            },
           },
-        },
-      });
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      };
+
+      // Save account choices in tap order without blocking the immediate UI
+      // update. Rapid language changes therefore still persist the final choice.
+      const persistenceTask = accountPersistenceQueueRef.current
+        .catch(() => undefined)
+        .then(persistAccountLanguage);
+
+      accountPersistenceQueueRef.current = persistenceTask.catch(() => undefined);
+      await persistenceTask;
     },
     [supabase],
   );

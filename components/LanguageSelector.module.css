@@ -17,7 +17,8 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  touch-action: manipulation;
+  transition: border-color 90ms ease, color 90ms ease, background 90ms ease;
 }
 .trigger:hover,
 .trigger[aria-expanded="true"] {
@@ -42,7 +43,7 @@
   border-radius: 14px;
   background: var(--surface-card);
   box-shadow: 0 20px 60px rgba(16, 24, 40, 0.18);
-  backdrop-filter: blur(18px);
+  contain: layout paint style;
 }
 .menu button {
   display: flex;
@@ -58,6 +59,7 @@
   color: var(--text-primary);
   text-align: start;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .menu button:hover,
 .menu button[aria-selected="true"] {
@@ -139,12 +141,10 @@
 }
 .success { color: var(--success-text, #16724a); }
 .error { color: var(--danger-text, #b42318); }
-.spinner { animation: spin 900ms linear infinite; }
 .public .trigger {
   background: color-mix(in srgb, var(--surface-card) 92%, transparent);
   backdrop-filter: blur(14px);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 640px) {
   .compact .trigger span { display: none; }
   .compact .trigger { width: 38px; padding: 0; }

@@ -29,6 +29,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -74,6 +75,7 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   email?: string;
+  avatarPath?: string;
   businessName?: string;
   businessProfiles?: BusinessProfileOption[];
   activeBusinessId?: string | null;
@@ -88,22 +90,22 @@ type DeviceClass = "phone" | "tablet" | "desktop";
 
 const personalRoutes: RouteItem[] = [
   {
-    href: "/dashboard",
-    label: "Home",
+    href: "/dashboard/overview",
+    label: "Overview",
     title: "Overview",
     icon: House,
     exact: true,
   },
   {
     href: "/dashboard/transactions",
-    label: "Activity",
+    label: "Transactions",
     title: "Transactions",
     icon: ReceiptText,
   },
   {
     href: "/dashboard/budget",
-    label: "Plan",
-    title: "Monthly plan",
+    label: "Planner",
+    title: "Monthly planner",
     icon: CalendarRange,
   },
   {
@@ -185,6 +187,12 @@ const personalRoutes: RouteItem[] = [
     icon: MessageSquareText,
   },
   {
+    href: "/dashboard/profile",
+    label: "Profile",
+    title: "Profile",
+    icon: UserRound,
+  },
+  {
     href: "/dashboard/settings",
     label: "Settings",
     title: "Settings",
@@ -195,7 +203,7 @@ const personalRoutes: RouteItem[] = [
 const businessRoutes: RouteItem[] = [
   {
     href: "/business/overview",
-    label: "Home",
+    label: "Overview",
     title: "Business overview",
     icon: House,
     exact: true,
@@ -208,7 +216,7 @@ const businessRoutes: RouteItem[] = [
   },
   {
     href: "/business/transactions",
-    label: "Activity",
+    label: "Transactions",
     title: "Business activity",
     icon: ReceiptText,
   },
@@ -289,6 +297,7 @@ const personalRouteGroups: RouteGroup[] = [
       personalRoutes[14],
       personalRoutes[15],
       personalRoutes[16],
+      personalRoutes[17],
     ],
   },
 ];
@@ -426,7 +435,7 @@ function activeRoute(
       );
     }
 
-    return pathname === "/dashboard";
+    return pathname === "/dashboard" || pathname === "/dashboard/overview";
   }
 
   return (
@@ -453,6 +462,7 @@ export function FiconterNativeAppChrome({
   workspace,
   displayName,
   email = "",
+  avatarPath = "",
   businessName = "",
   businessProfiles = [],
   activeBusinessId = null,
@@ -468,6 +478,7 @@ export function FiconterNativeAppChrome({
   const [selectedBusinessId, setSelectedBusinessId] = useState(
     activeBusinessId ?? "",
   );
+  const [avatarUrl, setAvatarUrl] = useState("");
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -606,6 +617,28 @@ export function FiconterNativeAppChrome({
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
   }, [activeBusinessId]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAvatar() {
+      if (!avatarPath) {
+        if (active) setAvatarUrl("");
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(avatarPath, 60 * 60);
+
+      if (active) setAvatarUrl(error ? "" : data.signedUrl);
+    }
+
+    void loadAvatar();
+    return () => {
+      active = false;
+    };
+  }, [avatarPath, supabase]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -770,7 +803,16 @@ export function FiconterNativeAppChrome({
           aria-expanded={drawerOpen}
           onClick={openDrawer}
         >
-          <span>{accountInitial}</span>
+          {avatarUrl ? (
+            <img
+              className={styles.workspaceAvatarImage}
+              src={avatarUrl}
+              alt=""
+              aria-hidden="true"
+            />
+          ) : (
+            <span>{accountInitial}</span>
+          )}
         </button>
 
         {workspace === "business" && businessProfiles.length ? (

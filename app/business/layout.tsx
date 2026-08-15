@@ -124,6 +124,7 @@ export default async function BusinessLayout({
             "",
         )}
         email={user.email ?? ""}
+        avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         businessName={business?.name ?? "Business workspace"}
         activeBusinessId={business?.id ?? null}
         businessProfiles={businesses

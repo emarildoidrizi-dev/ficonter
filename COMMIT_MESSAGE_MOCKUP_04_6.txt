@@ -1,0 +1,1 @@
+feat(mobile): remove duplicate settings card and optimize profile/home controls

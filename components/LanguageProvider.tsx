@@ -17,7 +17,6 @@ import {
   LANGUAGE_COOKIE_NAME,
   LANGUAGE_STORAGE_KEY,
   getLanguageOption,
-  isFiconterLanguage,
   normalizeLanguage,
   type FiconterLanguage,
 } from "@/lib/i18n/config";
@@ -262,7 +261,14 @@ export function LanguageProvider({
   useEffect(() => {
     languageRef.current = language;
     persistBrowserLanguage(language);
-    translatorRef.current?.refresh();
+
+    // Let the selected control paint first, then translate the document on the
+    // next frame. This removes the feeling that the language button is waiting.
+    const frame = window.requestAnimationFrame(() => {
+      translatorRef.current?.refresh();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [language]);
 
   useEffect(() => {
@@ -273,26 +279,9 @@ export function LanguageProvider({
     translatorRef.current = translator;
     translator.start();
 
-    try {
-      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      const cookieMatch = document.cookie.match(
-        new RegExp(`(?:^|; )${LANGUAGE_COOKIE_NAME}=([^;]*)`),
-      );
-
-      const browserPreference = isFiconterLanguage(stored)
-        ? stored
-        : normalizeLanguage(
-            cookieMatch
-              ? decodeURIComponent(cookieMatch[1])
-              : undefined,
-          );
-
-      if (browserPreference !== languageRef.current) {
-        setLanguage(browserPreference);
-      }
-    } catch {
-      // The default language remains active when browser storage is unavailable.
-    }
+    // initialLanguage is the committed source of truth. Browser storage is
+    // updated only after an explicit Save action and is never allowed to
+    // override the committed server/cookie value on mount.
 
     return () => {
       translator.stop();
@@ -307,42 +296,53 @@ export function LanguageProvider({
     ) => {
       const normalized = normalizeLanguage(nextLanguage);
 
-      setLanguage(normalized);
-      persistBrowserLanguage(normalized);
+      const applyCommittedLanguage = () => {
+        setLanguage(normalized);
+        persistBrowserLanguage(normalized);
+        window.dispatchEvent(
+          new CustomEvent(LANGUAGE_CHANGED_EVENT, {
+            detail: { language: normalized },
+          }),
+        );
+      };
 
-      window.dispatchEvent(
-        new CustomEvent(LANGUAGE_CHANGED_EVENT, {
-          detail: { language: normalized },
-        }),
-      );
-
-      if (!persistAccount) return;
+      if (!persistAccount) {
+        applyCommittedLanguage();
+        return;
+      }
 
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) return;
+      if (userError) throw userError;
 
-      const metadata = user.user_metadata ?? {};
-      const existingPreferences =
-        metadata.ficonter_preferences &&
-        typeof metadata.ficonter_preferences === "object"
-          ? (metadata.ficonter_preferences as Record<string, unknown>)
-          : {};
+      if (user) {
+        const metadata = user.user_metadata ?? {};
+        const existingPreferences =
+          metadata.ficonter_preferences &&
+          typeof metadata.ficonter_preferences === "object"
+            ? (metadata.ficonter_preferences as Record<string, unknown>)
+            : {};
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          ...metadata,
-          ficonter_preferences: {
-            ...existingPreferences,
-            language: normalized,
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            ...metadata,
+            ficonter_preferences: {
+              ...existingPreferences,
+              language: normalized,
+            },
           },
-        },
-      });
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
+
+      // The interface changes only after the explicit Save action has
+      // successfully committed the preference (or there is no signed-in
+      // account to persist).
+      applyCommittedLanguage();
     },
     [supabase],
   );

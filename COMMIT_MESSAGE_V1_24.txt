@@ -1,0 +1,1 @@
+feat(appearance): strengthen layout density across the platform

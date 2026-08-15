@@ -40,7 +40,7 @@ check("Server dashboard auth is request-cached", currentUser.includes("cache(asy
 check("Admin role lookup is request-cached", adminAccess.includes("requireAdmin = cache(async () =>"));
 
 const dashboardPages = [
-  "app/dashboard/page.tsx",
+  "app/dashboard/overview/page.tsx",
   "app/dashboard/transactions/page.tsx",
   "app/dashboard/bills/page.tsx",
   "app/dashboard/budget/page.tsx",

@@ -7,9 +7,9 @@ const checks = [];
 const expect = (condition, message) => checks.push({ condition, message });
 
 const engine = read("lib/wealth/financialHealth.ts");
-const score = read("components/FinancialHealthScore.tsx");
+const score = read("components/CoastalOverview.tsx");
 const overview = read("components/DashboardLiveOverview.tsx");
-const page = read("app/dashboard/page.tsx");
+const page = read("app/dashboard/overview/page.tsx");
 const sql = read("supabase/phase2_financial_health_engine.sql");
 
 expect(engine.includes("calculateFinancialHealth"), "Shared financial health engine exists");
@@ -24,11 +24,11 @@ expect(engine.includes('id: "planning"'), "Planning factor exists");
 expect(engine.includes("hasCashFlowBaseline"), "Income-only profiles do not activate cash-flow scoring");
 expect(engine.includes('"Setup incomplete"'), "Incomplete profiles use a neutral setup state");
 expect(engine.includes("current.assessed"), "Unrecorded scoring factors are excluded rather than treated as zero");
-expect(score.includes('result.scoreAvailable ? result.score : "—"'), "UI hides an unsupported numeric score");
-expect(!score.includes("function calculateHealth"), "Score component does not duplicate calculation logic");
-expect(score.includes("result: FinancialHealthResult"), "Score component consumes the shared result");
-expect(overview.includes("calculateFinancialHealth(healthInputs)"), "Overview calculates the shared result once");
-expect(overview.includes("metrics.totalIncome"), "Overview KPIs reuse shared metrics");
+expect(score.includes('financialHealth.scoreAvailable ? score : "—"'), "UI hides an unsupported numeric score");
+expect(!score.includes("calculateFinancialHealth("), "Overview presentation does not duplicate Financial Health calculation logic");
+expect(score.includes("financialHealth: FinancialHealthResult"), "Overview presentation consumes the shared Financial Health result");
+expect(overview.includes("calculateFinancialHealth(financialHealthInputs)"), "Overview calculates the shared result once from reconciled inputs");
+expect(overview.includes("financialHealth={financialHealth}"), "Overview passes the shared Financial Health result into the unified UI");
 expect(overview.includes('table: "bills"'), "Health refresh listens to Bills realtime");
 expect(overview.includes('table: "debts"'), "Health refresh listens to Debt realtime");
 expect(overview.includes('table: "goals"'), "Health refresh listens to Goals realtime");

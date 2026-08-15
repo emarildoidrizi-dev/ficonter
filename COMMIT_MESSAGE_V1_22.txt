@@ -1,0 +1,1 @@
+feat(governance): restrict wallpaper controls to Owner and Super Admin

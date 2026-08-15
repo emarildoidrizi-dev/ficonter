@@ -52,6 +52,7 @@ export default async function SettingsPage({
 
   const { admin } = await requireAdmin();
   const isSubscriptionExempt = Boolean(admin);
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const query = await searchParams;
   const section = Array.isArray(query?.section)
@@ -63,9 +64,21 @@ export default async function SettingsPage({
   const requiredFeature = isSubscriptionFeatureKey(requiredValue)
     ? requiredValue
     : null;
+  const hasExplicitSettingsSection = [
+    "security",
+    "financial",
+    "notifications",
+    "appearance",
+    "privacy",
+    "subscription",
+  ].includes(section ?? "");
+
+  if (section === "profile") {
+    redirect("/dashboard/profile");
+  }
 
   if (isSubscriptionExempt && section === "subscription") {
-    redirect("/dashboard/settings?section=profile");
+    redirect("/dashboard/settings?section=security");
   }
 
   const [
@@ -122,38 +135,29 @@ export default async function SettingsPage({
 
   return (
     <section
-      className={
-        isSubscriptionExempt
-          ? "ficonter-subscription-exempt-settings"
-          : undefined
-      }
+      className={`ficonter-settings-page${
+        isSubscriptionExempt ? " ficonter-subscription-exempt-settings" : ""
+      }`}
+      data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
-      {isSubscriptionExempt ? (
-        <style>{`
-          .ficonter-subscription-exempt-settings
-            aside[aria-label="Settings sections"]
-            > div:nth-child(2)
-            > button:nth-child(7) {
-              display: none !important;
-            }
-        `}</style>
-      ) : null}
-
-      <div className="page-heading">
+      <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage your profile, account security and Ficonter preferences from
-            one private workspace.
+            Manage account security and Ficonter preferences from one private
+            workspace.
           </p>
         </div>
       </div>
 
       {!isSubscriptionExempt ? (
-        <CustomerSubscriptionManager subscription={verifiedSubscriptionSnapshot} />
+        <div className="ficonter-settings-subscription-summary">
+          <CustomerSubscriptionManager subscription={verifiedSubscriptionSnapshot} />
+        </div>
       ) : null}
 
+      <div className="ficonter-settings-workspace-shell">
       <SettingsWorkspace
         userId={user.id}
         email={user.email ?? ""}
@@ -163,7 +167,9 @@ export default async function SettingsPage({
         subscription={isSubscriptionExempt ? null : displaySubscription}
         requiredFeature={requiredFeature}
         isSubscriptionExempt={isSubscriptionExempt}
+        canManageWallpapers={canManageWallpapers}
       />
+      </div>
     </section>
   );
 }

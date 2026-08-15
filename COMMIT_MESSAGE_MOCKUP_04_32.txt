@@ -1,0 +1,1 @@
+fix(mobile): make profile photo fully fill avatar circle

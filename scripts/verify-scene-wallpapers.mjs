@@ -83,15 +83,15 @@ for (const source of [layout, businessLayout]) {
   if (!source.includes("<TimeAwareWallpaperBootstrap")) {
     throw new Error("A workspace is missing TimeAwareWallpaperBootstrap");
   }
-  if (!source.includes('subscriptionPlanCode === "personal_pro"') ||
-      !source.includes('subscriptionPlanCode === "business_pro"')) {
-    throw new Error("A workspace is missing the strict paid-plan wallpaper check");
+  if (!source.includes('admin?.role === "super_admin"') ||
+      !source.includes('enabled={canManageWallpapers}')) {
+    throw new Error("A workspace is missing the Owner / Super Admin wallpaper role gate");
   }
 }
 
 if (!subscriptionPlans.includes("time_based_wallpapers") ||
-    !subscriptionPlans.includes('minimumPlan: "personal_pro"')) {
-  throw new Error("Time-based wallpapers are not assigned to a paid plan");
+    !subscriptionPlans.match(/time_based_wallpapers:[\s\S]*?minimumPlan: "later"[\s\S]*?lifecycle: "planned"/)) {
+  throw new Error("Time-based wallpapers are still assigned to a customer subscription plan");
 }
 
 for (const token of [
@@ -106,9 +106,9 @@ for (const token of [
 
 if (!settings.includes("Smart time-of-day wallpaper") ||
     settings.includes("<legend>Wallpaper motion</legend>") ||
-    !settings.includes('settingsPlanCode === "personal_pro"') ||
-    !settings.includes('settingsPlanCode === "business_pro"')) {
-  throw new Error("Appearance settings do not present one authoritative schedule");
+    !settings.includes("canManageWallpapers") ||
+    !settings.includes("Owner / Super Admin only")) {
+  throw new Error("Appearance settings do not enforce Owner / Super Admin wallpaper governance");
 }
 
 if (!css.includes("prefers-reduced-motion")) {
@@ -119,4 +119,4 @@ if (css.includes("coastal-island.svg")) {
   throw new Error("The cartoon coastal wallpaper is still active");
 }
 
-console.log("FICONTER photographic wallpaper verification passed (3 legacy real scenes + 3 paid dayparts + fixed Free fallback).");
+console.log("FICONTER photographic wallpaper verification passed (3 legacy real scenes + 3 protected dayparts + fixed customer fallback).");

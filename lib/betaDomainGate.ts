@@ -46,7 +46,7 @@ async function hasValidBetaLoginSession(userId: string) {
   if (!token || token.length > 256) return false;
 
   try {
-    const service = createServiceClient() as any;
+    const service = createServiceClient();
     const { data, error } = await service
       .from("beta_login_sessions")
       .select("user_id,expires_at")

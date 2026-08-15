@@ -1,0 +1,1 @@
+fix(mobile): remove iOS pull-down green overscroll strip

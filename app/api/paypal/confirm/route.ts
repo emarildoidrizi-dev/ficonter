@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { isSameOriginRequest, noStoreJson } from "@/lib/security/request";
 export const runtime = "nodejs";
 
 type PaidPlan = "personal_pro" | "business_pro";
@@ -129,7 +130,14 @@ async function getPayPalSubscription(subscriptionId: string) {
   return (await response.json()) as PayPalSubscription;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return noStoreJson(
+      { error: "This request could not be verified." },
+      { status: 403 },
+    );
+  }
+
   try {
     const supabase = await createClient();
 
@@ -138,7 +146,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Authentication required." },
         { status: 401 },
       );
@@ -154,7 +162,7 @@ export async function POST(request: Request) {
         : "";
 
     if (!/^I-[A-Za-z0-9]+$/.test(subscriptionId)) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid PayPal subscription ID." },
         { status: 400 },
       );
@@ -167,7 +175,7 @@ export async function POST(request: Request) {
       subscription.id !== subscriptionId ||
       subscription.status !== "ACTIVE"
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "The PayPal subscription is not active." },
         { status: 400 },
       );
@@ -178,7 +186,7 @@ export async function POST(request: Request) {
     );
 
     if (!configuredPlan) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "This PayPal plan does not belong to FICONTER." },
         { status: 400 },
       );
@@ -203,7 +211,7 @@ export async function POST(request: Request) {
       existingClaim &&
       existingClaim.user_id !== user.id
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "This PayPal subscription is already linked to another account.",
@@ -240,7 +248,7 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       planCode: configuredPlan.planCode,
       billingInterval: configuredPlan.billingInterval,
@@ -252,7 +260,7 @@ export async function POST(request: Request) {
       error,
     );
 
-    return NextResponse.json(
+    return noStoreJson(
       { error: "Unable to confirm the PayPal subscription." },
       { status: 500 },
     );

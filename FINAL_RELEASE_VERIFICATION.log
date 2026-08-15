@@ -1,0 +1,869 @@
+
+===== scripts/verify-bill-paid-unpaid-sync.mjs =====
+PASS  BillsManager prefers the atomic mark_bill_unpaid RPC
+PASS  Missing RPC/schema-cache errors are detected
+PASS  RLS-protected fallback reopens only a paid customer-owned Bill
+PASS  Fallback removes the linked generated transaction
+PASS  Fallback compensates if linked transaction deletion fails
+PASS  All FICONTER financial modules receive a live refresh signal
+PASS  Paid Bill cards expose Mark unpaid
+PASS  The reversal action has a clear icon
+PASS  The unpaid action has a distinct visual treatment
+PASS  The atomic RPC returns the Bill to pending state
+PASS  The paid timestamp is cleared
+PASS  The generated transaction link is cleared
+PASS  The linked generated transaction is removed
+PASS  The RPC is scoped to the authenticated customer
+PASS  PostgREST schema cache is refreshed after SQL deployment
+
+Bill paid/unpaid synchronization verification passed.
+
+===== scripts/verify-contact-support.mjs =====
+Contact support verification passed (18 checks).
+
+===== scripts/verify-credit-card-management.mjs =====
+PASS  Credit Cards page loads card activity.
+PASS  Credit Cards page reads existing credit-card debt rows.
+PASS  Confirmed card payments use an atomic RPC.
+PASS  Card balance activity uses an atomic RPC.
+PASS  Monthly statements reconcile the shared balance.
+PASS  Credit-card changes notify every financial module.
+PASS  New cards use the existing Debt source of truth.
+PASS  No duplicate credit-card account table is created.
+PASS  Desktop sidebar includes Credit Cards.
+PASS  Financial progress order includes Net Worth.
+PASS  Installed app drawer includes Credit Cards.
+PASS  Credit Cards route is prefetched.
+PASS  Generic debt automation excludes credit cards.
+PASS  Debt page links to dedicated Credit Cards management.
+PASS  Debt creation no longer offers Credit card as a duplicate category.
+PASS  Migration extends the existing debt row with card details.
+PASS  Migration creates non-cash card activity history.
+PASS  Payments use the existing transaction engine.
+PASS  Credit cards require confirmed payments rather than assumed automatic payments.
+PASS  Statement reconciliation preserves later card activity.
+PASS  Statement reconciliation preserves later confirmed payments.
+PASS  Confirmed statements cannot be silently moved backwards.
+PASS  Statement reconciliations cannot be reversed into inconsistent card data.
+PASS  Confirmed statement reconciliations are locked in the interface.
+PASS  Account export includes credit-card activity.
+PASS  JSON/PDF account archive loads credit-card activity.
+PASS  Minimum payment is calculated automatically at 3%.
+PASS  Credit-card cards use the clear Minimum payment due label.
+PASS  The confusing Minimum remaining label has been removed.
+PASS  Statement saving derives minimum payment from statement balance.
+PASS  The statement form displays a protected automatic 3% amount.
+PASS  Supabase enforces the 3% minimum-payment rule.
+PASS  The 3% database trigger is included.
+PASS  Credit Cards page loads permanent monthly statement records.
+PASS  Credit Cards includes a Monthly Planner-style month selector.
+PASS  Selected-month payment, remaining balance and interest metrics are visible.
+PASS  Payments and card activity are filtered into their original month.
+PASS  Minimum-payment status is limited to the correct statement cycle.
+PASS  Supabase stores one permanent record per card and month.
+PASS  Monthly statement records cannot be duplicated.
+PASS  Confirmed statements automatically create or update monthly history.
+PASS  Account export includes credit-card monthly history.
+PASS  Older statement months can be backfilled without changing the live balance.
+PASS  Supabase provides an owner-scoped historical statement RPC.
+PASS  Historical statement RPC cannot overwrite the current or a future balance.
+
+Credit Cards management verification passed.
+
+===== scripts/verify-currency-foundation.mjs =====
+Currency Engine Phase 1 verification passed.
+- Personal base-currency foundation present
+- Existing transaction source values untouched
+- Original-value conversion invariant present
+- Rollback path included
+
+===== scripts/verify-currency-phase2.mjs =====
+Currency Engine Phase 2 verification passed.
+- Registration currency selector present
+- All ISO currency options sourced from CURRENCY_CODES
+- Personal base currency is available to Free and paid accounts
+- Personal and Business workspace currency bootstrap present
+- New personal transactions default to the active base currency
+- Existing transactions are not mutated by Phase 2 SQL
+
+===== scripts/verify-currency-phase4.mjs =====
+Currency Engine Phase 4 verification passed.
+- Same-currency original amount invariant retained
+- Planner inputs are canonicalized before storage
+- Goals use Base Currency display and preserve original investment transactions
+- Transaction CSV/PDF exports include original + Base Currency values
+- Transaction conversion detail follows the selected Base Currency instead of hardcoded EUR
+- FX provider uses stale cache fallback before failing
+- Business currency remains isolated from Personal currency
+- Phase 4 SQL does not rewrite existing transactions
+
+===== scripts/verify-database-contract.mjs =====
+Database contract verified: 48 RPCs, 49 relations, 109 baseline functions, 50 tables and 1 view.
+
+===== scripts/verify-debt-transaction-sync.mjs =====
+PASS: DebtManager notifies the platform after debt/payment mutations
+PASS: Debt deletion uses the atomic database RPC
+PASS: Debt payment deletion uses the atomic reversal RPC
+PASS: DebtManager no longer performs a non-atomic client-side linked transaction deletion
+PASS: TransactionLedger reports linked debt-payment reversals
+PASS: Transaction deletion messaging explains debt restoration
+PASS: Database trigger protects every transaction deletion path
+PASS: Atomic debt deletion RPC exists
+PASS: Atomic debt-payment reversal RPC exists
+PASS: Existing Bills deletion RPC is preserved and extended
+PASS: Debt deletion removes the source debt before linked transactions, preventing false balance restoration
+
+All Debt <-> Transactions synchronization checks passed.
+
+===== scripts/verify-effortless-entry.mjs =====
+✓ Transactions page uses EffortlessEntryWorkspace
+✓ Entry modes are defined
+✓ Mode choices describe different effort
+✓ Mode choices describe different structures
+✓ Preferences persist in Supabase
+✓ Simple mode has a dedicated branch
+✓ Simple mode uses quick category chips
+✓ Simple mode defaults date and description
+✓ Guided mode has a dedicated branch
+✓ Guided mode has three steps
+✓ Detailed mode exposes a full ledger form
+✓ Detailed mode shows exact date and time
+✓ Favourites are supported
+✓ Recent entries are reusable
+✓ Recurring entries are supported
+✓ EUR recurring entries can be confirmed together
+✓ Non-EUR recurring entries require rate review
+✓ Duplicate recurring postings are blocked
+✓ Recurring RPC is authenticated
+✓ RLS is enabled for preferences
+✓ RLS is enabled for templates
+✓ RLS is enabled for postings
+✓ Transaction creation still emits realtime event
+✓ Connected modules are notified
+✓ Mode changes remount the form safely
+✓ Shortcut deletion keeps transactions
+✓ Effortless panel is not sticky
+✓ Distinct mode styles are included
+✓ Mobile layout is covered
+
+29 Effortless Entry checks passed.
+
+===== scripts/verify-final-release-hygiene.mjs =====
+PASS - No stale baseline_restore source snapshot is packaged
+PASS - No stale upload-to-repository source snapshot is packaged
+PASS - No stale node_modules-test-copy source snapshot is packaged
+PASS - Retired second mobile transition stylesheet is absent
+PASS - components/MobileNavigationController.tsx is retired
+PASS - components/PWAMobileDock.tsx is retired
+PASS - components/HorizonOverviewBoard.tsx is retired
+PASS - components/HorizonCommandStrip.tsx is retired
+PASS - components/ReloadToOverviewOnRefresh.tsx is retired
+PASS - components/FinancialGpsSummary.tsx is retired
+PASS - components/FinancialSetupSummary.tsx is retired
+PASS - No unresolved source TODO/FIXME/HACK markers remain
+PASS - No TypeScript error suppression directives remain
+PASS - No 'as any' escape hatches remain in app source
+PASS - No local TypeScript build cache is packaged
+PASS - All local imports resolve
+
+16/16 final release hygiene checks passed across 219 source files.
+
+===== scripts/verify-financial-consistency.mjs =====
+Financial consistency verification passed: 35 semantic and migration checks.
+
+===== scripts/verify-financial-gps.mjs =====
+Financial GPS verification passed against the current unified Overview integration.
+
+===== scripts/verify-financial-setup.mjs =====
+Financial setup verification passed against the current unified Overview integration.
+
+===== scripts/verify-fixed-redesign-layout.mjs =====
+FICONTER fixed redesign layout verification passed: 48 checks.
+
+===== scripts/verify-fixed-sidebar.mjs =====
+Coastal compact navigation verification passed: 14 checks.
+
+===== scripts/verify-global-theme-governance-v118.mjs =====
+FICONTER global theme governance V1.18: 26 checks passed.
+
+===== scripts/verify-interface-themes.mjs =====
+FICONTER interface themes: 18 checks passed.
+
+===== scripts/verify-language-speed-v117.mjs =====
+PASS - language selector no longer blocks on saving state
+PASS - language trigger is not disabled during account persistence
+PASS - language selection closes menu immediately
+PASS - account persistence runs without awaiting before UI response
+PASS - stale language-save messages are guarded
+PASS - document translation is deferred to next frame
+PASS - account language persistence is serialized
+PASS - language trigger uses manipulation touch action
+PASS - expensive menu backdrop blur removed
+
+9/9 checks passed.
+
+===== scripts/verify-localization.mjs =====
+Localization verification passed.
+- Languages: en, de, es, sq, ar, pt, it, ru
+- Full static UI catalog entries: 2468
+- Landing UI catalog entries: 125
+- Wealth runtime catalog entries: 188
+- Runtime template entries: 147
+- Static interface strings scanned: 2615
+- Wealth Engine runtime strings scanned: 489
+- Dynamic interface templates scanned: 122
+- Uncovered static interface strings: 0
+- Uncovered Wealth Engine runtime strings: 0
+- Uncovered dynamic interface templates: 0
+- Duplicate Settings language section: removed
+- Arabic RTL: configured
+
+===== scripts/verify-manual-debt-payments.mjs =====
+Manual debt-payment confirmation verified successfully.
+
+===== scripts/verify-mobile-add-transaction-v112.mjs =====
+PASS - plus is labelled Add transaction
+PASS - personal transaction target is defined
+PASS - business transaction target is defined
+PASS - plus target is always add=1
+PASS - same transactions page uses direct add event without a page reload
+PASS - same page query is updated with replace rather than refresh
+PASS - cross-page plus navigation goes to add route
+PASS - personal route reads add query
+PASS - personal route opens add view directly
+PASS - personal entry receives directAdd
+PASS - direct add forces simple transaction entry
+PASS - direct add focuses amount field
+PASS - business route reads add query
+PASS - business ledger opens form from plus route
+
+14/14 checks passed.
+
+===== scripts/verify-mobile-back-home-fallback-v119.mjs =====
+FICONTER Mobile Back Home Fallback V1.19: 12/12 checks passed.
+
+===== scripts/verify-mobile-back-navigation.mjs =====
+FICONTER mobile back navigation: 16/16 checks passed.
+
+===== scripts/verify-mobile-drawer-theme-v120.mjs =====
+✓ V1.20 drawer governance block exists
+✓ drawer uses selected surface card
+✓ drawer border follows theme
+✓ drawer links use semantic raised surface
+✓ drawer labels use semantic secondary text
+✓ drawer icons use current theme accent
+✓ active drawer item derives from current accent
+✓ active icon keeps semantic contrast
+✓ workspace switch is theme-derived
+✓ business selector uses theme control background
+✓ account sheet shares theme-aware drawer
+✓ danger actions use semantic danger tokens
+✓ global safeguard resets drawer chrome aliases
+✓ global safeguard maps surface
+✓ global safeguard maps foreground
+
+15/15 drawer theme checks passed.
+
+===== scripts/verify-mobile-page-stack-v18.mjs =====
+FICONTER Mobile Page Stack V1.8: 18/18 checks passed.
+
+===== scripts/verify-mobile-single-menu.mjs =====
+FICONTER mobile single-menu governance: 18 checks passed.
+
+===== scripts/verify-mobile-single-navigation-v111.mjs =====
+Mobile single-navigation V1.11 verification passed (11/11).
+
+===== scripts/verify-mobile-single-swipe-v110.mjs =====
+FICONTER Mobile Single Swipe V1.10: 12/12 checks passed.
+
+===== scripts/verify-mobile-ui-phase2.mjs =====
+FICONTER mobile UI Phase 2: 19 stabilization checks passed.
+
+===== scripts/verify-mobile-ui-phase3.mjs =====
+FICONTER mobile UI Phase 3: 17 navigation/chrome checks passed.
+
+===== scripts/verify-mobile-ui-phase4.mjs =====
+FICONTER mobile UI Phase 4: 25 module-layout checks passed.
+
+===== scripts/verify-mobile-ui-phase5.mjs =====
+FICONTER mobile UI Phase 5: 21 comfort/QA checks passed.
+
+===== scripts/verify-mobile-ui-phase6.mjs =====
+FICONTER mobile UI Phase 6: 24 full-shell/UI checks passed.
+
+===== scripts/verify-mobile-unified-v1.mjs =====
+FICONTER unified mobile UI V1: 17 consolidation checks passed.
+
+===== scripts/verify-monthly-spending-budget.mjs =====
+FICONTER synchronized monthly spending budget verification passed: 9 checks.
+
+===== scripts/verify-performance-accuracy.mjs =====
+PASS  Shared precision helpers preserve six-decimal reporting amounts
+PASS  Negative and positive rounding use a sign-safe implementation
+PASS  Browser Supabase clients are reused
+PASS  Exchange-rate calls are cached for one hour
+PASS  Exchange-rate requests are deduplicated
+PASS  Realtime changes carry a deduplication nonce
+PASS  Realtime refreshes are debounced and rate-limited
+PASS  Hidden tabs postpone refresh work
+PASS  Transaction entry no longer rerenders once per second
+PASS  Transaction entry uses the cached exchange-rate service
+PASS  Transaction search uses deferred rendering
+PASS  Large ledgers progressively render records
+PASS  Ledger totals use precision-safe aggregation
+PASS  Planner assigns transactions by their local transaction date
+PASS  Planner assigns paid bills to one activity month
+PASS  Planner excludes linked bill transactions from expenses
+PASS  Bills use the authenticated cached exchange-rate endpoint
+PASS  Server dashboard auth is request-cached
+PASS  Admin role lookup is request-cached
+PASS  Dashboard pages reuse the request-cached authenticated client
+
+20 performance and accuracy checks passed.
+
+===== scripts/verify-phase1-qa.mjs =====
+Phase 1 QA verification: 71 checks passed.
+  PASS  221 TypeScript/TSX files passed syntax transpilation.
+  PASS  No obsolete predecessor branding remains in source or filenames.
+  PASS  SQL migration defines record_goal_investment.
+  PASS  SQL migration defines reverse_goal_investment.
+  PASS  SQL migration defines delete_goal_with_investments.
+  PASS  SQL migration defines mark_bill_paid.
+  PASS  SQL migration defines delete_bill_with_transaction.
+  PASS  SQL migration defines record_debt_payment_atomic.
+  PASS  SQL migration defines reverse_debt_payment_atomic.
+  PASS  SQL migration defines delete_debt_with_payments.
+  PASS  SQL migration defines delete_all_financial_records.
+  PASS  Profile-photo bucket and private storage policies are included.
+  PASS  Transaction schema supports saving records.
+  PASS  SQL dollar-quoted blocks are balanced.
+  PASS  SQL migration closes with a transaction commit.
+  PASS  Bills use atomic database functions for reversal and deletion while automatic settlement stays server-managed.
+  PASS  Bills do not bypass the authenticated exchange-rate endpoint.
+  PASS  Debt payments, reversals, and deletion use the current atomic synchronization functions.
+  PASS  Debt UI no longer invokes obsolete or missing synchronization functions.
+  PASS  Goals use synchronized investment functions.
+  PASS  Transactions update the UI only after the database confirms the saved row.
+  PASS  Transactions no longer reset optimistically before persistence succeeds.
+  PASS  Registration confirmation returns users to the dashboard.
+  PASS  Password recovery exchanges its code before password update.
+  PASS  Auth callback securely exchanges PKCE codes.
+  PASS  Settings export and deletion include goals and use atomic cleanup.
+  PASS  Exchange-rate endpoint authenticates users and returns rate plus converted amount.
+  PASS  Service-role credentials remain server-only.
+  PASS  All 34 API routes are included in the endpoint inventory.
+  PASS  app/api/account/delete/route.ts disables sensitive response caching.
+  PASS  app/api/admin/health/route.ts disables sensitive response caching.
+  PASS  app/api/admin/support/[id]/messages/route.ts disables sensitive response caching.
+  PASS  app/api/admin/support/[id]/read/route.ts disables sensitive response caching.
+  PASS  app/api/admin/support/[id]/route.ts disables sensitive response caching.
+  PASS  app/api/admin/support/route.ts disables sensitive response caching.
+  PASS  app/api/admin/users/[id]/route.ts disables sensitive response caching.
+  PASS  app/api/admin/users/route.ts disables sensitive response caching.
+  PASS  app/api/beta/activate/route.ts disables sensitive response caching.
+  PASS  app/api/beta/continue-free/route.ts disables sensitive response caching.
+  PASS  app/api/beta/login-authorize/route.ts disables sensitive response caching.
+  PASS  app/api/beta/prepare-signup/route.ts disables sensitive response caching.
+  PASS  app/api/documents/[id]/access/route.ts disables sensitive response caching.
+  PASS  app/api/documents/[id]/route.ts disables sensitive response caching.
+  PASS  app/api/documents/complete/route.ts disables sensitive response caching.
+  PASS  app/api/documents/route.ts disables sensitive response caching.
+  PASS  app/api/documents/upload-intent/[id]/route.ts disables sensitive response caching.
+  PASS  app/api/documents/upload-intent/route.ts disables sensitive response caching.
+  PASS  app/api/exchange-rate/route.ts disables sensitive response caching.
+  PASS  app/api/financial-file/pdf-extract/route.ts disables sensitive response caching.
+  PASS  app/api/health/route.ts disables sensitive response caching.
+  PASS  app/api/notifications/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/billing-history/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/cancel/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/confirm/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/invoice/[transactionId]/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/plan/route.ts disables sensitive response caching.
+  PASS  app/api/paypal/webhook/route.ts disables sensitive response caching.
+  PASS  app/api/support/requests/route.ts disables sensitive response caching.
+  PASS  app/api/support/threads/[id]/messages/route.ts disables sensitive response caching.
+  PASS  app/api/support/threads/[id]/read/route.ts disables sensitive response caching.
+  PASS  app/api/support/threads/[id]/route.ts disables sensitive response caching.
+  PASS  app/api/support/threads/route.ts disables sensitive response caching.
+  PASS  app/api/wealth/ai-insights/route.ts disables sensitive response caching.
+  PASS  app/dashboard/transactions/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  app/dashboard/bills/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  app/dashboard/debt/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  app/dashboard/net-worth/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  app/dashboard/goals/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  app/dashboard/budget/page.tsx explicitly scopes financial queries to the authenticated user.
+  PASS  Cash Flow debt-payment reads are explicitly scoped to the authenticated user.
+  PASS  The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health and Wealth Score sources of truth.
+
+===== scripts/verify-phase1-security.mjs =====
+Phase 1 security verification: 76 checks passed.
+  PASS  Account deletion requires same-origin, authentication, and super-admin protection.
+  PASS  Admin directory endpoint requires an authenticated administrator.
+  PASS  Admin mutation endpoint enforces origin, role, and identifier validation.
+  PASS  Platform health details are restricted to administrators.
+  PASS  Exchange-rate endpoint requires authentication, validates input, and times out upstream calls.
+  PASS  Privileged Supabase client is server-only and does not use a public key name.
+  PASS  Admin role verification uses the centralized privileged client.
+  PASS  components/AccountRecoveryForm.tsx does not reference privileged Supabase credentials.
+  PASS  components/AdminDashboard.tsx does not reference privileged Supabase credentials.
+  PASS  components/AdminWorkspaceNavigation.tsx does not reference privileged Supabase credentials.
+  PASS  components/AiInsights.tsx does not reference privileged Supabase credentials.
+  PASS  components/AuthForm.tsx does not reference privileged Supabase credentials.
+  PASS  components/AuthenticatedLanguageBootstrap.tsx does not reference privileged Supabase credentials.
+  PASS  components/AutoFitSingleLineText.tsx does not reference privileged Supabase credentials.
+  PASS  components/BaseCurrencyBootstrap.tsx does not reference privileged Supabase credentials.
+  PASS  components/BetaDomainAccessGate.tsx does not reference privileged Supabase credentials.
+  PASS  components/BillsManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessAdministration.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessCostControl.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessInventory.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessOverview.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessReports.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessSales.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessSetup.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessSidebar.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessSuppliers.tsx does not reference privileged Supabase credentials.
+  PASS  components/BusinessTransactionLedger.tsx does not reference privileged Supabase credentials.
+  PASS  components/CashFlowIntelligence.tsx does not reference privileged Supabase credentials.
+  PASS  components/CoastalOverview.tsx does not reference privileged Supabase credentials.
+  PASS  components/CommandPalette.tsx does not reference privileged Supabase credentials.
+  PASS  components/ContactSupportModal.tsx does not reference privileged Supabase credentials.
+  PASS  components/CreditCardsManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/CurrencyDisplayProvider.tsx does not reference privileged Supabase credentials.
+  PASS  components/CustomerSubscriptionManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/DashboardLiveOverview.tsx does not reference privileged Supabase credentials.
+  PASS  components/DebtManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/DocumentVault.tsx does not reference privileged Supabase credentials.
+  PASS  components/EffortlessEntryWorkspace.tsx does not reference privileged Supabase credentials.
+  PASS  components/EmergencyFundIntelligence.tsx does not reference privileged Supabase credentials.
+  PASS  components/FiconterNativeAppChrome.tsx does not reference privileged Supabase credentials.
+  PASS  components/FinancialGps.tsx does not reference privileged Supabase credentials.
+  PASS  components/FinancialIndependence.tsx does not reference privileged Supabase credentials.
+  PASS  components/FinancialSetupGuide.tsx does not reference privileged Supabase credentials.
+  PASS  components/GlobalLanguageControl.tsx does not reference privileged Supabase credentials.
+  PASS  components/GoalsManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/HelpCenter.tsx does not reference privileged Supabase credentials.
+  PASS  components/InterfacePreferencesBootstrap.tsx does not reference privileged Supabase credentials.
+  PASS  components/KeyboardInteractionBridge.tsx does not reference privileged Supabase credentials.
+  PASS  components/LanguageProvider.tsx does not reference privileged Supabase credentials.
+  PASS  components/LanguageSelector.tsx does not reference privileged Supabase credentials.
+  PASS  components/MobileTransactionsLayout.tsx does not reference privileged Supabase credentials.
+  PASS  components/MonthlyPlanner.tsx does not reference privileged Supabase credentials.
+  PASS  components/NavigationSpeedBoost.tsx does not reference privileged Supabase credentials.
+  PASS  components/NetWorthGrowth.tsx does not reference privileged Supabase credentials.
+  PASS  components/NetWorthLive.tsx does not reference privileged Supabase credentials.
+  PASS  components/NotificationCenter.tsx does not reference privileged Supabase credentials.
+  PASS  components/PWARegister.tsx does not reference privileged Supabase credentials.
+  PASS  components/PasswordInput.tsx does not reference privileged Supabase credentials.
+  PASS  components/PayPalSubscriptionCheckout.tsx does not reference privileged Supabase credentials.
+  PASS  components/PlatformUsageDirectory.tsx does not reference privileged Supabase credentials.
+  PASS  components/RealtimeRefreshBridge.tsx does not reference privileged Supabase credentials.
+  PASS  components/SavingsIntelligence.tsx does not reference privileged Supabase credentials.
+  PASS  components/SettingsWorkspace.tsx does not reference privileged Supabase credentials.
+  PASS  components/Sidebar.tsx does not reference privileged Supabase credentials.
+  PASS  components/SupportConversations.tsx does not reference privileged Supabase credentials.
+  PASS  components/SupportDeleteDialog.tsx does not reference privileged Supabase credentials.
+  PASS  components/SupportInbox.tsx does not reference privileged Supabase credentials.
+  PASS  components/ThemeContrastGuard.tsx does not reference privileged Supabase credentials.
+  PASS  components/TimeAwareWallpaperBootstrap.tsx does not reference privileged Supabase credentials.
+  PASS  components/TransactionForm.tsx does not reference privileged Supabase credentials.
+  PASS  components/TransactionLedger.tsx does not reference privileged Supabase credentials.
+  PASS  components/UpdatePasswordForm.tsx does not reference privileged Supabase credentials.
+  PASS  components/UsageHeartbeat.tsx does not reference privileged Supabase credentials.
+  PASS  components/WealthScore.tsx does not reference privileged Supabase credentials.
+  PASS  components/useBaseCurrencySourceData.ts does not reference privileged Supabase credentials.
+
+===== scripts/verify-phase2-ai-insights.mjs =====
+Phase 2 Smart Insights verification passed (37 checks).
+
+===== scripts/verify-phase2-cash-flow.mjs =====
+✓ exists: lib/wealth/cashFlowIntelligence.ts
+✓ exists: components/CashFlowIntelligence.tsx
+✓ exists: components/CashFlowIntelligence.module.css
+✓ exists: app/dashboard/cash-flow/page.tsx
+✓ exists: supabase/phase2_cash_flow_intelligence.sql
+✓ exists: lib/finance/commitmentWindow.ts
+✓ exists: supabase/cash_flow_one_month_commitments_v2.sql
+✓ engine exports normalizer
+✓ engine exports calculator
+✓ engine reuses Financial Health calculator
+✓ engine provides one-month forecast
+✓ engine provides category pressure
+✓ engine provides known commitments
+✓ engine provides insight priorities
+✓ server page requires authenticated user
+✓ server page calls versioned one-month RPC
+✓ component subscribes to transactions
+✓ component subscribes to bills
+✓ component subscribes to debts
+✓ component subscribes to planner
+✓ component has forecast methodology disclosure
+✓ component renders 12-month chart
+✓ component renders spending pressure
+✓ component renders commitments
+✓ Cash Flow labels use one-month terminology
+✓ Bills summary uses the shared one-month window
+✓ shared date helper clamps month-end dates
+✓ v1 SQL remains available for rollback
+✓ v2 migration uses inclusive calendar-month boundary
+✓ client refresh uses versioned one-month RPC
+✓ sidebar exposes Cash flow route
+✓ SQL is security invoker
+✓ SQL scopes every source by authenticated user
+✓ SQL reuses Financial Health source
+✓ SQL denies anon execution
+✓ SQL grants authenticated execution
+✓ no service-role client added
+✓ verification script is wired
+
+38 Cash Flow Intelligence architecture checks passed.
+
+===== scripts/verify-phase2-emergency-fund.mjs =====
+✓ exists: lib/wealth/emergencyFund.ts
+✓ exists: components/EmergencyFundIntelligence.tsx
+✓ exists: components/EmergencyFundIntelligence.module.css
+✓ exists: app/dashboard/emergency-fund/page.tsx
+✓ exists: supabase/phase2_emergency_fund.sql
+✓ engine exports normalizer
+✓ engine exports calculator
+✓ engine reuses Financial Health calculator
+✓ engine reuses Financial Health inputs
+✓ engine provides three and six month targets
+✓ engine provides sustainable contribution guidance
+✓ engine provides estimated completion
+✓ engine provides milestones
+✓ engine provides transparent next action
+✓ server page requires authenticated user
+✓ server page calls aggregate RPC
+✓ component subscribes to transactions
+✓ component subscribes to bills
+✓ component discloses no duplicate balance
+✓ component renders reserve milestones
+✓ component renders scrollable full monthly history
+✓ component reuses Transactions workflow
+✓ sidebar exposes Emergency fund route
+✓ SQL is security invoker
+✓ SQL scopes transactions to authenticated user
+✓ SQL reuses Financial Health source
+✓ SQL adds only contribution history
+✓ SQL denies anon execution
+✓ SQL grants authenticated execution
+✓ no service-role client added
+✓ verification script is wired
+✓ verify all includes emergency fund
+
+32 Emergency Fund architecture checks passed.
+
+===== scripts/verify-phase2-financial-health.mjs =====
+PASS Shared financial health engine exists
+PASS Score engine is versioned
+PASS Cash-flow factor exists
+PASS Savings factor exists
+PASS Debt factor exists
+PASS Bills factor exists
+PASS Emergency-fund factor exists
+PASS Goals factor exists
+PASS Planning factor exists
+PASS Income-only profiles do not activate cash-flow scoring
+PASS Incomplete profiles use a neutral setup state
+PASS Unrecorded scoring factors are excluded rather than treated as zero
+PASS UI hides an unsupported numeric score
+PASS Overview presentation does not duplicate Financial Health calculation logic
+PASS Overview presentation consumes the shared Financial Health result
+PASS Overview calculates the shared result once from reconciled inputs
+PASS Overview passes the shared Financial Health result into the unified UI
+PASS Health refresh listens to Bills realtime
+PASS Health refresh listens to Debt realtime
+PASS Health refresh listens to Goals realtime
+PASS Health refresh listens to Planner realtime
+PASS Dashboard loads scalable aggregate inputs
+PASS Database function uses caller permissions
+PASS Database function is scoped to the authenticated user
+PASS Only authenticated users can execute the function
+PASS Financial health SQL does not use service-role access
+
+26 Phase 2 Financial Health checks passed.
+
+===== scripts/verify-phase2-financial-independence.mjs =====
+PASS FI engine reuses Net Worth Growth
+PASS FI engine reuses Savings Intelligence
+PASS FI engine reuses Emergency Fund
+PASS FI target is calculated once
+PASS Emergency reserve is protected from FI capital
+PASS Debt reduction contributes to the FI pace
+PASS Stable six-month saving pace is reused
+PASS Directional compounding timeline exists
+PASS Negative investable position is handled explicitly
+PASS Disclaimer remains in the UI layer
+PASS UI contains a planning disclaimer
+PASS Private assumptions are saved through the RLS table
+PASS One aggregate RPC powers refreshes
+PASS Aggregate FI inputs are normalized before base-currency reconciliation
+PASS FI UI does not query transactions directly
+PASS FI UI does not query debts directly
+PASS Current contribution scenario is generated
+PASS 100 EUR contribution scenario is generated
+PASS 250 EUR contribution scenario is generated
+PASS Lifestyle assumption control exists
+PASS Withdrawal-rate assumption control exists
+PASS Real-return assumption control exists
+PASS Transactions realtime refresh is covered by the shared financial event bridge
+PASS Debts realtime refresh is covered by the shared financial event bridge
+PASS Debt payments realtime refresh is covered by the shared financial event bridge
+PASS Bills realtime refresh is covered by the shared financial event bridge
+PASS Goals realtime refresh is covered by the shared financial event bridge
+PASS Server page loads the aggregate FI RPC
+PASS Sidebar links to Financial Independence
+PASS Private FI settings table exists
+PASS FI settings have RLS enabled
+PASS FI settings policies are user-scoped
+PASS FI RPC reuses Net Worth Growth RPC
+PASS FI RPC reuses Savings Intelligence RPC
+PASS FI RPC reuses Emergency Fund RPC
+PASS FI aggregate runs with caller permissions
+PASS FI SQL does not use service-role access
+PASS Financial Independence has mobile layout rules
+PASS Package exposes FI verification script
+PASS Full verification includes FI module
+
+40 Phase 2 Financial Independence checks passed.
+
+===== scripts/verify-phase2-net-worth-growth.mjs =====
+PASS Growth engine reuses Wealth Score inputs
+PASS Shared Net Worth Growth engine exists
+PASS Growth result is versioned
+PASS Selected-period growth is calculated once
+PASS Directional 12-month outlook exists
+PASS Forecast availability is explicit
+PASS Forecast requires three completed comparable changes
+PASS Opening baseline is excluded from forecasting
+PASS Opening baseline is excluded from growth metrics
+PASS Net liability movement is measured
+PASS Savings allocation is visible without double counting
+PASS Annual growth summaries are generated
+PASS Full-history analysis is supported
+PASS 3/6/9/12/all period selector is rendered
+PASS Growth trajectory chart is present
+PASS UI explains savings are not added twice
+PASS Annual growth view is present
+PASS Forecast panel is present
+PASS Insufficient history state is visible
+PASS UI explains baseline protection
+PASS Growth UI does not query transactions directly
+PASS Existing Wealth Score reuses the combined input source
+PASS Growth module is integrated into Net Worth
+PASS Net Worth listens to Transactions realtime
+PASS Net Worth listens to Debt realtime
+PASS Net Worth listens to Debt Payment realtime
+PASS Existing Wealth Score goal realtime remains active
+PASS One combined RPC powers refreshes
+PASS Server page loads the combined aggregate RPC
+PASS Server page has no parallel transaction query
+PASS Server page has no parallel debt query
+PASS Growth SQL reuses the Wealth Score aggregate
+PASS Growth RPC uses caller permissions
+PASS Growth RPC is scoped to the authenticated user
+PASS Only authenticated users can execute the Growth RPC
+PASS Growth SQL does not use service-role access
+PASS Recorded debt repayments power historical liability reconstruction
+PASS SQL provides monthly net-worth changes
+
+38 Phase 2 Net Worth Growth checks passed.
+
+===== scripts/verify-phase2-savings.mjs =====
+✓ exists: lib/wealth/savingsIntelligence.ts
+✓ exists: components/SavingsIntelligence.tsx
+✓ exists: components/SavingsIntelligence.module.css
+✓ exists: app/dashboard/savings/page.tsx
+✓ exists: supabase/phase2_savings_intelligence.sql
+✓ engine exports normalizer
+✓ engine exports calculator
+✓ engine reuses Cash Flow calculator
+✓ engine reuses Cash Flow inputs
+✓ engine provides saving consistency
+✓ engine provides recommended target
+✓ engine provides annual forecast
+✓ engine provides 3/6/9/12 calendar averages
+✓ engine counts zero-saving calendar months
+✓ engine uses six-month planning baseline
+✓ engine provides category allocation
+✓ engine excludes Emergency Fund defensively
+✓ engine provides best and weakest months
+✓ engine provides transparent next action
+✓ server page requires authenticated user
+✓ server page calls aggregate RPC
+✓ component subscribes to transactions
+✓ component subscribes to bills
+✓ component subscribes to debts
+✓ component subscribes to planner
+✓ component renders 12-month trend
+✓ component renders period selector
+✓ component defaults period selector to six months
+✓ component explains calendar average
+✓ component renders savings allocation
+✓ component explains Emergency Fund separation
+✓ component renders recent contributions
+✓ component discloses shared source of truth
+✓ sidebar exposes Savings Intelligence route
+✓ SQL is security invoker
+✓ SQL scopes transactions to authenticated user
+✓ SQL reuses Cash Flow source
+✓ SQL adds filtered monthly allocation and recent history
+✓ SQL excludes Emergency Fund from Savings Intelligence
+✓ SQL preserves goal investment classification
+✓ SQL denies anon execution
+✓ SQL grants authenticated execution
+✓ no service-role client added
+✓ verification script is wired
+✓ verify all includes savings
+
+45 Savings Intelligence architecture checks passed.
+
+===== scripts/verify-phase2-wealth-score.mjs =====
+PASS Wealth Score reuses Financial Health results
+PASS Shared Wealth Score engine exists
+PASS Wealth Score is versioned
+PASS Net-position factor exists
+PASS Accumulation factor exists
+PASS Debt-reduction factor exists
+PASS Capital-balance factor exists
+PASS Momentum factor exists
+PASS Goal-funding factor exists
+PASS Resilience factor exists
+PASS Three-month retention requires real history
+PASS Momentum comparison requires six months of data
+PASS Capital-to-debt ratio exposes availability explicitly
+PASS Income-only wealth profiles use a neutral setup state
+PASS UI does not display a fabricated retention percentage
+PASS UI does not display an artificial debt ratio
+PASS UI does not duplicate score calculations
+PASS UI consumes shared Wealth Score result
+PASS Net Worth calculates the shared result once from reconciled inputs
+PASS Realtime refresh uses the combined Growth RPC
+PASS Wealth Score listens to Transactions realtime
+PASS Wealth Score listens to Debt realtime
+PASS Wealth Score listens to Goals realtime
+PASS Net Worth server page loads one combined aggregate source
+PASS Net Worth no longer maintains a parallel transaction query
+PASS Net Worth no longer maintains a parallel debt query
+PASS Wealth RPC reuses Financial Health aggregate inputs
+PASS Growth RPC preserves Wealth Score as its source of truth
+PASS Wealth RPC uses caller permissions
+PASS Wealth RPC is scoped to the authenticated user
+PASS Only authenticated users can execute the Wealth RPC
+PASS Wealth SQL does not use service-role access
+
+32 Phase 2 Wealth Score checks passed.
+
+===== scripts/verify-profile-identity.mjs =====
+PASS Profile keeps editable full and display names
+PASS Email change is inside Profile
+PASS Email change uses authenticated confirmation flow
+PASS Pending email confirmation can be resent
+PASS Pending state is explained
+PASS Pending email survives refresh through user metadata
+PASS Phone field is not included
+PASS Sidebar identity updates when email changes
+PASS Removed duplicate sidebar Inbox link stays removed
+PASS Documents navigation stays intact
+PASS Pending email UI is styled
+PASS 11 profile identity checks
+
+===== scripts/verify-read-receipts-document-toast.mjs =====
+PASS shared support-read event
+PASS customer read event
+PASS admin read event
+PASS immediate badge listener
+PASS optimistic notification state
+PASS persistent thread-notification read state
+PASS support notification scope
+PASS five-second success dismissal
+Passed 8 read-state and document-toast checks.
+
+===== scripts/verify-responsive-navigation-v113.mjs =====
+PASS - route animation requires native phone device class
+PASS - settings route-driven drilldown requires phone
+PASS - tablet settings uses local state instead of route navigation
+PASS - phone replacement CSS is device-class scoped
+PASS - tablet keeps settings navigation visible
+PASS - tablet keeps settings detail panel visible
+PASS - legacy second transition stylesheet stays unloaded
+PASS - Profile is removed from Settings section list
+PASS - Profile is not accepted as a Settings section id
+PASS - Settings defaults to Account & security
+PASS - legacy Settings profile URL redirects to dedicated Profile page
+PASS - Settings copy no longer advertises profile management
+PASS - Profile page links to account Settings without claiming Settings owns Profile
+
+13/13 checks passed.
+
+===== scripts/verify-scene-wallpapers.mjs =====
+FICONTER photographic wallpaper verification passed (3 legacy real scenes + 3 paid dayparts + fixed Free fallback).
+
+===== scripts/verify-settings-save-feedback.mjs =====
+Settings local save-feedback verification passed.
+- Profile: local confirmation beside Save profile
+- Base currency: local confirmation beside Save base currency
+- Financial preferences: local confirmation beside Save preferences
+- Notifications: local confirmation beside Save notifications
+- Appearance: local confirmation beside Save appearance
+
+===== scripts/verify-settings-speed-v115.mjs =====
+PASS - Settings reads client search params
+PASS - Phone Settings switches active content immediately
+PASS - Phone Settings uses native client history
+PASS - Settings no longer calls router.push for section changes
+PASS - Settings synchronizes Back/history URL into local state
+PASS - Settings parent restores when section query disappears
+PASS - Same-path Back uses browser history
+PASS - Cross-path Back still uses client router
+PASS - Phone forward transition is 220ms
+PASS - Phone back transition is 200ms
+PASS - Phone Settings taps use manipulation touch action
+PASS - Tablet Settings contract remains present
+
+12/12 checks passed.
+
+===== scripts/verify-sidebar-atmosphere-removal.mjs =====
+Sidebar atmosphere removal verification passed.
+
+===== scripts/verify-support-conversation-deletion.mjs =====
+Support conversation deletion verification passed (12 checks).
+
+===== scripts/verify-support-messaging-documents.mjs =====
+Support messaging and Document Vault verification passed (48 checks).
+
+===== scripts/verify-support-selected-state.mjs =====
+PASS: Admin selected thread state is explicitly nullable
+PASS: Admin refresh payload is narrowed once
+PASS: Admin state updater does not re-read an optional payload
+PASS: Customer selected thread state is explicitly nullable
+PASS: Customer refresh payload is narrowed once
+PASS: Customer state updater does not re-read an optional payload
+Support selected-state verification passed (6 checks).
+
+===== scripts/verify-theme-contrast-and-budget-use.mjs =====
+FICONTER theme contrast and monthly budget use: 18 checks passed.
+
+===== scripts/verify-transaction-bulk-actions.mjs =====
+Transaction bulk-action verification passed (19 checks).
+
+===== scripts/verify-wealth-empty-state.mjs =====
+PASS Financial Health has zero-data and incomplete-profile states
+PASS Financial Health does not award debt points without debt records
+PASS Financial Health does not award bill, goal or planner points without records
+PASS Cash Flow has explicit forecast availability and no-data label
+PASS Emergency Fund confidence can report No data
+PASS Savings Intelligence coverage remains zero without saving records
+PASS Savings target line is hidden when the target is zero
+PASS Wealth Score blocks scoring for incomplete profiles
+PASS Net Worth Growth requires real comparable history
+PASS Financial Independence has an unassessed zero-data state
+PASS Global keyboard bridge is mounted
+PASS Keyboard bridge protects multiline inputs and duplicate native submissions
+PASS Primary confirmation dialogs expose Enter confirmation markers
+
+13 empty-state and keyboard checks passed.
+
+FICONTER Release Candidate verification passed (59 current suites).

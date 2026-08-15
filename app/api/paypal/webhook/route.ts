@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 
 import { createServiceClient } from "@/lib/supabase/admin";
 
+import { noStoreJson } from "@/lib/security/request";
 export const runtime = "nodejs";
 
 type PaidPlan = "personal_pro" | "business_pro";
@@ -274,7 +274,7 @@ export async function POST(request: Request) {
     try {
       event = JSON.parse(rawBody) as PayPalWebhookEvent;
     } catch {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid webhook payload." },
         { status: 400 },
       );
@@ -288,7 +288,7 @@ export async function POST(request: Request) {
     );
 
     if (!verified) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Invalid PayPal webhook signature." },
         { status: 401 },
       );
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
      * Acknowledge PayPal events that FICONTER does not need.
      */
     if (!SUPPORTED_EVENTS.has(eventType)) {
-      return NextResponse.json({
+      return noStoreJson({
         received: true,
         ignored: true,
       });
@@ -309,7 +309,7 @@ export async function POST(request: Request) {
     const subscriptionId = extractSubscriptionId(event);
 
     if (!subscriptionId) {
-      return NextResponse.json({
+      return noStoreJson({
         received: true,
         ignored: true,
       });
@@ -337,7 +337,7 @@ export async function POST(request: Request) {
      * FICONTER's four configured subscription plans.
      */
     if (!configuredPlan) {
-      return NextResponse.json({
+      return noStoreJson({
         received: true,
         ignored: true,
       });
@@ -368,7 +368,7 @@ export async function POST(request: Request) {
     }
 
     if (!existingSubscription) {
-      return NextResponse.json({
+      return noStoreJson({
         received: true,
         ignored: true,
         reason: "Subscription is not linked to a FICONTER user.",
@@ -410,7 +410,7 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
-    return NextResponse.json({
+    return noStoreJson({
       received: true,
       updated: true,
       eventType,
@@ -424,7 +424,7 @@ export async function POST(request: Request) {
      * A non-2xx response tells PayPal the event was not
      * successfully processed and allows delivery retries.
      */
-    return NextResponse.json(
+    return noStoreJson(
       { error: "Unable to process PayPal webhook." },
       { status: 500 },
     );

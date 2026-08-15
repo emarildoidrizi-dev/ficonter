@@ -9,6 +9,7 @@ import {
   MessageSquareText,
   RefreshCw,
   Search,
+  Save,
   Send,
   ShieldCheck,
   Trash2,
@@ -52,6 +53,7 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
   const [internalNote, setInternalNote] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [statusDraft, setStatusDraft] = useState<SupportStatus>(initialRequests[0]?.status ?? "open");
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AdminSupportRequest | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -74,6 +76,10 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
   }, [filter, query, requests]);
 
   const selected = requests.find((item) => item.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (selected) setStatusDraft(selected.status);
+  }, [selected?.id, selected?.status]);
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
@@ -142,7 +148,9 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
       if (!response.ok || !data?.request) throw new Error(data?.error ?? "The support request could not be updated.");
       const updatedRequest: AdminSupportRequest = data.request;
       setRequests((current) => current.map((item) => item.id === updatedRequest.id ? updatedRequest : item));
+      setStatusDraft(updatedRequest.status);
     } catch (updateError) {
+      setStatusDraft(selected.status);
       setError(updateError instanceof Error ? updateError.message : "The support request could not be updated.");
     } finally {
       setUpdating(false);
@@ -259,11 +267,20 @@ export function SupportInbox({ initialRequests }: { initialRequests: AdminSuppor
                   <small>{selected.contactEmail}</small>
                 </div>
                 <div className={styles.conversationActions}>
-                  <select value={selected.status} onChange={(event) => void updateStatus(event.target.value as SupportStatus)} disabled={updating || deleting} aria-label="Support status">
+                  <select value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as SupportStatus)} disabled={updating || deleting} aria-label="Support status">
                     <option value="open">Open</option>
                     <option value="in_progress">In progress</option>
                     <option value="resolved">Resolved</option>
                   </select>
+                  <button
+                    type="button"
+                    className={styles.saveStatusButton}
+                    disabled={updating || deleting || statusDraft === selected.status}
+                    onClick={() => void updateStatus(statusDraft)}
+                  >
+                    <Save size={14} aria-hidden="true" />
+                    {updating ? "Saving…" : "Save status"}
+                  </button>
                   <button
                     type="button"
                     className={styles.deleteThreadButton}

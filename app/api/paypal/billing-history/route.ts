@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { noStoreJson } from "@/lib/security/request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -160,7 +160,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: "Authentication required." },
         { status: 401 },
       );
@@ -170,7 +170,7 @@ export async function GET() {
       await requireAdmin();
 
     if (adminAccount) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error:
             "Administrative accounts do not use customer billing.",
@@ -202,7 +202,7 @@ export async function GET() {
       typeof subscription.paypal_subscription_id !==
         "string"
     ) {
-      return NextResponse.json({
+      return noStoreJson({
         transactions: [],
       });
     }
@@ -301,7 +301,7 @@ export async function GET() {
           Date.parse(b.time) - Date.parse(a.time),
       );
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         transactions,
       },
@@ -318,7 +318,7 @@ export async function GET() {
       error,
     );
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         error:
           "Billing history could not be loaded right now.",

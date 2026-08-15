@@ -9,7 +9,6 @@ import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
-import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -72,9 +71,8 @@ export default async function DashboardLayout({
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const hasPaidTimeAwareWallpaper =
-    subscriptionPlanCode === "personal_pro" ||
-    subscriptionPlanCode === "business_pro";
+  // Owner and Super Admin are the only roles allowed to use wallpaper controls.
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -89,9 +87,12 @@ export default async function DashboardLayout({
       reportingCurrency="EUR"
     >
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...interfacePreferences} />
+      <InterfacePreferencesBootstrap
+        {...interfacePreferences}
+        wallpaperAccessEnabled={canManageWallpapers}
+      />
       <TimeAwareWallpaperBootstrap
-        enabled={hasPaidTimeAwareWallpaper}
+        enabled={canManageWallpapers}
       />
       <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
       <BaseCurrencyBootstrap
@@ -108,12 +109,15 @@ export default async function DashboardLayout({
       <FiconterNativeAppChrome
         workspace="personal"
         subscriptionPlanCode={subscriptionPlanCode}
+        isAdmin={Boolean(admin)}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
             user.user_metadata?.name ??
             "",
         )}
+        email={user.email ?? ""}
+        avatarPath={String(user.user_metadata?.avatar_path ?? "")}
       />
       <Sidebar
         isAdmin={Boolean(admin)}
@@ -134,11 +138,6 @@ export default async function DashboardLayout({
       <main className="app-main">
         {children}
       </main>
-      <PWAMobileDock
-        workspace="personal"
-        subscriptionPlanCode={subscriptionPlanCode}
-        isAdmin={Boolean(admin)}
-      />
       </div>
     </CurrencyDisplayProvider>
   );

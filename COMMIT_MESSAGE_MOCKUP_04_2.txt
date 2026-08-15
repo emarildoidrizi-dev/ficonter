@@ -1,0 +1,1 @@
+fix(mobile): make Settings dock control toggle on and off

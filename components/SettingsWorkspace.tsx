@@ -4,11 +4,13 @@ import {
   ChangeEvent,
   FormEvent,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
@@ -155,6 +157,7 @@ type SaveFeedback = {
 
 type SaveFeedbackKey =
   | "profile"
+  | "security"
   | "baseCurrency"
   | "financialPreferences"
   | "notifications"
@@ -169,6 +172,7 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
   isSubscriptionExempt?: boolean;
+  canManageWallpapers?: boolean;
 };
 
 type DialogState =
@@ -189,7 +193,6 @@ function isSectionId(value: string | undefined): value is SectionId {
   return Boolean(
     value &&
       [
-        "profile",
         "security",
         "financial",
         "notifications",
@@ -201,7 +204,6 @@ function isSectionId(value: string | undefined): value is SectionId {
 }
 
 const sections = [
-  { id: "profile", label: "Profile", description: "Identity and profile photo", icon: UserRound },
   { id: "security", label: "Account & security", description: "Login, password and sessions", icon: LockKeyhole },
   { id: "financial", label: "Financial preferences", description: "Currency, formats and planner", icon: WalletCards },
   { id: "notifications", label: "Notifications", description: "Reminders and summaries", icon: Bell },
@@ -404,7 +406,7 @@ function readEmailIdentity(
 
 function emailChangeRedirectUrl() {
   if (typeof window === "undefined") return undefined;
-  const next = encodeURIComponent("/dashboard/settings?section=profile");
+  const next = encodeURIComponent("/dashboard/profile");
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 
@@ -447,8 +449,10 @@ export function SettingsWorkspace({
   subscription,
   requiredFeature = null,
   isSubscriptionExempt = false,
+  canManageWallpapers = false,
 }: Props) {
   const { language, locale } = useLanguage();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
@@ -462,10 +466,14 @@ export function SettingsWorkspace({
   const photoInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<SectionId>(() =>
     isSubscriptionExempt && initialSection === "subscription"
-      ? "profile"
+      ? "security"
       : isSectionId(initialSection)
         ? initialSection
-        : "profile",
+        : "security",
+  );
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(() =>
+    isSectionId(initialSection) &&
+    !(isSubscriptionExempt && initialSection === "subscription"),
   );
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
@@ -484,7 +492,14 @@ export function SettingsWorkspace({
   const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(metadata));
+  const [savedPreferences, setSavedPreferences] = useState<Preferences>(() => readPreferences(metadata));
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrency(
+      initialBaseCurrency || readPreferences(metadata).currency,
+      DEFAULT_BASE_CURRENCY,
+    ),
+  );
+  const [savedBaseCurrency, setSavedBaseCurrency] = useState<CurrencyCode>(() =>
     normalizeCurrency(
       initialBaseCurrency || readPreferences(metadata).currency,
       DEFAULT_BASE_CURRENCY,
@@ -504,6 +519,7 @@ export function SettingsWorkspace({
     [locale],
   );
   const [rememberDevice, setRememberDevice] = useState(false);
+  const [savedRememberDevice, setSavedRememberDevice] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -520,16 +536,21 @@ export function SettingsWorkspace({
     Partial<Record<SaveFeedbackKey, number>>
   >({});
 
-  useEffect(() => {
-    if (!isSectionId(initialSection)) return;
+  useLayoutEffect(() => {
+    if (!isSectionId(initialSection)) {
+      setMobileDetailOpen(false);
+      return;
+    }
 
     // Owner / Super Admin / Admin never enter the customer Subscription area.
     // Their access is role-based and does not require a plan or payment.
-    setActive(
+    const nextSection =
       isSubscriptionExempt && initialSection === "subscription"
-        ? "profile"
-        : initialSection,
-    );
+        ? "security"
+        : initialSection;
+
+    setActive(nextSection);
+    setMobileDetailOpen(true);
     setMessage(null);
     setSaveFeedback({});
   }, [initialSection, isSubscriptionExempt]);
@@ -616,12 +637,15 @@ export function SettingsWorkspace({
     setPreferences((current) =>
       current.language === language ? current : { ...current, language },
     );
+    setSavedPreferences((current) =>
+      current.language === language ? current : { ...current, language },
+    );
   }, [language]);
 
   useEffect(() => {
-    setBaseCurrency(
-      normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY),
-    );
+    const normalized = normalizeCurrency(initialBaseCurrency, DEFAULT_BASE_CURRENCY);
+    setBaseCurrency(normalized);
+    setSavedBaseCurrency(normalized);
   }, [initialBaseCurrency]);
 
   useEffect(() => {
@@ -657,8 +681,22 @@ export function SettingsWorkspace({
       .map((item) => item.trim());
     const trusted = cookies.includes("ficonter_trusted_device=1");
     setRememberDevice(trusted);
-    applyInterface(preferences);
+    setSavedRememberDevice(trusted);
+    applyInterface(savedPreferences);
   }, []);
+
+  useEffect(() => {
+    // Settings edits are drafts until an explicit Save action succeeds.
+    // Moving to another section discards any unconfirmed changes.
+    setPreferences(savedPreferences);
+    setBaseCurrency(savedBaseCurrency);
+    setRememberDevice(savedRememberDevice);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage(null);
+    setSaveFeedback({});
+  }, [active]);
 
   useEffect(() => {
     let mounted = true;
@@ -984,6 +1022,7 @@ export function SettingsWorkspace({
     try {
       await saveMetadata({ ficonter_preferences: next });
       setPreferences(next);
+      setSavedPreferences(next);
       applyInterface(next);
       window.dispatchEvent(new CustomEvent("ficonter:preferences-updated", { detail: next }));
       showLocalSaveFeedback(feedbackKey, "success", text);
@@ -1034,7 +1073,9 @@ export function SettingsWorkspace({
       });
 
       setBaseCurrency(normalized);
+      setSavedBaseCurrency(normalized);
       setPreferences(nextPreferences);
+      setSavedPreferences(nextPreferences);
 
       try {
         localStorage.setItem(
@@ -1078,10 +1119,17 @@ export function SettingsWorkspace({
     }
   }
 
-  async function saveRememberDevice(enabled: boolean) {
-    setRememberDevice(enabled);
-    saveTrustedDevicePreference(enabled);
-    showSuccess(enabled ? "This device will keep you signed in." : "Persistent login was disabled for this device.");
+  function saveRememberDevice() {
+    clearSaveFeedback("security");
+    saveTrustedDevicePreference(rememberDevice);
+    setSavedRememberDevice(rememberDevice);
+    showLocalSaveFeedback(
+      "security",
+      "success",
+      rememberDevice
+        ? "Persistent login preference saved."
+        : "Persistent login preference disabled.",
+    );
   }
 
   async function signOutOtherSessions() {
@@ -1400,6 +1448,66 @@ export function SettingsWorkspace({
     }
   }
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const isNativePhone =
+      root.dataset.ficonterNativeApp === "true" &&
+      root.dataset.ficonterDevice === "phone";
+
+    if (!isNativePhone) return;
+
+    const sectionFromUrl = searchParams.get("section") ?? undefined;
+    let nextSection: SectionId | null = null;
+
+    if (
+      isSectionId(sectionFromUrl) &&
+      !(isSubscriptionExempt && sectionFromUrl === "subscription") &&
+      sectionFromUrl !== "profile"
+    ) {
+      nextSection = sectionFromUrl;
+    }
+
+    if (nextSection) {
+      setActive(nextSection);
+      setMobileDetailOpen(true);
+      return;
+    }
+
+    setMobileDetailOpen(false);
+  }, [isSubscriptionExempt, searchParams]);
+
+  function openSettingsSection(id: SectionId) {
+    setMessage(null);
+    setSaveFeedback({});
+
+    const root = typeof document !== "undefined" ? document.documentElement : null;
+    const isNativePhone =
+      root?.dataset.ficonterNativeApp === "true" &&
+      root.dataset.ficonterDevice === "phone";
+
+    if (isNativePhone) {
+      const target = `/dashboard/settings?section=${id}`;
+      const current = `${window.location.pathname}${window.location.search}`;
+
+      if (current === target && active === id && mobileDetailOpen) return;
+
+      // All Settings sections are already mounted in this client workspace.
+      // Switch the visible screen immediately, then update browser history
+      // without asking the server to rebuild the Settings route.
+      setActive(id);
+      setMobileDetailOpen(true);
+      window.history.pushState(null, "", target);
+      return;
+    }
+
+    // Tablet/iPad/desktop-class Settings switches locally with no route delay
+    // and no page-stack animation.
+    if (active === id) return;
+    setActive(id);
+  }
+
   const visibleSections = isSubscriptionExempt
     ? sections.filter((section) => section.id !== "subscription")
     : sections;
@@ -1453,9 +1561,7 @@ const canUseAppearanceThemes = hasSubscriptionFeature(
   settingsPlanCode,
   "appearance_themes",
 );
-const canUseTimeBasedWallpapers =
-  settingsPlanCode === "personal_pro" ||
-  settingsPlanCode === "business_pro";
+const canUseTimeBasedWallpapers = canManageWallpapers;
 const canUsePrivatePdfExport = hasSubscriptionFeature(
   settingsPlanCode,
   "private_pdf_export",
@@ -1488,7 +1594,7 @@ const showSubscriptionManagement =
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className={styles.workspace}>
+    <div className={styles.workspace} data-mobile-detail={mobileDetailOpen ? "true" : "false"}>
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
           <div className={styles.avatar}>
@@ -1501,7 +1607,12 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
+            <button
+              key={id}
+              type="button"
+              className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`}
+              onClick={() => openSettingsSection(id)}
+            >
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
@@ -1565,7 +1676,13 @@ const showSubscriptionManagement =
             </form>
             <div className={styles.formCard}>
               <div className={styles.cardHeading}><Smartphone size={19} /><div><h3>Remember this device</h3><p>Keep your login active only on a private device.</p></div></div>
-              <Toggle checked={rememberDevice} onChange={saveRememberDevice} label="Persistent login on this device" />
+              <Toggle checked={rememberDevice} onChange={setRememberDevice} label="Persistent login on this device" />
+              <div className={styles.actions}>
+                {localSaveFeedback("security")}
+                <button type="button" className={styles.primaryButton} onClick={saveRememberDevice}>
+                  <Save size={16} />Save device preference
+                </button>
+              </div>
             </div>
             <div className={styles.formCard}>
               <div className={styles.cardHeading}><Monitor size={19} /><div><h3>Active sessions</h3><p>Supabase exposes the current browser session to the app. Other sessions can be revoked securely.</p></div></div>
@@ -1735,7 +1852,7 @@ const showSubscriptionManagement =
               <legend>Theme</legend>
               <p className={styles.themeHelp}>
                 Choose the atmosphere that feels most comfortable. Every theme uses
-                high-contrast text and controls for reliable readability.
+                high-contrast text and controls for reliable readability. Your selection remains a draft until you click Save appearance.
               </p>
               <div className={styles.optionGrid}>
                 {INTERFACE_THEME_OPTIONS.map(({ value, label, description }) => {
@@ -1762,7 +1879,6 @@ const showSubscriptionManagement =
                           if (isLockedTheme) return;
                           const next = { ...preferences, appearance: value };
                           setPreferences(next);
-                          applyInterface(next);
                         }}
                       />
                       <span
@@ -1780,65 +1896,47 @@ const showSubscriptionManagement =
                 })}
               </div>
             </fieldset>
-            <fieldset className={styles.optionGroup}>
-              <legend>Smart time-of-day wallpaper</legend>
-              {canUseTimeBasedWallpapers ? (
-                <>
-                  <p className={styles.themeHelp}>
-                    Your local device time keeps the greeting and real coastal photograph
-                    synchronized automatically. The image changes at 12:00 and 18:00.
-                  </p>
-                  <div className={styles.wallpaperGrid}>
-                    {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
-                      <article className={styles.wallpaperScheduleCard} key={value}>
-                        <span
-                          className={styles.wallpaperPreview}
-                          data-daypart={value}
-                          aria-hidden="true"
-                        >
-                          <i />
-                        </span>
-                        <strong>{label}</strong>
-                        <small>{hours} · {description}</small>
-                      </article>
-                    ))}
-                  </div>
-                  <div className={styles.infoStrip}>
-                    <Palette size={18} />
-                    <div>
-                      <strong>Automatic day cycle is active</strong>
-                      <span>Included with your paid plan and shared by Personal and Business workspaces.</span>
+            {canManageWallpapers ? (
+              <fieldset className={styles.optionGroup} data-owner-wallpaper-controls="true">
+                <legend>Smart time-of-day wallpaper</legend>
+                {canUseTimeBasedWallpapers ? (
+                  <>
+                    <p className={styles.themeHelp}>
+                      Your local device time keeps the greeting and real coastal photograph
+                      synchronized automatically. The image changes at 12:00 and 18:00.
+                    </p>
+                    <div className={styles.wallpaperGrid}>
+                      {DAYPART_WALLPAPER_SCHEDULE.map(({ value, label, hours, description }) => (
+                        <article className={styles.wallpaperScheduleCard} key={value}>
+                          <span
+                            className={styles.wallpaperPreview}
+                            data-daypart={value}
+                            aria-hidden="true"
+                          >
+                            <i />
+                          </span>
+                          <strong>{label}</strong>
+                          <small>{hours} · {description}</small>
+                        </article>
+                      ))}
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className={styles.themeHelp}>
-                    Free accounts use one fixed, optimized beach photograph. Automatic
-                    morning, afternoon and evening scenes are included with Personal Pro.
-                  </p>
-                  <div className={styles.wallpaperGrid}>
-                    <article className={styles.wallpaperScheduleCard}>
-                      <span
-                        className={styles.wallpaperPreview}
-                        data-daypart="fixed"
-                        aria-hidden="true"
-                      >
-                        <i />
-                      </span>
-                      <strong>Fixed Coastal Beach</strong>
-                      <small>Free plan · One consistent real beach photograph.</small>
-                    </article>
-                  </div>
-                </>
-              )}
-            </fieldset>
+                    <div className={styles.infoStrip}>
+                      <Palette size={18} />
+                      <div>
+                        <strong>Automatic day cycle is active</strong>
+                        <span>Owner / Super Admin only · shared by Personal and Business workspaces.</span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </fieldset>
+            ) : null}
             <fieldset className={styles.optionGroup}>
               <legend>Layout density</legend>
               <div className={styles.densityGrid}>
                 {([
-                  ["comfortable", "Comfortable", "More breathing room, larger controls and spacious cards."],
-                  ["compact", "Compact", "Tighter spacing and more financial information visible at once."],
+                  ["comfortable", "Comfortable", "Larger cards, wider spacing and bigger controls for a calmer view."],
+                  ["compact", "Compact", "Much tighter cards, rows and spacing so substantially more information fits on screen."],
                 ] as const).map(([value, label, description]) => (
                   <label className={styles.densityCard} key={value}>
                     <input
@@ -1847,10 +1945,10 @@ const showSubscriptionManagement =
                       onChange={() => {
                         const next = { ...preferences, density: value };
                         setPreferences(next);
-                        applyInterface(next);
                       }}
                     />
                     <span className={styles.densityPreview} data-density={value} aria-hidden="true">
+                      <i />
                       <i />
                       <i />
                       <i />

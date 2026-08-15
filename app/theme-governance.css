@@ -1,0 +1,206 @@
+/* ========================================================================== 
+   FICONTER V1.18 — GLOBAL THEME GOVERNANCE
+   One selected theme owns the entire application surface. Personal, Business,
+   Admin, mobile chrome, tablet layouts and desktop workspaces all consume the
+   same semantic tokens. Foreground controls inherit readable colors from the
+   current theme rather than keeping legacy hard-coded light/dark values.
+   ========================================================================== */
+
+html[data-theme] {
+  --theme-text: var(--text-primary);
+  --theme-muted: var(--text-secondary);
+  --theme-faint: var(--text-tertiary);
+  --theme-surface: var(--surface-card);
+  --theme-surface-raised: var(--surface-raised);
+  --theme-surface-subtle: var(--surface-subtle);
+  --theme-border: var(--border-subtle);
+  --theme-border-strong: var(--border-strong);
+  --theme-control: var(--control-bg);
+  --theme-accent: var(--gold);
+  --theme-danger: var(--burgundy);
+  --theme-success: var(--sage);
+
+  /* Legacy aliases remain semantic so older modules still follow theme. */
+  --ink: var(--text-primary);
+  --muted: var(--text-secondary);
+  --paper: var(--surface-card);
+  --line: var(--border-subtle);
+  --ivory: var(--surface-canvas);
+}
+
+html[data-theme] body,
+html[data-theme] .app-shell,
+html[data-theme] .app-main {
+  color: var(--text-primary);
+}
+
+html[data-theme] :where(input, select, textarea) {
+  color-scheme: light dark;
+  background-color: var(--control-bg);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
+}
+
+html[data-resolved-theme="light"] :where(input, select, textarea) {
+  color-scheme: light;
+}
+
+html[data-resolved-theme="dark"] :where(input, select, textarea) {
+  color-scheme: dark;
+}
+
+html[data-theme] :where(input, textarea)::placeholder {
+  color: var(--text-tertiary);
+  -webkit-text-fill-color: var(--text-tertiary);
+  opacity: 1;
+}
+
+html[data-theme] select option {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+html[data-theme] :where(button, a, summary):focus-visible {
+  outline-color: var(--gold);
+}
+
+html[data-theme] :where(button, a, summary) svg,
+html[data-theme] :where(label, legend) svg {
+  color: currentColor;
+}
+
+html[data-theme] :where(button, input, select, textarea):disabled,
+html[data-theme] [aria-disabled="true"] {
+  opacity: .58;
+}
+
+/* Mobile/tablet semantic aliases. These rules load after all historical mobile
+   layers, so premium themes cannot be replaced by the old fixed cream palette. */
+html[data-ficonter-native-app="true"] {
+  --fui-bg: var(--surface-canvas);
+  --fui-surface: color-mix(in srgb, var(--surface-card) 94%, transparent);
+  --fui-surface-solid: var(--surface-card);
+  --fui-surface-soft: var(--surface-subtle);
+  --fui-surface-tint: color-mix(in srgb, var(--surface-subtle) 76%, var(--surface-card) 24%);
+  --fui-text: var(--text-primary);
+  --fui-muted: var(--text-secondary);
+  --fui-faint: var(--text-tertiary);
+  --fui-accent: var(--gold);
+  --fui-accent-soft: color-mix(in srgb, var(--gold) 14%, var(--surface-subtle));
+  --fui-on-accent: var(--solid-text);
+  --fui-gold: var(--gold);
+  --fui-gold-soft: var(--gold-soft);
+  --fui-border: var(--border-subtle);
+  --fui-danger: var(--burgundy);
+  --fui-success: var(--sage);
+  --fui-shadow: 0 10px 30px color-mix(in srgb, var(--text-primary) 9%, transparent);
+  --fui-shadow-soft: 0 4px 18px color-mix(in srgb, var(--text-primary) 6%, transparent);
+
+  --mobile-text-primary: var(--text-primary);
+  --mobile-text-secondary: var(--text-secondary);
+  --mobile-text-tertiary: var(--text-tertiary);
+  --mobile-canvas: var(--surface-canvas);
+  --mobile-surface: var(--surface-card);
+  --mobile-surface-raised: var(--surface-raised);
+  --mobile-surface-subtle: var(--surface-subtle);
+  --mobile-control-bg: var(--control-bg);
+  --mobile-border: var(--border-subtle);
+  --mobile-border-strong: var(--border-strong);
+  --mobile-accent: var(--gold);
+  --mobile-focus-ring: var(--focus-ring);
+  --mobile-solid-bg: var(--solid-bg);
+  --mobile-solid-text: var(--solid-text);
+
+  /* Header and bottom navigation now follow the same selected theme. */
+  --mobile-chrome-bg: var(--surface-card);
+  --mobile-chrome-surface: var(--surface-raised);
+  --mobile-chrome-text: var(--text-primary);
+  --mobile-chrome-muted: var(--text-secondary);
+  --mobile-chrome-accent: var(--gold);
+  --mobile-chrome-accent-text: var(--gold);
+  --mobile-chrome-on-accent: var(--solid-text);
+  --mobile-chrome-focus: var(--gold);
+  --mobile-chrome-danger-text: var(--burgundy);
+  --mobile-chrome-danger-icon: var(--burgundy);
+}
+
+html[data-ficonter-native-app="true"] body {
+  color: var(--text-primary) !important;
+}
+
+html[data-ficonter-native-app="true"] .app-main {
+  color: var(--text-primary) !important;
+}
+
+/* Common mobile surfaces: retain each module's layout, but never retain an
+   incompatible foreground from a previous/default theme. */
+html[data-ficonter-native-app="true"] .app-main :where(
+  .panel,
+  .card,
+  .kpi,
+  [class*="panel" i],
+  [class*="card" i]
+) {
+  border-color: var(--border-subtle);
+}
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  h1,h2,h3,h4,h5,h6,
+  label,legend,th
+) {
+  color: var(--text-primary);
+}
+
+html[data-ficonter-native-app="true"] .app-main :where(
+  p,small,td
+) {
+  border-color: var(--border-subtle);
+}
+
+/* Theme switches are immediate but visually calm. Do not animate geometry. */
+html[data-theme] :where(
+  body,
+  .app-shell,
+  .app-main,
+  button,
+  input,
+  select,
+  textarea,
+  [role="dialog"],
+  [role="menu"]
+) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] :where(
+    body,
+    .app-shell,
+    .app-main,
+    button,
+    input,
+    select,
+    textarea,
+    [role="dialog"],
+    [role="menu"]
+  ) {
+    transition-duration: 0ms;
+  }
+}
+
+/* V1.20: More/account sheets are first-class theme surfaces.  This global
+   safeguard loads after historical mobile layers so an old fixed green shell
+   can never override the selected interface palette. */
+html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawer"] {
+  --mobile-chrome-bg: var(--surface-card);
+  --mobile-chrome-surface: var(--surface-raised);
+  --mobile-chrome-text: var(--text-primary);
+  --mobile-chrome-muted: var(--text-secondary);
+  --mobile-chrome-accent: var(--gold);
+  --mobile-chrome-accent-text: var(--gold);
+  --mobile-chrome-on-accent: var(--solid-text);
+  --mobile-chrome-focus: var(--gold);
+}

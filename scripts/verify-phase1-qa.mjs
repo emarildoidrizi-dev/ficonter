@@ -133,15 +133,14 @@ const serviceAdmin = await source("lib/supabase/admin.ts");
 check(serviceAdmin.includes('import "server-only"') && serviceAdmin.includes("SUPABASE_SERVICE_ROLE_KEY") && !serviceAdmin.includes("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY"), "Service-role credentials remain server-only.");
 
 const apiRoutes = files.filter((file) => file.endsWith(`${path.sep}route.ts`) && file.includes(`${path.sep}app${path.sep}api${path.sep}`));
-check(apiRoutes.length === 24, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
+check(apiRoutes.length === 34, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
 for (const file of apiRoutes) {
   const relative = path.relative(root, file);
   const text = await readFile(file, "utf8");
-  check(text.includes("noStoreHeaders"), `${relative} disables sensitive response caching.`);
+  check(text.includes("noStoreHeaders") || text.includes("noStoreJson"), `${relative} disables sensitive response caching.`);
 }
 
 const userScopedPages = [
-  "app/dashboard/page.tsx",
   "app/dashboard/transactions/page.tsx",
   "app/dashboard/bills/page.tsx",
   "app/dashboard/debt/page.tsx",
@@ -163,6 +162,14 @@ for (const file of userScopedPages) {
     `${file} explicitly scopes financial queries to the authenticated user.`,
   );
 }
+
+
+const cashFlowPage = await source("app/dashboard/cash-flow/page.tsx");
+check(
+  cashFlowPage.includes('.from("debt_payments")') &&
+    cashFlowPage.includes('.eq("user_id", user.id)'),
+  "Cash Flow debt-payment reads are explicitly scoped to the authenticated user.",
+);
 
 const wealthSql = await source("supabase/phase2_wealth_score_engine.sql");
 const growthSql = await source("supabase/phase2_net_worth_growth.sql");

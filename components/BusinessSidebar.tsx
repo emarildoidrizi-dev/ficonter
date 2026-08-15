@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Archive, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
+  Archive, ArrowLeft, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
   LayoutDashboard, LogOut, PackageOpen, Settings2, ShieldCheck,
   ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
 import { switchActiveBusinessAction } from "@/app/business/actions";
@@ -50,6 +50,8 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   user: { displayName: string; email: string };
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const headerRef = useRef<HTMLElement>(null);
@@ -69,11 +71,22 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     : "";
   const activeBusinesses = businesses.filter((item) => item.status !== "archived");
   const archivedCount = businesses.length - activeBusinesses.length;
+  const mobileRootPaths = new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"]);
+  const showBackCommand = !mobileRootPaths.has(pathname);
+  const fallbackBackHref = "/business/overview";
 
   useEffect(() => {
+    if (pendingBusinessId) {
+      if (business?.id === pendingBusinessId) {
+        setSelectedBusinessId(business.id);
+        setPendingBusinessId("");
+      }
+      return;
+    }
+
+    // Route changes discard an un-applied business selection.
     setSelectedBusinessId(business?.id ?? "");
-    if (pendingBusinessId && business?.id === pendingBusinessId) setPendingBusinessId("");
-  }, [business?.id, pendingBusinessId]);
+  }, [business?.id, pathname, pendingBusinessId]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -128,11 +141,10 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     return () => window.clearTimeout(fallbackId);
   }, [business?.id, pendingBusinessId]);
 
-  async function switchBusiness(event: ChangeEvent<HTMLSelectElement>) {
-    const nextBusinessId = event.target.value;
+  async function applyBusinessSwitch() {
+    const nextBusinessId = selectedBusinessId;
     if (!nextBusinessId || nextBusinessId === business?.id || switching || switchTransitionPending) return;
-    const previousBusinessId = selectedBusinessId || business?.id || "";
-    setSelectedBusinessId(nextBusinessId);
+    const previousBusinessId = business?.id || "";
     setSwitching(true);
     setSwitchError("");
     const result = await switchActiveBusinessAction(nextBusinessId);
@@ -145,6 +157,51 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     setPendingBusinessId(nextBusinessId);
     setSwitching(false);
     startSwitchTransition(() => router.refresh());
+  }
+
+  function resolveBackTarget() {
+    if (typeof window !== "undefined") {
+      try {
+        const parsed = JSON.parse(
+          sessionStorage.getItem("ficonter:mobile-route-stack") ?? "[]",
+        );
+        const stack = Array.isArray(parsed)
+          ? parsed.filter((item): item is string => typeof item === "string")
+          : [];
+
+        const currentIndex = stack.lastIndexOf(routeKey);
+        if (currentIndex > 0) {
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const candidate = stack[index];
+            if (candidate?.startsWith("/business")) return candidate;
+          }
+        }
+      } catch {
+        // Fall through to the workspace Overview.
+      }
+    }
+
+    // No valid FICONTER page remains in the internal stack.
+    // The Back command must terminate safely at this workspace's Overview.
+    return fallbackBackHref;
+  }
+
+  function goBackInstant() {
+    setAccountMenuOpen(false);
+    setOpenGroup(null);
+    document.documentElement.removeAttribute("data-ficonter-route-loading");
+
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
+    const resolvedTarget = resolveBackTarget();
+    const target =
+      resolvedTarget && resolvedTarget !== currentRoute
+        ? resolvedTarget
+        : fallbackBackHref;
+
+    if (target === currentRoute) return;
+
+    router.prefetch(target);
+    router.push(target, { scroll: false });
   }
 
   async function signOut(event: MouseEvent<HTMLButtonElement>) {
@@ -168,8 +225,20 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     <header className={styles.shellHeader} ref={headerRef}>
       <div className={styles.topRow}>
         <div className={styles.brandArea}>
-          <div className={styles.brandCard}><Brand href="/business/overview" /></div>
-          <span className={styles.workspacePill}><Building2 size={15} />Business<ChevronDown size={14} /></span>
+          {showBackCommand ? (
+            <button
+              type="button"
+              className={styles.mobileBackButton}
+              onPointerDown={() => router.prefetch(resolveBackTarget())}
+              onClick={goBackInstant}
+              aria-label="Go back"
+              title="Back"
+            >
+              <ArrowLeft size={21} aria-hidden="true" />
+            </button>
+          ) : null}
+          <div className={styles.brandCard}><Brand interactive={false} /></div>
+          <span className={styles.workspacePill}><Building2 size={15} />Business</span>
         </div>
 
         <div className={styles.businessIdentity}>
@@ -177,12 +246,20 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
             {businessLogoUrl ? <img src={businessLogoUrl} alt="" /> : <Building2 size={17} />}
           </span>
           {business ? (
-            <label className={styles.businessSelector}>
+            <div className={styles.businessSelector}>
               <span>Active business</span>
-              <select value={selectedBusinessId || business.id} onChange={switchBusiness} disabled={switching || switchTransitionPending} aria-label="Select active business">
+              <select value={selectedBusinessId || business.id} onChange={(event) => setSelectedBusinessId(event.target.value)} disabled={switching || switchTransitionPending} aria-label="Select active business">
                 {activeBusinesses.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
               </select>
-            </label>
+              <button
+                type="button"
+                className={styles.applyBusinessButton}
+                disabled={switching || switchTransitionPending || !selectedBusinessId || selectedBusinessId === business.id}
+                onClick={() => void applyBusinessSwitch()}
+              >
+                {switching || switchTransitionPending ? "Applying…" : "Apply"}
+              </button>
+            </div>
           ) : <Link className={styles.createLink} href="/business/setup">Create business</Link>}
           {pendingBusinessId ? <small className={styles.status}>Updating…</small> : null}
           {switchError ? <small className={styles.switchError}>{switchError}</small> : null}
@@ -195,8 +272,8 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           <div className={styles.accountDock} ref={accountRef}>
             {accountMenuOpen ? (
               <div className={styles.accountMenu} role="menu" aria-label="Account menu">
-                <Link href="/dashboard/settings?section=profile" role="menuitem" onClick={() => trackRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></Link>
-                <Link href="/business/manage" role="menuitem" onClick={() => trackRoute("/business/manage")}><Settings2 size={17} /><span>Manage businesses</span></Link>
+                <Link href="/dashboard/profile" role="menuitem" onClick={() => trackRoute("/dashboard/profile")}><UserRound size={17} /><span>Profile</span></Link>
+                <Link href="/dashboard/settings" role="menuitem" onClick={() => trackRoute("/dashboard/settings")}><Settings2 size={17} /><span>Settings</span></Link>
                 <div className={styles.accountMenuDivider} />
                 <button type="button" role="menuitem" className={styles.signOutItem} onClick={signOut} disabled={signingOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
               </div>

@@ -12,6 +12,7 @@ const manifestPath = path.join(
   "supabase/migrations/production-schema-manifest.json",
 );
 const typesPath = path.join(root, "lib/supabase/database.types.ts");
+const contractTypesPath = path.join(root, "lib/supabase/database.contract.ts");
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -78,7 +79,7 @@ function parseMigrationContract() {
   return { functions, relations };
 }
 
-const requiredFiles = [baselinePath, manifestPath, typesPath];
+const requiredFiles = [baselinePath, manifestPath, typesPath, contractTypesPath];
 for (const file of requiredFiles) {
   if (!fs.existsSync(file) || fs.statSync(file).size === 0) {
     throw new Error(`Missing database contract file: ${relative(file)}`);
@@ -131,11 +132,12 @@ if (missingRelations.length) {
   );
 }
 
-const types = fs.readFileSync(typesPath, "utf8");
+const types = `${fs.readFileSync(typesPath, "utf8")}
+${fs.readFileSync(contractTypesPath, "utf8")}`;
 const missingTypeNames = [
   ...source.rpc.keys(),
   ...[...source.relations.keys()].filter((name) => !storageBuckets.has(name)),
-].filter((name) => !types.includes(`${name}: {`));
+].filter((name) => !new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:`).test(types));
 
 if (missingTypeNames.length) {
   throw new Error(

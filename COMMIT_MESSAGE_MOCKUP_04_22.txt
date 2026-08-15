@@ -1,0 +1,1 @@
+fix(mobile): tighten overview summary icon alignment

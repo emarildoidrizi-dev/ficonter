@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const service = createServiceClient() as any;
+  const service = createServiceClient();
   const codeHash = hashValue(code);
 
   // The submitted code itself must be a currently active invitation.

@@ -1,0 +1,1 @@
+feat(mobile): lock Activity split view and compact ledger standard

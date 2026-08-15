@@ -14,10 +14,20 @@ export const revalidate = 0;
 const TRANSACTION_SELECT =
   "id,business_id,created_by,description,counterparty,supplier_id,type,category,cost_nature,cost_category_id,cost_centre_id,source_recurring_cost_id,source_supplier_invoice_id,source_inventory_movement_id,source_sale_id,recurrence_key,amount,currency,amount_base,exchange_rate_to_base,exchange_rate_date,exchange_rate_source,transaction_date,occurred_at,payment_method,reference,notes,created_at,updated_at";
 
-export default async function BusinessTransactionsPage() {
+type BusinessTransactionsPageProps = {
+  searchParams?: Promise<{
+    add?: string | string[];
+  }>;
+};
+
+export default async function BusinessTransactionsPage({ searchParams }: BusinessTransactionsPageProps) {
   const { supabase, user, business } = await getBusinessContext();
   if (!user) redirect("/login");
   if (!business) redirect("/business/setup");
+
+  const query = await searchParams;
+  const addValue = Array.isArray(query?.add) ? query.add[0] : query?.add;
+  const directAdd = addValue === "1";
 
   const [
     { data: transactions },
@@ -57,6 +67,7 @@ export default async function BusinessTransactionsPage() {
       initialCategories={(categories ?? []) as BusinessCostCategory[]}
       initialCostCentres={(costCentres ?? []) as BusinessCostCentre[]}
       initialSuppliers={(suppliers ?? []) as BusinessSupplier[]}
+      initialAdd={directAdd}
     />
   );
 }

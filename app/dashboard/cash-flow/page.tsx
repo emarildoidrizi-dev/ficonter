@@ -34,6 +34,7 @@ export default async function CashFlowPage() {
     supabase
       .from("debt_payments")
       .select("debt_id, amount_eur, paid_at")
+      .eq("user_id", user.id)
       .gte("paid_at", currentMonthStartIso()),
     supabase
       .from("transactions")

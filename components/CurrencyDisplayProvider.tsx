@@ -227,7 +227,7 @@ export function useHistoricalReportingRates(dates: Array<string | null | undefin
   const { reportingCurrency, baseCurrency, latestRate } = useCurrencyDisplay();
   const normalizedDates = useMemo(
     () => [...new Set(dates.filter((date): date is string => Boolean(date)).map((date) => date.slice(0, 10)))].sort(),
-    [dates.join("|")],
+    [dates],
   );
   const [rates, setRates] = useState<Record<string, number>>({});
 

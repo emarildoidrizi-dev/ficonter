@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { BetaDomainAccessGate } from "@/components/BetaDomainAccessGate";
-import { PWAMobileDock } from "@/components/PWAMobileDock";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -67,9 +66,8 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const hasPaidTimeAwareWallpaper =
-    subscriptionPlanCode === "personal_pro" ||
-    subscriptionPlanCode === "business_pro";
+  // Platform Owner and Super Admin are the only roles allowed to use wallpapers.
+  const canManageWallpapers = admin?.role === "super_admin";
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
     userId: user.id,
@@ -98,9 +96,12 @@ export default async function BusinessLayout({
       reportingCurrency={workspaceCurrency}
     >
     <div className="app-shell">
-      <InterfacePreferencesBootstrap {...preferences} />
+      <InterfacePreferencesBootstrap
+        {...preferences}
+        wallpaperAccessEnabled={canManageWallpapers}
+      />
       <TimeAwareWallpaperBootstrap
-        enabled={hasPaidTimeAwareWallpaper}
+        enabled={canManageWallpapers}
       />
       <AuthenticatedLanguageBootstrap language={preferences.language} />
       <BaseCurrencyBootstrap
@@ -118,13 +119,20 @@ export default async function BusinessLayout({
       <FiconterNativeAppChrome
         workspace="business"
         subscriptionPlanCode={subscriptionPlanCode}
+        isAdmin={Boolean(admin)}
         displayName={String(
           user.user_metadata?.display_name ??
             user.user_metadata?.full_name ??
             user.user_metadata?.name ??
             "",
         )}
+        email={user.email ?? ""}
+        avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         businessName={business?.name ?? "Business workspace"}
+        activeBusinessId={business?.id ?? null}
+        businessProfiles={businesses
+          .filter((item) => item.status !== "archived")
+          .map((item) => ({ id: item.id, name: item.name }))}
       />
       <BusinessSidebar
         businesses={businesses}
@@ -145,15 +153,6 @@ export default async function BusinessLayout({
         }}
       />
       <main className="app-main business-interface">{children}</main>
-      <PWAMobileDock
-        workspace="business"
-        subscriptionPlanCode={subscriptionPlanCode}
-        canManage={
-          membership?.role === "owner" ||
-          membership?.role === "admin"
-        }
-        isPlatformAdmin={Boolean(admin)}
-      />
       </div>
     </CurrencyDisplayProvider>
   );

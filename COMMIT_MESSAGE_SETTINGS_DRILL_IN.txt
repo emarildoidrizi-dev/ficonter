@@ -1,0 +1,1 @@
+feat(mobile): convert Settings into drill-in slide navigation

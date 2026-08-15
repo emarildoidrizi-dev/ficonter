@@ -166,7 +166,7 @@ async function enrichSubscriptionState(users: AdminUserRow[]) {
   if (!users.length) return users;
 
   try {
-    const service = createServiceClient() as any;
+    const service = createServiceClient();
     const userIds = users.map((user) => user.id);
     const [subscriptionsResult, betaResult] = await Promise.all([
       service

@@ -43,7 +43,12 @@ assert(!settings.includes("preferences.layout"), "Settings still stores a select
 
 const layout = fs.readFileSync(path.join(root, "app/dashboard/layout.tsx"), "utf8");
 assert(layout.includes("<CommandPalette />"), "Command palette is not mounted in the dashboard");
-assert(layout.includes("<InterfacePreferencesBootstrap {...interfacePreferences} />"), "Interface preferences are not bootstrapped");
+assert(
+  layout.includes("<InterfacePreferencesBootstrap") &&
+    layout.includes("{...interfacePreferences}") &&
+    layout.includes("wallpaperAccessEnabled={canManageWallpapers}"),
+  "Interface preferences are not bootstrapped",
+);
 assert(!layout.includes("layout:"), "Dashboard layout still reads the retired preference");
 
 const rootLayout = fs.readFileSync(path.join(root, "app/layout.tsx"), "utf8");

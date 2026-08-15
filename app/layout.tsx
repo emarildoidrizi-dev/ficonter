@@ -5,6 +5,12 @@ import "./theme-palettes.css";
 import "./living-themes.css";
 import "./native-mobile-app.css";
 import "./coastal-shell.css";
+import "./mobile-module-layouts.css";
+import "./mobile-comfort.css";
+import "./mobile-shell-v2.css";
+import "./mobile-unified-v1.css";
+import "./mobile-page-stack.css";
+import "./theme-governance.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";
@@ -169,6 +175,89 @@ const languagePreferenceScript = `
   } catch (_) {}
 })();`;
 
+
+const mobileAppModeScript = `
+(function () {
+  try {
+    var root = document.documentElement;
+    var pathname = window.location.pathname || "";
+    var inWorkspace =
+      pathname === "/dashboard" ||
+      pathname.indexOf("/dashboard/") === 0 ||
+      pathname === "/business" ||
+      pathname.indexOf("/business/") === 0;
+
+    if (!inWorkspace) {
+      root.dataset.ficonterNativeApp = "false";
+      root.dataset.ficonterDevice = "desktop";
+      root.dataset.ficonterDisplayMode = "browser";
+      return;
+    }
+
+    var viewport = window.visualViewport;
+    var width = Math.max(
+      1,
+      Math.round(
+        (viewport && viewport.width) ||
+          window.innerWidth ||
+          root.clientWidth ||
+          1024
+      )
+    );
+    var height = Math.max(
+      1,
+      Math.round(
+        (viewport && viewport.height) ||
+          window.innerHeight ||
+          root.clientHeight ||
+          768
+      )
+    );
+    var standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigator.standalone === true;
+    var screenWidth =
+      (window.screen && window.screen.width) || width;
+    var screenHeight =
+      (window.screen && window.screen.height) || height;
+    var shortestPhysicalSide = Math.min(
+      screenWidth,
+      screenHeight
+    );
+    var touchCapable =
+      (navigator.maxTouchPoints || 0) > 0 ||
+      window.matchMedia("(pointer: coarse)").matches;
+    var compactViewport = width <= 900;
+    var tabletOrFoldable =
+      touchCapable &&
+      shortestPhysicalSide <= 1180 &&
+      Math.max(width, height) <= 1440;
+    var installedCompact = standalone && width <= 1180;
+    var device = "desktop";
+
+    if (
+      width <= 640 ||
+      (touchCapable && shortestPhysicalSide <= 640)
+    ) {
+      device = "phone";
+    } else if (
+      compactViewport ||
+      tabletOrFoldable ||
+      installedCompact
+    ) {
+      device = "tablet";
+    }
+
+    root.dataset.ficonterNativeApp =
+      device === "desktop" ? "false" : "true";
+    root.dataset.ficonterDevice = device;
+    root.dataset.ficonterDisplayMode =
+      standalone ? "standalone" : "browser";
+    root.dataset.ficonterOrientation =
+      width >= height ? "landscape" : "portrait";
+  } catch (_) {}
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -189,6 +278,11 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: languagePreferenceScript,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: mobileAppModeScript,
           }}
         />
       </head>

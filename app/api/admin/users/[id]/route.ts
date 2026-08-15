@@ -320,7 +320,7 @@ export async function PATCH(
     };
 
     if (body.action === "revoke_beta") {
-      const betaService = createServiceClient() as any;
+      const betaService = createServiceClient();
       const { data: subscription, error: subscriptionError } = await betaService
         .from("subscriptions")
         .select("plan_code,status,provider")

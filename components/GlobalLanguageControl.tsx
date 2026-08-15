@@ -7,8 +7,9 @@ import styles from "./GlobalLanguageControl.module.css";
 export function GlobalLanguageControl() {
   const pathname = usePathname();
   const insideApplication = pathname.startsWith("/dashboard") || pathname.startsWith("/business");
+  const landingOwnsLanguageControl = pathname === "/";
 
-  if (insideApplication) return null;
+  if (insideApplication || landingOwnsLanguageControl) return null;
 
   return (
     <div className={styles.control}>

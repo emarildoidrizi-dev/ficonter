@@ -136,7 +136,7 @@ export const getCurrentSubscriptionAccess = cache(
 
     if (subscription.plan_code === "beta") {
       try {
-        const service = createServiceClient() as any;
+        const service = createServiceClient();
         const { data: verifiedBeta, error: betaError } = await service
           .from("beta_user_entitlements")
           .select("user_id")

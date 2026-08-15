@@ -1,0 +1,1 @@
+feat(mobile): separate profile menu from settings navigation

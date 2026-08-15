@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import {
-  Activity, ArrowLeftRight, BriefcaseBusiness, ChartPie, ChevronDown, CircleHelp, Compass,
-  CreditCard, FileArchive, Landmark, LayoutDashboard, ListChecks,
+  Activity, ArrowLeft, ArrowLeftRight, BriefcaseBusiness, ChartPie, ChevronDown, Compass,
+  CreditCard, FileArchive, Landmark, LayoutDashboard,
   LockKeyhole, LogOut, MessageSquareText, PiggyBank, ReceiptText, Route,
-  Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserRound, WalletCards,
+  Settings2, ShieldCheck, Sparkles, Target, TrendingUp, UserRound, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
@@ -66,6 +66,8 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   user: SidebarUser;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const headerRef = useRef<HTMLElement>(null);
@@ -89,12 +91,15 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
   }, [isAdmin]);
 
   const avatarText = (displayName || accountEmail || "F").trim().slice(0, 1).toUpperCase();
-  const accountAreaActive = ["/dashboard/setup", "/dashboard/settings", "/dashboard/help", "/dashboard/inbox"]
+  const accountAreaActive = ["/dashboard/profile", "/dashboard/setup", "/dashboard/settings", "/dashboard/help", "/dashboard/inbox"]
     .some((href) => pathname.startsWith(href));
   const businessLocked = !hasSubscriptionFeature(subscriptionPlanCode, "business_workspace");
   const businessHref = businessLocked
     ? getSubscriptionUpgradeHref("business_workspace")
     : "/business";
+  const mobileRootPaths = new Set(["/dashboard", "/dashboard/overview", "/dashboard/transactions", "/dashboard/budget"]);
+  const showBackCommand = !mobileRootPaths.has(pathname);
+  const fallbackBackHref = "/dashboard/overview";
 
   useEffect(() => {
     setPendingHref(null);
@@ -181,16 +186,73 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
 
   function openRoute(href: string) {
     const targetPath = href.split("?")[0] || href;
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
     setMenuOpen(false);
     setOpenGroup(null);
     setPendingHref(pathname === targetPath ? null : targetPath);
-    router.push(href);
+
+    // Never navigate to the screen that is already open.
+    if (currentRoute === href) return;
+
+    router.prefetch(href);
+    router.push(href, { scroll: false });
   }
 
   function trackNavigation(href: string) {
     const targetPath = href.split("?")[0] || href;
     setOpenGroup(null);
     setPendingHref(pathname === targetPath ? null : targetPath);
+  }
+
+  function resolveBackTarget() {
+    if (typeof window !== "undefined") {
+      try {
+        const parsed = JSON.parse(
+          sessionStorage.getItem("ficonter:mobile-route-stack") ?? "[]",
+        );
+        const stack = Array.isArray(parsed)
+          ? parsed.filter((item): item is string => typeof item === "string")
+          : [];
+
+        const currentIndex = stack.lastIndexOf(routeKey);
+        if (currentIndex > 0) {
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const candidate = stack[index];
+            if (candidate?.startsWith("/dashboard")) return candidate;
+          }
+        }
+      } catch {
+        // Fall through to the workspace Overview.
+      }
+    }
+
+    // No valid FICONTER page remains in the internal stack.
+    // The Back command must terminate safely at this workspace's Overview.
+    return fallbackBackHref;
+  }
+
+  function goBackInstant() {
+    setMenuOpen(false);
+    setOpenGroup(null);
+    document.documentElement.removeAttribute("data-ficonter-route-loading");
+
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
+    const resolvedTarget = resolveBackTarget();
+    const target =
+      resolvedTarget && resolvedTarget !== currentRoute
+        ? resolvedTarget
+        : fallbackBackHref;
+
+    if (target === currentRoute) return;
+
+    const targetUrl = new URL(target, window.location.origin);
+    if (targetUrl.pathname === window.location.pathname) {
+      window.history.back();
+      return;
+    }
+
+    router.prefetch(target);
+    router.push(target, { scroll: false });
   }
 
   async function signOut(event: ReactMouseEvent<HTMLButtonElement>) {
@@ -207,8 +269,20 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     <header className={styles.shellHeader} ref={headerRef}>
       <div className={styles.topRow}>
         <div className={styles.brandArea}>
-          <div className={styles.brandCard}><Brand href="/dashboard/overview" /></div>
-          <span className={styles.workspacePill}><WalletCards size={15} />Personal<ChevronDown size={14} /></span>
+          {showBackCommand ? (
+            <button
+              type="button"
+              className={styles.mobileBackButton}
+              onPointerDown={() => router.prefetch(resolveBackTarget())}
+              onClick={goBackInstant}
+              aria-label="Go back"
+              title="Back"
+            >
+              <ArrowLeft size={21} aria-hidden="true" />
+            </button>
+          ) : null}
+          <div className={styles.brandCard}><Brand interactive={false} /></div>
+          <span className={styles.workspacePill}><WalletCards size={15} />Personal</span>
         </div>
         <div className={styles.headerActions}>
           <LanguageSelector />
@@ -216,11 +290,8 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
           <div className={styles.accountDock} ref={accountRef}>
             {menuOpen ? (
               <div className={styles.accountMenu} role="menu" aria-label="Account menu">
-                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/settings?section=profile")}><UserRound size={17} /><span>Profile</span></button>
-                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/setup")}><ListChecks size={17} /><span>Financial setup</span></button>
-                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/settings?section=appearance")}><Settings size={17} /><span>Settings</span></button>
-                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/help")}><CircleHelp size={17} /><span>Help</span></button>
-                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setContactOpen(true); }}><MessageSquareText size={17} /><span>Contact Us</span></button>
+                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/profile")}><UserRound size={17} /><span>Profile</span></button>
+                <button type="button" role="menuitem" onClick={() => openRoute("/dashboard/settings")}><Settings2 size={17} /><span>Settings</span></button>
                 <div className={styles.accountMenuDivider} />
                 <button type="button" role="menuitem" className={styles.signOutItem} disabled={signingOut} onClick={signOut}><LogOut size={17} /><span>{signingOut ? "Logging out…" : "Log out"}</span></button>
               </div>

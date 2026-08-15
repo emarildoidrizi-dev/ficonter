@@ -1,0 +1,1 @@
+fix(mobile): remove duplicate nested swipe animation

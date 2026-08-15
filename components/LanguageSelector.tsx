@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Globe2, LoaderCircle } from "lucide-react";
+import { Check, ChevronDown, Globe2, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
@@ -19,17 +19,25 @@ export function LanguageSelector({
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [draftLanguage, setDraftLanguage] = useState<FiconterLanguage>(language);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
+  const latestSelectionRef = useRef(0);
   const current = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0];
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setDraftLanguage(language);
+        setOpen(false);
+      }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setDraftLanguage(language);
+        setOpen(false);
+      }
     }
 
     document.addEventListener("mousedown", closeOnOutside);
@@ -38,26 +46,49 @@ export function LanguageSelector({
       document.removeEventListener("mousedown", closeOnOutside);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [language]);
 
-  async function selectLanguage(nextLanguage: FiconterLanguage) {
-    if (saving || nextLanguage === language) {
+  useEffect(() => {
+    if (!open) setDraftLanguage(language);
+  }, [language, open]);
+
+  function selectLanguage(nextLanguage: FiconterLanguage) {
+    setDraftLanguage(nextLanguage);
+    setMessage(null);
+  }
+
+  async function saveLanguage() {
+    if (saving) return;
+    if (draftLanguage === language) {
       setOpen(false);
       return;
     }
 
+    const selectionId = latestSelectionRef.current + 1;
+    latestSelectionRef.current = selectionId;
     setSaving(true);
     setMessage(null);
-    setOpen(false);
 
     try {
-      await changeLanguage(nextLanguage, true);
-      setMessage({ type: "success", text: translateMessage(nextLanguage, "languageSaved") });
-      window.setTimeout(() => setMessage(null), 2600);
+      await changeLanguage(draftLanguage, true);
+      if (latestSelectionRef.current !== selectionId) return;
+      setOpen(false);
+      setMessage({
+        type: "success",
+        text: translateMessage(draftLanguage, "languageSaved"),
+      });
+      window.setTimeout(() => {
+        if (latestSelectionRef.current === selectionId) setMessage(null);
+      }, 1800);
     } catch {
-      setMessage({ type: "error", text: translateMessage(nextLanguage, "languageSaveFailed") });
+      if (latestSelectionRef.current !== selectionId) return;
+      setDraftLanguage(language);
+      setMessage({
+        type: "error",
+        text: translateMessage(language, "languageSaveFailed"),
+      });
     } finally {
-      setSaving(false);
+      if (latestSelectionRef.current === selectionId) setSaving(false);
     }
   }
 
@@ -83,10 +114,14 @@ export function LanguageSelector({
         aria-label={t("chooseLanguage")}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        disabled={saving}
+        onClick={() =>
+          setOpen((value) => {
+            if (!value) setDraftLanguage(language);
+            return !value;
+          })
+        }
       >
-        {saving ? <LoaderCircle size={16} className={styles.spinner} /> : <Globe2 size={16} />}
+        <Globe2 size={16} />
         <span>{current.nativeName}</span>
         <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
       </button>
@@ -97,9 +132,9 @@ export function LanguageSelector({
             <button
               type="button"
               role="option"
-              aria-selected={option.code === language}
+              aria-selected={option.code === draftLanguage}
               key={option.code}
-              onClick={() => void selectLanguage(option.code)}
+              onClick={() => selectLanguage(option.code)}
               lang={option.locale}
               dir={option.direction}
             >
@@ -107,9 +142,20 @@ export function LanguageSelector({
                 <strong>{option.nativeName}</strong>
                 <small>{option.englishName}</small>
               </span>
-              {option.code === language ? <Check size={16} /> : null}
+              {option.code === draftLanguage ? <Check size={16} /> : null}
             </button>
           ))}
+          <div className={styles.menuActions}>
+            <button
+              type="button"
+              className={styles.saveLanguage}
+              disabled={saving || draftLanguage === language}
+              onClick={() => void saveLanguage()}
+            >
+              <Save size={14} />
+              {saving ? t("saving") : t("saveLanguage")}
+            </button>
+          </div>
         </div>
       ) : null}
 

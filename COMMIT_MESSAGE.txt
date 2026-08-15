@@ -1,1 +1,1 @@
-feat(planner): synchronize monthly spending budget
+fix(release): harden FICONTER and finalize pre-release QA

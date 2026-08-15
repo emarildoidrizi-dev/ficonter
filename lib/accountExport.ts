@@ -89,6 +89,36 @@ const COLORS = {
 
 const encoder = new TextEncoder();
 
+const CURRENT_BRAND_MARK_SRC = "/ficonter-mark.svg";
+const CURRENT_BRAND_WORDMARK = "FICONTER";
+const CURRENT_BRAND_DESCRIPTOR = "FINANCIAL CONTROL CENTER";
+
+let brandMarkPromise: Promise<HTMLImageElement | null> | null = null;
+
+function loadCurrentBrandMark(): Promise<HTMLImageElement | null> {
+  if (brandMarkPromise) return brandMarkPromise;
+
+  brandMarkPromise = new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+
+    const finish = (value: HTMLImageElement | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    image.onload = () => finish(image);
+    image.onerror = () => finish(null);
+    image.decoding = "async";
+    image.src = CURRENT_BRAND_MARK_SRC;
+
+    if (image.complete && image.naturalWidth > 0) finish(image);
+  });
+
+  return brandMarkPromise;
+}
+
 function valueOf(record: Record<string, unknown>, key: string): unknown {
   return record[key];
 }
@@ -190,6 +220,7 @@ class CanvasReport {
     private readonly ownerName: string,
     private readonly exportedAt: string,
     private readonly footerLabel = "Private account export",
+    private readonly brandMark: HTMLImageElement | null = null,
   ) {}
 
   private createPage(title: string): void {
@@ -210,22 +241,25 @@ class CanvasReport {
     context.fillStyle = COLORS.ink;
     context.fillRect(0, 0, PAGE_WIDTH, 96);
 
-    context.fillStyle = COLORS.gold;
-    context.beginPath();
-    context.arc(MARGIN + 23, 48, 22, 0, Math.PI * 2);
-    context.fill();
+    const markSize = 64;
+    const markX = MARGIN;
+    const markY = 16;
 
-    context.fillStyle = COLORS.white;
-    context.font = "700 24px Georgia, serif";
-    context.textAlign = "center";
-    context.fillText("F", MARGIN + 23, 56);
+    if (this.brandMark?.naturalWidth) {
+      context.drawImage(this.brandMark, markX, markY, markSize, markSize);
+    }
 
     context.textAlign = "left";
-    context.font = "700 24px Georgia, serif";
-    context.fillText("FICONTER", MARGIN + 58, 55);
+    context.fillStyle = COLORS.white;
+    context.font = "700 25px Georgia, serif";
+    context.fillText(CURRENT_BRAND_WORDMARK, MARGIN + 80, 45);
+    context.fillStyle = "#cfc9bf";
+    context.font = "700 10px Arial, sans-serif";
+    context.fillText(CURRENT_BRAND_DESCRIPTOR, MARGIN + 80, 67);
+
     context.font = "500 17px Arial, sans-serif";
     context.fillStyle = "#d9d3ca";
-    context.fillText(title, MARGIN + 230, 54);
+    context.fillText(title, MARGIN + 355, 54);
 
     context.textAlign = "right";
     context.fillText(`Page ${this.page}`, PAGE_WIDTH - MARGIN, 54);
@@ -584,7 +618,8 @@ function reportSummary(payload: AccountExportPayload): { label: string; value: s
 
 export async function createAccountPdf(payload: AccountExportPayload): Promise<Blob> {
   const ownerName = payload.account.display_name || payload.account.full_name || "FICONTER account holder";
-  const report = new CanvasReport(ownerName, payload.exported_at);
+  const brandMark = await loadCurrentBrandMark();
+  const report = new CanvasReport(ownerName, payload.exported_at, "Private account export", brandMark);
   const locale = text(payload.preferences.numberFormat, "en-US");
   const preferredCurrency = text(payload.preferences.currency, "EUR");
 
@@ -826,7 +861,8 @@ export async function createTransactionsPdf(
     metadata.baseCurrency ||
     transactions[0]?.display_currency ||
     "EUR";
-  const report = new CanvasReport(ownerName, exportedAt, "Private transaction export");
+  const brandMark = await loadCurrentBrandMark();
+  const report = new CanvasReport(ownerName, exportedAt, "Private transaction export", brandMark);
 
   const totals = transactions.reduce(
     (summary, transaction) => {

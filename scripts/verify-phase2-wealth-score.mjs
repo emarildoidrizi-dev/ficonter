@@ -31,7 +31,7 @@ expect(component.includes('"Awaiting 3 months"'), "UI does not display a fabrica
 expect(component.includes('"Not recorded"'), "UI does not display an artificial debt ratio");
 expect(!component.includes("function calculateWealth"), "UI does not duplicate score calculations");
 expect(component.includes("result: WealthScoreResult"), "UI consumes shared Wealth Score result");
-expect(netWorth.includes("calculateWealthScore(inputs.wealthScore)"), "Net Worth calculates the shared result once");
+expect(netWorth.includes("calculateWealthScore(reconciledInputs.wealthScore)"), "Net Worth calculates the shared result once from reconciled inputs");
 expect(netWorth.includes("get_net_worth_growth_inputs"), "Realtime refresh uses the combined Growth RPC");
 expect(netWorth.includes('table: "transactions"'), "Wealth Score listens to Transactions realtime");
 expect(netWorth.includes('table: "debts"'), "Wealth Score listens to Debt realtime");

@@ -1,0 +1,173 @@
+/* FICONTER MOBILE PAGE STACK V1.8
+   Global mobile navigation contract:
+   - a forward drill-down is a new screen that enters from the right;
+   - Back returns through the stack with a reverse slide;
+   - parent content is never left rendered underneath a child section;
+   - desktop/tablet desktop-style layouts are not changed. */
+
+@media (max-width: 1180px) {
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] .app-main {
+    overflow-x: clip !important;
+    perspective: 1200px;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] .app-main > * {
+    min-width: 0;
+    transform-origin: center center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="forward"]
+    .app-main > * {
+    animation: ficonter-mobile-page-forward 220ms cubic-bezier(0.2, 0.86, 0.2, 1) both !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"][data-ficonter-nav-direction="back"]
+    .app-main > * {
+    animation: ficonter-mobile-page-back 200ms cubic-bezier(0.2, 0.86, 0.2, 1) both !important;
+  }
+
+  @keyframes ficonter-mobile-page-forward {
+    from {
+      opacity: 0.98;
+      transform: translate3d(100%, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes ficonter-mobile-page-back {
+    from {
+      opacity: 0.98;
+      transform: translate3d(-34%, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /* SETTINGS: the list is the parent screen; a selected section is a child
+     screen. Never render both vertically on mobile. */
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    .ficonter-settings-subscription-summary {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_panel"] {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_navigation"] {
+    display: grid !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="true"]
+    [class*="SettingsWorkspace_navigation"] {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="true"]
+    [class*="SettingsWorkspace_panel"] {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    .ficonter-settings-page[data-settings-detail="true"]
+    .ficonter-settings-page-heading {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    .ficonter-settings-page[data-settings-detail="true"]
+    .ficonter-settings-workspace-shell,
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    .ficonter-settings-page[data-settings-detail="true"]
+    [class*="SettingsWorkspace_workspace"] {
+    margin-top: 0 !important;
+  }
+
+  /* On the Settings parent screen, the list should read as a native menu,
+     not as a horizontal desktop tab strip. */
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_navigation"] {
+    overflow: visible !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_sectionList"] {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_sectionButton"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: 34px minmax(0, 1fr) 18px !important;
+    text-align: left !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="SettingsWorkspace_workspace"][data-mobile-detail="false"]
+    [class*="SettingsWorkspace_sectionButton"] > :last-child:not(:first-child) {
+    display: block !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"]
+    .app-main > * {
+    animation: none !important;
+  }
+}
+
+/* V1.13 — Tablet/iPad contract.
+   Larger touch devices intentionally keep the in-page Settings workspace.
+   Section selection is local React state, so there is no route transition,
+   no full-screen replacement and no navigation delay. */
+html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
+  [class*="SettingsWorkspace_workspace"]
+  [class*="SettingsWorkspace_navigation"] {
+  display: grid !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
+  [class*="SettingsWorkspace_workspace"]
+  [class*="SettingsWorkspace_panel"] {
+  display: block !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
+  [class*="SettingsWorkspace_sectionButton"] {
+  transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease !important;
+}
+
+/* V1.15 — immediate phone interaction feedback. */
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+  [class*="SettingsWorkspace_sectionButton"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease, transform 80ms ease !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+  [class*="SettingsWorkspace_sectionButton"]:active {
+  transform: scale(0.985);
+}

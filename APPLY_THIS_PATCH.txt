@@ -1,0 +1,17 @@
+FICONTER V1.26.3 - ESLint blocker fix
+
+This patch intentionally contains ONLY:
+  components/CurrencyDisplayProvider.tsx
+
+It fixes the single blocking ESLint error reported by GitHub Actions:
+  react-hooks/use-memo at CurrencyDisplayProvider.tsx:230
+
+Change:
+  [dates.join("|")]
+becomes:
+  [dates]
+
+Do not restore or copy any retired files/folders.
+
+Commit message:
+fix(ci): resolve CurrencyDisplayProvider hook dependency lint error

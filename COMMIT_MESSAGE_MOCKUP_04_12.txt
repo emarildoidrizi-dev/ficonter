@@ -1,0 +1,1 @@
+fix(mobile): make Settings close button return directly Home

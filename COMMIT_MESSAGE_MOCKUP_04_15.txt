@@ -1,0 +1,1 @@
+feat(mobile): simplify transaction mode selector

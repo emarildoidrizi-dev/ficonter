@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";
+import { MobileTransactionsLayout } from "@/components/MobileTransactionsLayout";
 import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,6 +10,7 @@ export const revalidate = 0;
 type TransactionsPageProps = {
   searchParams?: Promise<{
     setup?: string | string[];
+    add?: string | string[];
   }>;
 };
 
@@ -24,6 +26,8 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
 
   const query = await searchParams;
   const setupValue = Array.isArray(query?.setup) ? query.setup[0] : query?.setup;
+  const addValue = Array.isArray(query?.add) ? query.add[0] : query?.add;
+  const directAdd = addValue === "1";
   const initialType = setupTransactionType(setupValue);
 
   const [allowMultiCurrency, allowPdfExport] = await Promise.all([
@@ -42,27 +46,41 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       <header className="topbar">
         <div className="page-title">
           <h1>Transactions</h1>
-          <p>Record less, reuse more, and keep the full financial picture accurate.</p>
+          <p>Review activity or add a transaction without leaving this screen.</p>
         </div>
       </header>
-<section className="transactions-layout">
-        <div className="panel transaction-entry-panel transaction-effortless-panel">
-          <EffortlessEntryWorkspace
-            initialTransactions={data ?? []}
-            initialType={initialType}
-            allowMultiCurrency={allowMultiCurrency}
-          />
-        </div>
-        <div className="panel transaction-ledger-panel">
-          <div className="panel-head">
-            <div>
-              <h3>Your ledger</h3>
-              <p className="muted transaction-intro">Edit, filter, export and review your financial activity.</p>
-            </div>
+      <MobileTransactionsLayout
+        initialView={directAdd || setupValue ? "add" : "ledger"}
+        entry={
+          <div className="panel transaction-entry-panel transaction-effortless-panel">
+            <EffortlessEntryWorkspace
+              initialTransactions={data ?? []}
+              initialType={initialType}
+              allowMultiCurrency={allowMultiCurrency}
+              directAdd={directAdd}
+            />
           </div>
-          {error ? <div className="alert alert-error">{error.message}</div> : <TransactionLedger transactions={data ?? []} allowMultiCurrency={allowMultiCurrency} allowPdfExport={allowPdfExport} />}
-        </div>
-      </section>
+        }
+        ledger={
+          <div className="panel transaction-ledger-panel">
+            <div className="panel-head">
+              <div>
+                <h3>Transactions</h3>
+                <p className="muted transaction-intro">Search, filter and manage your financial activity.</p>
+              </div>
+            </div>
+            {error ? (
+              <div className="alert alert-error">{error.message}</div>
+            ) : (
+              <TransactionLedger
+                transactions={data ?? []}
+                allowMultiCurrency={allowMultiCurrency}
+                allowPdfExport={allowPdfExport}
+              />
+            )}
+          </div>
+        }
+      />
     </>
   );
 }

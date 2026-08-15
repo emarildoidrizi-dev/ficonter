@@ -123,6 +123,65 @@ type SubscriptionTable = {
   };
   Relationships: [];
 };
+
+type BetaInviteCodesTable = {
+  Row: {
+    id: string;
+    code_hash: string;
+    label: string | null;
+    active: boolean;
+    max_uses: number | null;
+    use_count: number;
+    expires_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    code_hash: string;
+    label?: string | null;
+    active?: boolean;
+    max_uses?: number | null;
+    use_count?: number;
+    expires_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    code_hash?: string;
+    label?: string | null;
+    active?: boolean;
+    max_uses?: number | null;
+    use_count?: number;
+    expires_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Relationships: [];
+};
+
+type BetaSignupTokensTable = {
+  Row: { token: string; invite_code_id: string; expires_at: string; consumed_at: string | null; created_at: string };
+  Insert: { token: string; invite_code_id: string; expires_at: string; consumed_at?: string | null; created_at?: string };
+  Update: { token?: string; invite_code_id?: string; expires_at?: string; consumed_at?: string | null; created_at?: string };
+  Relationships: [];
+};
+
+type BetaUserEntitlementsTable = {
+  Row: { user_id: string; invite_code_id: string; verified_at: string };
+  Insert: { user_id: string; invite_code_id: string; verified_at?: string };
+  Update: { user_id?: string; invite_code_id?: string; verified_at?: string };
+  Relationships: [];
+};
+
+type BetaLoginSessionsTable = {
+  Row: { token_hash: string; user_id: string; expires_at: string; created_at: string };
+  Insert: { token_hash: string; user_id: string; expires_at: string; created_at?: string };
+  Update: { token_hash?: string; user_id?: string; expires_at?: string; created_at?: string };
+  Relationships: [];
+};
+
 type ContractTables = {
   business_audit_log: RefinedTable<
     "business_audit_log",
@@ -160,6 +219,10 @@ type ContractTables = {
     { status?: GoalStatus },
     { status?: GoalStatus }
   >;
+  beta_invite_codes: BetaInviteCodesTable;
+  beta_signup_tokens: BetaSignupTokensTable;
+  beta_user_entitlements: BetaUserEntitlementsTable;
+  beta_login_sessions: BetaLoginSessionsTable;
 };
 
 type ContractFunctions = {
@@ -228,6 +291,14 @@ type ContractFunctions = {
       p_logo_path: string | null;
       p_cover_image_path: string | null;
     };
+  };
+  activate_ficonter_beta_for_existing_user: {
+    Args: { p_user_id: string; p_code_hash: string };
+    Returns: boolean;
+  };
+  owner_revoke_ficonter_beta_access: {
+    Args: { p_user_id: string; p_actor_user_id: string; p_audit_details?: Json };
+    Returns: string;
   };
 };
 

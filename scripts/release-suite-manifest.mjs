@@ -64,6 +64,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-support-messaging-documents.mjs',
   'verify-support-selected-state.mjs',
   'verify-theme-contrast-and-budget-use.mjs',
+  'verify-theme-typography-v133.mjs',
   'verify-transaction-bulk-actions.mjs',
   'verify-wallpaper-role-governance-v122.mjs',
   'verify-wealth-empty-state.mjs',

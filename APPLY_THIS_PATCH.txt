@@ -1,17 +1,16 @@
-FICONTER V1.26.3 - ESLint blocker fix
+FICONTER V1.33 — THEME-SYNCHRONISED TYPOGRAPHY
 
-This patch intentionally contains ONLY:
-  components/CurrencyDisplayProvider.tsx
-
-It fixes the single blocking ESLint error reported by GitHub Actions:
-  react-hooks/use-memo at CurrencyDisplayProvider.tsx:230
-
-Change:
-  [dates.join("|")]
-becomes:
-  [dates]
-
-Do not restore or copy any retired files/folders.
+1. Extract this ZIP directly into the root of your current FICONTER repository.
+2. Replace the included files when prompted.
+3. Do not delete any other files.
+4. Commit and push.
 
 Commit message:
-fix(ci): resolve CurrencyDisplayProvider hook dependency lint error
+feat(theme): synchronize typography instantly with theme changes
+
+Expected behavior:
+- Saved theme palette and typography switch in the same browser style recalculation.
+- No second typography state, timer, refresh, or delayed JavaScript update.
+- Headings, interface text and financial figures receive theme-specific typography.
+- Number alignment remains stable with tabular numerals.
+- Existing Save appearance governance remains unchanged.

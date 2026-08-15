@@ -1,0 +1,185 @@
+/*
+ * FICONTER V1.33 — Theme-synchronised typography.
+ *
+ * Typography is derived from the SAME data-theme/data-resolved-theme attributes
+ * as the colour palette. There is intentionally no second JavaScript typography
+ * state, so palette and typography cannot drift out of sync. A theme commit
+ * therefore changes colour, type family, weight and tracking in one browser
+ * style recalculation.
+ */
+
+:root,
+html[data-theme="light"],
+html[data-theme="system"][data-resolved-theme="light"] {
+  --font-interface: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Georgia, "Times New Roman", ui-serif, serif;
+  --font-numeric: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 500;
+  --font-display-tracking: -0.035em;
+  --font-interface-tracking: 0em;
+  --font-label-tracking: 0.075em;
+  --font-numeric-tracking: -0.018em;
+}
+
+html[data-theme="dark"],
+html[data-theme="system"][data-resolved-theme="dark"] {
+  --font-interface: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-numeric: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 650;
+  --font-display-tracking: -0.045em;
+  --font-interface-tracking: 0.002em;
+  --font-label-tracking: 0.085em;
+  --font-numeric-tracking: -0.022em;
+}
+
+html[data-theme="midnight"] {
+  --font-interface: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Baskerville, "Iowan Old Style", "Palatino Linotype", Georgia, ui-serif, serif;
+  --font-numeric: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 500;
+  --font-display-tracking: -0.028em;
+  --font-interface-tracking: 0.006em;
+  --font-label-tracking: 0.105em;
+  --font-numeric-tracking: -0.014em;
+}
+
+html[data-theme="emerald"] {
+  --font-interface: "Gill Sans", "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
+  --font-numeric: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 600;
+  --font-display-tracking: -0.021em;
+  --font-interface-tracking: 0.004em;
+  --font-label-tracking: 0.095em;
+  --font-numeric-tracking: -0.015em;
+}
+
+html[data-theme="bordeaux"] {
+  --font-interface: "Trebuchet MS", "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Baskerville, "Iowan Old Style", Georgia, "Times New Roman", ui-serif, serif;
+  --font-numeric: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 500;
+  --font-display-tracking: -0.025em;
+  --font-interface-tracking: 0.003em;
+  --font-label-tracking: 0.09em;
+  --font-numeric-tracking: -0.012em;
+}
+
+html[data-theme="ocean"] {
+  --font-interface: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-numeric: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 650;
+  --font-display-tracking: -0.038em;
+  --font-interface-tracking: 0.008em;
+  --font-label-tracking: 0.105em;
+  --font-numeric-tracking: -0.02em;
+}
+
+html[data-theme="sandstone"] {
+  --font-interface: "Trebuchet MS", "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
+  --font-numeric: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display-weight: 500;
+  --font-display-tracking: -0.017em;
+  --font-interface-tracking: 0.005em;
+  --font-label-tracking: 0.085em;
+  --font-numeric-tracking: -0.012em;
+}
+
+/* Interface typography. Keep sizing/layout unchanged; only the typographic
+   character changes with the selected theme. */
+html[data-theme] body,
+html[data-theme] button,
+html[data-theme] input,
+html[data-theme] select,
+html[data-theme] textarea,
+html[data-theme] .app-shell {
+  font-family: var(--font-interface);
+  letter-spacing: var(--font-interface-tracking);
+}
+
+/* Premium/display typography across Personal, Business, Admin and Settings.
+   The extra root/app-shell specificity intentionally supersedes historical
+   component-level Georgia declarations without touching dimensions. */
+html[data-theme] .app-shell :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  .page-title h1,
+  [class*="title" i],
+  [class*="heading" i]
+) {
+  font-family: var(--font-display) !important;
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--font-display-tracking);
+}
+
+/* Navigation and controls remain crisp and practical even when display text is
+   serif. This also prevents inherited display type from leaking into buttons. */
+html[data-theme] .app-shell :where(
+  nav,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="menuitem"],
+  [role="tab"],
+  [role="button"]
+) {
+  font-family: var(--font-interface) !important;
+}
+
+/* Uppercase financial labels retain hierarchy, but their tracking follows the
+   active theme rather than staying visually identical in every palette. */
+html[data-theme] .app-shell :where(
+  th,
+  legend,
+  .eyebrow,
+  [class*="eyebrow" i],
+  [class*="label" i]
+) {
+  letter-spacing: var(--font-label-tracking);
+}
+
+/* Financial figures switch in the same style frame as the theme while keeping
+   tabular figures for scanability and stable column alignment. */
+html[data-theme] .app-shell :where(
+  output,
+  .amount-positive,
+  .amount-negative,
+  .kpi strong,
+  [class*="amount" i],
+  [class*="balance" i],
+  [class*="metric" i] strong,
+  [class*="total" i] strong,
+  td:last-child
+) {
+  font-family: var(--font-numeric) !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: var(--font-numeric-tracking);
+}
+
+/* Theme colour and typography are both driven by the same semantic tokens.
+   These rules reinforce readability for typography without hard-coding a
+   foreground that could become incorrect in a different palette. */
+html[data-theme] .app-shell :where(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: var(--text-primary);
+}
+
+html[data-theme] .app-shell :where(p, small, figcaption, caption) {
+  color: var(--text-secondary);
+}
+
+/* Font-family is intentionally not transitioned. The type profile changes
+   atomically with data-theme while colour transitions may remain visually calm. */
+html[data-theme] body,
+html[data-theme] .app-shell,
+html[data-theme] .app-shell * {
+  transition-property: background-color, border-color, color, box-shadow;
+}

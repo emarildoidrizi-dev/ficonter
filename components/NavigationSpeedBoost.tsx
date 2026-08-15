@@ -119,6 +119,7 @@ export function NavigationSpeedBoost({
   const routeKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const warmedRoutes = useRef(new Set<string>());
   const previousRouteKey = useRef(routeKey);
+  const lastAnimatedRouteKey = useRef(routeKey);
   const transitionTimer = useRef<number | null>(null);
   const loadingTimer = useRef<number | null>(null);
 
@@ -142,7 +143,12 @@ export function NavigationSpeedBoost({
     }
 
     const previous = previousRouteKey.current;
-    if (previous !== routeKey && isNativePhoneApp()) {
+    const shouldAnimate =
+      previous !== routeKey &&
+      lastAnimatedRouteKey.current !== routeKey &&
+      isNativePhoneApp();
+
+    if (shouldAnimate) {
       const storageKey = "ficonter:mobile-route-stack";
       let stack: string[] = [];
 
@@ -174,6 +180,7 @@ export function NavigationSpeedBoost({
         // Session storage is only a progressive enhancement for navigation direction.
       }
 
+      lastAnimatedRouteKey.current = routeKey;
       root.dataset.ficonterNavDirection = direction;
       root.dataset.ficonterNavTransition = "active";
 

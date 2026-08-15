@@ -1023,7 +1023,7 @@ export function FiconterNativeAppChrome({
           }
           onClick={() => {
             if (workspace === "business") {
-              router.push(addHref);
+              if (pathname !== addHref) router.push(addHref, { scroll: false });
               return;
             }
 

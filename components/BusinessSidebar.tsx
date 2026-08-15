@@ -196,6 +196,9 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
     const target = resolveBackTarget();
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
+
+    if (!target || target === currentRoute) return;
 
     router.prefetch(target);
     router.push(target, { scroll: false });

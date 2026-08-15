@@ -198,10 +198,16 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
 
   function openRoute(href: string) {
     const targetPath = href.split("?")[0] || href;
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
     setMenuOpen(false);
     setOpenGroup(null);
     setPendingHref(pathname === targetPath ? null : targetPath);
-    router.push(href);
+
+    // Never navigate to the screen that is already open.
+    if (currentRoute === href) return;
+
+    router.prefetch(href);
+    router.push(href, { scroll: false });
   }
 
   function trackNavigation(href: string) {
@@ -242,6 +248,9 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
     const target = resolveBackTarget();
+    const currentRoute = `${window.location.pathname}${window.location.search}`;
+
+    if (!target || target === currentRoute) return;
 
     router.prefetch(target);
     router.push(target, { scroll: false });

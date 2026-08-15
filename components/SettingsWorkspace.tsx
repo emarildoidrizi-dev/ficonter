@@ -4,6 +4,7 @@ import {
   ChangeEvent,
   FormEvent,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -526,7 +527,7 @@ export function SettingsWorkspace({
     Partial<Record<SaveFeedbackKey, number>>
   >({});
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isSectionId(initialSection)) {
       setMobileDetailOpen(false);
       return;
@@ -1412,18 +1413,27 @@ export function SettingsWorkspace({
   }
 
   function openSettingsSection(id: SectionId) {
-    setActive(id);
     setMessage(null);
     setSaveFeedback({});
 
-    if (
+    const isNativeMobile =
       typeof document !== "undefined" &&
-      document.documentElement.dataset.ficonterNativeApp === "true"
-    ) {
-      setMobileDetailOpen(true);
-      router.prefetch(`/dashboard/settings?section=${id}`);
-      router.push(`/dashboard/settings?section=${id}`, { scroll: false });
+      document.documentElement.dataset.ficonterNativeApp === "true";
+
+    if (isNativeMobile) {
+      const target = `/dashboard/settings?section=${id}`;
+      const current = `${window.location.pathname}${window.location.search}`;
+
+      // Mobile navigation is route-driven: one tap, one route change, one slide.
+      // Do not update the child view locally before Next.js completes the route.
+      if (current === target) return;
+
+      router.prefetch(target);
+      router.push(target, { scroll: false });
+      return;
     }
+
+    setActive(id);
   }
 
   const visibleSections = isSubscriptionExempt

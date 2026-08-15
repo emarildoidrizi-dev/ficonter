@@ -32,7 +32,7 @@ html[data-ficonter-native-app="true"] .app-main {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-top: calc(76px + env(safe-area-inset-top));
   scroll-padding-bottom: calc(112px + env(safe-area-inset-bottom));
   padding-top: calc(76px + env(safe-area-inset-top)) !important;

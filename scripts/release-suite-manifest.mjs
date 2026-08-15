@@ -52,6 +52,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-phase2-savings.mjs',
   'verify-phase2-wealth-score.mjs',
   'verify-profile-identity.mjs',
+  'verify-profile-routing-v131.mjs',
   'verify-read-receipts-document-toast.mjs',
   'verify-responsive-navigation-v113.mjs',
   'verify-scene-wallpapers.mjs',

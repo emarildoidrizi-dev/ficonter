@@ -1,0 +1,13 @@
+FICONTER V1.31 — Profile to Account Preferences
+
+1. Extract this ZIP directly into the FICONTER repository root.
+2. Replace the included files.
+3. Commit with:
+   feat(profile): route profile directly to account preferences
+4. Push origin and wait for GitHub Actions/Vercel.
+
+Behavior:
+- The old standalone Profile screen is retired.
+- Every Profile action opens Settings > Profile (Account preferences).
+- /dashboard/profile remains only as a permanent compatibility redirect.
+- Dead standalone Profile CSS is removed.

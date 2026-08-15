@@ -16,7 +16,7 @@ expect(chrome.includes('ref={moreButtonRef}'), "Bottom More must own the navigat
 expect(chrome.includes('aria-controls="ficonter-app-drawer"'), "More must control the navigation sheet.");
 expect(chrome.includes('onClick={openAccount}'), "Avatar must open the account-only sheet.");
 expect(chrome.includes('id="ficonter-account-sheet"'), "Account sheet is missing.");
-expect(chrome.includes('href="/dashboard/profile"'), "Profile action is missing from account sheet.");
+expect(chrome.includes('href="/dashboard/settings?section=profile"'), "Profile action must open Account preferences directly.");
 expect(chrome.includes('End this FICONTER session'), "Log-out action is missing from account sheet.");
 expect(!chrome.includes('className={styles.accountPanel}'), "Account controls must not be duplicated inside More.");
 expect(chrome.includes('label: "Platform admin"'), "Platform Admin group is missing from More.");

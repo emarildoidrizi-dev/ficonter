@@ -23,7 +23,7 @@ const checks = [
   ['Settings defaults to Account & security when no section is requested', settings.includes(': "security",') && settings.includes('? "security"')],
   ['Settings profile URL stays inside Settings', !settingsPage.includes('if (section === "profile")') && settingsPage.includes('"profile"')],
   ['Settings copy includes profile management again', settingsPage.includes('Manage your profile, account security')],
-  ['Dedicated Profile page links directly to the restored Settings profile section', profilePage.includes('/dashboard/settings?section=profile') && profilePage.includes('Open account settings')],
+  ['Legacy Profile route permanently redirects into Settings profile preferences', profilePage.includes('permanentRedirect("/dashboard/settings?section=profile")') && !profilePage.includes('fui-profile-card')],
 ];
 
 let passed = 0;

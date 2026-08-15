@@ -189,7 +189,7 @@ const personalRoutes: RouteItem[] = [
     icon: MessageSquareText,
   },
   {
-    href: "/dashboard/profile",
+    href: "/dashboard/settings?section=profile",
     label: "Profile",
     title: "Profile",
     icon: UserRound,
@@ -844,7 +844,7 @@ export function FiconterNativeAppChrome({
   function openAccount() {
     setDrawerOpen(false);
     setAccountOpen(true);
-    router.prefetch("/dashboard/profile");
+    router.prefetch("/dashboard/settings?section=profile");
   }
 
   async function applyBusinessProfile() {
@@ -1346,13 +1346,13 @@ export function FiconterNativeAppChrome({
 
         <div className={styles.accountActions}>
           <Link
-            href="/dashboard/profile"
+            href="/dashboard/settings?section=profile"
             prefetch={true}
             className={styles.accountAction}
             onClick={() => setAccountOpen(false)}
           >
             <span className={styles.accountActionIcon}><UserRound size={19} aria-hidden="true" /></span>
-            <span><strong>Profile</strong><small>View and manage your profile</small></span>
+            <span><strong>Profile</strong><small>Account preferences</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
           <Link

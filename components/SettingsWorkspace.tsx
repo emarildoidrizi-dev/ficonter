@@ -408,7 +408,7 @@ function readEmailIdentity(
 
 function emailChangeRedirectUrl() {
   if (typeof window === "undefined") return undefined;
-  const next = encodeURIComponent("/dashboard/profile");
+  const next = encodeURIComponent("/dashboard/settings?section=profile");
   return `${window.location.origin}/auth/callback?next=${next}`;
 }
 

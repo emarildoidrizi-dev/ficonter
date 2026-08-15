@@ -24,11 +24,11 @@ expect(css.includes('BusinessOverview_shell'), "Business treatment is missing.")
 expect(chrome.includes('href: "/dashboard/overview"'), "Overview route must point directly to /dashboard/overview.");
 expect(chrome.includes('label: "Transactions"'), "Transactions bottom-nav label is missing.");
 expect(chrome.includes('label: "Planner"'), "Planner bottom-nav label is missing.");
-expect(chrome.includes('href: "/dashboard/profile"'), "Profile route is missing from More.");
+expect(chrome.includes('href: "/dashboard/settings?section=profile"'), "Profile must open Account preferences directly from More.");
 expect(chrome.includes('avatarPath?: string'), "Header avatar support is missing.");
 expect(transactions.includes("MobileTransactionsLayout"), "Transactions split view is missing.");
 expect(exists("components/MobileTransactionsLayout.tsx"), "Transactions split component is missing.");
-expect(exists("app/dashboard/profile/page.tsx"), "Profile page is missing.");
+expect(exists("app/dashboard/profile/page.tsx") && read("app/dashboard/profile/page.tsx").includes("permanentRedirect"), "Legacy Profile route must remain only as a compatibility redirect.");
 expect(!read("components/FiconterNativeAppChrome.tsx").includes("profileOnly"), "Obsolete profileOnly prop must not return.");
 
 console.log("FICONTER unified mobile UI V1: 17 consolidation checks passed.");

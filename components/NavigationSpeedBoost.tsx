@@ -31,7 +31,6 @@ const personalCriticalRoutes = [
   "/dashboard/budget",
   "/dashboard/bills",
   "/dashboard/settings",
-  "/dashboard/profile",
 ];
 
 const personalSecondaryRoutes = [

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
@@ -449,6 +450,7 @@ export function SettingsWorkspace({
   isSubscriptionExempt = false,
 }: Props) {
   const { language, locale } = useLanguage();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
@@ -466,6 +468,10 @@ export function SettingsWorkspace({
       : isSectionId(initialSection)
         ? initialSection
         : "profile",
+  );
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(() =>
+    isSectionId(initialSection) &&
+    !(isSubscriptionExempt && initialSection === "subscription"),
   );
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
@@ -521,15 +527,20 @@ export function SettingsWorkspace({
   >({});
 
   useEffect(() => {
-    if (!isSectionId(initialSection)) return;
+    if (!isSectionId(initialSection)) {
+      setMobileDetailOpen(false);
+      return;
+    }
 
     // Owner / Super Admin / Admin never enter the customer Subscription area.
     // Their access is role-based and does not require a plan or payment.
-    setActive(
+    const nextSection =
       isSubscriptionExempt && initialSection === "subscription"
         ? "profile"
-        : initialSection,
-    );
+        : initialSection;
+
+    setActive(nextSection);
+    setMobileDetailOpen(true);
     setMessage(null);
     setSaveFeedback({});
   }, [initialSection, isSubscriptionExempt]);
@@ -1400,6 +1411,21 @@ export function SettingsWorkspace({
     }
   }
 
+  function openSettingsSection(id: SectionId) {
+    setActive(id);
+    setMessage(null);
+    setSaveFeedback({});
+
+    if (
+      typeof document !== "undefined" &&
+      document.documentElement.dataset.ficonterNativeApp === "true"
+    ) {
+      setMobileDetailOpen(true);
+      router.prefetch(`/dashboard/settings?section=${id}`);
+      router.push(`/dashboard/settings?section=${id}`, { scroll: false });
+    }
+  }
+
   const visibleSections = isSubscriptionExempt
     ? sections.filter((section) => section.id !== "subscription")
     : sections;
@@ -1488,7 +1514,7 @@ const showSubscriptionManagement =
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className={styles.workspace}>
+    <div className={styles.workspace} data-mobile-detail={mobileDetailOpen ? "true" : "false"}>
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
           <div className={styles.avatar}>
@@ -1501,7 +1527,7 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
+            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => openSettingsSection(id)}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />

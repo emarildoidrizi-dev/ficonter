@@ -63,6 +63,15 @@ export default async function SettingsPage({
   const requiredFeature = isSubscriptionFeatureKey(requiredValue)
     ? requiredValue
     : null;
+  const hasExplicitSettingsSection = [
+    "profile",
+    "security",
+    "financial",
+    "notifications",
+    "appearance",
+    "privacy",
+    "subscription",
+  ].includes(section ?? "");
 
   if (isSubscriptionExempt && section === "subscription") {
     redirect("/dashboard/settings?section=profile");
@@ -122,11 +131,10 @@ export default async function SettingsPage({
 
   return (
     <section
-      className={
-        isSubscriptionExempt
-          ? "ficonter-subscription-exempt-settings"
-          : undefined
-      }
+      className={`ficonter-settings-page${
+        isSubscriptionExempt ? " ficonter-subscription-exempt-settings" : ""
+      }`}
+      data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
       {isSubscriptionExempt ? (
         <style>{`
@@ -139,7 +147,7 @@ export default async function SettingsPage({
         `}</style>
       ) : null}
 
-      <div className="page-heading">
+      <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
@@ -151,9 +159,12 @@ export default async function SettingsPage({
       </div>
 
       {!isSubscriptionExempt ? (
-        <CustomerSubscriptionManager subscription={verifiedSubscriptionSnapshot} />
+        <div className="ficonter-settings-subscription-summary">
+          <CustomerSubscriptionManager subscription={verifiedSubscriptionSnapshot} />
+        </div>
       ) : null}
 
+      <div className="ficonter-settings-workspace-shell">
       <SettingsWorkspace
         userId={user.id}
         email={user.email ?? ""}
@@ -164,6 +175,7 @@ export default async function SettingsPage({
         requiredFeature={requiredFeature}
         isSubscriptionExempt={isSubscriptionExempt}
       />
+      </div>
     </section>
   );
 }

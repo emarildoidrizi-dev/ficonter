@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Workspace = "personal" | "business";
 
@@ -115,7 +115,11 @@ export function NavigationSpeedBoost({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const warmedRoutes = useRef(new Set<string>());
+  const previousRouteKey = useRef(routeKey);
+  const transitionTimer = useRef<number | null>(null);
   const loadingTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -136,11 +140,56 @@ export function NavigationSpeedBoost({
       window.clearTimeout(loadingTimer.current);
       loadingTimer.current = null;
     }
-  }, [pathname]);
+
+    const previous = previousRouteKey.current;
+    if (previous !== routeKey && isNativePhoneApp()) {
+      const storageKey = "ficonter:mobile-route-stack";
+      let stack: string[] = [];
+
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(storageKey) ?? "[]");
+        if (Array.isArray(parsed)) stack = parsed.filter((item): item is string => typeof item === "string");
+      } catch {
+        stack = [];
+      }
+
+      if (!stack.length) stack = [previous];
+
+      let direction: "forward" | "back" = "forward";
+      const previousIndex = stack.lastIndexOf(routeKey);
+
+      if (stack.length >= 2 && stack[stack.length - 2] === routeKey) {
+        direction = "back";
+        stack.pop();
+      } else if (previousIndex >= 0 && previousIndex < stack.length - 1) {
+        direction = "back";
+        stack = stack.slice(0, previousIndex + 1);
+      } else if (stack[stack.length - 1] !== routeKey) {
+        stack.push(routeKey);
+      }
+
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(stack.slice(-40)));
+      } catch {
+        // Session storage is only a progressive enhancement for navigation direction.
+      }
+
+      root.dataset.ficonterNavDirection = direction;
+      root.dataset.ficonterNavTransition = "active";
+
+      if (transitionTimer.current) window.clearTimeout(transitionTimer.current);
+      transitionTimer.current = window.setTimeout(() => {
+        root.removeAttribute("data-ficonter-nav-transition");
+        transitionTimer.current = null;
+      }, direction === "back" ? 300 : 340);
+    }
+
+    previousRouteKey.current = routeKey;
+  }, [cacheKey, routeKey, workspace]);
 
   useEffect(() => {
     function warmRoute(route: string | null) {
-      if (!route || route === pathname) return;
+      if (!route || route === routeKey) return;
       if (warmedRoutes.current.has(route)) return;
 
       warmedRoutes.current.add(route);
@@ -177,7 +226,7 @@ export function NavigationSpeedBoost({
 
       const route = internalRoute(event.target);
 
-      if (!route || route === pathname) return;
+      if (!route || route === routeKey) return;
 
       warmRoute(route);
 
@@ -248,8 +297,12 @@ export function NavigationSpeedBoost({
       document.documentElement.removeAttribute(
         "data-ficonter-route-loading",
       );
+      if (transitionTimer.current) {
+        window.clearTimeout(transitionTimer.current);
+        transitionTimer.current = null;
+      }
     };
-  }, [pathname, router]);
+  }, [routeKey, router]);
 
   useEffect(() => {
     const criticalRoutes =

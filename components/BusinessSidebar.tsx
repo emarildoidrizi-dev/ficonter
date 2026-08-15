@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Archive, ArrowLeft, ArrowLeftRight, BarChart3, Building2, ChevronDown, FileText,
   LayoutDashboard, LogOut, PackageOpen, Settings2, ShieldCheck,
@@ -50,11 +50,13 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   user: { displayName: string; email: string };
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const headerRef = useRef<HTMLElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-  const previousPathRef = useRef(pathname);
+  const previousPathRef = useRef(routeKey);
   const [previousAppPath, setPreviousAppPath] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -77,13 +79,13 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
 
   useEffect(() => {
     const previous = previousPathRef.current;
-    if (previous !== pathname) {
+    if (previous !== routeKey) {
       if (previous.startsWith("/dashboard") || previous.startsWith("/business")) {
         setPreviousAppPath(previous);
       }
-      previousPathRef.current = pathname;
+      previousPathRef.current = routeKey;
     }
-  }, [pathname]);
+  }, [routeKey]);
 
   useEffect(() => {
     setSelectedBusinessId(business?.id ?? "");
@@ -162,14 +164,38 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     startSwitchTransition(() => router.refresh());
   }
 
+  function resolveBackTarget() {
+    if (typeof window !== "undefined") {
+      try {
+        const parsed = JSON.parse(
+          sessionStorage.getItem("ficonter:mobile-route-stack") ?? "[]",
+        );
+        const stack = Array.isArray(parsed)
+          ? parsed.filter((item): item is string => typeof item === "string")
+          : [];
+
+        if (stack.length >= 2 && stack[stack.length - 1] === routeKey) {
+          return stack[stack.length - 2];
+        }
+
+        const currentIndex = stack.lastIndexOf(routeKey);
+        if (currentIndex > 0) return stack[currentIndex - 1];
+      } catch {
+        // Fall through to the local previous route / workspace overview.
+      }
+    }
+
+    return previousAppPath && previousAppPath !== routeKey
+      ? previousAppPath
+      : fallbackBackHref;
+  }
+
   function goBackInstant() {
     setAccountMenuOpen(false);
     setOpenGroup(null);
     document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-    const target = previousAppPath && previousAppPath !== pathname
-      ? previousAppPath
-      : fallbackBackHref;
+    const target = resolveBackTarget();
 
     router.prefetch(target);
     router.push(target, { scroll: false });
@@ -200,7 +226,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
             <button
               type="button"
               className={styles.mobileBackButton}
-              onPointerDown={() => router.prefetch(previousAppPath || fallbackBackHref)}
+              onPointerDown={() => router.prefetch(resolveBackTarget())}
               onClick={goBackInstant}
               aria-label="Go back"
               title="Back"

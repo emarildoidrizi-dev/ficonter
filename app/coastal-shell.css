@@ -6,7 +6,7 @@ html[data-theme="light"] .app-shell,
 html[data-theme="system"][data-resolved-theme="light"] .app-shell {
   --text-primary: #183b4b;
   --text-secondary: #536963;
-  --text-tertiary: #63776f;
+  --text-tertiary: #566a63;
   --surface-canvas: #dce9e3;
   --surface-card: #eee9d9;
   --surface-raised: #f4efdf;

@@ -318,7 +318,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
       </div>
 
       <nav className={styles.navigation} aria-label="Personal finance navigation">
-        <Link href="/dashboard/overview" prefetch={false} className={`${styles.overviewLink}${isRouteActive(pathname, "/dashboard/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/overview") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/overview")}>
+        <Link href="/dashboard/overview" prefetch={true} className={`${styles.overviewLink}${isRouteActive(pathname, "/dashboard/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/overview") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/overview")}>
           <LayoutDashboard size={17} /><span>Overview</span>
         </Link>
         {groups.map((group) => {
@@ -340,7 +340,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
                   const targetHref = locked && feature ? getSubscriptionUpgradeHref(feature) : href;
                   const active = !locked && isRouteActive(pathname, href);
                   return (
-                    <Link href={targetHref} key={href} prefetch={false} className={active ? styles.activeMenuLink : undefined} aria-current={active ? "page" : undefined} aria-label={locked ? `${label} — upgrade required` : undefined} title={locked ? "Upgrade required" : undefined} onClick={() => trackNavigation(targetHref)}>
+                    <Link href={targetHref} key={href} prefetch={true} className={active ? styles.activeMenuLink : undefined} aria-current={active ? "page" : undefined} aria-label={locked ? `${label} — upgrade required` : undefined} title={locked ? "Upgrade required" : undefined} onClick={() => trackNavigation(targetHref)}>
                       <Icon size={17} /><span>{label}</span>{locked ? <LockKeyhole size={13} /> : null}
                     </Link>
                   );
@@ -349,7 +349,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
             </details>
           );
         })}
-        <Link href="/dashboard/settings" prefetch={false} className={`${styles.settingsLink}${isRouteActive(pathname, "/dashboard/settings") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/settings") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/settings")}>
+        <Link href="/dashboard/settings" prefetch={true} className={`${styles.settingsLink}${isRouteActive(pathname, "/dashboard/settings") ? ` ${styles.activeLink}` : ""}`} aria-current={isRouteActive(pathname, "/dashboard/settings") ? "page" : undefined} onClick={() => trackNavigation("/dashboard/settings")}>
           <span>Settings</span>
         </Link>
       </nav>

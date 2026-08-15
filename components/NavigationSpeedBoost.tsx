@@ -14,12 +14,24 @@ type NavigatorWithConnection = Navigator & {
   connection?: NetworkInformation;
 };
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (
+    callback: () => void,
+    options?: { timeout?: number },
+  ) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+const ROUTE_LOADING_DELAY_MS = 140;
+const ROUTE_LOADING_MAX_MS = 8000;
+
 const personalCriticalRoutes = [
-  "/dashboard",
+  "/dashboard/overview",
   "/dashboard/transactions",
   "/dashboard/budget",
   "/dashboard/bills",
   "/dashboard/settings",
+  "/dashboard/profile",
 ];
 
 const personalSecondaryRoutes = [
@@ -35,6 +47,7 @@ const personalSecondaryRoutes = [
   "/dashboard/insights",
   "/dashboard/documents",
   "/dashboard/inbox",
+  "/dashboard/setup",
 ];
 
 const businessCriticalRoutes = [
@@ -50,6 +63,7 @@ const businessSecondaryRoutes = [
   "/business/suppliers",
   "/business/administration",
   "/business/manage",
+  "/business/setup",
 ];
 
 const warmedByContext = new Map<string, Set<string>>();
@@ -67,9 +81,7 @@ function internalRoute(target: EventTarget | null) {
 
   try {
     const url = new URL(href, window.location.href);
-
     if (url.origin !== window.location.origin) return null;
-
     return `${url.pathname}${url.search}`;
   } catch {
     return null;
@@ -88,15 +100,9 @@ function shouldHandleClick(event: MouseEvent) {
 }
 
 function allowsBackgroundPrefetch() {
-  const connection = (
-    navigator as NavigatorWithConnection
-  ).connection;
-
+  const connection = (navigator as NavigatorWithConnection).connection;
   if (connection?.saveData) return false;
-
-  return !["slow-2g", "2g"].includes(
-    connection?.effectiveType ?? "",
-  );
+  return !["slow-2g", "2g"].includes(connection?.effectiveType ?? "");
 }
 
 function isNativePhoneApp() {
@@ -122,25 +128,27 @@ export function NavigationSpeedBoost({
   const previousRouteKey = useRef(routeKey);
   const lastAnimatedRouteKey = useRef(routeKey);
   const transitionTimer = useRef<number | null>(null);
-  const loadingTimer = useRef<number | null>(null);
+  const loadingDelayTimer = useRef<number | null>(null);
+  const loadingMaxTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const contextKey = `${workspace}:${cacheKey}`;
-    const existing =
-      warmedByContext.get(contextKey) ?? new Set<string>();
-
+    const existing = warmedByContext.get(contextKey) ?? new Set<string>();
     warmedByContext.set(contextKey, existing);
     warmedRoutes.current = existing;
   }, [cacheKey, workspace]);
 
   useEffect(() => {
     const root = document.documentElement;
-
     root.removeAttribute("data-ficonter-route-loading");
 
-    if (loadingTimer.current) {
-      window.clearTimeout(loadingTimer.current);
-      loadingTimer.current = null;
+    if (loadingDelayTimer.current) {
+      window.clearTimeout(loadingDelayTimer.current);
+      loadingDelayTimer.current = null;
+    }
+    if (loadingMaxTimer.current) {
+      window.clearTimeout(loadingMaxTimer.current);
+      loadingMaxTimer.current = null;
     }
 
     const previous = previousRouteKey.current;
@@ -155,7 +163,9 @@ export function NavigationSpeedBoost({
 
       try {
         const parsed = JSON.parse(sessionStorage.getItem(storageKey) ?? "[]");
-        if (Array.isArray(parsed)) stack = parsed.filter((item): item is string => typeof item === "string");
+        if (Array.isArray(parsed)) {
+          stack = parsed.filter((item): item is string => typeof item === "string");
+        }
       } catch {
         stack = [];
       }
@@ -189,19 +199,16 @@ export function NavigationSpeedBoost({
       transitionTimer.current = window.setTimeout(() => {
         root.removeAttribute("data-ficonter-nav-transition");
         transitionTimer.current = null;
-      }, direction === "back" ? 220 : 240);
+      }, direction === "back" ? 200 : 220);
     }
 
     previousRouteKey.current = routeKey;
-  }, [cacheKey, routeKey, workspace]);
+  }, [routeKey]);
 
   useEffect(() => {
     function warmRoute(route: string | null) {
-      if (!route || route === routeKey) return;
-      if (warmedRoutes.current.has(route)) return;
-
+      if (!route || route === routeKey || warmedRoutes.current.has(route)) return;
       warmedRoutes.current.add(route);
-
       try {
         router.prefetch(route);
       } catch {
@@ -231,38 +238,29 @@ export function NavigationSpeedBoost({
 
     function handleClick(event: MouseEvent) {
       if (!shouldHandleClick(event)) return;
-
       const route = internalRoute(event.target);
-
       if (!route || route === routeKey) return;
 
       warmRoute(route);
 
-      document.documentElement.dataset.ficonterRouteLoading =
-        "true";
+      // Do not flash a progress bar for genuinely instant client-side routes.
+      // It appears only when navigation takes long enough to be perceptible.
+      if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
+      if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
 
-      if (loadingTimer.current) {
-        window.clearTimeout(loadingTimer.current);
-      }
+      loadingDelayTimer.current = window.setTimeout(() => {
+        document.documentElement.dataset.ficonterRouteLoading = "true";
+        loadingDelayTimer.current = null;
+      }, ROUTE_LOADING_DELAY_MS);
 
-      loadingTimer.current = window.setTimeout(() => {
-        document.documentElement.removeAttribute(
-          "data-ficonter-route-loading",
-        );
-        loadingTimer.current = null;
-      }, 9000);
+      loadingMaxTimer.current = window.setTimeout(() => {
+        document.documentElement.removeAttribute("data-ficonter-route-loading");
+        loadingMaxTimer.current = null;
+      }, ROUTE_LOADING_MAX_MS);
     }
 
-    document.addEventListener(
-      "pointerover",
-      handlePointerOver,
-      true,
-    );
-    document.addEventListener(
-      "pointerdown",
-      handlePointerDown,
-      true,
-    );
+    document.addEventListener("pointerover", handlePointerOver, true);
+    document.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("focusin", handleFocusIn, true);
     document.addEventListener("touchstart", handleTouchStart, {
       capture: true,
@@ -271,40 +269,18 @@ export function NavigationSpeedBoost({
     document.addEventListener("click", handleClick, true);
 
     return () => {
-      document.removeEventListener(
-        "pointerover",
-        handlePointerOver,
-        true,
-      );
-      document.removeEventListener(
-        "pointerdown",
-        handlePointerDown,
-        true,
-      );
-      document.removeEventListener(
-        "focusin",
-        handleFocusIn,
-        true,
-      );
-      document.removeEventListener(
-        "touchstart",
-        handleTouchStart,
-        true,
-      );
-      document.removeEventListener(
-        "click",
-        handleClick,
-        true,
-      );
+      document.removeEventListener("pointerover", handlePointerOver, true);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("focusin", handleFocusIn, true);
+      document.removeEventListener("touchstart", handleTouchStart, true);
+      document.removeEventListener("click", handleClick, true);
 
-      if (loadingTimer.current) {
-        window.clearTimeout(loadingTimer.current);
-        loadingTimer.current = null;
-      }
+      if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
+      if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
+      loadingDelayTimer.current = null;
+      loadingMaxTimer.current = null;
+      document.documentElement.removeAttribute("data-ficonter-route-loading");
 
-      document.documentElement.removeAttribute(
-        "data-ficonter-route-loading",
-      );
       if (transitionTimer.current) {
         window.clearTimeout(transitionTimer.current);
         transitionTimer.current = null;
@@ -314,62 +290,52 @@ export function NavigationSpeedBoost({
 
   useEffect(() => {
     const criticalRoutes =
-      workspace === "personal"
-        ? personalCriticalRoutes
-        : businessCriticalRoutes;
-
+      workspace === "personal" ? personalCriticalRoutes : businessCriticalRoutes;
     const secondaryRoutes =
-      workspace === "personal"
-        ? personalSecondaryRoutes
-        : businessSecondaryRoutes;
-
-    const oppositeWorkspace =
-      workspace === "personal"
-        ? "/business/overview"
-        : "/dashboard";
-
+      workspace === "personal" ? personalSecondaryRoutes : businessSecondaryRoutes;
+    const oppositeWorkspace = workspace === "personal" ? "/business/overview" : "/dashboard/overview";
+    const contextKey = `${workspace}:${cacheKey}`;
+    const idleWindow = window as IdleWindow;
     const scheduled: number[] = [];
+    let idleHandle: number | null = null;
 
-    function schedule(route: string, delay: number) {
-      scheduled.push(
-        window.setTimeout(() => {
-          if (
-            route === pathname ||
-            warmedRoutes.current.has(route)
-          ) {
-            return;
-          }
-
-          warmedRoutes.current.add(route);
-
-          try {
-            router.prefetch(route);
-          } catch {
-            warmedRoutes.current.delete(route);
-          }
-        }, delay),
-      );
+    function warm(route: string) {
+      if (route === pathname || warmedRoutes.current.has(route)) return;
+      warmedRoutes.current.add(route);
+      try {
+        router.prefetch(route);
+      } catch {
+        warmedRoutes.current.delete(route);
+      }
     }
 
+    // Warm the routes users are most likely to choose immediately after the
+    // shell becomes interactive. Staggering prevents a burst of RSC requests.
     criticalRoutes.forEach((route, index) => {
-      schedule(route, 120 + index * 130);
+      scheduled.push(window.setTimeout(() => warm(route), 40 + index * 70));
     });
 
-    schedule(oppositeWorkspace, 900);
-
-    if (
-      allowsBackgroundPrefetch() &&
-      isNativePhoneApp()
-    ) {
+    const warmSecondary = () => {
+      if (!allowsBackgroundPrefetch() || document.visibilityState !== "visible") return;
       secondaryRoutes.forEach((route, index) => {
-        schedule(route, 1100 + index * 190);
+        scheduled.push(window.setTimeout(() => warm(route), index * 85));
       });
+      scheduled.push(window.setTimeout(() => warm(oppositeWorkspace), 180));
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleHandle = idleWindow.requestIdleCallback(warmSecondary, { timeout: 900 });
+    } else {
+      scheduled.push(window.setTimeout(warmSecondary, 650));
     }
 
     return () => {
-      scheduled.forEach((timer) =>
-        window.clearTimeout(timer),
-      );
+      scheduled.forEach((timer) => window.clearTimeout(timer));
+      if (idleHandle !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleHandle);
+      }
+      // The warmed set intentionally survives same-workspace navigation.
+      warmedByContext.set(contextKey, warmedRoutes.current);
     };
   }, [cacheKey, pathname, router, workspace]);
 

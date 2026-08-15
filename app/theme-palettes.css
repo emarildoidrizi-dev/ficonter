@@ -104,7 +104,7 @@ html[data-theme="ocean"] {
   color-scheme: light;
   --text-primary: #172d34;
   --text-secondary: #536d75;
-  --text-tertiary: #71878e;
+  --text-tertiary: #596f76;
   --surface-canvas: #eaf2f4;
   --surface-card: #fbfdfd;
   --surface-raised: #ffffff;
@@ -136,7 +136,7 @@ html[data-theme="sandstone"] {
   color-scheme: light;
   --text-primary: #2d251f;
   --text-secondary: #685e55;
-  --text-tertiary: #877a6e;
+  --text-tertiary: #6f6156;
   --surface-canvas: #eee5d7;
   --surface-card: #fcf8f1;
   --surface-raised: #ffffff;

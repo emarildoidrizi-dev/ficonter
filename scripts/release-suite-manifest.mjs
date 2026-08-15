@@ -38,6 +38,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-mobile-ui-phase5.mjs',
   'verify-mobile-ui-phase6.mjs',
   'verify-mobile-unified-v1.mjs',
+  'verify-navigation-theme-v129.mjs',
   'verify-monthly-spending-budget.mjs',
   'verify-performance-accuracy.mjs',
   'verify-phase1-qa.mjs',

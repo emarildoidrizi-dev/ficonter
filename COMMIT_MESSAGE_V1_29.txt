@@ -1,0 +1,1 @@
+feat(ui): accelerate navigation and enforce adaptive theme contrast

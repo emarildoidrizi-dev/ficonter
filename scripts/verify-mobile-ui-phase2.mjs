@@ -30,7 +30,10 @@ expect(mobile, '[data-resolved-theme="dark"]', "Mobile must explicitly honor the
 expect(mobile, "--mobile-page-title-size", "Mobile must use one page-title scale token.");
 expect(mobile, "var(--mobile-control-text-size)", "Mobile controls must use the stable control type token.");
 expect(mobile, "var(--mobile-text-tertiary)", "Mobile placeholders must use the tertiary semantic text token.");
-expect(guard, 'root.dataset.ficonterNativeApp === "true"', "Runtime contrast repaint must be disabled in native mobile mode.");
+expect(guard, 'record.addedNodes', "Runtime contrast audit must protect newly rendered mobile content incrementally.");
+if (guard.includes('if (root.dataset.ficonterNativeApp === "true") return')) {
+  throw new Error("Runtime contrast protection must not skip native mobile mode.");
+}
 expect(guard, '"data-ficonter-native-app"', "Contrast guard must react when mobile mode changes.");
 expect(chrome, "var(--mobile-chrome-text)", "Mobile chrome must use stable text tokens.");
 expect(chrome, "var(--mobile-chrome-accent)", "Mobile chrome must use stable accent tokens.");

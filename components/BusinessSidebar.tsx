@@ -291,7 +291,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
       <nav className={styles.navigation} aria-label="Business navigation">
         {business ? (
           <>
-            <Link href="/business/overview" className={`${styles.overviewLink}${activeRoute(pathname, "/business/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={activeRoute(pathname, "/business/overview") ? "page" : undefined} prefetch={false} onClick={() => trackRoute("/business/overview")}><LayoutDashboard size={17} />Overview</Link>
+            <Link href="/business/overview" className={`${styles.overviewLink}${activeRoute(pathname, "/business/overview") ? ` ${styles.activeLink}` : ""}`} aria-current={activeRoute(pathname, "/business/overview") ? "page" : undefined} prefetch={true} onClick={() => trackRoute("/business/overview")}><LayoutDashboard size={17} />Overview</Link>
             {groups.map((group) => {
               const visibleLinks = group.links.filter(([, , , manageOnly, platformOnly]) => (!manageOnly || canManage) && (!platformOnly || isPlatformAdmin));
               if (!visibleLinks.length) return null;
@@ -307,7 +307,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
                     }}
                   >{group.label}<ChevronDown size={14} /></summary>
                   <div className={styles.groupMenu}>
-                    {visibleLinks.map(([href, Icon, label]) => <Link href={href} key={href} className={activeRoute(pathname, href) ? styles.activeMenuLink : undefined} aria-current={activeRoute(pathname, href) ? "page" : undefined} prefetch={false} onClick={() => trackRoute(href)}><Icon size={17} /><span>{label}</span></Link>)}
+                    {visibleLinks.map(([href, Icon, label]) => <Link href={href} key={href} className={activeRoute(pathname, href) ? styles.activeMenuLink : undefined} aria-current={activeRoute(pathname, href) ? "page" : undefined} prefetch={true} onClick={() => trackRoute(href)}><Icon size={17} /><span>{label}</span></Link>)}
                   </div>
                 </details>
               );

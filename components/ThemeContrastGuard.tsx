@@ -259,9 +259,17 @@ function rgbaToCss(color: Rgba) {
 export function ThemeContrastGuard() {
   useEffect(() => {
     const root = document.documentElement;
-    let frame = 0;
-    let timer = 0;
+    let fullAuditFrame = 0;
+    let fullAuditTimer = 0;
+    let incrementalFrame = 0;
     const adjusted = new Set<HTMLElement>();
+    const pendingScopes = new Set<Element>();
+
+    function removeAdjustment(element: HTMLElement) {
+      element.classList.remove("ficonter-auto-contrast");
+      element.style.removeProperty("--ficonter-auto-text");
+      adjusted.delete(element);
+    }
 
     function clearAdjustments() {
       adjusted.forEach((element) => {
@@ -271,91 +279,116 @@ export function ThemeContrastGuard() {
       adjusted.clear();
     }
 
-    function audit() {
-      frame = 0;
-      timer = 0;
-      clearAdjustments();
-
-      // Mobile Phase 2 owns text contrast through deterministic semantic CSS
-      // tokens. Never repaint mobile text after render: doing so caused the
-      // visible dark -> white -> alternate-color flicker during theme changes.
-      if (root.dataset.ficonterNativeApp === "true") return;
-
-      const scope = document.querySelector(".app-shell") ?? document.body;
-      const elements = Array.from(scope.querySelectorAll<HTMLElement>(TEXT_SELECTOR));
-
-      for (const element of elements) {
-        if (!isVisibleTextElement(element)) continue;
-        if (element.closest("[data-ficonter-contrast-ignore='true']")) continue;
-
-        const foreground = textColor(element);
-        if (!foreground) continue;
-
-        const background = effectiveBackground(element);
-        if (contrastRatio(foreground, background) >= MIN_CONTRAST) continue;
-
-        const replacement = chooseReadableColor(background);
-        element.style.setProperty("--ficonter-auto-text", rgbaToCss(replacement));
-        element.classList.add("ficonter-auto-contrast");
-        adjusted.add(element);
+    function auditElement(element: HTMLElement) {
+      if (!isVisibleTextElement(element)) {
+        if (adjusted.has(element)) removeAdjustment(element);
+        return;
       }
+      if (element.closest("[data-ficonter-contrast-ignore='true']")) return;
+
+      const foreground = textColor(element);
+      if (!foreground) return;
+      const background = effectiveBackground(element);
+
+      if (contrastRatio(foreground, background) >= MIN_CONTRAST) {
+        if (adjusted.has(element)) removeAdjustment(element);
+        return;
+      }
+
+      const replacement = chooseReadableColor(background);
+      element.style.setProperty("--ficonter-auto-text", rgbaToCss(replacement));
+      element.classList.add("ficonter-auto-contrast");
+      adjusted.add(element);
     }
 
-    function scheduleAudit() {
-      if (frame || timer) return;
-      timer = window.setTimeout(() => {
-        timer = 0;
-        frame = window.requestAnimationFrame(audit);
-      }, 80);
+    function collectTextElements(scope: ParentNode) {
+      const elements: HTMLElement[] = [];
+      if (scope instanceof HTMLElement && scope.matches(TEXT_SELECTOR)) {
+        elements.push(scope);
+      }
+      elements.push(...Array.from(scope.querySelectorAll<HTMLElement>(TEXT_SELECTOR)));
+      return elements;
     }
 
-    const rootObserver = new MutationObserver(scheduleAudit);
+    function auditScope(scope: ParentNode) {
+      for (const element of collectTextElements(scope)) auditElement(element);
+    }
+
+    function runFullAudit() {
+      fullAuditFrame = 0;
+      fullAuditTimer = 0;
+      clearAdjustments();
+      const scope = document.querySelector(".app-shell") ?? document.body;
+      auditScope(scope);
+    }
+
+    function scheduleFullAudit(delay = 24) {
+      if (fullAuditFrame || fullAuditTimer) return;
+      fullAuditTimer = window.setTimeout(() => {
+        fullAuditTimer = 0;
+        fullAuditFrame = window.requestAnimationFrame(runFullAudit);
+      }, delay);
+    }
+
+    function runIncrementalAudit() {
+      incrementalFrame = 0;
+      const scopes = [...pendingScopes];
+      pendingScopes.clear();
+      for (const scope of scopes) auditScope(scope);
+    }
+
+    function scheduleIncrementalAudit(scope: Element) {
+      pendingScopes.add(scope);
+      if (incrementalFrame) return;
+      incrementalFrame = window.requestAnimationFrame(runIncrementalAudit);
+    }
+
+    const rootObserver = new MutationObserver(() => scheduleFullAudit());
     rootObserver.observe(root, {
       attributes: true,
       attributeFilter: [
         "data-theme",
         "data-resolved-theme",
         "data-wallpaper-scene",
+        "data-wallpaper-daypart",
         "data-background-motion",
         "data-ficonter-native-app",
       ],
     });
 
-    const contentObserver = new MutationObserver(scheduleAudit);
+    // Route changes add a new subtree. Audit only what was added instead of
+    // rescanning every label after every React text mutation.
+    const contentObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof Element) scheduleIncrementalAudit(node);
+        }
+      }
+    });
     contentObserver.observe(document.body, {
       childList: true,
       subtree: true,
-      characterData: true,
     });
 
-    window.addEventListener("resize", scheduleAudit, { passive: true });
-    window.addEventListener("ficonter:preferences-updated", scheduleAudit);
+    const handleResize = () => scheduleFullAudit(90);
+    const handlePreferences = () => scheduleFullAudit();
+    window.addEventListener("resize", handleResize, { passive: true });
+    window.addEventListener("ficonter:preferences-updated", handlePreferences);
 
-    scheduleAudit();
+    scheduleFullAudit(0);
 
     return () => {
       rootObserver.disconnect();
       contentObserver.disconnect();
-      window.removeEventListener("resize", scheduleAudit);
-      window.removeEventListener("ficonter:preferences-updated", scheduleAudit);
-      if (frame) window.cancelAnimationFrame(frame);
-      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("ficonter:preferences-updated", handlePreferences);
+      if (fullAuditFrame) window.cancelAnimationFrame(fullAuditFrame);
+      if (incrementalFrame) window.cancelAnimationFrame(incrementalFrame);
+      if (fullAuditTimer) window.clearTimeout(fullAuditTimer);
+      pendingScopes.clear();
       clearAdjustments();
     };
   }, []);
 
-  return (
-    <style>{`
-      [data-resolved-theme] .app-shell .ficonter-auto-contrast {
-        color: var(--ficonter-auto-text) !important;
-        -webkit-text-fill-color: var(--ficonter-auto-text) !important;
-      }
-
-      [data-resolved-theme] .app-shell .ficonter-auto-contrast::placeholder {
-        color: color-mix(in srgb, var(--ficonter-auto-text) 72%, transparent) !important;
-        -webkit-text-fill-color: color-mix(in srgb, var(--ficonter-auto-text) 72%, transparent) !important;
-        opacity: 1 !important;
-      }
-    `}</style>
-  );
+  return null;
 }

@@ -1,0 +1,140 @@
+/* ========================================================================== 
+   FICONTER V1.29 — AUTOMATIC THEME VISIBILITY
+   The selected theme owns every shared foreground/surface relationship.
+   This layer loads last so legacy module CSS cannot make financial values,
+   navigation chrome, banners, bars or controls unreadable after a theme swap.
+   ========================================================================== */
+
+html[data-theme] {
+  --theme-on-canvas: var(--text-primary);
+  --theme-on-surface: var(--text-primary);
+  --theme-on-surface-muted: var(--text-secondary);
+  --theme-on-surface-faint: var(--text-tertiary);
+  --theme-on-solid: var(--solid-text);
+  --theme-surface-card: var(--surface-card);
+  --theme-surface-raised: var(--surface-raised);
+  --theme-control-surface: var(--control-bg);
+  --theme-separator: var(--border-subtle);
+}
+
+html[data-theme] body,
+html[data-theme] .app-shell,
+html[data-theme] .app-main {
+  color: var(--theme-on-canvas);
+}
+
+/* Shared structural surfaces always inherit a readable foreground. We avoid
+   replacing their layout/gradient; the runtime contrast guard handles unusual
+   hard-coded backgrounds without forcing every module into one visual style. */
+html[data-theme] .app-shell :where(
+  header,
+  nav,
+  [role="navigation"],
+  [role="menu"],
+  [role="dialog"],
+  [class*="banner" i],
+  [class*="bar" i],
+  [class*="card" i],
+  [class*="panel" i],
+  [class*="drawer" i],
+  [class*="sheet" i],
+  [class*="menu" i],
+  [class*="popover" i],
+  [class*="dropdown" i],
+  [class*="toolbar" i]
+) {
+  color: var(--theme-on-surface);
+  border-color: var(--theme-separator);
+}
+
+/* Menus/dialogs/sheets must never expose wallpaper directly behind text. */
+html[data-theme] .app-shell :where(
+  [role="menu"],
+  [role="dialog"],
+  [class*="drawer" i],
+  [class*="sheet" i],
+  [class*="popover" i],
+  [class*="dropdown" i]
+) {
+  background-color: color-mix(in srgb, var(--theme-surface-raised) 97%, transparent);
+}
+
+/* Financial numbers and primary labels are always high-contrast. */
+html[data-theme] .app-shell :where(
+  h1,h2,h3,h4,h5,h6,
+  output,
+  [class*="amount" i],
+  [class*="balance" i],
+  [class*="total" i],
+  [class*="number" i],
+  [class*="metricValue" i],
+  [class*="statValue" i],
+  [class*="money" i]
+) {
+  color: var(--theme-on-surface);
+}
+
+/* Descriptive/meta copy remains visibly secondary rather than fading into the
+   active surface. */
+html[data-theme] .app-shell :where(
+  [class*="subtitle" i],
+  [class*="description" i],
+  [class*="caption" i],
+  [class*="meta" i],
+  [class*="muted" i],
+  [class*="hint" i],
+  [class*="helper" i]
+) {
+  color: var(--theme-on-surface-muted);
+}
+
+html[data-theme] .app-shell :where(input, select, textarea) {
+  background-color: var(--theme-control-surface);
+  border-color: var(--theme-separator);
+  color: var(--theme-on-surface);
+  caret-color: var(--theme-on-surface);
+}
+
+html[data-theme] .app-shell :where(input, textarea)::placeholder {
+  color: var(--theme-on-surface-faint);
+  -webkit-text-fill-color: var(--theme-on-surface-faint);
+  opacity: 1;
+}
+
+html[data-theme] .app-shell select option {
+  background: var(--theme-surface-raised);
+  color: var(--theme-on-surface);
+}
+
+/* Icons follow the same readable foreground as their label unless the icon is
+   explicitly marked as a multicolour asset. */
+html[data-theme] .app-shell :where(
+  button,
+  a,
+  summary,
+  [role="button"],
+  [role="menuitem"]
+) svg:not([data-ficonter-preserve-color="true"]) {
+  color: currentColor;
+}
+
+/* Keep native phone/tablet chrome under the same semantic contract. */
+html[data-ficonter-native-app="true"][data-theme] {
+  --mobile-chrome-bg: var(--surface-card);
+  --mobile-chrome-surface: var(--surface-raised);
+  --mobile-chrome-text: var(--text-primary);
+  --mobile-chrome-muted: var(--text-secondary);
+  --mobile-chrome-accent: var(--gold);
+  --mobile-chrome-on-accent: var(--solid-text);
+}
+
+html[data-theme] .app-shell .ficonter-auto-contrast {
+  color: var(--ficonter-auto-text) !important;
+  -webkit-text-fill-color: var(--ficonter-auto-text) !important;
+}
+
+html[data-theme] .app-shell .ficonter-auto-contrast::placeholder {
+  color: color-mix(in srgb, var(--ficonter-auto-text) 76%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in srgb, var(--ficonter-auto-text) 76%, transparent) !important;
+  opacity: 1 !important;
+}

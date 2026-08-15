@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   BarChart3,
   BookOpen,
   BriefcaseBusiness,
@@ -513,6 +514,8 @@ export function FiconterNativeAppChrome({
   const accountCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const accountSheetRef = useRef<HTMLElement>(null);
+  const previousPathRef = useRef(pathname);
+  const [previousAppPath, setPreviousAppPath] = useState<string | null>(null);
 
   const routes = useMemo(
     () => [
@@ -537,6 +540,14 @@ export function FiconterNativeAppChrome({
 
   const isAdminRoute =
     pathname.startsWith("/dashboard/admin") || pathname.startsWith("/business/admin");
+
+  const mobileRootPaths =
+    workspace === "business"
+      ? new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"])
+      : new Set(["/dashboard", "/dashboard/overview", "/dashboard/transactions", "/dashboard/budget"]);
+  const showBackCommand = !mobileRootPaths.has(pathname);
+  const fallbackBackHref =
+    workspace === "business" ? "/business/overview" : "/dashboard/overview";
 
   const identity =
     workspace === "business"
@@ -650,6 +661,10 @@ export function FiconterNativeAppChrome({
   }, [addHref, router, workspace]);
 
   useEffect(() => {
+    if (previousPathRef.current !== pathname) {
+      setPreviousAppPath(previousPathRef.current);
+      previousPathRef.current = pathname;
+    }
     setDrawerOpen(false);
     setAccountOpen(false);
   }, [pathname]);
@@ -834,6 +849,26 @@ export function FiconterNativeAppChrome({
     router.refresh();
   }
 
+  function goBackInstant() {
+    setDrawerOpen(false);
+    setAccountOpen(false);
+    document.documentElement.removeAttribute("data-ficonter-route-loading");
+
+    const previousIsInsideApp = Boolean(
+      previousAppPath &&
+      (previousAppPath.startsWith("/dashboard") || previousAppPath.startsWith("/business")),
+    );
+
+    if (previousIsInsideApp && previousAppPath !== pathname) {
+      router.prefetch(previousAppPath);
+      router.push(previousAppPath, { scroll: false });
+      return;
+    }
+
+    router.prefetch(fallbackBackHref);
+    router.push(fallbackBackHref, { scroll: false });
+  }
+
   async function signOut() {
     if (signingOut) return;
 
@@ -882,11 +917,28 @@ export function FiconterNativeAppChrome({
           />
         </div>
 
-        <div className={styles.routeIdentity}>
-          <span className={styles.routeEyebrow}>
-            {isAdminRoute ? "ADMIN" : workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
-          </span>
-          <strong>{route.title}</strong>
+        <div className={`${styles.routeIdentity} ${showBackCommand ? styles.routeIdentityWithBack : ""}`}>
+          {showBackCommand ? (
+            <button
+              type="button"
+              className={styles.backButton}
+              onPointerDown={() => {
+                if (previousAppPath) router.prefetch(previousAppPath);
+                else router.prefetch(fallbackBackHref);
+              }}
+              onClick={goBackInstant}
+              aria-label="Go back"
+              title="Back"
+            >
+              <ArrowLeft size={20} aria-hidden={true} />
+            </button>
+          ) : null}
+          <div className={styles.routeCopy}>
+            <span className={styles.routeEyebrow}>
+              {isAdminRoute ? "ADMIN" : workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
+            </span>
+            <strong>{route.title}</strong>
+          </div>
         </div>
 
         <button

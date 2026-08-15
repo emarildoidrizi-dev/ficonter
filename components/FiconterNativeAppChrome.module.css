@@ -44,6 +44,7 @@
 }
 
 .menuButton,
+.backButton,
 .workspaceBadge,
 .drawerHeader button,
 .dockItem,
@@ -78,8 +79,16 @@
 }
 
 .routeIdentity {
+  display: flex;
   min-width: 0;
+  align-items: center;
   align-self: center;
+  gap: 7px;
+}
+
+.routeCopy {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .routeIdentity span,
@@ -107,6 +116,37 @@
   font-weight: 780;
   line-height: 1.06;
   letter-spacing: -0.022em;
+}
+
+.backButton {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(216, 189, 124, 0.24);
+  border-radius: 11px;
+  color: var(--mobile-chrome-text);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  font: inherit;
+  cursor: pointer;
+}
+
+.backButton svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.backButton:active {
+  transform: scale(0.94);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--mobile-chrome-focus);
+  outline-offset: 2px;
 }
 
 .workspaceBadge {

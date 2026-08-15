@@ -774,39 +774,3 @@
 }
 
 /* FICONTER EXACT MOBILE CONTROL CONTAINMENT V4 - END */
-
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE 04.32 — PROFILE PHOTO TRUE CIRCLE FILL                     */
-/* The saved profile image occupies the complete circular account control.    */
-/* Keep the gold outline and online/status dot, but remove all inner padding.  */
-/* -------------------------------------------------------------------------- */
-.workspaceBadge {
-  padding: 0 !important;
-  overflow: visible !important;
-  isolation: isolate;
-}
-
-.workspaceAvatarImage {
-  position: absolute !important;
-  z-index: 1;
-  inset: 1px !important;
-  width: auto !important;
-  height: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 50% !important;
-  object-fit: cover !important;
-  object-position: center center !important;
-  clip-path: circle(50% at 50% 50%);
-}
-
-.workspaceBadge > span {
-  position: relative;
-  z-index: 1;
-}
-
-.workspaceBadge::after {
-  z-index: 3;
-}

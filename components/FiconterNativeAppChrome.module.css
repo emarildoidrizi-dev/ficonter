@@ -2,18 +2,6 @@
    Mobile-only application chrome. The shell is deliberately stable and
    independent from workspace wallpaper/theme changes. */
 
-:global(html[data-ficonter-native-app="true"]) {
-  --ficonter-native-header-height: 82px;
-  --ficonter-native-dock-height: 66px;
-}
-
-@media (max-width: 390px) {
-  :global(html[data-ficonter-native-app="true"]) {
-    --ficonter-native-header-height: 78px;
-    --ficonter-native-dock-height: 62px;
-  }
-}
-
 .header,
 .bottomDock,
 .drawer,
@@ -112,7 +100,7 @@
 }
 
 .routeIdentity strong {
-  margin-top: 4px;
+  margin-top: 5px;
   color: var(--mobile-chrome-text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
@@ -129,12 +117,11 @@
   place-items: center;
   align-self: center;
   justify-self: end;
-  overflow: hidden;
   border: 1px solid rgba(216, 189, 124, 0.24);
   border-radius: 50%;
   color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.07);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   line-height: 1;
   text-decoration: none;
@@ -437,10 +424,10 @@
   margin: 1px 0 8px;
   padding: 8px 14px;
   border: 1px solid rgba(216, 189, 124, 0.18);
-  border-radius: 15px;
+  border-radius: 17px;
   color: var(--mobile-chrome-accent-text);
   background: rgba(216, 189, 124, 0.065);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 730;
   line-height: 1.2;
   text-decoration: none;
@@ -686,7 +673,7 @@
   width: min(720px, calc(100vw - 44px));
   border: 1px solid rgba(216, 189, 124, 0.14);
   border-bottom: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 24px 24px 0 0;
   transform: translateX(50%) translateZ(0);
 }
 
@@ -694,7 +681,7 @@
   right: 50%;
   left: auto;
   width: min(760px, calc(100vw - 34px));
-  border-radius: 24px 24px 0 0;
+  border-radius: 30px 30px 0 0;
   transform: translate3d(50%, 105%, 0);
 }
 
@@ -817,7 +804,6 @@
   width: 42px;
   height: 42px;
   place-items: center;
-  overflow: hidden;
   border: 1px solid rgba(216, 189, 124, 0.22);
   border-radius: 50%;
   color: var(--mobile-chrome-on-accent);
@@ -849,7 +835,7 @@
 .accountIdentity small {
   margin-top: 3px;
   color: var(--mobile-chrome-muted);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 580;
 }
 
@@ -858,7 +844,7 @@
   min-height: 40px;
   grid-template-columns: 18px auto;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 0 10px;
   border: 1px solid rgba(184, 79, 79, 0.24);
   border-radius: 12px;
@@ -885,7 +871,7 @@
 .drawerBusinessSelector {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  gap: 6px;
   margin: 0 0 8px;
   padding: 10px 12px;
   border: 1px solid rgba(216, 189, 124, 0.18);
@@ -954,666 +940,4 @@
   .businessProfileBar {
     min-height: 36px;
   }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE MOCKUP 04 — approved chrome                                */
-/* -------------------------------------------------------------------------- */
-
-:global(html[data-ficonter-native-app="true"]) .header {
-  min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
-  grid-template-columns: 46px minmax(0, 1fr) 44px;
-  gap: 10px;
-  align-items: center;
-  padding:
-    env(safe-area-inset-top)
-    max(12px, env(safe-area-inset-right))
-    7px
-    max(12px, env(safe-area-inset-left));
-  border-bottom: 1px solid #c79f4d;
-  border-radius: 0 0 18px 18px;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(76, 112, 96, .20), transparent 28%),
-    linear-gradient(115deg, #243b34 0%, #102c25 48%, #0b211c 100%);
-  box-shadow: 0 10px 28px rgba(21, 44, 37, .24), inset 0 -1px 0 rgba(255,255,255,.035);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.menuButton {
-  width: 52px;
-  height: 52px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid rgba(207, 168, 78, .74);
-  border-radius: 17px;
-  color: #efd99a;
-  background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(0,0,0,.10));
-  box-shadow: 0 7px 18px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08);
-}
-
-.headerMark {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  box-shadow: none;
-}
-
-.routeIdentity {
-  align-self: center;
-}
-
-.routeEyebrow {
-  color: #e7cf91;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .14em;
-}
-
-.routeIdentity strong {
-  margin-top: 5px;
-  color: #fffdf5;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 21px;
-  font-weight: 600;
-  line-height: .98;
-  letter-spacing: -.035em;
-}
-
-.workspaceBadge {
-  width: 44px;
-  height: 44px;
-  border: 1px solid #d2ad5b;
-  color: #fffdf6;
-  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(0,0,0,.05));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 20px;
-  font-weight: 500;
-}
-
-.workspaceBadge::after {
-  position: absolute;
-  right: 50%;
-  bottom: -4px;
-  width: 7px;
-  height: 7px;
-  border: 1px solid #17342c;
-  border-radius: 50%;
-  background: #e4c77e;
-  content: "";
-  transform: translateX(50%);
-}
-
-:global(html[data-ficonter-native-app="true"]) .bottomDock {
-  min-height: calc(var(--ficonter-native-dock-height) + env(safe-area-inset-bottom));
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 60px minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 0;
-  padding:
-    5px
-    max(6px, env(safe-area-inset-right))
-    max(4px, env(safe-area-inset-bottom))
-    max(6px, env(safe-area-inset-left));
-  border-top: 1px solid #c69c44;
-  border-radius: 24px 24px 0 0;
-  background:
-    radial-gradient(circle at 50% -30%, rgba(224, 192, 111, .11), transparent 26%),
-    linear-gradient(108deg, #243a34 0%, #102a23 54%, #0b211c 100%);
-  box-shadow: 0 -12px 34px rgba(15, 41, 33, .26);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.dockItem {
-  min-height: 50px;
-  gap: 3px;
-  padding: 3px 2px 1px;
-  border-radius: 15px;
-  color: #c9d1cd;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.dockItem svg {
-  width: 21px;
-  height: 21px;
-  stroke-width: 1.8;
-}
-
-.dockActive {
-  color: #ecd28b;
-}
-
-.dockActive::after {
-  top: auto;
-  bottom: 0;
-  width: 5px;
-  height: 5px;
-  background: #e1bd68;
-  box-shadow: none;
-}
-
-.dockActive svg {
-  color: #e8ca79;
-  transform: none;
-}
-
-.addButton {
-  width: 52px;
-  height: 52px;
-  margin-top: -14px;
-  border: 4px solid #18332b;
-  color: #17362d;
-  background: radial-gradient(circle at 32% 26%, #f7e7b1, #ddbd69 62%, #c49a43 100%);
-  box-shadow:
-    0 10px 22px rgba(0,0,0,.30),
-    0 0 0 1px #d4ae59,
-    inset 0 1px 0 rgba(255,255,255,.65);
-}
-
-.addButton svg {
-  width: 25px;
-  height: 25px;
-  stroke-width: 1.7;
-}
-
-@media (max-width: 390px) {
-  :global(html[data-ficonter-native-app="true"]) .header {
-    min-height: calc(82px + env(safe-area-inset-top));
-    grid-template-columns: 44px minmax(0, 1fr) 42px;
-    gap: 11px;
-    padding-right: max(13px, env(safe-area-inset-right));
-    padding-left: max(13px, env(safe-area-inset-left));
-  }
-
-  .menuButton { width: 52px; height: 52px; border-radius: 15px; }
-  .headerMark { width: 47px; height: 47px; border-radius: 13px; }
-  .routeEyebrow { font-size: 9.5px; }
-  .routeIdentity strong { font-size: 23px; }
-  .workspaceBadge { width: 48px; height: 48px; font-size: 21px; }
-  :global(html[data-ficonter-native-app="true"]) .bottomDock { min-height: calc(var(--ficonter-native-dock-height) + env(safe-area-inset-bottom)); grid-template-columns: 1fr 1fr 58px 1fr 1fr; }
-  .addButton { width: 50px; height: 50px; margin-top: -12px; }
-  .dockItem { font-size: 9.5px; }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE MOCKUP 04.1 — menu below title + Settings dock             */
-/* Header branding is static. Navigation is a dedicated icon below the route  */
-/* title, and Personal Settings lives only in the fixed bottom navigation.     */
-/* -------------------------------------------------------------------------- */
-
-:global(html[data-ficonter-native-app="true"]) .header {
-  min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
-  grid-template-columns: 46px minmax(0, 1fr) 44px;
-  align-items: start;
-  padding-top: calc(env(safe-area-inset-top) + 5px);
-  padding-bottom: 5px;
-}
-
-.brandMark {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  place-items: center;
-  align-self: start;
-  overflow: hidden;
-  border: 1px solid rgba(207, 168, 78, .74);
-  border-radius: 13px;
-  background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(0,0,0,.10));
-  box-shadow: 0 7px 18px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08);
-}
-
-.routeIdentity {
-  display: grid;
-  align-content: start;
-  align-self: start;
-  padding-top: 2px;
-}
-
-.menuButton {
-  width: 34px;
-  height: 28px;
-  min-width: 34px;
-  min-height: 28px;
-  place-items: center start;
-  align-self: start;
-  margin-top: 4px;
-  padding: 0;
-  overflow: visible;
-  border: 0;
-  border-radius: 7px;
-  color: #e7cf91;
-  background: transparent;
-  box-shadow: none;
-}
-
-.menuButton svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.75;
-}
-
-.menuButton:hover,
-.menuButton:active {
-  background: transparent;
-}
-
-.workspaceBadge {
-  align-self: start;
-  margin-top: 2px;
-}
-
-@media (max-width: 390px) {
-  :global(html[data-ficonter-native-app="true"]) .header {
-    min-height: calc(var(--ficonter-native-header-height) + env(safe-area-inset-top));
-    grid-template-columns: 44px minmax(0, 1fr) 42px;
-    padding-top: calc(env(safe-area-inset-top) + 4px);
-    padding-bottom: 4px;
-  }
-
-  .brandMark {
-    width: 40px;
-    height: 40px;
-    border-radius: 11px;
-  }
-
-  .brandMark .headerMark {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-  }
-
-  .routeEyebrow {
-    font-size: 9px;
-  }
-
-  .routeIdentity strong {
-    font-size: 20px;
-  }
-
-  .menuButton {
-    width: 27px;
-    height: 22px;
-    min-width: 27px;
-    min-height: 22px;
-    margin-top: 3px;
-  }
-
-  .menuButton svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .workspaceBadge {
-    width: 42px;
-    height: 42px;
-    font-size: 18px;
-  }
-
-  .dockItem {
-    font-size: 9.5px;
-  }
-}
-
-
-/* Preserve the second business-profile row after the personal header grows. */
-:global(html[data-ficonter-native-app="true"]) .businessHeader {
-  min-height: calc(136px + env(safe-area-inset-top));
-  row-gap: 7px;
-}
-
-@media (max-width: 390px) {
-  :global(html[data-ficonter-native-app="true"]) .businessHeader {
-    min-height: calc(130px + env(safe-area-inset-top));
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE PROFILE SPLIT — account avatar is profile-only             */
-/* The avatar opens a compact account sheet with Profile + Sign out only.     */
-/* -------------------------------------------------------------------------- */
-
-.accountSheet {
-  display: none;
-}
-
-:global(html[data-ficonter-native-app="true"]) .accountSheet {
-  position: fixed;
-  z-index: 1910;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  width: 100%;
-  max-height: min(52dvh, 430px);
-  min-height: 0;
-  padding:
-    8px
-    max(13px, env(safe-area-inset-right))
-    max(18px, env(safe-area-inset-bottom))
-    max(13px, env(safe-area-inset-left));
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border: 1px solid rgba(216, 189, 124, 0.17);
-  border-bottom: 0;
-  border-radius: 28px 28px 0 0;
-  background:
-    radial-gradient(circle at 50% 0, rgba(216, 189, 124, 0.09), transparent 34%),
-    var(--mobile-chrome-surface);
-  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.42);
-  transform: translate3d(0, 105%, 0);
-  transition: transform 230ms cubic-bezier(0.2, 0.82, 0.2, 1);
-  backface-visibility: hidden;
-  scrollbar-width: none;
-}
-
-.accountSheet::-webkit-scrollbar {
-  display: none;
-}
-
-.accountSheetOpen {
-  transform: translate3d(0, 0, 0) !important;
-}
-
-.accountSheetHeader {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 48px minmax(0, 1fr) 42px;
-  align-items: center;
-  gap: 11px;
-  padding: 1px 1px 7px;
-}
-
-.accountSheetHeader .accountAvatar {
-  width: 48px;
-  height: 48px;
-  font-size: 17px;
-}
-
-.accountSheetHeader .accountIdentity strong {
-  margin-top: 2px;
-  font-size: 15px;
-}
-
-.accountSheetHeader .accountIdentity small:first-child {
-  margin-top: 0;
-  color: var(--mobile-chrome-accent);
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: 0.13em;
-}
-
-.accountSheetClose {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  color: var(--mobile-chrome-text);
-  background: rgba(255, 255, 255, 0.045);
-  font: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.accountProfileLink,
-.accountSheetSignOut {
-  min-height: 62px;
-  border-radius: 17px;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.accountProfileLink {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 20px;
-  align-items: center;
-  gap: 11px;
-  padding: 9px 12px;
-  border: 1px solid rgba(216, 189, 124, 0.16);
-  color: var(--mobile-chrome-text);
-  background: rgba(216, 189, 124, 0.055);
-}
-
-.accountProfileIcon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(216, 189, 124, 0.2);
-  border-radius: 13px;
-  color: var(--mobile-chrome-accent-text);
-  background: rgba(216, 189, 124, 0.075);
-}
-
-.accountProfileLink > span:nth-child(2) {
-  min-width: 0;
-}
-
-.accountProfileLink strong,
-.accountProfileLink small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.accountProfileLink strong {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.accountProfileLink small {
-  margin-top: 4px;
-  color: var(--mobile-chrome-muted);
-  font-size: 10.5px;
-  font-weight: 580;
-}
-
-.accountProfileLink > svg {
-  color: var(--mobile-chrome-accent);
-}
-
-.accountSheetSignOut {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 20px auto;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 0 16px;
-  border: 1px solid rgba(184, 79, 79, 0.26);
-  color: var(--mobile-chrome-danger-text);
-  background: rgba(132, 45, 45, 0.11);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 790;
-  cursor: pointer;
-}
-
-.accountSheetSignOut:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-
-.accountSheetClose:focus-visible,
-.accountProfileLink:focus-visible,
-.accountSheetSignOut:focus-visible {
-  outline: 2px solid var(--mobile-chrome-focus);
-  outline-offset: 2px;
-}
-
-.accountSheetClose:active,
-.accountProfileLink:active,
-.accountSheetSignOut:active {
-  transform: scale(0.97);
-}
-
-:global(html[data-ficonter-device="tablet"]) .accountSheet {
-  right: 50%;
-  left: auto;
-  width: min(620px, calc(100vw - 34px));
-  border-radius: 28px 28px 0 0;
-  transform: translate3d(50%, 105%, 0);
-}
-
-:global(html[data-ficonter-device="tablet"]) .accountSheetOpen {
-  transform: translate3d(50%, 0, 0) !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .accountSheet,
-  .accountSheetClose,
-  .accountProfileLink,
-  .accountSheetSignOut {
-    transition: none !important;
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE INSTANT SETTINGS — dock button opens a local sheet          */
-/* This avoids a route transition just to reveal the Settings section list.    */
-/* -------------------------------------------------------------------------- */
-
-.settingsSheet {
-  max-height: min(78dvh, 640px) !important;
-  gap: 9px !important;
-}
-
-.settingsSheetMark {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border: 1px solid rgba(216, 189, 124, 0.22);
-  border-radius: 15px;
-  color: var(--mobile-chrome-accent-text);
-  background:
-    linear-gradient(145deg, rgba(216, 189, 124, 0.11), rgba(216, 189, 124, 0.035)),
-    rgba(255, 255, 255, 0.025);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
-}
-
-.settingsQuickList {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-.settingsQuickList .accountProfileLink {
-  min-height: 58px;
-}
-
-:global(html[data-ficonter-device="tablet"]) .settingsSheet {
-  max-height: min(72dvh, 650px) !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .settingsSheet,
-  .settingsSheetMark,
-  .settingsQuickList .accountProfileLink {
-    transition: none !important;
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE PROFILE AVATAR — show the saved profile photo in the        */
-/* top-right account control instead of duplicating it in Settings.             */
-/* -------------------------------------------------------------------------- */
-.workspaceAvatarImage,
-.accountAvatarImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.workspaceAvatarImage {
-  padding: 0;
-}
-
-.accountAvatarImage {
-  padding: 0;
-}
-
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE 04.11 — authenticated language globe                       */
-/* The globe sits beside the profile avatar without disturbing header rows.   */
-/* -------------------------------------------------------------------------- */
-.headerLanguage {
-  position: absolute;
-  z-index: 4;
-  top: calc(env(safe-area-inset-top) + 8px);
-  inset-inline-end: max(64px, calc(env(safe-area-inset-right) + 64px));
-}
-
-@media (max-width: 390px) {
-  .headerLanguage {
-    top: calc(env(safe-area-inset-top) + 7px);
-    inset-inline-end: max(58px, calc(env(safe-area-inset-right) + 58px));
-  }
-}
-
-@media (max-width: 360px) {
-  .headerLanguage {
-    top: calc(env(safe-area-inset-top) + 7px);
-    inset-inline-end: max(55px, calc(env(safe-area-inset-right) + 55px));
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE 04.31 — edge-clean header                                  */
-/* Remove the tiny exposed wedges at the lower header corners. The mobile      */
-/* header now meets the wallpaper flush from edge to edge.                     */
-/* -------------------------------------------------------------------------- */
-:global(html[data-ficonter-native-app="true"]) .header {
-  border-radius: 0 !important;
-}
-
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE 04.32 — PROFILE PHOTO TRUE CIRCLE FILL                     */
-/* The saved profile image occupies the complete circular account control.    */
-/* Keep the gold outline and online/status dot, but remove all inner padding.  */
-/* -------------------------------------------------------------------------- */
-.workspaceBadge {
-  padding: 0 !important;
-  overflow: visible !important;
-  isolation: isolate;
-}
-
-.workspaceAvatarImage {
-  position: absolute !important;
-  z-index: 1;
-  inset: 1px !important;
-  width: auto !important;
-  height: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 50% !important;
-  object-fit: cover !important;
-  object-position: center center !important;
-  clip-path: circle(50% at 50% 50%);
-}
-
-.workspaceBadge > span {
-  position: relative;
-  z-index: 1;
-}
-
-.workspaceBadge::after {
-  z-index: 3;
 }

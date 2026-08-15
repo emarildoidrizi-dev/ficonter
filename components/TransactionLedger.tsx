@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   CalendarRange,
   Download,
@@ -9,8 +9,6 @@ import {
   Pencil,
   RotateCcw,
   Search,
-  SlidersHorizontal,
-  MoreHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -168,11 +166,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressStartRef = useRef<{ id: string; x: number; y: number } | null>(null);
-  const longPressTriggeredRef = useRef(false);
 
   useEffect(() => {
     function handleCreated(event: Event) {
@@ -392,60 +385,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
     setDateTo("");
     setSelectedIds(new Set());
     setError("");
-  }
-
-  function isNativeMobileLedger() {
-    return typeof document !== "undefined" && document.documentElement.dataset.ficonterNativeApp === "true";
-  }
-
-  function cancelLongPress() {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressStartRef.current = null;
-  }
-
-  function startLongPress(id: string, pointerType: string, clientX: number, clientY: number) {
-    if (!isNativeMobileLedger() || pointerType === "mouse") return;
-    cancelLongPress();
-    longPressTriggeredRef.current = false;
-    longPressStartRef.current = { id, x: clientX, y: clientY };
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      setSelectedIds((current) => {
-        if (current.has(id)) return current;
-        const next = new Set(current);
-        next.add(id);
-        return next;
-      });
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate?.(12);
-      }
-      longPressTimerRef.current = null;
-    }, 700);
-  }
-
-  function moveLongPress(clientX: number, clientY: number) {
-    const start = longPressStartRef.current;
-    if (!start || !longPressTimerRef.current) return;
-    if (Math.hypot(clientX - start.x, clientY - start.y) > 9) cancelLongPress();
-  }
-
-  function handleMobileRowClick(id: string) {
-    if (!isNativeMobileLedger()) return;
-    if (longPressTriggeredRef.current) {
-      longPressTriggeredRef.current = false;
-      return;
-    }
-    if (selectedIds.size > 0) toggleTransaction(id);
-  }
-
-  function editSingleSelection() {
-    if (selectedTransactions.length !== 1) return;
-    const [transaction] = selectedTransactions;
-    setSelectedIds(new Set());
-    openEdit(transaction);
   }
 
   function toggleTransaction(id: string) {
@@ -747,93 +686,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
 
   return (
     <>
-      <div className={styles.mobileLedgerControls}>
-        <label className={styles.mobileSearchBox}>
-          <Search size={18} aria-hidden="true" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search transactions…"
-            aria-label="Search transactions"
-          />
-        </label>
-        <button
-          type="button"
-          className={mobileFiltersOpen ? styles.mobileControlActive : styles.mobileControlButton}
-          onClick={() => {
-            setMobileFiltersOpen((current) => !current);
-            setMobileToolsOpen(false);
-          }}
-          aria-expanded={mobileFiltersOpen}
-        >
-          <SlidersHorizontal size={17} aria-hidden="true" /> Filter
-        </button>
-        <button
-          type="button"
-          className={styles.mobileDateButton}
-          onClick={() => {
-            setMobileFiltersOpen(true);
-            setMobileToolsOpen(false);
-          }}
-        >
-          <CalendarRange size={17} aria-hidden="true" />
-          <span>{dateFrom || dateTo ? `${dateFrom || "…"} – ${dateTo || "…"}` : "All dates"}</span>
-        </button>
-        <button
-          type="button"
-          className={mobileToolsOpen ? styles.mobileControlActive : styles.mobileControlButton}
-          onClick={() => {
-            setMobileToolsOpen((current) => !current);
-            setMobileFiltersOpen(false);
-          }}
-          aria-expanded={mobileToolsOpen}
-        >
-          <MoreHorizontal size={18} aria-hidden="true" /> Tools
-        </button>
-      </div>
-
-      {mobileFiltersOpen && (
-        <section className={styles.mobileControlPanel} aria-label="Ledger filters">
-          <div className={styles.mobileDateRange}>
-            <label>From<input type="date" value={dateFromDraft} max={dateToDraft || undefined} onChange={(event) => setDateFromDraft(event.target.value)} /></label>
-            <label>To<input type="date" value={dateToDraft} min={dateFromDraft || undefined} onChange={(event) => setDateToDraft(event.target.value)} /></label>
-          </div>
-          <div className={styles.mobileFilterGrid}>
-            <select value={directionFilter} onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)} aria-label="Money movement">
-              <option value="all">All money movements</option>
-              <option value="inflow">Money received</option>
-              <option value="outflow">Money spent</option>
-              <option value="neutral">Transfers / adjustments</option>
-            </select>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Category">
-              <option value="all">All categories</option>{categories.map((category) => <option key={category}>{category}</option>)}
-            </select>
-            <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)} aria-label="Currency">
-              <option value="all">All currencies</option>{currencies.map((currency) => <option key={currency} value={currency}>{currencySymbol(currency)} {currency} — {currencyName(currency)}</option>)}
-            </select>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} aria-label="Sort transactions">
-              <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest amount</option><option value="lowest">Lowest amount</option><option value="description">Description A–Z</option>
-            </select>
-          </div>
-          <div className={styles.mobilePanelActions}>
-            <button type="button" onClick={clearFilters}><RotateCcw size={15} /> Reset</button>
-            <button type="button" className={styles.mobilePrimaryAction} onClick={() => { applyDateRange(); setMobileFiltersOpen(false); }}>Apply filters</button>
-          </div>
-        </section>
-      )}
-
-      {mobileToolsOpen && (
-        <section className={styles.mobileControlPanel} aria-label="Ledger tools">
-          <div className={styles.mobileToolsGrid}>
-            <button type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}><Download size={16} /> Export CSV</button>
-            <button type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(visible, "view"); }} disabled={!visible.length || exportingPdf}>
-              {allowPdfExport ? <FileText size={16} /> : <LockKeyhole size={16} />}
-              {allowPdfExport ? (exportingPdf ? "Preparing PDF…" : "Export PDF") : "PDF · Personal Pro"}
-            </button>
-          </div>
-        </section>
-      )}
-
       <div className={styles.toolbarTop}>
         <label className={styles.searchBox}>
           <Search size={17} aria-hidden="true" />
@@ -877,24 +729,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       {notice && <div className={styles.notice}>{notice}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
-      {selectedTransactions.length > 0 && (
-        <div className={styles.mobileSelectionBar} role="toolbar" aria-label="Selected transaction actions">
-          <button type="button" className={styles.mobileSelectionClose} onClick={() => setSelectedIds(new Set())} aria-label="Exit selection mode">
-            <X size={17} aria-hidden="true" />
-          </button>
-          <strong>{selectedTransactions.length} selected</strong>
-          <button type="button" className={styles.mobileSelectAll} onClick={toggleAllVisible}>
-            {allVisibleSelected ? "Clear all" : "Select all"}
-          </button>
-          <button type="button" className={styles.mobileEditSelection} onClick={editSingleSelection} disabled={selectedTransactions.length !== 1}>
-            <Pencil size={15} aria-hidden="true" /> Edit
-          </button>
-          <button type="button" className={styles.mobileDeleteSelection} onClick={() => setBulkDeleteOpen(true)}>
-            <Trash2 size={15} aria-hidden="true" /> Delete
-          </button>
-        </div>
-      )}
-
       <div className={styles.selectionBar}>
         <label className={styles.selectAllControl}>
           <input
@@ -918,7 +752,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       </div>
 
       <div
-        className={`${styles.listViewport} ${selectedTransactions.length > 0 ? styles.mobileSelectionMode : ""} ficonter-scroll-region`}
+        className={`${styles.listViewport} ficonter-scroll-region`}
         tabIndex={visible.length > 10 ? 0 : undefined}
         aria-label="Transaction history. The newest ten transactions are visible first; scroll for older records."
       >
@@ -926,17 +760,8 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         {renderedVisible.map((transaction) => {
           const direction = directionOf(transaction.type);
           return (
-            <article
-              className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`}
-              key={transaction.id}
-              onPointerDown={(event) => startLongPress(transaction.id, event.pointerType, event.clientX, event.clientY)}
-              onPointerMove={(event) => moveLongPress(event.clientX, event.clientY)}
-              onPointerUp={cancelLongPress}
-              onPointerCancel={cancelLongPress}
-              onPointerLeave={cancelLongPress}
-              onClick={() => handleMobileRowClick(transaction.id)}
-            >
-              <label className={styles.rowCheckbox} onClick={(event) => event.stopPropagation()}>
+            <article className={`${styles.row} ${selectedIds.has(transaction.id) ? styles.selectedRow : ""}`} key={transaction.id}>
+              <label className={styles.rowCheckbox}>
                 <input
                   type="checkbox"
                   checked={selectedIds.has(transaction.id)}
@@ -975,10 +800,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         })}
         </div>
       </div>
-      {selectedTransactions.length === 0 && visible.length > 0 ? (
-        <p className={styles.mobileSelectionHint}>Press and hold a transaction to select.</p>
-      ) : null}
-
       {visible.length > 10 ? (
         <div className={styles.scrollHint}>
           Rendering {Math.min(renderedVisible.length, visible.length)} of {visible.length} matching records

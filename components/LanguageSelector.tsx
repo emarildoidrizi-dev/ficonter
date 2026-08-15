@@ -1,13 +1,13 @@
 "use client";
 
 import { Check, ChevronDown, Globe2, LoaderCircle } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageProvider";
 import styles from "./LanguageSelector.module.css";
 
-type Variant = "compact" | "settings" | "public" | "icon";
+type Variant = "compact" | "settings" | "public";
 
 export function LanguageSelector({
   variant = "compact",
@@ -18,7 +18,6 @@ export function LanguageSelector({
 }) {
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
@@ -84,36 +83,16 @@ export function LanguageSelector({
         aria-label={t("chooseLanguage")}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={menuId}
-        title={t("chooseLanguage")}
-        data-language-world-control={variant === "public" || variant === "icon" ? "true" : undefined}
         onClick={() => setOpen((value) => !value)}
         disabled={saving}
       >
-        {saving ? (
-          <LoaderCircle
-            size={variant === "public" ? 18 : variant === "icon" ? 20 : 16}
-            className={styles.spinner}
-          />
-        ) : (
-          <Globe2
-            size={variant === "public" ? 19 : variant === "icon" ? 21 : 16}
-            className={variant === "public" || variant === "icon" ? styles.worldIcon : undefined}
-          />
-        )}
-        {variant !== "icon" ? <span>{current.nativeName}</span> : null}
-        {variant !== "icon" ? (
-          <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
-        ) : null}
+        {saving ? <LoaderCircle size={16} className={styles.spinner} /> : <Globe2 size={16} />}
+        <span>{current.nativeName}</span>
+        <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
       </button>
 
       {open ? (
-        <div
-          id={menuId}
-          className={styles.menu}
-          role="listbox"
-          aria-label={t("chooseLanguage")}
-        >
+        <div className={styles.menu} role="listbox" aria-label={t("chooseLanguage")}>
           {LANGUAGE_OPTIONS.map((option) => (
             <button
               type="button"

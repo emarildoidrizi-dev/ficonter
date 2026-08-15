@@ -150,23 +150,3 @@
   .compact .trigger { width: 38px; padding: 0; }
   .settings .menu { inset-inline-start: 14px; width: calc(100% - 28px); }
 }
-
-/* Public language control: the globe is intentionally prominent on both the
-   landing header and authentication screens so language is always obvious. */
-.public .trigger {
-  min-height: 42px;
-  padding-inline: 13px;
-  border-radius: 999px;
-  gap: 8px;
-}
-.public .worldIcon {
-  flex: 0 0 auto;
-  color: var(--gold, #b79b6c);
-}
-@media (max-width: 430px) {
-  .public .trigger {
-    min-height: 40px;
-    padding-inline: 10px;
-    font-size: 11px;
-  }
-}

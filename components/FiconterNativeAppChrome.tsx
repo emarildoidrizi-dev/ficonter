@@ -4,16 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
-  Bell,
   BookOpen,
   BriefcaseBusiness,
   Building2,
   CalendarRange,
   ChartNoAxesCombined,
   ChevronRight,
-  Plus,
+  CirclePlus,
   CreditCard,
-  Database,
   FileText,
   Goal,
   HandCoins,
@@ -22,10 +20,8 @@ import {
   LayoutGrid,
   LockKeyhole,
   LogOut,
-  Menu,
   MessageSquareText,
   PackageOpen,
-  Palette,
   ReceiptText,
   Settings2,
   ShieldCheck,
@@ -33,8 +29,6 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  UserRound,
-  WalletCards,
   X,
 } from "lucide-react";
 import {
@@ -45,7 +39,6 @@ import {
   type ComponentType,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { LanguageSelector } from "./LanguageSelector";
 import { switchActiveBusinessAction } from "@/app/business/actions";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
@@ -81,15 +74,10 @@ type Props = {
   workspace: Workspace;
   displayName: string;
   email?: string;
-  avatarPath?: string;
   businessName?: string;
   businessProfiles?: BusinessProfileOption[];
   activeBusinessId?: string | null;
   subscriptionPlanCode: SubscriptionPlanCode;
-};
-
-type ProfileUpdatedDetail = {
-  profilePhotoPath?: string;
 };
 
 type IOSNavigator = Navigator & {
@@ -98,11 +86,9 @@ type IOSNavigator = Navigator & {
 
 type DeviceClass = "phone" | "tablet" | "desktop";
 
-const PERSONAL_HOME_HREF = "/dashboard/overview";
-
 const personalRoutes: RouteItem[] = [
   {
-    href: PERSONAL_HOME_HREF,
+    href: "/dashboard",
     label: "Home",
     title: "Overview",
     icon: House,
@@ -111,7 +97,7 @@ const personalRoutes: RouteItem[] = [
   {
     href: "/dashboard/transactions",
     label: "Activity",
-    title: "Activity",
+    title: "Transactions",
     icon: ReceiptText,
   },
   {
@@ -203,12 +189,6 @@ const personalRoutes: RouteItem[] = [
     label: "Settings",
     title: "Settings",
     icon: Settings2,
-  },
-  {
-    href: "/dashboard/profile",
-    label: "Profile",
-    title: "Profile",
-    icon: UserRound,
   },
 ];
 
@@ -308,6 +288,7 @@ const personalRouteGroups: RouteGroup[] = [
     routes: [
       personalRoutes[14],
       personalRoutes[15],
+      personalRoutes[16],
     ],
   },
 ];
@@ -336,39 +317,6 @@ const businessRouteGroups: RouteGroup[] = [
     ],
   },
 ];
-
-const personalSettingsQuickRoutes = [
-  {
-    href: "/dashboard/settings?section=security",
-    label: "Account & security",
-    description: "Login, password and sessions",
-    icon: LockKeyhole,
-  },
-  {
-    href: "/dashboard/settings?section=financial",
-    label: "Financial preferences",
-    description: "Currency, formats and planner",
-    icon: WalletCards,
-  },
-  {
-    href: "/dashboard/settings?section=notifications",
-    label: "Notifications",
-    description: "Reminders and summaries",
-    icon: Bell,
-  },
-  {
-    href: "/dashboard/settings?section=appearance",
-    label: "Appearance",
-    description: "Theme, motion and density",
-    icon: Palette,
-  },
-  {
-    href: "/dashboard/settings?section=privacy",
-    label: "Data & privacy",
-    description: "Exports and account controls",
-    icon: Database,
-  },
-] as const;
 
 function isStandalone() {
   return (
@@ -478,7 +426,7 @@ function activeRoute(
       );
     }
 
-    return pathname === "/dashboard" || pathname === PERSONAL_HOME_HREF;
+    return pathname === "/dashboard";
   }
 
   return (
@@ -505,7 +453,6 @@ export function FiconterNativeAppChrome({
   workspace,
   displayName,
   email = "",
-  avatarPath = "",
   businessName = "",
   businessProfiles = [],
   activeBusinessId = null,
@@ -515,10 +462,6 @@ export function FiconterNativeAppChrome({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [avatarPhotoPath, setAvatarPhotoPath] = useState(avatarPath);
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [businessSwitchError, setBusinessSwitchError] = useState("");
@@ -526,14 +469,8 @@ export function FiconterNativeAppChrome({
     activeBusinessId ?? "",
   );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const accountButtonRef = useRef<HTMLButtonElement>(null);
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
-  const accountCloseButtonRef = useRef<HTMLButtonElement>(null);
-  const settingsCloseButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
-  const accountSheetRef = useRef<HTMLElement>(null);
-  const settingsSheetRef = useRef<HTMLElement>(null);
 
   const routes =
     workspace === "business"
@@ -549,10 +486,6 @@ export function FiconterNativeAppChrome({
     () => currentRoute(pathname, routes, workspace),
     [pathname, routes, workspace],
   );
-
-  const hideTopHeader =
-    workspace === "personal" &&
-    (pathname === "/dashboard" || pathname === PERSONAL_HOME_HREF);
 
   const identity =
     workspace === "business"
@@ -571,9 +504,6 @@ export function FiconterNativeAppChrome({
     activeRoute(pathname, item, workspace),
   );
 
-  const settingsActive =
-    workspace === "personal" && settingsOpen;
-
   const addHref =
     workspace === "business"
       ? "/business/transactions"
@@ -586,7 +516,7 @@ export function FiconterNativeAppChrome({
 
   const switchHref =
     workspace === "business"
-      ? PERSONAL_HOME_HREF
+      ? "/dashboard"
       : "/business/overview";
 
   const businessWorkspaceLocked =
@@ -599,72 +529,6 @@ export function FiconterNativeAppChrome({
   const switchTargetHref = businessWorkspaceLocked
     ? getSubscriptionUpgradeHref("business_workspace")
     : switchHref;
-
-  useEffect(() => {
-    setAvatarPhotoPath(avatarPath);
-  }, [avatarPath]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadAvatar() {
-      if (!avatarPhotoPath) {
-        if (active) setAvatarUrl("");
-        return;
-      }
-
-      const { data, error } = await supabase.storage
-        .from("profile-photos")
-        .createSignedUrl(avatarPhotoPath, 60 * 60);
-
-      if (active) {
-        setAvatarUrl(error ? "" : data.signedUrl);
-      }
-    }
-
-    void loadAvatar();
-    return () => {
-      active = false;
-    };
-  }, [avatarPhotoPath, supabase]);
-
-  useEffect(() => {
-    function handleProfileUpdate(event: Event) {
-      const detail = (event as CustomEvent<ProfileUpdatedDetail>).detail;
-      if (typeof detail?.profilePhotoPath === "string") {
-        setAvatarPhotoPath(detail.profilePhotoPath);
-      }
-    }
-
-    window.addEventListener("ficonter:profile-updated", handleProfileUpdate);
-    return () =>
-      window.removeEventListener("ficonter:profile-updated", handleProfileUpdate);
-  }, []);
-
-  useEffect(() => {
-    function handleOpenSettingsMenu() {
-      setDrawerOpen(false);
-      setAccountOpen(false);
-      setSettingsOpen(true);
-
-      personalSettingsQuickRoutes.forEach((item, index) => {
-        window.setTimeout(() => {
-          router.prefetch(item.href);
-        }, index * 35);
-      });
-    }
-
-    window.addEventListener(
-      "ficonter:open-settings-menu",
-      handleOpenSettingsMenu,
-    );
-    return () =>
-      window.removeEventListener(
-        "ficonter:open-settings-menu",
-        handleOpenSettingsMenu,
-      );
-  }, [router]);
-
 
   useEffect(() => {
     synchronizeNativeAppMode();
@@ -736,35 +600,12 @@ export function FiconterNativeAppChrome({
 
   useEffect(() => {
     setDrawerOpen(false);
-    setAccountOpen(false);
-    setSettingsOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     setSelectedBusinessId(activeBusinessId ?? "");
     setBusinessSwitchError("");
   }, [activeBusinessId]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-
-    if (hideTopHeader) {
-      root.dataset.ficonterTopHeader = "hidden";
-      root.style.setProperty("--ficonter-native-header-height", "0px");
-      return () => {
-        root.dataset.ficonterTopHeader = "visible";
-        root.style.removeProperty("--ficonter-native-header-height");
-      };
-    }
-
-    root.dataset.ficonterTopHeader = "visible";
-    root.style.removeProperty("--ficonter-native-header-height");
-
-    return () => {
-      root.dataset.ficonterTopHeader = "visible";
-      root.style.removeProperty("--ficonter-native-header-height");
-    };
-  }, [hideTopHeader]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -806,114 +647,6 @@ export function FiconterNativeAppChrome({
   }, [drawerOpen]);
 
   useEffect(() => {
-    if (!accountOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setAccountOpen(false);
-        window.requestAnimationFrame(() => {
-          accountButtonRef.current?.focus({ preventScroll: true });
-        });
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const focusable = Array.from(
-        accountSheetRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((element) => !element.hasAttribute("inert"));
-
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [accountOpen]);
-
-  useEffect(() => {
-    if (!settingsOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSettingsOpen(false);
-        window.requestAnimationFrame(() => {
-          settingsButtonRef.current?.focus({ preventScroll: true });
-        });
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const focusable = Array.from(
-        settingsSheetRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((element) => !element.hasAttribute("inert"));
-
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [settingsOpen]);
-
-  useEffect(() => {
-    document.documentElement.dataset.ficonterAccountMenu =
-      accountOpen ? "open" : "closed";
-
-    if (accountOpen) {
-      window.requestAnimationFrame(() => {
-        accountCloseButtonRef.current?.focus({ preventScroll: true });
-      });
-    }
-
-    return () => {
-      document.documentElement.dataset.ficonterAccountMenu = "closed";
-    };
-  }, [accountOpen]);
-
-  useEffect(() => {
-    document.documentElement.dataset.ficonterSettingsMenu =
-      settingsOpen ? "open" : "closed";
-
-    if (settingsOpen) {
-      window.requestAnimationFrame(() => {
-        settingsCloseButtonRef.current?.focus({ preventScroll: true });
-      });
-    }
-
-    return () => {
-      document.documentElement.dataset.ficonterSettingsMenu = "closed";
-    };
-  }, [settingsOpen]);
-
-  useEffect(() => {
     document.documentElement.dataset.ficonterAppDrawer =
       drawerOpen ? "open" : "closed";
 
@@ -930,8 +663,6 @@ export function FiconterNativeAppChrome({
   }, [drawerOpen]);
 
   function openDrawer() {
-    setAccountOpen(false);
-    setSettingsOpen(false);
     setDrawerOpen(true);
 
     routes.forEach((item, index) => {
@@ -939,50 +670,6 @@ export function FiconterNativeAppChrome({
         router.prefetch(item.href);
       }, index * 45);
     });
-  }
-
-  function openAccount() {
-    setDrawerOpen(false);
-    setSettingsOpen(false);
-    setAccountOpen(true);
-    router.prefetch("/dashboard/profile");
-  }
-
-  function toggleSettings() {
-    if (settingsOpen) {
-      setSettingsOpen(false);
-      window.requestAnimationFrame(() => {
-        settingsButtonRef.current?.focus({ preventScroll: true });
-      });
-      return;
-    }
-
-    setDrawerOpen(false);
-    setAccountOpen(false);
-    setSettingsOpen(true);
-
-    personalSettingsQuickRoutes.forEach((item, index) => {
-      window.setTimeout(() => {
-        router.prefetch(item.href);
-      }, index * 35);
-    });
-  }
-
-  function goHomeInstant() {
-    setDrawerOpen(false);
-    setAccountOpen(false);
-    setSettingsOpen(false);
-    document.documentElement.removeAttribute("data-ficonter-route-loading");
-
-    // Home is /dashboard/overview. Avoid the legacy /dashboard redirect because
-    // it causes an unnecessary second navigation and loading-state flash.
-    if (pathname === PERSONAL_HOME_HREF || pathname === "/dashboard") {
-      window.scrollTo({ top: 0, behavior: "auto" });
-      return;
-    }
-
-    router.prefetch(PERSONAL_HOME_HREF);
-    router.push(PERSONAL_HOME_HREF, { scroll: false });
   }
 
   async function switchBusinessProfile(nextBusinessId: string) {
@@ -1018,14 +705,10 @@ export function FiconterNativeAppChrome({
 
     setSigningOut(true);
     setDrawerOpen(false);
-    setAccountOpen(false);
-    setSettingsOpen(false);
 
     const root = document.documentElement;
 
     root.dataset.ficonterAppDrawer = "closed";
-    root.dataset.ficonterAccountMenu = "closed";
-    root.dataset.ficonterSettingsMenu = "closed";
     root.removeAttribute("data-ficonter-route-loading");
     root.removeAttribute("data-mobile-nav-open");
 
@@ -1048,64 +731,46 @@ export function FiconterNativeAppChrome({
 
   return (
     <>
-      {!hideTopHeader ? (
       <header
         className={`${styles.header} ${
           workspace === "business" ? styles.businessHeader : ""
         }`}
       >
-        <div className={styles.brandMark} aria-hidden="true">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className={styles.menuButton}
+          onClick={openDrawer}
+          aria-label="Open app navigation"
+          aria-expanded={drawerOpen}
+          aria-controls="ficonter-app-drawer"
+        >
           <img
             className={styles.headerMark}
-            src="/ficonter-app-icon.png"
+            src="/ficonter-mark.svg"
             alt=""
-            width={52}
-            height={52}
+            width={30}
+            height={30}
+            aria-hidden="true"
           />
-        </div>
+        </button>
 
         <div className={styles.routeIdentity}>
           <span className={styles.routeEyebrow}>
             {workspace === "business" ? "BUSINESS" : "PERSONAL"} · FICONTER
           </span>
           <strong>{route.title}</strong>
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className={styles.menuButton}
-            onClick={openDrawer}
-            aria-label="Open app navigation"
-            aria-expanded={drawerOpen}
-            aria-controls="ficonter-app-drawer"
-          >
-            <Menu size={26} aria-hidden={true} />
-          </button>
-        </div>
-
-        <div className={styles.headerLanguage}>
-          <LanguageSelector variant="icon" />
         </div>
 
         <button
-          ref={accountButtonRef}
           type="button"
           className={styles.workspaceBadge}
           title={`${accountName} — account`}
-          aria-label={`Open profile menu for ${accountName}`}
-          aria-expanded={accountOpen}
-          aria-controls="ficonter-account-sheet"
-          onClick={openAccount}
+          aria-label={`Open account menu for ${accountName}`}
+          aria-expanded={drawerOpen}
+          onClick={openDrawer}
         >
-          {avatarUrl ? (
-            <img
-              className={styles.workspaceAvatarImage}
-              src={avatarUrl}
-              alt=""
-              aria-hidden="true"
-            />
-          ) : (
-            <span>{accountInitial}</span>
-          )}
+          <span>{accountInitial}</span>
         </button>
 
         {workspace === "business" && businessProfiles.length ? (
@@ -1130,7 +795,6 @@ export function FiconterNativeAppChrome({
           </label>
         ) : null}
       </header>
-      ) : null}
 
       <nav
         className={styles.bottomDock}
@@ -1143,25 +807,6 @@ export function FiconterNativeAppChrome({
             item,
             workspace,
           );
-
-          if (workspace === "personal" && item.href === PERSONAL_HOME_HREF) {
-            return (
-              <button
-                key={item.href}
-                type="button"
-                className={`${styles.dockItem} ${
-                  active ? styles.dockActive : ""
-                }`}
-                aria-current={active ? "page" : undefined}
-                aria-label="Open Home instantly"
-                onPointerDown={() => router.prefetch(PERSONAL_HOME_HREF)}
-                onClick={goHomeInstant}
-              >
-                <Icon size={21} aria-hidden={true} />
-                <span>{item.label}</span>
-              </button>
-            );
-          }
 
           return (
             <Link
@@ -1203,7 +848,7 @@ export function FiconterNativeAppChrome({
             router.push(`${addHref}#quick-add`);
           }}
         >
-          <Plus size={30} aria-hidden={true} />
+          <CirclePlus size={27} aria-hidden={true} />
         </button>
 
         {primaryItems.slice(2, 3).map((item) => {
@@ -1230,67 +875,33 @@ export function FiconterNativeAppChrome({
           );
         })}
 
-        {workspace === "personal" ? (
-          <button
-            ref={settingsButtonRef}
-            type="button"
-            className={`${styles.dockItem} ${
-              settingsActive ? styles.dockActive : ""
-            }`}
-            aria-pressed={settingsActive}
-            aria-label={settingsActive ? "Close Settings" : "Open Settings"}
-            aria-expanded={settingsOpen}
-            aria-controls="ficonter-settings-sheet"
-            onClick={toggleSettings}
-          >
-            <Settings2 size={21} aria-hidden={true} />
-            <span>Settings</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={`${styles.dockItem} ${
-              moreActive ? styles.dockActive : ""
-            }`}
-            onClick={openDrawer}
-            aria-label="Open all sections"
-            aria-expanded={drawerOpen}
-          >
-            <LayoutGrid size={21} aria-hidden={true} />
-            <span>More</span>
-          </button>
-        )}
+        <button
+          type="button"
+          className={`${styles.dockItem} ${
+            moreActive ? styles.dockActive : ""
+          }`}
+          onClick={openDrawer}
+          aria-label="Open all sections"
+          aria-expanded={drawerOpen}
+        >
+          <LayoutGrid size={21} aria-hidden={true} />
+          <span>More</span>
+        </button>
       </nav>
 
       <button
         type="button"
         className={`${styles.backdrop} ${
-          drawerOpen || accountOpen || settingsOpen ? styles.backdropOpen : ""
+          drawerOpen ? styles.backdropOpen : ""
         }`}
         onClick={() => {
-          const closingAccount = accountOpen;
-          const closingSettings = settingsOpen;
           setDrawerOpen(false);
-          setAccountOpen(false);
-          setSettingsOpen(false);
           window.requestAnimationFrame(() => {
-            if (closingAccount) {
-              accountButtonRef.current?.focus({ preventScroll: true });
-            } else if (closingSettings) {
-              settingsButtonRef.current?.focus({ preventScroll: true });
-            } else {
-              menuButtonRef.current?.focus({ preventScroll: true });
-            }
+            menuButtonRef.current?.focus({ preventScroll: true });
           });
         }}
-        aria-label={
-          accountOpen
-            ? "Close profile menu"
-            : settingsOpen
-              ? "Close Settings"
-              : "Close app navigation"
-        }
-        tabIndex={drawerOpen || accountOpen || settingsOpen ? 0 : -1}
+        aria-label="Close app navigation"
+        tabIndex={drawerOpen ? 0 : -1}
       />
 
       <aside
@@ -1332,6 +943,24 @@ export function FiconterNativeAppChrome({
             aria-label="Close app navigation"
           >
             <X size={22} aria-hidden={true} />
+          </button>
+        </div>
+
+        <div className={styles.accountPanel}>
+          <span className={styles.accountAvatar} aria-hidden="true">{accountInitial}</span>
+          <span className={styles.accountIdentity}>
+            <strong>{accountName}</strong>
+            <small>{email || (workspace === "business" ? identity : "Signed in")}</small>
+          </span>
+          <button
+            type="button"
+            className={styles.accountSignOut}
+            onClick={() => void signOut()}
+            disabled={signingOut}
+            aria-label="Sign out"
+          >
+            <LogOut size={18} aria-hidden={true} />
+            <span>{signingOut ? "Signing out…" : "Sign out"}</span>
           </button>
         </div>
 
@@ -1439,136 +1068,6 @@ export function FiconterNativeAppChrome({
           ))}
         </nav>
 
-      </aside>
-
-      <aside
-        ref={settingsSheetRef}
-        id="ficonter-settings-sheet"
-        className={`${styles.accountSheet} ${styles.settingsSheet} ${
-          settingsOpen ? styles.accountSheetOpen : ""
-        }`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Settings"
-        aria-hidden={!settingsOpen}
-        inert={!settingsOpen}
-      >
-        <div className={styles.sheetHandle} aria-hidden="true" />
-        <div className={styles.accountSheetHeader}>
-          <span className={styles.settingsSheetMark} aria-hidden="true">
-            <Settings2 size={22} />
-          </span>
-          <span className={styles.accountIdentity}>
-            <small>PRIVATE PREFERENCES</small>
-            <strong>Settings</strong>
-            <small>Choose a section</small>
-          </span>
-          <button
-            ref={settingsCloseButtonRef}
-            type="button"
-            className={styles.accountSheetClose}
-            onClick={goHomeInstant}
-            aria-label="Close Settings and go to Home"
-          >
-            <X size={22} aria-hidden={true} />
-          </button>
-        </div>
-
-        <nav className={styles.settingsQuickList} aria-label="Settings sections">
-          {personalSettingsQuickRoutes.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={true}
-                className={styles.accountProfileLink}
-                onClick={() => setSettingsOpen(false)}
-              >
-                <span className={styles.accountProfileIcon}>
-                  <Icon size={20} aria-hidden={true} />
-                </span>
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.description}</small>
-                </span>
-                <ChevronRight size={18} aria-hidden={true} />
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <aside
-        ref={accountSheetRef}
-        id="ficonter-account-sheet"
-        className={`${styles.accountSheet} ${
-          accountOpen ? styles.accountSheetOpen : ""
-        }`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Profile menu"
-        aria-hidden={!accountOpen}
-        inert={!accountOpen}
-      >
-        <div className={styles.sheetHandle} aria-hidden="true" />
-        <div className={styles.accountSheetHeader}>
-          <span className={styles.accountAvatar} aria-hidden="true">
-            {avatarUrl ? (
-              <img
-                className={styles.accountAvatarImage}
-                src={avatarUrl}
-                alt=""
-              />
-            ) : (
-              accountInitial
-            )}
-          </span>
-          <span className={styles.accountIdentity}>
-            <small>PROFILE</small>
-            <strong>{accountName}</strong>
-            <small>{email || "Signed in"}</small>
-          </span>
-          <button
-            ref={accountCloseButtonRef}
-            type="button"
-            className={styles.accountSheetClose}
-            onClick={() => {
-              setAccountOpen(false);
-              window.requestAnimationFrame(() => {
-                accountButtonRef.current?.focus({ preventScroll: true });
-              });
-            }}
-            aria-label="Close profile menu"
-          >
-            <X size={22} aria-hidden={true} />
-          </button>
-        </div>
-
-        <Link
-          href="/dashboard/profile"
-          prefetch={true}
-          className={styles.accountProfileLink}
-        >
-          <span className={styles.accountProfileIcon}>
-            <UserRound size={20} aria-hidden={true} />
-          </span>
-          <span>
-            <strong>Profile</strong>
-            <small>Identity, profile photo and login email</small>
-          </span>
-          <ChevronRight size={18} aria-hidden={true} />
-        </Link>
-
-        <button
-          type="button"
-          className={styles.accountSheetSignOut}
-          onClick={() => void signOut()}
-          disabled={signingOut}
-        >
-          <LogOut size={19} aria-hidden={true} />
-          <span>{signingOut ? "Signing out…" : "Sign out"}</span>
-        </button>
       </aside>
     </>
   );

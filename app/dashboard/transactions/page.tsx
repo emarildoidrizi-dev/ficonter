@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { TransactionsActivityWorkspace } from "@/components/TransactionsActivityWorkspace";
+import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
+import { TransactionLedger } from "@/components/TransactionLedger";
 import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,13 +45,24 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           <p>Record less, reuse more, and keep the full financial picture accurate.</p>
         </div>
       </header>
-<TransactionsActivityWorkspace
-        transactions={data ?? []}
-        initialType={initialType}
-        allowMultiCurrency={allowMultiCurrency}
-        allowPdfExport={allowPdfExport}
-        ledgerError={error?.message ?? ""}
-      />
+<section className="transactions-layout">
+        <div className="panel transaction-entry-panel transaction-effortless-panel">
+          <EffortlessEntryWorkspace
+            initialTransactions={data ?? []}
+            initialType={initialType}
+            allowMultiCurrency={allowMultiCurrency}
+          />
+        </div>
+        <div className="panel transaction-ledger-panel">
+          <div className="panel-head">
+            <div>
+              <h3>Your ledger</h3>
+              <p className="muted transaction-intro">Edit, filter, export and review your financial activity.</p>
+            </div>
+          </div>
+          {error ? <div className="alert alert-error">{error.message}</div> : <TransactionLedger transactions={data ?? []} allowMultiCurrency={allowMultiCurrency} allowPdfExport={allowPdfExport} />}
+        </div>
+      </section>
     </>
   );
 }

@@ -11,7 +11,6 @@ import {
 import Link from "next/link";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
-  ArrowLeft,
   Bell,
   Camera,
   Check,
@@ -170,7 +169,6 @@ type Props = {
   subscription?: SubscriptionSnapshot | null;
   requiredFeature?: SubscriptionFeature | null;
   isSubscriptionExempt?: boolean;
-  profileOnly?: boolean;
 };
 
 type DialogState =
@@ -449,7 +447,6 @@ export function SettingsWorkspace({
   subscription,
   requiredFeature = null,
   isSubscriptionExempt = false,
-  profileOnly = false,
 }: Props) {
   const { language, locale } = useLanguage();
   const supabase = useMemo(() => createClient(), []);
@@ -463,17 +460,13 @@ export function SettingsWorkspace({
   const [billingHistoryError, setBillingHistoryError] = useState("");
   const [billingHistoryReloadKey, setBillingHistoryReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
-  const [sectionDetailOpen, setSectionDetailOpen] = useState(() =>
-    profileOnly || (isSectionId(initialSection) && initialSection !== "profile"),
+  const [active, setActive] = useState<SectionId>(() =>
+    isSubscriptionExempt && initialSection === "subscription"
+      ? "profile"
+      : isSectionId(initialSection)
+        ? initialSection
+        : "profile",
   );
-  const [active, setActive] = useState<SectionId>(() => {
-    if (profileOnly) return "profile";
-    if (isSubscriptionExempt && initialSection === "subscription") return "security";
-    return isSectionId(initialSection) && initialSection !== "profile"
-      ? initialSection
-      : "security";
-  });
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
   const [profilePhoto, setProfilePhoto] = useState("");
@@ -528,30 +521,18 @@ export function SettingsWorkspace({
   >({});
 
   useEffect(() => {
-    if (profileOnly) {
-      setActive("profile");
-      setSectionDetailOpen(true);
-      setMessage(null);
-      setSaveFeedback({});
-      return;
-    }
-
-    if (!isSectionId(initialSection) || initialSection === "profile") {
-      setSectionDetailOpen(false);
-      return;
-    }
+    if (!isSectionId(initialSection)) return;
 
     // Owner / Super Admin / Admin never enter the customer Subscription area.
     // Their access is role-based and does not require a plan or payment.
     setActive(
       isSubscriptionExempt && initialSection === "subscription"
-        ? "security"
+        ? "profile"
         : initialSection,
     );
-    setSectionDetailOpen(true);
     setMessage(null);
     setSaveFeedback({});
-  }, [initialSection, isSubscriptionExempt, profileOnly]);
+  }, [initialSection, isSubscriptionExempt]);
 
   useEffect(() => {
     return () => {
@@ -1419,13 +1400,12 @@ export function SettingsWorkspace({
     }
   }
 
-  const settingsSections = sections.filter((section) => section.id !== "profile");
   const visibleSections = isSubscriptionExempt
-    ? settingsSections.filter((section) => section.id !== "subscription")
-    : settingsSections;
-  const activeSection = profileOnly
-    ? sections.find((section) => section.id === "profile") ?? sections[0]
-    : visibleSections.find((section) => section.id === active) ?? visibleSections[0];
+    ? sections.filter((section) => section.id !== "subscription")
+    : sections;
+  const activeSection =
+    visibleSections.find((section) => section.id === active) ??
+    visibleSections[0];
 const currentPlanCode = normalizeSubscriptionPlan(subscription?.plan_code);
 const currentSubscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
 
@@ -1507,40 +1487,8 @@ const showSubscriptionManagement =
     currentPlanCode === "business_pro");
   const avatarText = (displayName || fullName || email || "F").trim().slice(0, 1).toUpperCase();
 
-  function scrollSettingsToTop() {
-    window.requestAnimationFrame(() => {
-      workspaceRef.current?.scrollIntoView({
-        block: "start",
-        behavior: "smooth",
-      });
-    });
-  }
-
-  function openSettingsSection(id: SectionId) {
-    setActive(id);
-    setSectionDetailOpen(true);
-    setMessage(null);
-    setSaveFeedback({});
-    scrollSettingsToTop();
-  }
-
-  function closeSettingsSection() {
-    // Retire the detail view in the same interaction that opens the native
-    // Settings sheet. This makes the Back control disappear immediately
-    // instead of leaving the section mounted behind the quick menu.
-    setSectionDetailOpen(false);
-    setMessage(null);
-    setSaveFeedback({});
-    window.dispatchEvent(new CustomEvent("ficonter:open-settings-menu"));
-  }
-
   return (
-    <div
-      ref={workspaceRef}
-      data-settings-view={profileOnly || sectionDetailOpen ? "detail" : "index"}
-      className={`${styles.workspace} ${profileOnly ? styles.profileOnlyWorkspace : ""}`}
-    >
-      {!profileOnly ? (
+    <div className={styles.workspace}>
       <aside className={styles.navigation} aria-label="Settings sections">
         <div className={styles.accountCard}>
           <div className={styles.avatar}>
@@ -1553,13 +1501,7 @@ const showSubscriptionManagement =
         </div>
         <div className={styles.sectionList}>
           {visibleSections.map(({ id, label, description, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className={`${styles.sectionButton}${active === id && sectionDetailOpen ? ` ${styles.sectionActive}` : ""}`}
-              onClick={() => openSettingsSection(id)}
-              aria-label={`Open ${label}`}
-            >
+            <button key={id} type="button" className={`${styles.sectionButton}${active === id ? ` ${styles.sectionActive}` : ""}`} onClick={() => { setActive(id); setMessage(null); setSaveFeedback({}); }}>
               <span className={styles.sectionIcon}><Icon size={17} /></span>
               <span><strong>{label}</strong><small>{description}</small></span>
               <ChevronRight size={16} />
@@ -1567,22 +1509,10 @@ const showSubscriptionManagement =
           ))}
         </div>
       </aside>
-      ) : null}
 
-      <main className={`${styles.panel} ${profileOnly ? styles.profileOnlyPanel : ""}`}>
-        {!profileOnly ? (
-          <button
-            type="button"
-            className={styles.mobileSectionBack}
-            onClick={closeSettingsSection}
-            aria-label="Back to Settings sections"
-          >
-            <ArrowLeft size={18} />
-            <span>Settings</span>
-          </button>
-        ) : null}
+      <main className={styles.panel}>
         <header className={styles.panelHeader}>
-          <div><span className={styles.eyebrow}>{profileOnly ? "Private profile" : "Account preferences"}</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
+          <div><span className={styles.eyebrow}>Account preferences</span><h2>{activeSection.label}</h2><p>{activeSection.description}</p></div>
           <div className={styles.secureBadge}><ShieldCheck size={16} />Private</div>
         </header>
 

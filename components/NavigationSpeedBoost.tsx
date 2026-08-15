@@ -15,7 +15,7 @@ type NavigatorWithConnection = Navigator & {
 };
 
 const personalCriticalRoutes = [
-  "/dashboard/overview",
+  "/dashboard",
   "/dashboard/transactions",
   "/dashboard/budget",
   "/dashboard/bills",
@@ -265,7 +265,7 @@ export function NavigationSpeedBoost({
     const oppositeWorkspace =
       workspace === "personal"
         ? "/business/overview"
-        : "/dashboard/overview";
+        : "/dashboard";
 
     const scheduled: number[] = [];
 

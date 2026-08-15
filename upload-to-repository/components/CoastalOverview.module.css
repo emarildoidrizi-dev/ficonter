@@ -1,6 +1,6 @@
 .overview {
   width: 100%;
-  color: var(--text-primary);
+  color: #1d394a;
 }
 
 .error {
@@ -9,10 +9,10 @@
   gap: 9px;
   margin-bottom: 12px;
   padding: 11px 14px;
-  border: 1px solid color-mix(in srgb, var(--burgundy) 42%, transparent);
+  border: 1px solid rgba(171, 93, 76, .24);
   border-radius: 13px;
-  background: color-mix(in srgb, var(--danger-soft) 92%, transparent);
-  color: var(--burgundy);
+  background: rgba(250, 235, 226, .86);
+  color: #8d4e43;
   font-size: 13px;
   font-weight: 700;
 }
@@ -28,7 +28,7 @@
 .eyebrow {
   display: block;
   margin-bottom: 9px;
-  color: var(--sage);
+  color: #4c8e8a;
   font-size: 12px;
   font-weight: 850;
   letter-spacing: .18em;
@@ -37,7 +37,7 @@
 
 .hero h1 {
   margin: 0;
-  color: var(--text-primary);
+  color: #1d394a;
   font-family: inherit;
   font-size: clamp(31px, 3.2vw, 46px);
   font-weight: 450;
@@ -47,7 +47,7 @@
 
 .hero p {
   margin: 12px 0 0;
-  color: var(--text-secondary);
+  color: #536fa8;
   font-size: 16px;
 }
 
@@ -59,16 +59,16 @@
   justify-content: center;
   gap: 8px;
   padding: 0 24px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(110, 101, 74, .17);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
-  color: var(--text-primary);
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--surface-sidebar) 9%, transparent);
+  background: rgba(246, 242, 223, .9);
+  color: #253f4e;
+  box-shadow: 0 12px 30px rgba(65, 89, 78, .08);
   font-size: 14px;
   font-weight: 850;
 }
 
-.addMoney:hover { transform: translateY(-1px); background: var(--surface-hover); }
+.addMoney:hover { transform: translateY(-1px); background: #f7f3e4; }
 
 .cardGrid {
   display: grid;
@@ -80,21 +80,17 @@
   min-width: 0;
   min-height: 274px;
   padding: clamp(22px, 2vw, 28px);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(111, 102, 74, .15);
   border-radius: 18px;
-  background-color: var(--surface-card);
-  background-image: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--surface-raised) 94%, transparent),
-    color-mix(in srgb, var(--surface-card) 92%, var(--sage-soft) 8%)
-  );
-  color: var(--text-primary);
-  box-shadow: 0 20px 48px color-mix(in srgb, var(--surface-sidebar) 12%, transparent);
+  background:
+    linear-gradient(145deg, rgba(247, 243, 225, .91), rgba(237, 238, 220, .85));
+  box-shadow: 0 20px 48px rgba(58, 81, 72, .11);
+  backdrop-filter: blur(16px) saturate(112%);
 }
 
 .card h2 {
   margin: 0;
-  color: var(--text-primary);
+  color: #223e4e;
   font-size: 18px;
   font-weight: 500;
   letter-spacing: -.02em;
@@ -105,7 +101,7 @@
 .cashCard, .insightsCard { grid-column: span 4; }
 
 .cardLabel {
-  color: var(--text-secondary);
+  color: #38515c;
   font-size: 13px;
   text-transform: uppercase;
 }
@@ -113,7 +109,7 @@
 .availableAmount {
   display: block;
   margin-top: 22px;
-  color: color-mix(in srgb, var(--sage) 72%, var(--text-primary));
+  color: #397fb0;
   font-size: clamp(38px, 3.2vw, 54px);
   font-weight: 650;
   letter-spacing: -.035em;
@@ -121,7 +117,7 @@
 }
 
 .cardNote, .healthMessage {
-  color: var(--text-secondary);
+  color: #526da5;
   font-size: 13px;
 }
 
@@ -138,18 +134,17 @@
   min-width: 0;
   padding: 15px 16px;
   border-radius: 13px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 74%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
+  background: rgba(230, 227, 208, .72);
 }
 
-.cashSummary span {
+.miniStats span, .cashSummary span {
   display: block;
   margin-bottom: 8px;
-  color: var(--text-secondary);
+  color: #455b66;
   font-size: 12px;
 }
 
-.miniStats strong, .cashSummary strong { color: var(--text-primary); font-size: 15px; }
+.miniStats strong, .cashSummary strong { color: #203b4b; font-size: 15px; }
 
 .healthLine {
   display: flex;
@@ -159,12 +154,12 @@
 }
 
 .healthLine > strong {
-  color: var(--sage);
+  color: #4e9290;
   font-size: 52px;
   line-height: .9;
 }
 
-.healthLine span, .healthLine p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.healthLine span, .healthLine p { margin: 0; color: #294453; font-size: 13px; }
 .healthLine p { margin-top: 7px; }
 
 .healthTrack {
@@ -172,14 +167,14 @@
   overflow: hidden;
   margin-top: 34px;
   border-radius: 99px;
-  background: color-mix(in srgb, var(--sage) 18%, var(--surface-subtle));
+  background: rgba(71, 143, 142, .13);
 }
 
 .healthTrack span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--gold), var(--sage));
+  background: linear-gradient(90deg, #b49b5d, #4e9290);
 }
 
 .healthMessage {
@@ -200,60 +195,20 @@
 
 .cashSummary > div:last-child { text-align: right; }
 
-.cashComparison {
-  height: 118px;
+.cashBars {
+  height: 112px;
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: clamp(28px, 5vw, 64px);
+  align-items: flex-end;
+  gap: 8px;
   margin-top: 18px;
 }
 
-.cashColumn {
-  width: min(34%, 112px);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 7px;
-}
-
-.cashColumnTrack {
-  min-height: 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  border-bottom: 2px solid color-mix(in srgb, var(--sage) 34%, transparent);
+.cashBars span {
+  flex: 1;
+  min-width: 12px;
   border-radius: 8px 8px 2px 2px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--sage) 8%, transparent),
-    color-mix(in srgb, var(--sage) 16%, transparent)
-  );
-}
-
-.cashColumnTrack span {
-  width: 100%;
-  border-radius: 8px 8px 2px 2px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--sage) 68%, #8fd9e6),
-    color-mix(in srgb, var(--sage) 88%, var(--solid-bg))
-  );
+  background: linear-gradient(180deg, #70c7d8, #438b88);
   transition: height .25s ease;
-}
-
-.cashColumnTrack span[data-tone="spent"] {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--gold) 46%, #85b8d5),
-    color-mix(in srgb, var(--gold) 34%, var(--solid-bg))
-  );
-}
-
-.cashColumn small {
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 750;
-  text-align: center;
 }
 
 .upcomingList { margin-top: 22px; }
@@ -264,7 +219,7 @@
   align-items: center;
   gap: 12px;
   min-height: 68px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(77, 92, 76, .13);
   color: inherit;
 }
 
@@ -275,14 +230,14 @@
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: var(--surface-subtle);
-  color: var(--text-primary);
+  background: rgba(228, 243, 239, .9);
+  color: #315264;
 }
 .upcomingItem > span { min-width: 0; display: grid; gap: 4px; }
 .upcomingItem strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
-.upcomingItem small { color: var(--text-secondary); font-size: 12px; }
-.upcomingItem b { color: var(--text-primary); font-size: 14px; }
-.emptyUpcoming { display: grid; min-height: 150px; place-items: center; color: var(--text-secondary); font-size: 13px; text-align: center; }
+.upcomingItem small { color: #647cb2; font-size: 12px; }
+.upcomingItem b { color: #203b4b; font-size: 14px; }
+.emptyUpcoming { display: grid; min-height: 150px; place-items: center; color: #647b74; font-size: 13px; text-align: center; }
 
 .rhythmCard { text-align: center; }
 .rhythmCard h2 { text-align: left; }
@@ -294,29 +249,12 @@
   margin: 27px auto 0;
   place-items: center;
   border-radius: 50%;
-  background: conic-gradient(
-    var(--sage) var(--progress),
-    color-mix(in srgb, var(--sage) 18%, var(--surface-subtle)) 0
-  );
+  background: conic-gradient(#4f918f var(--progress), rgba(76, 145, 143, .15) 0);
   position: relative;
 }
-.donut::after { position: absolute; inset: 22px; border-radius: 50%; background: var(--surface-raised); content: ""; }
-.donut span { position: relative; z-index: 1; color: var(--text-primary); font-size: 24px; font-weight: 850; }
-.rhythmCard p { margin: 14px 0 0; color: var(--text-secondary); font-size: 12px; }
-.rhythmCard[data-budget-state="missing"] .donut {
-  background: conic-gradient(var(--border-strong) 0deg, var(--surface-subtle) 0);
-}
-.missingBudget { display: grid; justify-items: center; gap: 9px; }
-.missingBudget p { max-width: 240px; line-height: 1.45; }
-.missingBudget a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 850;
-}
-.missingBudget a:hover { color: var(--sage); }
+.donut::after { position: absolute; inset: 22px; border-radius: 50%; background: rgba(246, 246, 236, .97); content: ""; }
+.donut span { position: relative; z-index: 1; color: #213c4d; font-size: 24px; font-weight: 850; }
+.rhythmCard p { margin: 14px 0 0; color: #5870a4; font-size: 12px; }
 
 .insightList { margin-top: 24px; }
 .insightList a {
@@ -325,8 +263,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  border-bottom: 1px solid rgba(77, 92, 76, .13);
+  color: #294657;
   font-size: 14px;
 }
 .insightList a:last-child { border-bottom: 0; }
@@ -348,510 +286,12 @@
   .cardGrid { grid-template-columns: 1fr; }
   .card { grid-column: auto; min-height: 0; padding: 20px; }
   .miniStats { grid-template-columns: 1fr; }
-  .cashComparison { height: 104px; }
-  .mobileGpsLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 14px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-card); color: var(--text-primary); font-size: 13px; font-weight: 800; }
+  .cashBars { height: 92px; }
+  .mobileGpsLink { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 14px; border-radius: 14px; background: rgba(246,242,223,.9); color: #264a55; font-size: 13px; font-weight: 800; }
 }
 
 @media (max-width: 470px) {
   .hero { display: grid; }
   .addMoney { width: 100%; }
   .availableAmount { font-size: 36px; }
-}
-
-/* -------------------------------------------------------------------------- */
-/* FICONTER MOBILE OVERVIEW — ordered editorial finance dashboard              */
-/* The reference layout is mobile-only. Every colour resolves from the active  */
-/* FICONTER theme so labels, rows and controls remain legible in every theme.   */
-/* -------------------------------------------------------------------------- */
-
-.miniStat {
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
-}
-
-.availableHeader {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-
-.availableHeaderIcon,
-.availableHeaderChevron,
-.cardDivider,
-.miniStatIcon,
-.miniStatCopy,
-.miniStatChevron,
-.healthHeader,
-.healthInfo {
-  display: none;
-}
-
-@media (max-width: 720px) {
-  .overview {
-    position: relative;
-    isolation: isolate;
-    padding-top: 0;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-  }
-
-  /* Preserve the platform's current wallpaper/daypart rather than forcing a
-     permanent morning picture. The theme veil supplies the readable contrast. */
-  .overview::before {
-    position: absolute;
-    z-index: -2;
-    top: -112px;
-    right: -14px;
-    left: -14px;
-    height: 720px;
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--surface-canvas) 12%, transparent) 0%,
-        color-mix(in srgb, var(--surface-canvas) 18%, transparent) 18%,
-        color-mix(in srgb, var(--surface-canvas) 34%, transparent) 42%,
-        color-mix(in srgb, var(--surface-canvas) 58%, transparent) 68%,
-        color-mix(in srgb, var(--surface-canvas) 84%, transparent) 88%,
-        var(--surface-canvas) 100%
-      ),
-      var(--living-scene) center top / cover no-repeat;
-    content: "";
-    pointer-events: none;
-  }
-
-  .overview::after {
-    position: absolute;
-    z-index: -1;
-    top: 360px;
-    right: -14px;
-    left: -14px;
-    height: 390px;
-    background: linear-gradient(
-      180deg,
-      transparent,
-      color-mix(in srgb, var(--surface-canvas) 88%, transparent) 66%,
-      var(--surface-canvas)
-    );
-    content: "";
-    pointer-events: none;
-  }
-
-  .hero {
-    min-height: 326px;
-    display: block;
-    padding: 48px 14px 22px;
-    margin: 0 0 6px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .eyebrow {
-    margin-bottom: 15px;
-    color: color-mix(in srgb, var(--gold) 76%, var(--text-primary));
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 15px;
-    font-weight: 900;
-    letter-spacing: .18em;
-    text-shadow: 0 1px 12px color-mix(in srgb, var(--surface-canvas) 58%, transparent);
-  }
-
-  .hero h1 {
-    max-width: 100%;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(34px, 10vw, 46px);
-    font-weight: 500;
-    letter-spacing: -.045em;
-    line-height: 1.02;
-    text-wrap: balance;
-  }
-
-  .hero p {
-    max-width: 34rem;
-    margin-top: 15px;
-    color: var(--text-secondary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 16px;
-    line-height: 1.42;
-  }
-
-  .addMoney {
-    width: min(100%, 272px);
-    min-height: 54px;
-    margin-top: 27px;
-    padding: 0 25px;
-    border: 1px solid color-mix(in srgb, var(--gold) 78%, var(--border-strong));
-    border-radius: 999px;
-    color: var(--solid-text);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--solid-bg) 92%, white 8%),
-      var(--solid-bg)
-    );
-    box-shadow:
-      0 10px 24px color-mix(in srgb, var(--surface-sidebar) 20%, transparent),
-      inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 18px;
-    font-weight: 600;
-    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-  }
-
-  .addMoney:hover,
-  .addMoney:active {
-    background: var(--solid-bg-hover);
-  }
-
-  .addMoney:active { transform: scale(.985); }
-
-  .addMoney:focus-visible,
-  .availableHeader:focus-visible,
-  .miniStat:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--gold) 72%, transparent);
-    outline-offset: 3px;
-  }
-
-  .addMoney svg {
-    width: 23px;
-    height: 23px;
-    stroke-width: 1.8;
-  }
-
-  /* Mobile overview is a predictable vertical hierarchy. No swipe deck and no
-     side-by-side financial cards: users always encounter the same order. */
-  .cardGrid {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    overflow: visible;
-  }
-
-  .card {
-    width: 100%;
-    grid-column: auto;
-    min-width: 0;
-    min-height: 0;
-    padding: 22px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 25px;
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface-raised) 98%, transparent),
-      color-mix(in srgb, var(--surface-card) 96%, var(--sage-soft) 4%)
-    );
-    color: var(--text-primary);
-    box-shadow:
-      0 18px 42px color-mix(in srgb, var(--surface-sidebar) 13%, transparent),
-      inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
-  }
-
-  .availableCard {
-    min-height: 0;
-    padding: 22px 20px 20px;
-  }
-
-  .availableHeader {
-    min-height: 50px;
-    display: grid;
-    grid-template-columns: 46px minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
-    color: var(--text-primary);
-    text-decoration: none;
-  }
-
-  .availableHeaderIcon {
-    width: 46px;
-    height: 46px;
-    display: grid;
-    place-items: center;
-    border-radius: 15px;
-    color: color-mix(in srgb, var(--sage) 84%, var(--text-primary));
-    background: color-mix(in srgb, var(--sage-soft) 82%, var(--surface-raised));
-  }
-
-  .availableHeaderChevron {
-    display: block;
-    justify-self: end;
-    color: var(--text-secondary);
-    stroke-width: 1.8;
-  }
-
-  .cardLabel {
-    color: var(--text-secondary);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .10em;
-  }
-
-  .availableAmount {
-    margin-top: 13px;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(43px, 13vw, 58px);
-    font-weight: 500;
-    letter-spacing: -.045em;
-    line-height: .98;
-    overflow-wrap: anywhere;
-  }
-
-  .cardNote {
-    margin: 14px 0 0;
-    color: var(--text-secondary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 14px;
-    line-height: 1.4;
-  }
-
-  .cardDivider {
-    height: 1px;
-    display: block;
-    margin: 20px 0 17px;
-    background: var(--border-subtle);
-  }
-
-  .miniStats {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    margin-top: 0;
-  }
-
-  .miniStats > .miniStat {
-    min-height: 108px;
-    display: grid;
-    grid-template-columns: 60px minmax(0, 1fr) 22px;
-    align-items: center;
-    column-gap: 18px;
-    padding: 18px 20px;
-    border: 1px solid color-mix(in srgb, var(--border-strong) 58%, var(--border-subtle));
-    border-radius: 24px;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--sage-soft) 74%, var(--surface-raised)),
-      color-mix(in srgb, var(--surface-subtle) 88%, var(--surface-raised))
-    );
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
-      0 8px 20px color-mix(in srgb, var(--surface-sidebar) 5%, transparent);
-    transition:
-      transform .16s ease,
-      background-color .16s ease,
-      border-color .16s ease,
-      box-shadow .16s ease;
-  }
-
-  .miniStats > .miniStat:active { transform: scale(.988); }
-
-  .miniStats > .miniStat:hover {
-    border-color: color-mix(in srgb, var(--gold) 42%, var(--border-strong));
-    background: color-mix(in srgb, var(--surface-hover) 72%, var(--sage-soft));
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
-      0 10px 24px color-mix(in srgb, var(--surface-sidebar) 8%, transparent);
-  }
-
-  .miniStatIcon {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    display: block;
-    place-self: center;
-    margin: 0 !important;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--gold) 34%, var(--border-subtle));
-    border-radius: 20px;
-    color: color-mix(in srgb, var(--sage) 88%, var(--text-primary));
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-raised) 98%, white 2%),
-      color-mix(in srgb, var(--surface-raised) 92%, var(--gold-soft) 8%)
-    );
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 24%, transparent),
-      0 7px 18px color-mix(in srgb, var(--surface-sidebar) 7%, transparent);
-    line-height: 0;
-  }
-
-  .miniStatIcon svg {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: 24px;
-    height: 24px;
-    display: block;
-    margin: 0 !important;
-    padding: 0;
-    transform: translate(-50%, -50%) !important;
-    transform-origin: center;
-    stroke-width: 1.8;
-  }
-
-  /* Lucide glyphs have different optical centres despite identical viewBoxes.
-     These tiny offsets are deliberate and affect only the glyph, never the box. */
-  .miniStatIcon[data-icon="still-to-pay"] svg {
-    top: calc(50% + 1px) !important;
-  }
-
-  .miniStatIcon[data-icon="left-after"] svg {
-    top: calc(50% + 0.5px) !important;
-  }
-
-  .miniStatCopy {
-    min-width: 0;
-    display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: 6px;
-    margin: 0 !important;
-    padding: 0;
-    font-family: Georgia, "Times New Roman", serif;
-  }
-
-  .miniStatCopy > span {
-    display: block;
-    margin: 0;
-    overflow: hidden;
-    color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-primary));
-    font-size: 17px;
-    font-weight: 500;
-    line-height: 1.12;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .miniStatCopy > strong {
-    display: block;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -.025em;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .miniStatChevron {
-    width: 22px;
-    height: 22px;
-    display: block;
-    align-self: center;
-    justify-self: end;
-    margin: 0 !important;
-    color: color-mix(in srgb, var(--gold) 82%, var(--text-secondary));
-    stroke-width: 1.8;
-  }
-
-  .healthCard {
-    min-height: 178px;
-    padding: 22px;
-  }
-
-  .healthHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-  }
-
-  .healthHeader h2 {
-    margin: 0;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -.025em;
-  }
-
-  .healthInfo {
-    width: 38px;
-    height: 38px;
-    display: grid;
-    flex: 0 0 auto;
-    place-items: center;
-    border: 1px solid var(--border-subtle);
-    border-radius: 50%;
-    color: color-mix(in srgb, var(--sage) 80%, var(--text-primary));
-    background: color-mix(in srgb, var(--sage-soft) 76%, var(--surface-raised));
-  }
-
-  .healthLine { margin-top: 22px; }
-  .healthLine > strong {
-    color: color-mix(in srgb, var(--sage) 72%, var(--text-primary));
-    font-family: Georgia, "Times New Roman", serif;
-  }
-
-  .healthTrack {
-    background: color-mix(in srgb, var(--sage) 18%, var(--surface-subtle));
-  }
-
-  .healthTrack span {
-    background: linear-gradient(90deg, var(--gold), var(--sage));
-  }
-
-  .cashCard,
-  .upcomingCard,
-  .rhythmCard,
-  .insightsCard {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface-raised) 98%, transparent),
-      color-mix(in srgb, var(--surface-card) 96%, var(--sage-soft) 4%)
-    );
-  }
-
-  .card h2,
-  .cashSummary strong,
-  .upcomingItem strong,
-  .upcomingItem b,
-  .insightList a,
-  .mobileGpsLink {
-    color: var(--text-primary);
-  }
-
-  .cashSummary span,
-  .upcomingItem small,
-  .healthMessage,
-  .rhythmCard p,
-  .cardNote {
-    color: var(--text-secondary);
-  }
-}
-
-@media (max-width: 390px) {
-  .hero { min-height: 306px; padding: 42px 11px 20px; }
-  .hero h1 { font-size: 34px; }
-  .addMoney { width: min(100%, 260px); }
-  .availableCard { padding-inline: 17px; }
-  .availableAmount { font-size: 43px; }
-
-  .miniStats > .miniStat {
-    min-height: 96px;
-    grid-template-columns: 52px minmax(0, 1fr) 19px;
-    column-gap: 14px;
-    padding: 14px 16px;
-    border-radius: 21px;
-  }
-
-  .miniStatIcon {
-    width: 52px;
-    height: 52px;
-    border-radius: 17px;
-  }
-
-  .miniStatIcon svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .miniStatCopy { gap: 5px; }
-  .miniStatCopy > span { font-size: 14px; }
-  .miniStatCopy > strong { font-size: 19px; }
-  .miniStatChevron { width: 19px; height: 19px; }
 }

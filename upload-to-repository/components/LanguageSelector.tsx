@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, Globe2, LoaderCircle } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageProvider";
@@ -18,7 +18,6 @@ export function LanguageSelector({
 }) {
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
@@ -84,31 +83,16 @@ export function LanguageSelector({
         aria-label={t("chooseLanguage")}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={menuId}
-        title={t("chooseLanguage")}
-        data-language-world-control={variant === "public" ? "true" : undefined}
         onClick={() => setOpen((value) => !value)}
         disabled={saving}
       >
-        {saving ? (
-          <LoaderCircle size={variant === "public" ? 18 : 16} className={styles.spinner} />
-        ) : (
-          <Globe2
-            size={variant === "public" ? 19 : 16}
-            className={variant === "public" ? styles.worldIcon : undefined}
-          />
-        )}
+        {saving ? <LoaderCircle size={16} className={styles.spinner} /> : <Globe2 size={16} />}
         <span>{current.nativeName}</span>
         <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
       </button>
 
       {open ? (
-        <div
-          id={menuId}
-          className={styles.menu}
-          role="listbox"
-          aria-label={t("chooseLanguage")}
-        >
+        <div className={styles.menu} role="listbox" aria-label={t("chooseLanguage")}>
           {LANGUAGE_OPTIONS.map((option) => (
             <button
               type="button"

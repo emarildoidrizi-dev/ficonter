@@ -9,8 +9,6 @@ import {
   Pencil,
   RotateCcw,
   Search,
-  SlidersHorizontal,
-  MoreHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -168,8 +166,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     function handleCreated(event: Event) {
@@ -690,93 +686,6 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
 
   return (
     <>
-      <div className={styles.mobileLedgerControls}>
-        <label className={styles.mobileSearchBox}>
-          <Search size={18} aria-hidden="true" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search transactions…"
-            aria-label="Search transactions"
-          />
-        </label>
-        <button
-          type="button"
-          className={mobileFiltersOpen ? styles.mobileControlActive : styles.mobileControlButton}
-          onClick={() => {
-            setMobileFiltersOpen((current) => !current);
-            setMobileToolsOpen(false);
-          }}
-          aria-expanded={mobileFiltersOpen}
-        >
-          <SlidersHorizontal size={17} aria-hidden="true" /> Filter
-        </button>
-        <button
-          type="button"
-          className={styles.mobileDateButton}
-          onClick={() => {
-            setMobileFiltersOpen(true);
-            setMobileToolsOpen(false);
-          }}
-        >
-          <CalendarRange size={17} aria-hidden="true" />
-          <span>{dateFrom || dateTo ? `${dateFrom || "…"} – ${dateTo || "…"}` : "All dates"}</span>
-        </button>
-        <button
-          type="button"
-          className={mobileToolsOpen ? styles.mobileControlActive : styles.mobileControlButton}
-          onClick={() => {
-            setMobileToolsOpen((current) => !current);
-            setMobileFiltersOpen(false);
-          }}
-          aria-expanded={mobileToolsOpen}
-        >
-          <MoreHorizontal size={18} aria-hidden="true" /> Tools
-        </button>
-      </div>
-
-      {mobileFiltersOpen && (
-        <section className={styles.mobileControlPanel} aria-label="Ledger filters">
-          <div className={styles.mobileDateRange}>
-            <label>From<input type="date" value={dateFromDraft} max={dateToDraft || undefined} onChange={(event) => setDateFromDraft(event.target.value)} /></label>
-            <label>To<input type="date" value={dateToDraft} min={dateFromDraft || undefined} onChange={(event) => setDateToDraft(event.target.value)} /></label>
-          </div>
-          <div className={styles.mobileFilterGrid}>
-            <select value={directionFilter} onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)} aria-label="Money movement">
-              <option value="all">All money movements</option>
-              <option value="inflow">Money received</option>
-              <option value="outflow">Money spent</option>
-              <option value="neutral">Transfers / adjustments</option>
-            </select>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Category">
-              <option value="all">All categories</option>{categories.map((category) => <option key={category}>{category}</option>)}
-            </select>
-            <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)} aria-label="Currency">
-              <option value="all">All currencies</option>{currencies.map((currency) => <option key={currency} value={currency}>{currencySymbol(currency)} {currency} — {currencyName(currency)}</option>)}
-            </select>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} aria-label="Sort transactions">
-              <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest amount</option><option value="lowest">Lowest amount</option><option value="description">Description A–Z</option>
-            </select>
-          </div>
-          <div className={styles.mobilePanelActions}>
-            <button type="button" onClick={clearFilters}><RotateCcw size={15} /> Reset</button>
-            <button type="button" className={styles.mobilePrimaryAction} onClick={() => { applyDateRange(); setMobileFiltersOpen(false); }}>Apply filters</button>
-          </div>
-        </section>
-      )}
-
-      {mobileToolsOpen && (
-        <section className={styles.mobileControlPanel} aria-label="Ledger tools">
-          <div className={styles.mobileToolsGrid}>
-            <button type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}><Download size={16} /> Export CSV</button>
-            <button type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(visible, "view"); }} disabled={!visible.length || exportingPdf}>
-              {allowPdfExport ? <FileText size={16} /> : <LockKeyhole size={16} />}
-              {allowPdfExport ? (exportingPdf ? "Preparing PDF…" : "Export PDF") : "PDF · Personal Pro"}
-            </button>
-          </div>
-        </section>
-      )}
-
       <div className={styles.toolbarTop}>
         <label className={styles.searchBox}>
           <Search size={17} aria-hidden="true" />

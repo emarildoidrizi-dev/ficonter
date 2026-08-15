@@ -64,12 +64,8 @@ export default async function SettingsPage({
     ? requiredValue
     : null;
 
-  if (section === "profile") {
-    redirect("/dashboard/profile");
-  }
-
   if (isSubscriptionExempt && section === "subscription") {
-    redirect("/dashboard/settings?section=security");
+    redirect("/dashboard/settings?section=profile");
   }
 
   const [
@@ -148,8 +144,8 @@ export default async function SettingsPage({
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage account security and Ficonter preferences from one private
-            workspace.
+            Manage your profile, account security and Ficonter preferences from
+            one private workspace.
           </p>
         </div>
       </div>

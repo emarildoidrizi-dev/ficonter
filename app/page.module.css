@@ -651,19 +651,58 @@
 
 .flowTotals > div { display: grid; gap: 5px; }
 
-.flowBars {
-  height: 105px;
-  margin-top: 15px;
-  display: flex;
-  align-items: end;
-  gap: 8px;
+.flowCaption {
+  margin: 12px 0 0;
+  color: #66767b;
+  font-size: 10px;
 }
 
-.flowBars i {
-  flex: 1;
-  min-height: 8px;
-  border-radius: 7px 7px 2px 2px;
-  background: linear-gradient(180deg, #76bed0, #3d8583);
+.flowBars {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.flowBarColumn {
+  display: grid;
+  gap: 7px;
+}
+
+.flowBarColumn small {
+  color: #708087;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.flowBarTrack {
+  height: 104px;
+  display: flex;
+  align-items: end;
+  padding: 0 2px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(247, 249, 246, 0.2), rgba(216, 227, 223, 0.38));
+}
+
+.flowBarValue {
+  width: 100%;
+  min-height: 12px;
+  border-radius: 9px 9px 3px 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.flowBarIncome { background: linear-gradient(180deg, #7ec5d4, #337979); }
+.flowBarSpent { background: linear-gradient(180deg, #8bc0cb, #416f7a); }
+.flowBarCommitted { background: linear-gradient(180deg, #99c3b9, #517a73); }
+.flowBarReserve { background: linear-gradient(180deg, #c8bb8d, #8d7a46); }
+.flowBarRemaining { background: linear-gradient(180deg, #d7ddd7, #7a888c); }
+
+.flowBarColumn b {
+  color: #223b43;
+  font-size: 11px;
 }
 
 .viewGrid {

@@ -121,18 +121,8 @@ export default async function HomePage({
         </div>
 
         <div className={styles.heroVisual}>
-          <Image
-            src="/landing/ficonter-personal-finance.webp"
-            alt="A couple reviewing their finances together on Ficonter at home"
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 54vw"
-          />
-          <div className={styles.photoShade} />
-          <div className={styles.heroPhotoCaption}>
-            <span>One shared picture</span>
-            <strong>Plan together, with confidence.</strong>
-          </div>
+          <div className={styles.heroGlow} aria-hidden="true" />
+
           <div className={styles.floatingDashboard}>
             <div className={styles.floatingHeader}>
               <div className={styles.workspaceIdentity}>
@@ -172,6 +162,18 @@ export default async function HomePage({
                 <div><span>Committed</span><strong>€2,160</strong></div>
                 <div><span>Reserve</span><strong>€1,850</strong></div>
               </div>
+            </div>
+          </div>
+
+          <div className={styles.heroSupportCard}>
+            <div className={styles.heroSupportBadge}>Personal & Business</div>
+            <div className={styles.heroSupportImage}>
+              <Image
+                src="/landing/ficonter-business-workspace.webp"
+                alt="A business team reviewing plans together in Ficonter"
+                fill
+                sizes="(max-width: 900px) 70vw, 280px"
+              />
             </div>
           </div>
         </div>

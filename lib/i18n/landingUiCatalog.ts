@@ -67,6 +67,8 @@ export const LANDING_UI_TRANSLATIONS: Record<string, LandingUiTranslationRow> = 
   "Platform": landing("Plattform", "Plataforma", "Platforma", "المنصة", "Plataforma", "Piattaforma", "Платформа"),
   "For you": landing("Für dich", "Para ti", "Për ty", "من أجلك", "Para si", "Per te", "Для вас"),
   "Personal & Business": landing("Privat & Geschäftlich", "Personal y Empresa", "Personale & Biznes", "شخصي وأعمال", "Pessoal e Empresa", "Personale e Business", "Личное и Бизнес"),
+  "Start free": landing("Kostenlos starten", "Empieza gratis", "Fillo falas", "ابدأ مجانًا", "Começar grátis", "Inizia gratis", "Начать бесплатно"),
+  "A business team reviewing plans together in Ficonter": landing("Ein Geschäftsteam prüft gemeinsam Pläne in Ficonter", "Un equipo empresarial revisa planes juntos en Ficonter", "Një ekip biznesi po shqyrton planet së bashku në Ficonter", "فريق أعمال يراجع الخطط معًا في Ficonter", "Uma equipa empresarial analisa planos em conjunto na Ficonter", "Un team aziendale rivede i piani insieme in Ficonter", "Команда бизнеса вместе рассматривает планы в Ficonter"),
   "Financial Control Center": landing("Finanzkontrollzentrum", "Centro de Control Financiero", "Qendra e Kontrollit Financiar", "مركز التحكم المالي", "Centro de Controlo Financeiro", "Centro di Controllo Finanziario", "Центр финансового контроля"),
   "Know where you stand. Decide what comes next.": landing(
     "Wissen, wo du stehst. Entscheiden, was als Nächstes kommt.",

@@ -193,77 +193,67 @@
   overflow: hidden;
   border: 1px solid rgba(24, 48, 58, 0.1);
   border-radius: 30px;
-  background: #dfe8e4;
+  background:
+    radial-gradient(circle at 85% 14%, rgba(184, 154, 97, 0.2), transparent 26%),
+    radial-gradient(circle at 14% 78%, rgba(84, 142, 132, 0.14), transparent 25%),
+    linear-gradient(145deg, #f3eee2 0%, #eef3ef 54%, #e4ece7 100%);
   box-shadow: 0 30px 72px rgba(28, 47, 54, 0.16);
 }
 
-.heroVisual > img,
+.heroGlow {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 28%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 0%, transparent 48%);
+  pointer-events: none;
+}
+
+.heroSupportCard {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  width: min(292px, calc(100% - 56px));
+  padding: 12px;
+  border: 1px solid rgba(24, 48, 58, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 252, 246, 0.8);
+  box-shadow: 0 16px 40px rgba(23, 41, 49, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.heroSupportBadge {
+  position: absolute;
+  z-index: 2;
+  top: 22px;
+  left: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(13, 27, 35, 0.78);
+  color: #f7f2e8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.heroSupportImage {
+  position: relative;
+  min-height: 178px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.heroSupportImage > img,
 .storyImage > img {
   object-fit: cover;
 }
 
-.heroVisual > img {
-  object-position: 57% center;
-  transform: scale(1.015);
-}
-
-.photoShade {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(10, 26, 31, 0.04) 20%, rgba(8, 20, 26, 0.56) 100%),
-    linear-gradient(90deg, rgba(246, 243, 234, 0.2) 0%, transparent 55%);
-}
-
-.heroPhotoCaption {
-  position: absolute;
-  z-index: 2;
-  inset-inline-start: 28px;
-  bottom: 26px;
-  display: grid;
-  gap: 4px;
-  color: #fff;
-  text-shadow: 0 2px 14px rgba(8, 20, 26, 0.22);
-}
-
-.heroPhotoCaption span {
-  color: #d9e9e5;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.heroPhotoCaption strong {
-  max-width: 300px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 24px;
-  font-weight: 500;
-  line-height: 1.12;
-}
-
-.floatingDashboard {
-  position: absolute;
-  z-index: 3;
-  top: 24px;
-  inset-inline: 24px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 24px;
-  background: rgba(250, 248, 241, 0.955);
-  box-shadow: 0 26px 62px rgba(11, 23, 29, 0.21);
-  backdrop-filter: blur(20px);
-}
-
-.floatingHeader {
-  min-height: 46px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  background: rgba(15, 33, 41, 0.97);
-  color: #e9f0ed;
+.heroSupportImage > img {
+  object-position: center;
 }
 
 .workspaceIdentity {
@@ -951,7 +941,10 @@
   .hero { padding: 58px 0 44px; grid-template-columns: 1fr; gap: 38px; }
   .heroCopy { max-width: 680px; }
   .hero h1 { max-width: 680px; font-size: clamp(52px, 8vw, 64px); }
-  .heroVisual { min-height: 500px; border-radius: 28px; }
+  .heroVisual { min-height: 540px; border-radius: 28px; }
+  .floatingDashboard { inset: 18px 18px 178px 18px; }
+  .heroSupportCard { right: 18px; bottom: 18px; width: calc(100% - 36px); }
+  .heroSupportImage { min-height: 160px; }
   .proofStrip,
   .peopleGrid,
   .principleGrid,
@@ -1014,8 +1007,11 @@
   .heroLead { font-size: 16px; line-height: 1.58; }
   .heroActions,
   .finalActions { display: grid; grid-template-columns: 1fr; width: 100%; }
-  .heroVisual { min-height: 480px; }
-  .floatingDashboard { top: 14px; inset-inline: 14px; border-radius: 20px; }
+  .heroVisual { min-height: 520px; border-radius: 24px; }
+  .floatingDashboard { inset: 14px 14px 170px 14px; border-radius: 20px; }
+  .heroSupportCard { right: 14px; bottom: 14px; width: calc(100% - 28px); border-radius: 20px; padding: 10px; }
+  .heroSupportBadge { top: 18px; left: 18px; font-size: 9px; }
+  .heroSupportImage { min-height: 146px; border-radius: 14px; }
   .floatingBody { padding: 15px; }
   .floatingTitleRow { gap: 10px; }
   .floatingTitleRow strong { font-size: 20px; }
@@ -1028,8 +1024,6 @@
   .heroMiniStats { gap: 6px; }
   .heroMiniStats > div { padding: 8px; }
   .heroMiniStats strong { font-size: 12px; }
-  .heroPhotoCaption { inset-inline-start: 20px; bottom: 21px; }
-  .heroPhotoCaption strong { font-size: 21px; }
   .platformSection { padding: 100px 0 80px; }
   .sectionIntro,
   .sectionIntroLeft { margin-bottom: 36px; }

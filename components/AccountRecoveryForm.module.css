@@ -103,8 +103,10 @@
 
 .success,
 .error,
+.info,
 .securityNote,
-.phoneSummary {
+.phoneSummary,
+.alternative {
   border-radius: 13px;
   padding: 12px 14px;
   font-size: 13px;
@@ -121,8 +123,14 @@
   color: #7b3c3c;
 }
 
+.info {
+  background: #eef3f7;
+  color: #42596a;
+}
+
 .securityNote,
-.phoneSummary {
+.phoneSummary,
+.alternative {
   border: 1px solid var(--line);
   background: #f7f3ec;
   color: var(--muted);
@@ -168,3 +176,46 @@
 :global(html[data-resolved-theme="dark"]) .intro,
 :global(html[data-resolved-theme="dark"]) .phoneSummary,
 :global(html[data-resolved-theme="dark"]) .securityNote { color: var(--text-secondary) !important; }
+
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.alternative {
+  display: grid;
+  gap: 8px;
+}
+
+.alternative strong {
+  color: var(--ink);
+}
+
+.alternative p {
+  margin: 0;
+}
+
+.textButton {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .actionRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+:global(html[data-resolved-theme="dark"]) .alternative,
+:global(html[data-resolved-theme="dark"]) .info {
+  background: var(--surface-raised) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+}

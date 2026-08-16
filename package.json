@@ -48,7 +48,9 @@
     "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
     "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs",
     "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs",
-    "verify:branded-login-entry": "node scripts/verify-branded-login-entry.mjs"
+    "verify:branded-login-entry": "node scripts/verify-branded-login-entry.mjs",
+    "verify:account-recovery": "node scripts/verify-account-recovery.mjs",
+    "verify:password-recovery-link": "node scripts/verify-password-recovery-link-fix.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

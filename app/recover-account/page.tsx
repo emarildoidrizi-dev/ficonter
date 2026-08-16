@@ -1,13 +1,15 @@
 import { Brand } from "@/components/Brand";
 import { AccountRecoveryForm } from "@/components/AccountRecoveryForm";
+import { normalizeAuthEntry } from "@/lib/auth/recovery";
 
 export default async function RecoverAccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; entry?: string; error?: string }>;
 }) {
   const params = await searchParams;
   const initialMode = params.mode === "username" ? "username" : "password";
+  const entry = normalizeAuthEntry(params.entry);
 
   return (
     <main className="auth-shell">
@@ -25,7 +27,11 @@ export default async function RecoverAccountPage({
 
       <section className="auth-form-wrap">
         <div className="auth-card">
-          <AccountRecoveryForm initialMode={initialMode} />
+          <AccountRecoveryForm
+            initialMode={initialMode}
+            entry={entry}
+            initialError={params.error ?? null}
+          />
         </div>
       </section>
     </main>

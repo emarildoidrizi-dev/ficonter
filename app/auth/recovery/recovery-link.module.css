@@ -1,0 +1,72 @@
+.shell {
+  display: grid;
+  gap: 22px;
+}
+
+.shell h2 {
+  margin: 0 0 8px;
+  font-size: 38px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.primary,
+.primaryLink {
+  min-height: 48px;
+  border: 0;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--solid-bg);
+  color: var(--solid-text);
+  padding: 0 18px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.securityNote,
+.error {
+  border-radius: 13px;
+  padding: 13px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.securityNote {
+  border: 1px solid var(--line);
+  background: #f7f3ec;
+  color: var(--muted);
+}
+
+.error {
+  background: #f7e6e6;
+  color: #7b3c3c;
+}
+
+.backLink {
+  justify-self: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+:global(html[data-resolved-theme="dark"]) .securityNote {
+  background: var(--surface-raised) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+
+:global(html[data-resolved-theme="dark"]) .intro,
+:global(html[data-resolved-theme="dark"]) .backLink {
+  color: var(--text-secondary) !important;
+}

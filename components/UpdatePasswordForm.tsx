@@ -3,10 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { type AuthEntry, withAuthEntry } from "@/lib/auth/recovery";
 import styles from "./UpdatePasswordForm.module.css";
 
-export function UpdatePasswordForm() {
-  const supabase = useMemo(() => createClient(), []);
+export function UpdatePasswordForm({ entry = null }: { entry?: AuthEntry | null }) {
+  const supabase = useMemo(() => createClient(false), []);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
@@ -15,21 +16,24 @@ export function UpdatePasswordForm() {
     text: string;
   } | null>(null);
 
+  const loginHref = withAuthEntry("/login", entry);
+  const recoveryHref = withAuthEntry("/recover-account?mode=password", entry);
+
   useEffect(() => {
     let mounted = true;
 
     async function inspectSession() {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getUser();
 
       if (!mounted) return;
 
-      if (data.session) {
+      if (!error && data.user) {
         setReady(true);
+        setMessage(null);
       } else {
         setMessage({
           type: "error",
-          text:
-            "This password-reset link is invalid or has expired. Request a new link.",
+          text: "This password-reset link is invalid or has expired. Request a new link.",
         });
       }
     }
@@ -41,7 +45,7 @@ export function UpdatePasswordForm() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
-      if (event === "PASSWORD_RECOVERY" || session) {
+      if (event === "PASSWORD_RECOVERY" && session) {
         setReady(true);
         setMessage(null);
       }
@@ -60,9 +64,7 @@ export function UpdatePasswordForm() {
 
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
-    const confirmPassword = String(
-      formData.get("confirmPassword") ?? "",
-    );
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (password.length < 8) {
       setMessage({
@@ -88,28 +90,29 @@ export function UpdatePasswordForm() {
         password,
       });
 
-      if (updateError) {
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
-      const { error: signOutError } = await supabase.auth.signOut();
+      // Password recovery is a security event: explicitly terminate the old
+      // sessions after the password changes. If global revocation fails, at
+      // minimum remove this recovery session locally before returning to login.
+      const { error: globalSignOutError } = await supabase.auth.signOut({
+        scope: "global",
+      });
 
-      if (signOutError) {
-        throw signOutError;
+      if (globalSignOutError) {
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
       }
 
       setMessage({
         type: "success",
-        text: "Your Ficonter password has been changed successfully.",
+        text: "Your FICONTER password has been changed. Sign in again with your new password.",
       });
       setComplete(true);
-    } catch (error) {
+      setReady(false);
+    } catch {
       setMessage({
         type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "The password could not be changed.",
+        text: "The password could not be changed. Request a new recovery link if this one has expired.",
       });
     } finally {
       setLoading(false);
@@ -154,9 +157,7 @@ export function UpdatePasswordForm() {
 
           {message ? (
             <div
-              className={
-                message.type === "error" ? styles.error : styles.success
-              }
+              className={message.type === "error" ? styles.error : styles.success}
             >
               {message.text}
             </div>
@@ -173,12 +174,12 @@ export function UpdatePasswordForm() {
       ) : (
         <div className={styles.complete}>
           {message ? <div className={styles.success}>{message.text}</div> : null}
-          <Link href="/login">Return to login</Link>
+          <Link href={loginHref}>Return to login</Link>
         </div>
       )}
 
       {!ready && !complete ? (
-        <Link className={styles.requestLink} href="/recover-account?mode=password">
+        <Link className={styles.requestLink} href={recoveryHref}>
           Request another reset link
         </Link>
       ) : null}

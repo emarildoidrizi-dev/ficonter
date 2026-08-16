@@ -1,7 +1,15 @@
 import { Brand } from "@/components/Brand";
 import { UpdatePasswordForm } from "@/components/UpdatePasswordForm";
+import { normalizeAuthEntry } from "@/lib/auth/recovery";
 
-export default function UpdatePasswordPage() {
+export default async function UpdatePasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ entry?: string }>;
+}) {
+  const params = await searchParams;
+  const entry = normalizeAuthEntry(params.entry);
+
   return (
     <main className="auth-shell">
       <section className="auth-art">
@@ -18,7 +26,7 @@ export default function UpdatePasswordPage() {
 
       <section className="auth-form-wrap">
         <div className="auth-card">
-          <UpdatePasswordForm />
+          <UpdatePasswordForm entry={entry} />
         </div>
       </section>
     </main>

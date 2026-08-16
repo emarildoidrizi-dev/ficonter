@@ -28,7 +28,7 @@ check(page.includes('from("credit_card_activities")'), "Credit Cards page loads 
 check(page.includes('.ilike("category", "credit card")'), "Credit Cards page reads existing credit-card debt rows.");
 check(manager.includes('"record_credit_card_payment"'), "Confirmed card payments use an atomic RPC.");
 check(manager.includes('"record_credit_card_activity"'), "Card balance activity uses an atomic RPC.");
-check(manager.includes('"update_credit_card_statement"'), "Monthly statements reconcile the shared balance.");
+check(manager.includes('.from("debts")') && manager.includes("statement_balance: statementBalance") && !manager.includes('supabase.rpc("update_credit_card_statement"'), "Monthly statements save issuer snapshots without rewriting the live balance.");
 check(manager.includes('notifyFiconterDataChange("all")'), "Credit-card changes notify every financial module.");
 check(manager.includes('category: "Credit card"'), "New cards use the existing Debt source of truth.");
 check(!manager.includes('from("credit_cards")'), "No duplicate credit-card account table is created.");

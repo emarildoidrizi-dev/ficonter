@@ -106,6 +106,8 @@ export const GLOBAL_RUNTIME_TEMPLATES: Record<string, TemplateRow> = {
   "{0} income and spending, shown on the same scale": row("Einnahmen und Ausgaben im {0}, auf derselben Skala dargestellt", "Ingresos y gastos de {0}, mostrados en la misma escala", "Të ardhurat dhe shpenzimet për {0}, të shfaqura në të njëjtën shkallë", "الدخل والإنفاق في {0}، معروضان بالمقياس نفسه", "Rendimentos e despesas de {0}, apresentados na mesma escala", "Entrate e spese di {0}, mostrate sulla stessa scala", "Доходы и расходы за {0}, показанные в одном масштабе"),
   "Send another link in {0}s": row("Neuen Link in {0}s senden", "Enviar otro enlace en {0}s", "Dërgo lidhje tjetër pas {0}s", "إرسال رابط آخر خلال {0} ث", "Enviar outro link em {0}s", "Invia un altro link tra {0}s", "Отправить новую ссылку через {0} с"),
   "Resend in {0}s": row("Erneut senden in {0}s", "Reenviar en {0}s", "Ridërgo pas {0}s", "إعادة الإرسال خلال {0} ث", "Reenviar em {0}s", "Invia di nuovo tra {0}s", "Отправить снова через {0} с"),
+  "{0} · historical record": row("{0} · historischer Datensatz", "{0} · registro histórico", "{0} · regjistrim historik", "{0} · سجل تاريخي", "{0} · registo histórico", "{0} · record storico", "{0} · историческая запись"),
+
 };
 
 function escapeRegex(value: string): string {

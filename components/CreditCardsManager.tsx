@@ -576,6 +576,7 @@ export function CreditCardsManager({
 
   function monthlyMetrics(card: CreditCardDebt) {
     const record = monthlyRecordFor(card.id);
+    const isCurrentMonth = selectedMonth === monthKey();
     const monthActivities = activities.filter(
       (activity) =>
         activity.debt_id === card.id &&
@@ -589,15 +590,18 @@ export function CreditCardsManager({
     const paidThisMonth = sumMoney(monthPayments.map(paymentBase));
     const paidTowardStatement = paymentsTowardStatement(card, record);
     const minimumPayment = record ? recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur) : 0;
-    const statementBalance = record ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur) : 0;
+    const recordedStatementBalance = record
+      ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur)
+      : 0;
+    // Statement balance is always a historical issuer snapshot. It never
+    // mirrors or drives the live card balance. Balance left to pay is the
+    // live amount owed and therefore mirrors Current balance instead.
+    const statementBalance = recordedStatementBalance;
     const minimumRemaining = Math.max(
       0,
       roundMoney(minimumPayment - paidTowardStatement),
     );
-    const statementRemaining = Math.max(
-      0,
-      roundMoney(statementBalance - paidTowardStatement),
-    );
+    const statementRemaining = cardCurrent(card);
     const purchases = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "purchase")
@@ -629,7 +633,9 @@ export function CreditCardsManager({
       minimumPayment,
       minimumRemaining,
       statementBalance,
+      recordedStatementBalance,
       statementRemaining,
+      isCurrentMonth,
       interest,
       purchases,
       fees,
@@ -674,14 +680,23 @@ export function CreditCardsManager({
       }),
     );
     const statementBalances = sumMoney(
-      monthRecords.map((record) => recordFieldBase(record, record.statement_balance, record.statement_balance_eur)),
+      monthRecords.map((record) =>
+        recordFieldBase(
+          record,
+          record.statement_balance,
+          record.statement_balance_eur,
+        ),
+      ),
     );
     const remainingByCard = cards.map((card) => {
       const record = monthRecords.find(
         (item) => item.debt_id === card.id,
       );
       if (!record) {
-        return { minimumRemaining: 0, statementRemaining: 0 };
+        return {
+          minimumRemaining: 0,
+          statementRemaining: cardCurrent(card),
+        };
       }
 
       const nextRecord =
@@ -719,12 +734,7 @@ export function CreditCardsManager({
             recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur) - paidBase,
           ),
         ),
-        statementRemaining: Math.max(
-          0,
-          roundMoney(
-            recordFieldBase(record, record.statement_balance, record.statement_balance_eur) - paidBase,
-          ),
-        ),
+        statementRemaining: cardCurrent(card),
       };
     });
     const minimumRemaining = sumMoney(
@@ -984,41 +994,48 @@ export function CreditCardsManager({
         card.statement_date &&
           statementForm.statement_date < card.statement_date,
       );
-      const rpcName = historicalStatement
-        ? "save_credit_card_monthly_record"
-        : "update_credit_card_statement";
 
-      const { data, error } = await supabase.rpc(rpcName, {
-        p_debt_id: card.id,
-        p_statement_balance: statementBalance,
-        p_statement_balance_eur: roundMoney(balanceConversion.eur),
-        p_exchange_rate: roundRate(balanceConversion.rate),
-        p_statement_date: statementForm.statement_date,
-        p_payment_due_date: statementForm.payment_due_date,
-        p_minimum_payment: minimumPayment,
-        p_minimum_payment_eur: roundMoney(minimumConversion.eur),
-        p_apr: apr,
-        p_interest_charged: interestCharged,
-        p_interest_charged_eur: roundMoney(interestConversion.eur),
-      });
-
-      if (error) throw error;
-
-      if (!historicalStatement) {
-        const result = data as {
-          debt?: CreditCardDebt;
-          activity?: CreditCardActivity | null;
-        } | null;
-        if (result?.debt) {
-          setCards((current) =>
-            upsertById(current, result.debt as CreditCardDebt),
-          );
-        }
-        if (result?.activity) {
-          setActivities((current) =>
-            upsertById(current, result.activity as CreditCardActivity),
-          );
-        }
+      if (historicalStatement) {
+        const { error } = await supabase.rpc("save_credit_card_monthly_record", {
+          p_debt_id: card.id,
+          p_statement_balance: statementBalance,
+          p_statement_balance_eur: roundMoney(balanceConversion.eur),
+          p_exchange_rate: roundRate(balanceConversion.rate),
+          p_statement_date: statementForm.statement_date,
+          p_payment_due_date: statementForm.payment_due_date,
+          p_minimum_payment: minimumPayment,
+          p_minimum_payment_eur: roundMoney(minimumConversion.eur),
+          p_apr: apr,
+          p_interest_charged: interestCharged,
+          p_interest_charged_eur: roundMoney(interestConversion.eur),
+        });
+        if (error) throw error;
+      } else {
+        // A statement is an issuer snapshot only. Saving it must never rewrite
+        // current_balance. The existing debts trigger persists the matching
+        // credit_card_monthly_records snapshot after these statement fields change.
+        const { data, error } = await supabase
+          .from("debts")
+          .update({
+            statement_balance: statementBalance,
+            statement_balance_eur: roundMoney(balanceConversion.eur),
+            statement_date: statementForm.statement_date,
+            payment_due_date: statementForm.payment_due_date,
+            payment_due_day: Number(statementForm.payment_due_date.slice(8, 10)),
+            minimum_payment: minimumPayment,
+            minimum_payment_eur: roundMoney(minimumConversion.eur),
+            annual_interest_rate: apr,
+            interest_charged: interestCharged,
+            interest_charged_eur: roundMoney(interestConversion.eur),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", card.id)
+          .eq("user_id", userId)
+          .ilike("category", "credit card")
+          .select()
+          .single();
+        if (error) throw error;
+        setCards((current) => upsertById(current, data as CreditCardDebt));
       }
 
       const statementMonth = statementForm.statement_date.slice(0, 7);
@@ -1046,7 +1063,7 @@ export function CreditCardsManager({
       setNotice(
         historicalStatement
           ? "Historical monthly statement saved without changing the current balance."
-          : "Statement confirmed and the card balance reconciled.",
+          : "Statement snapshot saved without changing the current balance.",
       );
       notifyFiconterDataChange("all");
     } catch (error) {
@@ -1631,7 +1648,7 @@ export function CreditCardsManager({
                     <small>
                       {metrics.record
                         ? readableDate(metrics.record.statement_date)
-                        : monthTitle(selectedMonth)}
+                        : `${monthTitle(selectedMonth)} · historical record`}
                     </small>
                   </div>
                   <div>
@@ -1643,12 +1660,8 @@ export function CreditCardsManager({
                   </div>
                   <div>
                     <span>Balance left to pay</span>
-                    <strong>
-                      {metrics.record
-                        ? displayMoney(metrics.statementRemaining)
-                        : "No statement"}
-                    </strong>
-                    <small>Remaining from the selected statement balance</small>
+                    <strong>{displayMoney(current)}</strong>
+                    <small>Mirrors Current balance — the live amount still owed</small>
                   </div>
                   <div>
                     <span>Minimum payment due</span>
@@ -1845,9 +1858,9 @@ export function CreditCardsManager({
             </span>
             <h2>Update {statementTarget.name}</h2>
             <p>
-              Enter the exact figures shown by the issuer. The minimum payment is
-              calculated automatically as 3% of the statement balance and is not
-              recorded as a purchase.
+              {selectedMonth === monthKey()
+                ? "Enter the statement exactly as issued. It is kept as a monthly record and does not change Current balance. The minimum payment is calculated as 3% of the statement balance."
+                : "Enter the exact historical figures shown by the issuer. The minimum payment is calculated automatically as 3% of that historical statement balance."}
             </p>
             <div className={styles.modalGrid}>
               <label>
@@ -1869,6 +1882,9 @@ export function CreditCardsManager({
                   }}
                   required
                 />
+                {selectedMonth === monthKey() ? (
+                  <small>Saved as a statement snapshot only; Current balance is not changed.</small>
+                ) : null}
               </label>
               <label>
                 Minimum payment due — automatic 3%

@@ -1,0 +1,34 @@
+{
+  "branch_name": "feature/instant-business-switching",
+  "base_archive": "ficonter-feature-landing-page-v2 (1).zip",
+  "git_metadata_present_in_base": false,
+  "changed_files": [
+    "CHANGE_SUMMARY.md",
+    "COMMIT_MESSAGE.txt",
+    "EXPLICIT_SAVE_GOVERNANCE_V1_23.md",
+    "app/business-interface.css",
+    "components/BusinessManager.tsx",
+    "components/BusinessSidebar.module.css",
+    "components/BusinessSidebar.tsx",
+    "components/FiconterNativeAppChrome.module.css",
+    "components/FiconterNativeAppChrome.tsx",
+    "package.json",
+    "scripts/verify-explicit-save-governance-v123.mjs"
+  ],
+  "added_files": [
+    "COMMIT_MESSAGE_INSTANT_BUSINESS_SWITCHING.txt",
+    "INSTANT_BUSINESS_SWITCHING_V1.md",
+    "components/useInstantBusinessSwitch.ts",
+    "scripts/verify-instant-business-switching.mjs",
+    "INSTANT_BUSINESS_SWITCHING.patch"
+  ],
+  "removed_files": [],
+  "landing_page_files_changed": [],
+  "verification": {
+    "instant_business_switching": "18/18 PASS",
+    "explicit_save_governance": "23/23 PASS",
+    "modified_ts_tsx_syntax_transpile": "PASS",
+    "affected_css_brace_integrity": "PASS",
+    "full_next_build": "NOT RUN - dependencies absent and npm install unavailable in sandbox"
+  }
+}

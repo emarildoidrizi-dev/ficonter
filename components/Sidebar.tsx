@@ -12,6 +12,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OPEN_CONTACT_EVENT } from "@/lib/support";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
 import { Brand } from "./Brand";
@@ -195,6 +196,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     if (currentRoute === href) return;
 
     router.prefetch(href);
+    if (!requestFiconterNavigationIntent(href, currentRoute)) return;
     router.push(href, { scroll: false });
   }
 
@@ -252,6 +254,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     }
 
     router.prefetch(target);
+    if (!requestFiconterNavigationIntent(target, currentRoute)) return;
     router.push(target, { scroll: false });
   }
 

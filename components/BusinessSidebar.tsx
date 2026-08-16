@@ -8,13 +8,14 @@ import {
   ShoppingCart, Truck, UserRound, Users, WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import type { Business } from "@/lib/business/types";
-import { switchActiveBusinessAction } from "@/app/business/actions";
 import { Brand } from "./Brand";
 import { LanguageSelector } from "./LanguageSelector";
 import { NotificationCenter } from "./NotificationCenter";
+import { useInstantBusinessSwitch } from "./useInstantBusinessSwitch";
 import styles from "./BusinessSidebar.module.css";
 
 type BusinessLink = readonly [href: string, icon: LucideIcon, label: string, manageOnly?: boolean, platformOnly?: boolean];
@@ -60,33 +61,23 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const [switching, setSwitching] = useState(false);
-  const [switchError, setSwitchError] = useState("");
-  const [selectedBusinessId, setSelectedBusinessId] = useState(business?.id ?? "");
-  const [pendingBusinessId, setPendingBusinessId] = useState("");
-  const [switchTransitionPending, startSwitchTransition] = useTransition();
+  const {
+    businessId: displayedBusinessId,
+    switchBusiness,
+    switching,
+    error: switchError,
+  } = useInstantBusinessSwitch(business?.id ?? null);
   const displayName = user.displayName.trim() || user.email.split("@")[0] || "Member";
-  const businessLogoUrl = business?.logo_path
-    ? supabase.storage.from("business-assets").getPublicUrl(business.logo_path).data.publicUrl
-    : "";
   const activeBusinesses = businesses.filter((item) => item.status !== "archived");
+  const displayedBusiness =
+    activeBusinesses.find((item) => item.id === displayedBusinessId) ?? business;
+  const businessLogoUrl = displayedBusiness?.logo_path
+    ? supabase.storage.from("business-assets").getPublicUrl(displayedBusiness.logo_path).data.publicUrl
+    : "";
   const archivedCount = businesses.length - activeBusinesses.length;
   const mobileRootPaths = new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"]);
   const showBackCommand = !mobileRootPaths.has(pathname);
   const fallbackBackHref = "/business/overview";
-
-  useEffect(() => {
-    if (pendingBusinessId) {
-      if (business?.id === pendingBusinessId) {
-        setSelectedBusinessId(business.id);
-        setPendingBusinessId("");
-      }
-      return;
-    }
-
-    // Route changes discard an un-applied business selection.
-    setSelectedBusinessId(business?.id ?? "");
-  }, [business?.id, pathname, pendingBusinessId]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -135,30 +126,6 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     };
   }, [accountMenuOpen]);
 
-  useEffect(() => {
-    if (!pendingBusinessId || business?.id === pendingBusinessId) return;
-    const fallbackId = window.setTimeout(() => window.location.replace(window.location.href), 1800);
-    return () => window.clearTimeout(fallbackId);
-  }, [business?.id, pendingBusinessId]);
-
-  async function applyBusinessSwitch() {
-    const nextBusinessId = selectedBusinessId;
-    if (!nextBusinessId || nextBusinessId === business?.id || switching || switchTransitionPending) return;
-    const previousBusinessId = business?.id || "";
-    setSwitching(true);
-    setSwitchError("");
-    const result = await switchActiveBusinessAction(nextBusinessId);
-    if (!result.ok) {
-      setSelectedBusinessId(previousBusinessId);
-      setSwitchError(result.error);
-      setSwitching(false);
-      return;
-    }
-    setPendingBusinessId(nextBusinessId);
-    setSwitching(false);
-    startSwitchTransition(() => router.refresh());
-  }
-
   function resolveBackTarget() {
     if (typeof window !== "undefined") {
       try {
@@ -201,6 +168,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     if (target === currentRoute) return;
 
     router.prefetch(target);
+    if (!requestFiconterNavigationIntent(target, currentRoute)) return;
     router.push(target, { scroll: false });
   }
 
@@ -248,21 +216,17 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
           {business ? (
             <div className={styles.businessSelector}>
               <span>Active business</span>
-              <select value={selectedBusinessId || business.id} onChange={(event) => setSelectedBusinessId(event.target.value)} disabled={switching || switchTransitionPending} aria-label="Select active business">
+              <select
+                value={displayedBusinessId || business.id}
+                onChange={(event) => void switchBusiness(event.target.value)}
+                disabled={switching}
+                aria-label="Select active business"
+              >
                 {activeBusinesses.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
               </select>
-              <button
-                type="button"
-                className={styles.applyBusinessButton}
-                disabled={switching || switchTransitionPending || !selectedBusinessId || selectedBusinessId === business.id}
-                onClick={() => void applyBusinessSwitch()}
-              >
-                {switching || switchTransitionPending ? "Applying…" : "Apply"}
-              </button>
             </div>
           ) : <Link className={styles.createLink} href="/business/setup">Create business</Link>}
-          {pendingBusinessId ? <small className={styles.status}>Updating…</small> : null}
-          {switchError ? <small className={styles.switchError}>{switchError}</small> : null}
+          {switchError ? <small className={styles.switchError} role="status" aria-live="polite">{switchError}</small> : null}
           {archivedCount ? <span className={styles.archiveNotice}><Archive size={12} />{archivedCount} archived</span> : null}
         </div>
 

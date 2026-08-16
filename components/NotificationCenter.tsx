@@ -4,6 +4,7 @@ import { Bell, CheckCheck, Inbox, LoaderCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import {
   SUPPORT_READ_EVENT,
   type NotificationItem,
@@ -148,7 +149,10 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
   function openNotification(item: NotificationItem) {
     if (!item.readAt) void markRead(item.id);
     setOpen(false);
-    if (item.href) router.push(item.href);
+    if (item.href) {
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (requestFiconterNavigationIntent(item.href, current)) router.push(item.href);
+    }
   }
 
   const inboxHref = isAdmin ? "/dashboard/admin/support" : "/dashboard/inbox";
@@ -161,7 +165,10 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
         className={styles.iconButton}
         aria-label={isAdmin ? "Open support inbox" : "Open messages"}
         title={isAdmin ? "Support inbox" : "Messages"}
-        onClick={() => router.push(inboxHref)}
+        onClick={() => {
+          const current = `${window.location.pathname}${window.location.search}`;
+          if (requestFiconterNavigationIntent(inboxHref, current)) router.push(inboxHref);
+        }}
       >
         <Inbox size={18} aria-hidden="true" />
         {inboxBadge > 0 ? <span>{Math.min(inboxBadge, 99)}</span> : null}

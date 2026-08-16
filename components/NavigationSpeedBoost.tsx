@@ -2,6 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  FICONTER_NAVIGATION_INTENT_EVENT,
+  FICONTER_NAVIGATION_SETTLED_EVENT,
+  FICONTER_NAVIGATION_STALLED_EVENT,
+  requestFiconterNavigationIntent,
+  type FiconterNavigationIntentDetail,
+} from "@/lib/navigationRuntime";
 
 type Workspace = "personal" | "business";
 
@@ -23,7 +30,9 @@ type IdleWindow = Window & {
 };
 
 const ROUTE_LOADING_DELAY_MS = 140;
-const ROUTE_LOADING_MAX_MS = 8000;
+const ROUTE_LOADING_MAX_MS = 12_000;
+const ROUTE_CLIENT_RETRY_MS = 5_500;
+const ROUTE_HARD_RECOVERY_MS = 11_000;
 
 const personalCriticalRoutes = [
   "/dashboard/overview",
@@ -104,6 +113,26 @@ function allowsBackgroundPrefetch() {
   return !["slow-2g", "2g"].includes(connection?.effectiveType ?? "");
 }
 
+
+function navigationTargetSettled(routeKey: string, target: string) {
+  if (routeKey === target) return true;
+
+  const routePath = routeKey.split("?")[0] || routeKey;
+  const targetPath = target.split("?")[0] || target;
+
+  // Workspace roots are server redirects by design. Treat their canonical
+  // landing screens as a successful navigation commit.
+  if (targetPath === "/dashboard" && routePath === "/dashboard/overview") return true;
+  if (
+    targetPath === "/business" &&
+    ["/business/overview", "/business/manage", "/business/setup"].includes(routePath)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isNativePhoneApp() {
   const root = document.documentElement;
   return (
@@ -129,6 +158,12 @@ export function NavigationSpeedBoost({
   const transitionTimer = useRef<number | null>(null);
   const loadingDelayTimer = useRef<number | null>(null);
   const loadingMaxTimer = useRef<number | null>(null);
+  const retryTimer = useRef<number | null>(null);
+  const recoveryTimer = useRef<number | null>(null);
+  const currentRouteKey = useRef(routeKey);
+  const pendingTarget = useRef<string | null>(null);
+  const pendingOrigin = useRef<string | null>(null);
+  const intentStartedAt = useRef(0);
 
   useEffect(() => {
     const contextKey = `${workspace}:${cacheKey}`;
@@ -139,6 +174,7 @@ export function NavigationSpeedBoost({
 
   useEffect(() => {
     const root = document.documentElement;
+    currentRouteKey.current = routeKey;
     root.removeAttribute("data-ficonter-route-loading");
 
     if (loadingDelayTimer.current) {
@@ -148,6 +184,29 @@ export function NavigationSpeedBoost({
     if (loadingMaxTimer.current) {
       window.clearTimeout(loadingMaxTimer.current);
       loadingMaxTimer.current = null;
+    }
+
+    const target = pendingTarget.current;
+    const navigationSettled = Boolean(
+      target && navigationTargetSettled(routeKey, target),
+    );
+
+    if (navigationSettled) {
+      if (retryTimer.current) window.clearTimeout(retryTimer.current);
+      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
+      retryTimer.current = null;
+      recoveryTimer.current = null;
+      pendingTarget.current = null;
+      pendingOrigin.current = null;
+      intentStartedAt.current = 0;
+      root.removeAttribute("data-ficonter-route-pending");
+      root.removeAttribute("data-ficonter-route-target");
+      root.removeAttribute("data-ficonter-route-intent-at");
+      window.dispatchEvent(
+        new CustomEvent(FICONTER_NAVIGATION_SETTLED_EVENT, {
+          detail: { target, route: routeKey },
+        }),
+      );
     }
 
     const previous = previousRouteKey.current;
@@ -206,7 +265,7 @@ export function NavigationSpeedBoost({
 
   useEffect(() => {
     function warmRoute(route: string | null) {
-      if (!route || route === routeKey || warmedRoutes.current.has(route)) return;
+      if (!route || route === currentRouteKey.current || warmedRoutes.current.has(route)) return;
       warmedRoutes.current.add(route);
       try {
         router.prefetch(route);
@@ -238,17 +297,35 @@ export function NavigationSpeedBoost({
     function handleClick(event: MouseEvent) {
       if (!shouldHandleClick(event)) return;
       const route = internalRoute(event.target);
-      if (!route || route === routeKey) return;
+      const origin = currentRouteKey.current;
+      if (!route || route === origin) return;
 
       warmRoute(route);
 
-      // Do not flash a progress bar for genuinely instant client-side routes.
-      // It appears only when navigation takes long enough to be perceptible.
+      if (!requestFiconterNavigationIntent(route, origin)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+
+    function handleNavigationIntent(event: Event) {
+      const detail = (event as CustomEvent<FiconterNavigationIntentDetail>).detail;
+      if (!detail?.target || !detail?.origin) return;
+
+      const route = detail.target;
+      pendingTarget.current = route;
+      pendingOrigin.current = detail.origin;
+      intentStartedAt.current = detail.startedAt || Date.now();
+
       if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
       if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
+      if (retryTimer.current) window.clearTimeout(retryTimer.current);
+      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
 
       loadingDelayTimer.current = window.setTimeout(() => {
-        document.documentElement.dataset.ficonterRouteLoading = "true";
+        if (pendingTarget.current === route) {
+          document.documentElement.dataset.ficonterRouteLoading = "true";
+        }
         loadingDelayTimer.current = null;
       }, ROUTE_LOADING_DELAY_MS);
 
@@ -256,8 +333,37 @@ export function NavigationSpeedBoost({
         document.documentElement.removeAttribute("data-ficonter-route-loading");
         loadingMaxTimer.current = null;
       }, ROUTE_LOADING_MAX_MS);
+
+      // A healthy prefetched transition will finish long before this retry.
+      retryTimer.current = window.setTimeout(() => {
+        if (
+          pendingTarget.current === route &&
+          currentRouteKey.current === pendingOrigin.current
+        ) {
+          router.replace(route, { scroll: false });
+        }
+        retryTimer.current = null;
+      }, ROUTE_CLIENT_RETRY_MS);
+
+      // Last-resort recovery. This is intentionally outside the normal path:
+      // it only runs if the App Router has remained stuck for eleven seconds.
+      recoveryTimer.current = window.setTimeout(() => {
+        if (
+          pendingTarget.current === route &&
+          currentRouteKey.current === pendingOrigin.current
+        ) {
+          window.dispatchEvent(
+            new CustomEvent(FICONTER_NAVIGATION_STALLED_EVENT, {
+              detail: { target: route, route: currentRouteKey.current },
+            }),
+          );
+          window.location.assign(route);
+        }
+        recoveryTimer.current = null;
+      }, ROUTE_HARD_RECOVERY_MS);
     }
 
+    window.addEventListener(FICONTER_NAVIGATION_INTENT_EVENT, handleNavigationIntent);
     document.addEventListener("pointerover", handlePointerOver, true);
     document.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("focusin", handleFocusIn, true);
@@ -273,19 +379,27 @@ export function NavigationSpeedBoost({
       document.removeEventListener("focusin", handleFocusIn, true);
       document.removeEventListener("touchstart", handleTouchStart, true);
       document.removeEventListener("click", handleClick, true);
+      window.removeEventListener(FICONTER_NAVIGATION_INTENT_EVENT, handleNavigationIntent);
 
       if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
       if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
+      if (retryTimer.current) window.clearTimeout(retryTimer.current);
+      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
       loadingDelayTimer.current = null;
       loadingMaxTimer.current = null;
+      retryTimer.current = null;
+      recoveryTimer.current = null;
       document.documentElement.removeAttribute("data-ficonter-route-loading");
+      document.documentElement.removeAttribute("data-ficonter-route-pending");
+      document.documentElement.removeAttribute("data-ficonter-route-target");
+      document.documentElement.removeAttribute("data-ficonter-route-intent-at");
 
       if (transitionTimer.current) {
         window.clearTimeout(transitionTimer.current);
         transitionTimer.current = null;
       }
     };
-  }, [routeKey, router]);
+  }, [router]);
 
   useEffect(() => {
     const criticalRoutes =

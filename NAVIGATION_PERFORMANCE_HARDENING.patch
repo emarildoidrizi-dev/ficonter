@@ -1,0 +1,978 @@
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt	2026-08-16 08:01:25.654744261 +0000
+@@ -0,0 +1 @@
++perf(navigation): harden client routing and eliminate refresh races
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md	2026-08-16 08:01:25.650744261 +0000
+@@ -0,0 +1,44 @@
++# FICONTER — Navigation Performance Hardening
++
++Target branch name: `feature/navigation-performance-hardening`
++
++This patch is built on top of the supplied `feature/instant-business-switching` source snapshot. The archive contains no `.git` history, so the branch name is a handoff target rather than a Git branch created inside this environment.
++
++## Behavior now
++
++- Internal links are prefetched on pointer, touch, focus, and prioritized idle warming.
++- Rapid duplicate taps are suppressed before they can create duplicate App Router transitions.
++- Main imperative navigation paths (desktop account routes, Back, mobile/PWA Back and Add Transaction, command palette, notifications, support handoff) use the same navigation-intent coordinator.
++- The navigation listener remains mounted for the workspace session instead of being torn down and recreated after every route change.
++- Realtime `router.refresh()` work yields while a route transition is pending, eliminating refresh-vs-navigation races.
++- Overview-specific realtime refresh and currency reconciliation also refuse to race an active navigation.
++- The mobile/PWA More drawer no longer launches a redundant all-route prefetch burst every time it opens.
++- Healthy navigation stays client-side and keeps `scroll: false` where already governed.
++- A stalled App Router transition gets one client-side retry after 5.5 seconds.
++- If the client router is still stuck after 11 seconds, a last-resort document navigation recovers the requested screen instead of leaving the app permanently frozen.
++- Personal and Business workspaces now have route error boundaries with Retry and Overview recovery actions.
++- Business now has the same immediate route-loading boundary available to Personal.
++- New recovery copy is covered by all eight supported FICONTER languages.
++
++## Existing governance preserved
++
++- Phone rule remains: one tap -> one client-side route -> one slide -> stop.
++- Tablet/iPad and larger layouts remain in their governed navigation model.
++- Business profile switching remains immediate and does not reintroduce Apply/Save.
++- Explicit Save governance remains unchanged everywhere else.
++- No landing-page behavior is changed by this patch.
++
++## Verification
++
++- Navigation hardening: 22/22
++- Mobile single-navigation V1.11: 11/11
++- Responsive navigation V1.13: 13/13
++- Mobile Back/Home V1.19: 12/12
++- Instant Business switching: 18/18
++- Explicit Save governance: 23/23
++- Navigation/theme V1.29: 19/19
++- Localization: PASS, 0 uncovered static strings/templates
++- Release candidate: PASS, 67 current suites
++- Modified TypeScript/TSX syntax transpilation: PASS
++
++A full `next build` was not run because the supplied source archive does not include `node_modules` and this environment does not have the project dependencies installed locally.
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.patch /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.patch
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.patch	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.patch	2026-08-16 08:01:25.658744261 +0000
+@@ -0,0 +1,53 @@
++diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt
++--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/COMMIT_MESSAGE_NAVIGATION_HARDENING.txt	2026-08-16 08:01:25.654744261 +0000
++@@ -0,0 +1 @@
+++perf(navigation): harden client routing and eliminate refresh races
++diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md
++--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/NAVIGATION_PERFORMANCE_HARDENING.md	2026-08-16 08:01:25.650744261 +0000
++@@ -0,0 +1,44 @@
+++# FICONTER — Navigation Performance Hardening
+++
+++Target branch name: `feature/navigation-performance-hardening`
+++
+++This patch is built on top of the supplied `feature/instant-business-switching` source snapshot. The archive contains no `.git` history, so the branch name is a handoff target rather than a Git branch created inside this environment.
+++
+++## Behavior now
+++
+++- Internal links are prefetched on pointer, touch, focus, and prioritized idle warming.
+++- Rapid duplicate taps are suppressed before they can create duplicate App Router transitions.
+++- Main imperative navigation paths (desktop account routes, Back, mobile/PWA Back and Add Transaction, command palette, notifications, support handoff) use the same navigation-intent coordinator.
+++- The navigation listener remains mounted for the workspace session instead of being torn down and recreated after every route change.
+++- Realtime `router.refresh()` work yields while a route transition is pending, eliminating refresh-vs-navigation races.
+++- Overview-specific realtime refresh and currency reconciliation also refuse to race an active navigation.
+++- The mobile/PWA More drawer no longer launches a redundant all-route prefetch burst every time it opens.
+++- Healthy navigation stays client-side and keeps `scroll: false` where already governed.
+++- A stalled App Router transition gets one client-side retry after 5.5 seconds.
+++- If the client router is still stuck after 11 seconds, a last-resort document navigation recovers the requested screen instead of leaving the app permanently frozen.
+++- Personal and Business workspaces now have route error boundaries with Retry and Overview recovery actions.
+++- Business now has the same immediate route-loading boundary available to Personal.
+++- New recovery copy is covered by all eight supported FICONTER languages.
+++
+++## Existing governance preserved
+++
+++- Phone rule remains: one tap -> one client-side route -> one slide -> stop.
+++- Tablet/iPad and larger layouts remain in their governed navigation model.
+++- Business profile switching remains immediate and does not reintroduce Apply/Save.
+++- Explicit Save governance remains unchanged everywhere else.
+++- No landing-page behavior is changed by this patch.
+++
+++## Verification
+++
+++- Navigation hardening: 22/22
+++- Mobile single-navigation V1.11: 11/11
+++- Responsive navigation V1.13: 13/13
+++- Mobile Back/Home V1.19: 12/12
+++- Instant Business switching: 18/18
+++- Explicit Save governance: 23/23
+++- Navigation/theme V1.29: 19/19
+++- Localization: PASS, 0 uncovered static strings/templates
+++- Release candidate: PASS, 67 current suites
+++- Modified TypeScript/TSX syntax transpilation: PASS
+++
+++A full `next build` was not run because the supplied source archive does not include `node_modules` and this environment does not have the project dependencies installed locally.
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/business/error.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/business/error.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/business/error.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/business/error.tsx	2026-08-16 07:57:35.290745789 +0000
+@@ -0,0 +1,19 @@
++"use client";
++
++import { WorkspaceRouteError } from "@/components/WorkspaceRouteError";
++
++export default function BusinessRouteError({
++  error,
++  reset,
++}: {
++  error: Error & { digest?: string };
++  reset: () => void;
++}) {
++  return (
++    <WorkspaceRouteError
++      error={error}
++      reset={reset}
++      overviewHref="/business/overview"
++    />
++  );
++}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/business/loading.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/business/loading.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/business/loading.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/business/loading.tsx	2026-08-16 07:57:35.294745789 +0000
+@@ -0,0 +1 @@
++export { default } from "../dashboard/loading";
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/dashboard/error.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/dashboard/error.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/app/dashboard/error.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/app/dashboard/error.tsx	2026-08-16 07:57:35.286745789 +0000
+@@ -0,0 +1,19 @@
++"use client";
++
++import { WorkspaceRouteError } from "@/components/WorkspaceRouteError";
++
++export default function DashboardRouteError({
++  error,
++  reset,
++}: {
++  error: Error & { digest?: string };
++  reset: () => void;
++}) {
++  return (
++    <WorkspaceRouteError
++      error={error}
++      reset={reset}
++      overviewHref="/dashboard/overview"
++    />
++  );
++}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/BusinessSidebar.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/BusinessSidebar.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/BusinessSidebar.tsx	2026-08-16 07:32:54.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/BusinessSidebar.tsx	2026-08-16 07:57:03.489705280 +0000
+@@ -10,6 +10,7 @@
+ import type { LucideIcon } from "lucide-react";
+ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+ import { createClient } from "@/lib/supabase/client";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import type { Business } from "@/lib/business/types";
+ import { Brand } from "./Brand";
+ import { LanguageSelector } from "./LanguageSelector";
+@@ -167,6 +168,7 @@
+     if (target === currentRoute) return;
+ 
+     router.prefetch(target);
++    if (!requestFiconterNavigationIntent(target, currentRoute)) return;
+     router.push(target, { scroll: false });
+   }
+ 
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/CommandPalette.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/CommandPalette.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/CommandPalette.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/CommandPalette.tsx	2026-08-16 07:57:03.490558481 +0000
+@@ -3,6 +3,7 @@
+ import { useEffect, useMemo, useRef, useState } from "react";
+ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+ import { useRouter } from "next/navigation";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import { ArrowRight, Command, Search, X } from "lucide-react";
+ import { FICONTER_COMMANDS } from "@/lib/commandPalette";
+ import styles from "./CommandPalette.module.css";
+@@ -61,6 +62,8 @@
+ 
+   function select(href: string) {
+     setOpen(false);
++    const current = `${window.location.pathname}${window.location.search}`;
++    if (!requestFiconterNavigationIntent(href, current)) return;
+     router.push(href);
+   }
+ 
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/ContactSupportModal.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/ContactSupportModal.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/ContactSupportModal.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/ContactSupportModal.tsx	2026-08-16 07:57:03.491025554 +0000
+@@ -19,6 +19,7 @@
+ } from "react";
+ import { createPortal } from "react-dom";
+ import { useRouter } from "next/navigation";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import {
+   SUPPORT_CATEGORIES,
+   SUPPORT_LIMITS,
+@@ -233,7 +234,9 @@
+               onClick={() => {
+                 const threadId = receipt.threadId;
+                 close();
+-                router.push(`/dashboard/inbox?thread=${threadId}`);
++                const target = `/dashboard/inbox?thread=${threadId}`;
++                const current = `${window.location.pathname}${window.location.search}`;
++                if (requestFiconterNavigationIntent(target, current)) router.push(target);
+               }}
+               data-primary-action="true"
+             >
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/CurrencyDisplayProvider.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/CurrencyDisplayProvider.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/CurrencyDisplayProvider.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/CurrencyDisplayProvider.tsx	2026-08-16 07:57:15.703826606 +0000
+@@ -29,6 +29,7 @@
+ } from "@/lib/finance/currencyEngine";
+ import { finiteNumber, roundConvertedAmount } from "@/lib/finance/money";
+ import { useRouter } from "next/navigation";
++import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
+ 
+ type Workspace = "personal" | "business";
+ 
+@@ -176,7 +177,7 @@
+       return;
+     }
+ 
+-    if (workspace === "personal") {
++    if (workspace === "personal" && !isFiconterNavigationPending()) {
+       router.refresh();
+     }
+   }, [baseCurrency, latestRate, reportingCurrency, router, workspace]);
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/DashboardLiveOverview.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/DashboardLiveOverview.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/DashboardLiveOverview.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/DashboardLiveOverview.tsx	2026-08-16 07:55:27.053636475 +0000
+@@ -4,6 +4,7 @@
+ import { useRouter } from "next/navigation";
+ import { createClient } from "@/lib/supabase/client";
+ import { isFinancialDataScope, subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
++import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
+ import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
+ import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+ import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
+@@ -140,6 +141,10 @@
+       if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+       refreshTimer.current = window.setTimeout(() => {
+         refreshTimer.current = null;
++        // If the user is already leaving Overview, the destination route will
++        // fetch current data. Refreshing the old route here only creates an RSC
++        // race and can make navigation feel stuck.
++        if (isFiconterNavigationPending()) return;
+         router.refresh();
+       }, 220);
+     };
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/FiconterNativeAppChrome.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/FiconterNativeAppChrome.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/FiconterNativeAppChrome.tsx	2026-08-16 07:31:44.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/FiconterNativeAppChrome.tsx	2026-08-16 07:57:03.490404995 +0000
+@@ -2,6 +2,7 @@
+ 
+ import Link from "next/link";
+ import { usePathname, useRouter, useSearchParams } from "next/navigation";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import {
+   ArrowLeft,
+   BarChart3,
+@@ -833,12 +834,9 @@
+   function openDrawer() {
+     setAccountOpen(false);
+     setDrawerOpen(true);
+-
+-    routes.forEach((item, index) => {
+-      window.setTimeout(() => {
+-        router.prefetch(item.href);
+-      }, index * 45);
+-    });
++    // NavigationSpeedBoost already warms critical routes and prefetches a
++    // destination on pointer/touch intent. Re-prefetching every route each
++    // time More opens only creates avoidable network contention.
+   }
+ 
+   function openAccount() {
+@@ -868,6 +866,7 @@
+       navigatingBackRef.current = true;
+       setPreviousAppPath(stack[stack.length - 1] ?? null);
+       router.prefetch(target);
++      if (!requestFiconterNavigationIntent(target, currentHref)) return;
+       router.push(target, { scroll: false });
+       return;
+     }
+@@ -879,6 +878,7 @@
+ 
+     navigatingBackRef.current = true;
+     router.prefetch(fallbackBackHref);
++    if (!requestFiconterNavigationIntent(fallbackBackHref, currentHref)) return;
+     router.push(fallbackBackHref, { scroll: false });
+   }
+ 
+@@ -1039,7 +1039,7 @@
+           title="Add transaction"
+           onClick={() => {
+             if (pathname === transactionsHref) {
+-              if (currentHref !== addHref) {
++              if (currentHref !== addHref && requestFiconterNavigationIntent(addHref, currentHref)) {
+                 router.replace(addHref, { scroll: false });
+               }
+               window.requestAnimationFrame(() => {
+@@ -1049,6 +1049,7 @@
+             }
+ 
+             router.prefetch(addHref);
++            if (!requestFiconterNavigationIntent(addHref, currentHref)) return;
+             router.push(addHref, { scroll: false });
+           }}
+         >
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/NavigationSpeedBoost.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/NavigationSpeedBoost.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/NavigationSpeedBoost.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/NavigationSpeedBoost.tsx	2026-08-16 07:59:48.953387992 +0000
+@@ -2,6 +2,13 @@
+ 
+ import { useEffect, useRef } from "react";
+ import { usePathname, useRouter, useSearchParams } from "next/navigation";
++import {
++  FICONTER_NAVIGATION_INTENT_EVENT,
++  FICONTER_NAVIGATION_SETTLED_EVENT,
++  FICONTER_NAVIGATION_STALLED_EVENT,
++  requestFiconterNavigationIntent,
++  type FiconterNavigationIntentDetail,
++} from "@/lib/navigationRuntime";
+ 
+ type Workspace = "personal" | "business";
+ 
+@@ -23,7 +30,9 @@
+ };
+ 
+ const ROUTE_LOADING_DELAY_MS = 140;
+-const ROUTE_LOADING_MAX_MS = 8000;
++const ROUTE_LOADING_MAX_MS = 12_000;
++const ROUTE_CLIENT_RETRY_MS = 5_500;
++const ROUTE_HARD_RECOVERY_MS = 11_000;
+ 
+ const personalCriticalRoutes = [
+   "/dashboard/overview",
+@@ -104,6 +113,26 @@
+   return !["slow-2g", "2g"].includes(connection?.effectiveType ?? "");
+ }
+ 
++
++function navigationTargetSettled(routeKey: string, target: string) {
++  if (routeKey === target) return true;
++
++  const routePath = routeKey.split("?")[0] || routeKey;
++  const targetPath = target.split("?")[0] || target;
++
++  // Workspace roots are server redirects by design. Treat their canonical
++  // landing screens as a successful navigation commit.
++  if (targetPath === "/dashboard" && routePath === "/dashboard/overview") return true;
++  if (
++    targetPath === "/business" &&
++    ["/business/overview", "/business/manage", "/business/setup"].includes(routePath)
++  ) {
++    return true;
++  }
++
++  return false;
++}
++
+ function isNativePhoneApp() {
+   const root = document.documentElement;
+   return (
+@@ -129,6 +158,12 @@
+   const transitionTimer = useRef<number | null>(null);
+   const loadingDelayTimer = useRef<number | null>(null);
+   const loadingMaxTimer = useRef<number | null>(null);
++  const retryTimer = useRef<number | null>(null);
++  const recoveryTimer = useRef<number | null>(null);
++  const currentRouteKey = useRef(routeKey);
++  const pendingTarget = useRef<string | null>(null);
++  const pendingOrigin = useRef<string | null>(null);
++  const intentStartedAt = useRef(0);
+ 
+   useEffect(() => {
+     const contextKey = `${workspace}:${cacheKey}`;
+@@ -139,6 +174,7 @@
+ 
+   useEffect(() => {
+     const root = document.documentElement;
++    currentRouteKey.current = routeKey;
+     root.removeAttribute("data-ficonter-route-loading");
+ 
+     if (loadingDelayTimer.current) {
+@@ -150,6 +186,29 @@
+       loadingMaxTimer.current = null;
+     }
+ 
++    const target = pendingTarget.current;
++    const navigationSettled = Boolean(
++      target && navigationTargetSettled(routeKey, target),
++    );
++
++    if (navigationSettled) {
++      if (retryTimer.current) window.clearTimeout(retryTimer.current);
++      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
++      retryTimer.current = null;
++      recoveryTimer.current = null;
++      pendingTarget.current = null;
++      pendingOrigin.current = null;
++      intentStartedAt.current = 0;
++      root.removeAttribute("data-ficonter-route-pending");
++      root.removeAttribute("data-ficonter-route-target");
++      root.removeAttribute("data-ficonter-route-intent-at");
++      window.dispatchEvent(
++        new CustomEvent(FICONTER_NAVIGATION_SETTLED_EVENT, {
++          detail: { target, route: routeKey },
++        }),
++      );
++    }
++
+     const previous = previousRouteKey.current;
+     const shouldAnimate =
+       previous !== routeKey &&
+@@ -206,7 +265,7 @@
+ 
+   useEffect(() => {
+     function warmRoute(route: string | null) {
+-      if (!route || route === routeKey || warmedRoutes.current.has(route)) return;
++      if (!route || route === currentRouteKey.current || warmedRoutes.current.has(route)) return;
+       warmedRoutes.current.add(route);
+       try {
+         router.prefetch(route);
+@@ -238,17 +297,35 @@
+     function handleClick(event: MouseEvent) {
+       if (!shouldHandleClick(event)) return;
+       const route = internalRoute(event.target);
+-      if (!route || route === routeKey) return;
++      const origin = currentRouteKey.current;
++      if (!route || route === origin) return;
+ 
+       warmRoute(route);
+ 
+-      // Do not flash a progress bar for genuinely instant client-side routes.
+-      // It appears only when navigation takes long enough to be perceptible.
++      if (!requestFiconterNavigationIntent(route, origin)) {
++        event.preventDefault();
++        event.stopPropagation();
++      }
++    }
++
++    function handleNavigationIntent(event: Event) {
++      const detail = (event as CustomEvent<FiconterNavigationIntentDetail>).detail;
++      if (!detail?.target || !detail?.origin) return;
++
++      const route = detail.target;
++      pendingTarget.current = route;
++      pendingOrigin.current = detail.origin;
++      intentStartedAt.current = detail.startedAt || Date.now();
++
+       if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
+       if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
++      if (retryTimer.current) window.clearTimeout(retryTimer.current);
++      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
+ 
+       loadingDelayTimer.current = window.setTimeout(() => {
+-        document.documentElement.dataset.ficonterRouteLoading = "true";
++        if (pendingTarget.current === route) {
++          document.documentElement.dataset.ficonterRouteLoading = "true";
++        }
+         loadingDelayTimer.current = null;
+       }, ROUTE_LOADING_DELAY_MS);
+ 
+@@ -256,8 +333,37 @@
+         document.documentElement.removeAttribute("data-ficonter-route-loading");
+         loadingMaxTimer.current = null;
+       }, ROUTE_LOADING_MAX_MS);
++
++      // A healthy prefetched transition will finish long before this retry.
++      retryTimer.current = window.setTimeout(() => {
++        if (
++          pendingTarget.current === route &&
++          currentRouteKey.current === pendingOrigin.current
++        ) {
++          router.replace(route, { scroll: false });
++        }
++        retryTimer.current = null;
++      }, ROUTE_CLIENT_RETRY_MS);
++
++      // Last-resort recovery. This is intentionally outside the normal path:
++      // it only runs if the App Router has remained stuck for eleven seconds.
++      recoveryTimer.current = window.setTimeout(() => {
++        if (
++          pendingTarget.current === route &&
++          currentRouteKey.current === pendingOrigin.current
++        ) {
++          window.dispatchEvent(
++            new CustomEvent(FICONTER_NAVIGATION_STALLED_EVENT, {
++              detail: { target: route, route: currentRouteKey.current },
++            }),
++          );
++          window.location.assign(route);
++        }
++        recoveryTimer.current = null;
++      }, ROUTE_HARD_RECOVERY_MS);
+     }
+ 
++    window.addEventListener(FICONTER_NAVIGATION_INTENT_EVENT, handleNavigationIntent);
+     document.addEventListener("pointerover", handlePointerOver, true);
+     document.addEventListener("pointerdown", handlePointerDown, true);
+     document.addEventListener("focusin", handleFocusIn, true);
+@@ -273,19 +379,27 @@
+       document.removeEventListener("focusin", handleFocusIn, true);
+       document.removeEventListener("touchstart", handleTouchStart, true);
+       document.removeEventListener("click", handleClick, true);
++      window.removeEventListener(FICONTER_NAVIGATION_INTENT_EVENT, handleNavigationIntent);
+ 
+       if (loadingDelayTimer.current) window.clearTimeout(loadingDelayTimer.current);
+       if (loadingMaxTimer.current) window.clearTimeout(loadingMaxTimer.current);
++      if (retryTimer.current) window.clearTimeout(retryTimer.current);
++      if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
+       loadingDelayTimer.current = null;
+       loadingMaxTimer.current = null;
++      retryTimer.current = null;
++      recoveryTimer.current = null;
+       document.documentElement.removeAttribute("data-ficonter-route-loading");
++      document.documentElement.removeAttribute("data-ficonter-route-pending");
++      document.documentElement.removeAttribute("data-ficonter-route-target");
++      document.documentElement.removeAttribute("data-ficonter-route-intent-at");
+ 
+       if (transitionTimer.current) {
+         window.clearTimeout(transitionTimer.current);
+         transitionTimer.current = null;
+       }
+     };
+-  }, [routeKey, router]);
++  }, [router]);
+ 
+   useEffect(() => {
+     const criticalRoutes =
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/NotificationCenter.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/NotificationCenter.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/NotificationCenter.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/NotificationCenter.tsx	2026-08-16 07:57:15.703595041 +0000
+@@ -4,6 +4,7 @@
+ import { usePathname, useRouter } from "next/navigation";
+ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { createClient } from "@/lib/supabase/client";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import {
+   SUPPORT_READ_EVENT,
+   type NotificationItem,
+@@ -148,7 +149,10 @@
+   function openNotification(item: NotificationItem) {
+     if (!item.readAt) void markRead(item.id);
+     setOpen(false);
+-    if (item.href) router.push(item.href);
++    if (item.href) {
++      const current = `${window.location.pathname}${window.location.search}`;
++      if (requestFiconterNavigationIntent(item.href, current)) router.push(item.href);
++    }
+   }
+ 
+   const inboxHref = isAdmin ? "/dashboard/admin/support" : "/dashboard/inbox";
+@@ -161,7 +165,10 @@
+         className={styles.iconButton}
+         aria-label={isAdmin ? "Open support inbox" : "Open messages"}
+         title={isAdmin ? "Support inbox" : "Messages"}
+-        onClick={() => router.push(inboxHref)}
++        onClick={() => {
++          const current = `${window.location.pathname}${window.location.search}`;
++          if (requestFiconterNavigationIntent(inboxHref, current)) router.push(inboxHref);
++        }}
+       >
+         <Inbox size={18} aria-hidden="true" />
+         {inboxBadge > 0 ? <span>{Math.min(inboxBadge, 99)}</span> : null}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/RealtimeRefreshBridge.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/RealtimeRefreshBridge.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/RealtimeRefreshBridge.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/RealtimeRefreshBridge.tsx	2026-08-16 07:55:11.475639749 +0000
+@@ -3,6 +3,10 @@
+ import { usePathname, useRouter } from "next/navigation";
+ import { useEffect, useRef } from "react";
+ import {
++  FICONTER_NAVIGATION_SETTLED_EVENT,
++  isFiconterNavigationPending,
++} from "@/lib/navigationRuntime";
++import {
+   ficonterRealtimeKeys,
+   parseFiconterDataChange,
+   type FiconterDataChange,
+@@ -86,6 +90,7 @@
+   const timerRef = useRef<number | null>(null);
+   const lastRefreshRef = useRef(Date.now());
+   const pendingWhileHiddenRef = useRef(false);
++  const pendingWhileNavigatingRef = useRef(false);
+   const rememberedNoncesRef = useRef<string[]>([]);
+   const rememberedNonceSetRef = useRef(new Set<string>());
+ 
+@@ -119,6 +124,15 @@
+         return;
+       }
+ 
++      // Route changes always win over passive data refreshes. A refresh racing
++      // an App Router transition can force the current RSC tree to reconcile
++      // while the destination is also loading, which is both slower and less
++      // deterministic. The destination already fetches current server data.
++      if (isFiconterNavigationPending()) {
++        pendingWhileNavigatingRef.current = true;
++        return;
++      }
++
+       if (timerRef.current) window.clearTimeout(timerRef.current);
+       const elapsed = Date.now() - lastRefreshRef.current;
+       const delay = Math.max(
+@@ -127,9 +141,16 @@
+       );
+ 
+       timerRef.current = window.setTimeout(() => {
++        if (isFiconterNavigationPending()) {
++          pendingWhileNavigatingRef.current = true;
++          timerRef.current = null;
++          return;
++        }
++
+         router.refresh();
+         lastRefreshRef.current = Date.now();
+         pendingWhileHiddenRef.current = false;
++        pendingWhileNavigatingRef.current = false;
+         timerRef.current = null;
+       }, delay);
+     }
+@@ -171,9 +192,19 @@
+       refreshSoon(parseFiconterDataChange(event.data));
+     }
+ 
++    function onNavigationSettled() {
++      if (!pendingWhileNavigatingRef.current) return;
++      pendingWhileNavigatingRef.current = false;
++
++      // Let the destination route commit its pathname before deciding whether
++      // a queued realtime refresh is relevant to the newly visible screen.
++      window.requestAnimationFrame(() => refreshSoon());
++    }
++
+     window.addEventListener("ficonter:data-changed", onCustomEvent);
+     window.addEventListener("storage", onStorage);
+     window.addEventListener("focus", onFocus);
++    window.addEventListener(FICONTER_NAVIGATION_SETTLED_EVENT, onNavigationSettled);
+     document.addEventListener("visibilitychange", onVisibility);
+ 
+     let channel: BroadcastChannel | null = null;
+@@ -189,6 +220,7 @@
+       window.removeEventListener("ficonter:data-changed", onCustomEvent);
+       window.removeEventListener("storage", onStorage);
+       window.removeEventListener("focus", onFocus);
++      window.removeEventListener(FICONTER_NAVIGATION_SETTLED_EVENT, onNavigationSettled);
+       document.removeEventListener("visibilitychange", onVisibility);
+       channel?.removeEventListener("message", onChannelMessage);
+       channel?.close();
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/Sidebar.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/Sidebar.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/Sidebar.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/Sidebar.tsx	2026-08-16 07:57:03.489498488 +0000
+@@ -12,6 +12,7 @@
+ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+ import { createClient } from "@/lib/supabase/client";
+ import { OPEN_CONTACT_EVENT } from "@/lib/support";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
+ import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
+ import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
+ import { Brand } from "./Brand";
+@@ -195,6 +196,7 @@
+     if (currentRoute === href) return;
+ 
+     router.prefetch(href);
++    if (!requestFiconterNavigationIntent(href, currentRoute)) return;
+     router.push(href, { scroll: false });
+   }
+ 
+@@ -252,6 +254,7 @@
+     }
+ 
+     router.prefetch(target);
++    if (!requestFiconterNavigationIntent(target, currentRoute)) return;
+     router.push(target, { scroll: false });
+   }
+ 
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.module.css /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.module.css
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.module.css	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.module.css	2026-08-16 07:57:35.278745789 +0000
+@@ -0,0 +1,68 @@
++.card {
++  width: min(680px, 100%);
++  margin: 32px auto;
++  padding: 24px;
++  display: grid;
++  grid-template-columns: auto 1fr;
++  gap: 14px 16px;
++  border: 1px solid var(--line);
++  border-radius: 22px;
++  background: color-mix(in srgb, var(--paper) 92%, transparent);
++  box-shadow: 0 18px 50px rgba(24, 29, 32, 0.08);
++  color: var(--ink);
++}
++
++.icon {
++  width: 42px;
++  height: 42px;
++  display: grid;
++  place-items: center;
++  border-radius: 14px;
++  background: color-mix(in srgb, currentColor 8%, transparent);
++}
++
++.copy { min-width: 0; }
++.eyebrow {
++  display: block;
++  margin-bottom: 5px;
++  color: var(--muted);
++  font-size: 11px;
++  font-weight: 700;
++  letter-spacing: .12em;
++  text-transform: uppercase;
++}
++.copy h2 { margin: 0; font-size: clamp(20px, 3vw, 27px); line-height: 1.15; }
++.copy p { margin: 8px 0 0; color: var(--muted); line-height: 1.55; }
++
++.actions {
++  grid-column: 2;
++  display: flex;
++  flex-wrap: wrap;
++  gap: 9px;
++  margin-top: 4px;
++}
++
++.actions button {
++  min-height: 40px;
++  padding: 0 14px;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  border: 1px solid var(--ink);
++  border-radius: 12px;
++  background: var(--ink);
++  color: var(--paper);
++  font: inherit;
++  font-weight: 700;
++  cursor: pointer;
++}
++
++.actions button:disabled { opacity: .55; cursor: wait; }
++.actions .secondary { background: transparent; color: var(--ink); border-color: var(--line); }
++
++@media (max-width: 640px) {
++  .card { margin: 18px 0; padding: 19px; grid-template-columns: 1fr; }
++  .icon, .copy, .actions { grid-column: 1; }
++  .actions button { flex: 1 1 140px; }
++}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.tsx /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.tsx
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/components/WorkspaceRouteError.tsx	2026-08-16 07:57:35.274745789 +0000
+@@ -0,0 +1,62 @@
++"use client";
++
++import { useEffect, useState } from "react";
++import { House, RefreshCw, TriangleAlert } from "lucide-react";
++import { useRouter } from "next/navigation";
++import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
++import styles from "./WorkspaceRouteError.module.css";
++
++export function WorkspaceRouteError({
++  error,
++  reset,
++  overviewHref,
++}: {
++  error: Error & { digest?: string };
++  reset: () => void;
++  overviewHref: string;
++}) {
++  const router = useRouter();
++  const [retrying, setRetrying] = useState(false);
++
++  useEffect(() => {
++    // Keep the technical detail in the console while presenting a clean,
++    // recoverable state to the user.
++    console.error("FICONTER route boundary", error);
++  }, [error]);
++
++  function retry() {
++    if (retrying) return;
++    setRetrying(true);
++    reset();
++    window.setTimeout(() => setRetrying(false), 1200);
++  }
++
++  function openOverview() {
++    const current = `${window.location.pathname}${window.location.search}`;
++    if (!requestFiconterNavigationIntent(overviewHref, current)) return;
++    router.replace(overviewHref, { scroll: false });
++  }
++
++  return (
++    <section className={styles.card} role="alert" aria-live="assertive">
++      <span className={styles.icon} aria-hidden="true">
++        <TriangleAlert size={22} />
++      </span>
++      <div className={styles.copy}>
++        <span className={styles.eyebrow}>Navigation recovery</span>
++        <h2>This section could not open cleanly.</h2>
++        <p>Your workspace is still safe. Retry this section, or return to Overview.</p>
++      </div>
++      <div className={styles.actions}>
++        <button type="button" onClick={retry} disabled={retrying}>
++          <RefreshCw size={16} aria-hidden="true" />
++          {retrying ? "Retrying…" : "Retry"}
++        </button>
++        <button type="button" className={styles.secondary} onClick={openOverview}>
++          <House size={16} aria-hidden="true" />
++          Overview
++        </button>
++      </div>
++    </section>
++  );
++}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/lib/i18n/runtimeTranslator.ts /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/lib/i18n/runtimeTranslator.ts
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/lib/i18n/runtimeTranslator.ts	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/lib/i18n/runtimeTranslator.ts	2026-08-16 07:59:28.595933128 +0000
+@@ -28,6 +28,11 @@
+  * dates, percentages or live financial values.
+  */
+ const RUNTIME_TRANSLATIONS: Record<string, TranslationRow> = {
++  "Navigation recovery": row("Navigationswiederherstellung", "Recuperación de navegación", "Rikuperimi i navigimit", "استعادة التنقل", "Recuperação da navegação", "Ripristino della navigazione", "Восстановление навигации"),
++  "This section could not open cleanly.": row("Dieser Bereich konnte nicht ordnungsgemäß geöffnet werden.", "Esta sección no se pudo abrir correctamente.", "Ky seksion nuk mund të hapej siç duhet.", "تعذر فتح هذا القسم بشكل صحيح.", "Não foi possível abrir esta secção corretamente.", "Non è stato possibile aprire correttamente questa sezione.", "Не удалось корректно открыть этот раздел."),
++  "Your workspace is still safe. Retry this section, or return to Overview.": row("Ihr Arbeitsbereich ist weiterhin sicher. Versuchen Sie diesen Bereich erneut oder kehren Sie zur Übersicht zurück.", "Tu espacio de trabajo sigue seguro. Vuelve a intentar esta sección o regresa a Resumen.", "Hapësira juaj e punës është ende e sigurt. Provojeni përsëri këtë seksion ose kthehuni te Përmbledhja.", "مساحة عملك ما زالت آمنة. أعد محاولة هذا القسم أو ارجع إلى النظرة العامة.", "O seu espaço de trabalho continua seguro. Tente esta secção novamente ou volte à Visão geral.", "Il tuo spazio di lavoro è ancora al sicuro. Riprova questa sezione o torna alla Panoramica.", "Ваше рабочее пространство остаётся в безопасности. Повторите попытку или вернитесь к обзору."),
++  "Retrying…": row("Erneuter Versuch…", "Reintentando…", "Duke provuar përsëri…", "جارٍ إعادة المحاولة…", "A tentar novamente…", "Nuovo tentativo…", "Повторная попытка…"),
++  "Retry": row("Erneut versuchen", "Reintentar", "Provo përsëri", "إعادة المحاولة", "Tentar novamente", "Riprova", "Повторить"),
+   "Current plan": row("Aktueller Tarif", "Plan actual", "Plani aktual", "الخطة الحالية", "Plano atual", "Piano attuale", "Текущий тариф"),
+   "Free plan": row("Kostenloser Tarif", "Plan gratuito", "Plani falas", "الخطة المجانية", "Plano gratuito", "Piano gratuito", "Бесплатный тариф"),
+   "Recommended": row("Empfohlen", "Recomendado", "Rekomanduar", "موصى به", "Recomendado", "Consigliato", "Рекомендуется"),
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/lib/navigationRuntime.ts /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/lib/navigationRuntime.ts
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/lib/navigationRuntime.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/lib/navigationRuntime.ts	2026-08-16 07:56:41.358746147 +0000
+@@ -0,0 +1,63 @@
++export const FICONTER_NAVIGATION_INTENT_EVENT = "ficonter:navigation-intent";
++export const FICONTER_NAVIGATION_SETTLED_EVENT = "ficonter:navigation-settled";
++export const FICONTER_NAVIGATION_STALLED_EVENT = "ficonter:navigation-stalled";
++
++const ROUTE_INTENT_GUARD_MS = 320;
++const DUPLICATE_INTENT_GUARD_MS = 1_600;
++
++export type FiconterNavigationIntentDetail = {
++  target: string;
++  origin: string;
++  startedAt: number;
++};
++
++export function isFiconterNavigationPending(): boolean {
++  if (typeof document === "undefined") return false;
++  return document.documentElement.dataset.ficonterRoutePending === "true";
++}
++
++export function currentFiconterNavigationTarget(): string | null {
++  if (typeof document === "undefined") return null;
++  return document.documentElement.dataset.ficonterRouteTarget ?? null;
++}
++
++/**
++ * Claims a navigation intent before calling router.push/replace.
++ *
++ * Returns false when the tap is a duplicate/accidental rapid second intent.
++ * The NavigationSpeedBoost listener owns the timers, retry, and final cleanup.
++ */
++export function requestFiconterNavigationIntent(
++  target: string,
++  origin?: string,
++): boolean {
++  if (typeof window === "undefined" || typeof document === "undefined") return true;
++
++  const current = origin ?? `${window.location.pathname}${window.location.search}`;
++  if (!target || target === current) return false;
++
++  const root = document.documentElement;
++  const now = Date.now();
++  const existingTarget = root.dataset.ficonterRouteTarget ?? null;
++  const existingStartedAt = Number(root.dataset.ficonterRouteIntentAt ?? "0");
++  const elapsed = existingStartedAt > 0 ? now - existingStartedAt : Number.POSITIVE_INFINITY;
++
++  if (
++    root.dataset.ficonterRoutePending === "true" &&
++    (elapsed < ROUTE_INTENT_GUARD_MS ||
++      (existingTarget === target && elapsed < DUPLICATE_INTENT_GUARD_MS))
++  ) {
++    return false;
++  }
++
++  root.dataset.ficonterRoutePending = "true";
++  root.dataset.ficonterRouteTarget = target;
++  root.dataset.ficonterRouteIntentAt = String(now);
++
++  window.dispatchEvent(
++    new CustomEvent<FiconterNavigationIntentDetail>(FICONTER_NAVIGATION_INTENT_EVENT, {
++      detail: { target, origin: current, startedAt: now },
++    }),
++  );
++  return true;
++}
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/package.json /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/package.json
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/package.json	2026-08-16 07:33:20.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/package.json	2026-08-16 07:58:29.207323998 +0000
+@@ -46,7 +46,8 @@
+     "verify:v129": "node scripts/verify-navigation-theme-v129.mjs",
+     "verify:v132": "node scripts/verify-surface-opacity-v132.mjs",
+     "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
+-    "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs"
++    "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs",
++    "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.7.0",
+diff -ruN /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/scripts/verify-navigation-performance-hardening.mjs /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/scripts/verify-navigation-performance-hardening.mjs
+--- /mnt/data/ficonter_nav_baseline/ficonter-feature-instant-business-switching/scripts/verify-navigation-performance-hardening.mjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter_nav_work/ficonter-feature-instant-business-switching/scripts/verify-navigation-performance-hardening.mjs	2026-08-16 08:00:33.704841805 +0000
+@@ -0,0 +1,50 @@
++import fs from 'node:fs';
++
++const read = (path) => fs.readFileSync(path, 'utf8');
++const boost = read('components/NavigationSpeedBoost.tsx');
++const runtime = read('lib/navigationRuntime.ts');
++const realtime = read('components/RealtimeRefreshBridge.tsx');
++const overview = read('components/DashboardLiveOverview.tsx');
++const currency = read('components/CurrencyDisplayProvider.tsx');
++const mobile = read('components/FiconterNativeAppChrome.tsx');
++const sidebar = read('components/Sidebar.tsx');
++const businessSidebar = read('components/BusinessSidebar.tsx');
++const palette = read('components/CommandPalette.tsx');
++const notifications = read('components/NotificationCenter.tsx');
++const routeError = read('components/WorkspaceRouteError.tsx');
++const dashboardError = read('app/dashboard/error.tsx');
++const businessError = read('app/business/error.tsx');
++const businessLoading = read('app/business/loading.tsx');
++
++const checks = [
++  ['Central navigation intent runtime exists', runtime.includes('requestFiconterNavigationIntent') && runtime.includes('FICONTER_NAVIGATION_INTENT_EVENT')],
++  ['Rapid duplicate navigation is guarded', runtime.includes('ROUTE_INTENT_GUARD_MS') && runtime.includes('DUPLICATE_INTENT_GUARD_MS')],
++  ['Navigation target is globally visible to refresh bridges', runtime.includes('data') || runtime.includes('ficonterRouteTarget')],
++  ['Link navigation is prefetched on intent', boost.includes('handlePointerDown') && boost.includes('router.prefetch(route)')],
++  ['All internal link clicks claim one navigation intent', boost.includes('requestFiconterNavigationIntent(route, origin)')],
++  ['Navigation completion clears pending state', boost.includes('data-ficonter-route-pending') && boost.includes('FICONTER_NAVIGATION_SETTLED_EVENT')],
++  ['Stalled client navigation retries once', boost.includes('ROUTE_CLIENT_RETRY_MS') && boost.includes('router.replace(route, { scroll: false })')],
++  ['Pathological navigation has a last-resort recovery', boost.includes('ROUTE_HARD_RECOVERY_MS') && boost.includes('window.location.assign(route)')],
++  ['Realtime refresh yields to navigation', realtime.includes('isFiconterNavigationPending()') && realtime.includes('pendingWhileNavigatingRef')],
++  ['Queued realtime refresh resumes after navigation settles', realtime.includes('FICONTER_NAVIGATION_SETTLED_EVENT') && realtime.includes('onNavigationSettled')],
++  ['Overview realtime refresh cannot race a route transition', overview.includes('if (isFiconterNavigationPending()) return;')],
++  ['Currency refresh cannot race a route transition', currency.includes('workspace === "personal" && !isFiconterNavigationPending()')],
++  ['Mobile More drawer no longer prefetches every route on every open', !/function openDrawer\(\)[\s\S]{0,500}routes\.forEach/.test(mobile)],
++  ['Mobile imperative Back/Add routes claim navigation intent', (mobile.match(/requestFiconterNavigationIntent/g) ?? []).length >= 4],
++  ['Personal desktop imperative navigation claims intent', (sidebar.match(/requestFiconterNavigationIntent/g) ?? []).length >= 3],
++  ['Business desktop Back claims intent', businessSidebar.includes('requestFiconterNavigationIntent(target, currentRoute)')],
++  ['Command palette navigation claims intent', palette.includes('requestFiconterNavigationIntent(href, current)')],
++  ['Notification navigation claims intent', notifications.includes('requestFiconterNavigationIntent')],
++  ['Route error boundary offers retry and Overview recovery', routeError.includes('reset()') && routeError.includes('overviewHref') && routeError.includes('requestFiconterNavigationIntent')],
++  ['Personal workspace has route error boundary', dashboardError.includes('WorkspaceRouteError')],
++  ['Business workspace has route error boundary', businessError.includes('WorkspaceRouteError')],
++  ['Business workspace has immediate loading boundary', businessLoading.includes('../dashboard/loading')],
++];
++
++let failed = 0;
++for (const [label, ok] of checks) {
++  console.log(`${ok ? 'PASS' : 'FAIL'} - ${label}`);
++  if (!ok) failed += 1;
++}
++console.log(`\n${checks.length - failed}/${checks.length} navigation-hardening checks passed.`);
++if (failed) process.exit(1);

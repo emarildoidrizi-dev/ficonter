@@ -1,0 +1,779 @@
+--- a/CHANGE_SUMMARY.md
++++ b/CHANGE_SUMMARY.md
+@@ -47,3 +47,12 @@
+ - Theme/density changes now apply globally only after Save succeeds.
+ - Added explicit Save/Apply actions and draft-discard behavior.
+ - Added 21-check explicit-save governance verification suite.
++
++
++## Instant Business switching governance amendment
++- Active Business profile switching is now an immediate-action exception to explicit-save governance.
++- Desktop, tablet and mobile/PWA selectors switch on selection with no Save, Apply or confirmation step.
++- The old `selectedBusinessId` / `pendingBusinessId` Apply-state workflow and desktop hard browser reload fallback were removed.
++- Business switching is persisted through the guarded server action, synchronized across mounted shell controls, and rolled back with a compact error message on failure.
++- Business content is temporarily non-interactive during server reconciliation to prevent actions against stale data from the previous Business workspace.
++- This amendment supersedes only the old V1.23 Business-switch Apply requirement; editable Business settings still require explicit Save/Apply.
+
+--- a/COMMIT_MESSAGE.txt
++++ b/COMMIT_MESSAGE.txt
+@@ -1 +1 @@
+-fix(release): harden FICONTER and finalize pre-release QA
++feat(business): switch business profiles immediately without Apply
+
+--- a/COMMIT_MESSAGE_INSTANT_BUSINESS_SWITCHING.txt
++++ b/COMMIT_MESSAGE_INSTANT_BUSINESS_SWITCHING.txt
+@@ -0,0 +1 @@
++feat(business): switch business profiles immediately without Apply
+
+--- a/EXPLICIT_SAVE_GOVERNANCE_V1_23.md
++++ b/EXPLICIT_SAVE_GOVERNANCE_V1_23.md
+@@ -3,26 +3,26 @@
+ ## Locked rule
+ User-editable values are drafts until an explicit **Save**, **Apply**, or **Confirm** action succeeds. Typing, selecting, toggling, or choosing a different option does not persist the change by itself.
+ 
+-If the user leaves the relevant view without committing the draft, the last confirmed value remains the source of truth.
++Two deliberate interaction exceptions now exist because the selection itself is the confirmation: **language selection** and **active Business profile switching**. Business profile switching is an immediate workspace action, not a Settings-form draft.
++
++If the user leaves a normal editable view without committing the draft, the last confirmed value remains the source of truth.
+ 
+ ## Implemented coverage
+ - Settings preferences keep committed and draft snapshots separately.
+ - Theme and density selections no longer change the global interface before **Save appearance**.
+ - Notification and financial-preference controls remain drafts until their Save buttons are used.
+ - Remember-device is now a draft toggle with **Save device preference**.
+-- Header language selection uses a draft choice and **Save language**; the interface language changes only after the save succeeds.
++- Header language selection is an immediate-confirm exception; selecting a language applies and persists it directly.
+ - Monthly Planner start balance no longer saves on blur; it has **Save start balance**.
+ - Monthly Planner breakdown presentation is visit-only and is no longer silently written to localStorage.
+ - Effortless Entry style uses a draft selection and **Save entry style** before changing/persisting the workflow preference.
+ - Admin support status uses a draft selector and **Save status**.
+-- Business-profile selection uses an explicit **Apply** action on desktop and mobile before changing the persisted active business.
++- Active Business-profile selection is an immediate-action exception on desktop, tablet and mobile/PWA. No separate Save/Apply/confirmation is required.
+ 
+ ## Draft discard behavior
+ - Switching Settings sections restores the last committed Settings values.
+-- Closing the language menu without Save discards the language draft.
+ - Changing Planner month restores that month’s saved start balance.
+ - Selecting a different support thread restores the thread’s saved status.
+-- Leaving a Business route discards an un-applied business-profile selection.
+ - Component/route unmount naturally discards unsaved form state.
+ 
+ ## Non-persistent controls
+
+--- a/INSTANT_BUSINESS_SWITCHING_V1.md
++++ b/INSTANT_BUSINESS_SWITCHING_V1.md
+@@ -0,0 +1,35 @@
++# FICONTER — Instant Business Switching V1
++
++## Governance
++Active Business profile selection is an immediate application action. It is a deliberate exception to FICONTER's explicit-save governance, alongside immediate language selection.
++
++The Business switch must not require Save, Apply, or confirmation. Editable fields inside Business settings and administration remain governed by explicit Save/Apply.
++
++## Implemented behavior
++- Desktop Business selector switches on selection.
++- Mobile/PWA top Business selector switches on selection.
++- Mobile/PWA More-sheet Business selector switches on selection.
++- Manage Businesses card opening uses the same guarded server action instead of writing the active workspace directly from the client.
++- `selectedBusinessId` and `pendingBusinessId` draft state used by the old Apply workflow were removed.
++- The old desktop hard-reload fallback was removed.
++- The selected Business is reflected optimistically across mounted Business shell controls through a small client event bridge.
++- Persistence remains centralized in `switchActiveBusinessAction` and the existing `set_active_business_workspace` database RPC.
++- After persistence succeeds, `router.refresh()` reconciles server-rendered Business data through the Next.js client router. This is not a browser/full-page reload.
++- While reconciliation is in flight, the previous Business module is temporarily non-interactive and visually muted so the user cannot act on stale Business A data under a Business B selector.
++- If the action/database/session path fails, the previous Business ID is restored and a compact error status is shown.
++- The Manage Businesses path also restores the previous active card/profile if switching fails.
++
++## Data isolation
++No Business financial records are copied or mutated during a switch. The persisted `active_business_id` only changes which already-isolated Business workspace is resolved by `getBusinessContext()`.
++
++## Branch/source note
++This package is prepared as `feature/instant-business-switching`. The uploaded source archive did not contain `.git` metadata and was named `ficonter-feature-landing-page-v2`, so Git ancestry from `main` cannot be proven from the archive itself. No landing-page behavior was intentionally modified by this patch.
++
++## Verification
++Run:
++
++`npm run verify:instant-business-switching`
++
++and the existing explicit-save governance check:
++
++`npm run verify:explicit-save`
+
+--- a/app/business-interface.css
++++ b/app/business-interface.css
+@@ -152,3 +152,13 @@
+     padding: 0;
+   }
+ }
++
++
++/* Instant Business switching: prevent actions against the previous workspace
++   while the server-rendered Business context is reconciling. */
++html[data-ficonter-business-switching="true"] .app-main.business-interface {
++  pointer-events: none;
++  cursor: progress;
++  opacity: 0.58;
++  transition: opacity 140ms ease;
++}
+
+--- a/components/BusinessManager.tsx
++++ b/components/BusinessManager.tsx
+@@ -32,7 +32,9 @@
+   currencySymbol,
+ } from "@/lib/financialOptions";
+ import type { Business } from "@/lib/business/types";
++import { switchActiveBusinessAction } from "@/app/business/actions";
+ import { AutoFitSingleLineText } from "@/components/AutoFitSingleLineText";
++import { broadcastInstantBusinessSwitch } from "@/components/useInstantBusinessSwitch";
+ import styles from "./BusinessManager.module.css";
+ 
+ const BUSINESS_TYPES = [
+@@ -442,23 +444,54 @@
+       return;
+     }
+ 
++    const previousBusinessId = currentBusinessId ?? "";
+     setBusy(`switch-${businessId}`);
+     clearMessages();
+ 
+-    const { error: switchError } = await supabase.rpc(
+-      "set_active_business_workspace",
+-      { p_business_id: businessId },
+-    );
+-
+-    if (switchError) {
+-      setError(switchError.message);
++    // Opening another business is an immediate action, not an editable form.
++    setCurrentBusinessId(businessId);
++    broadcastInstantBusinessSwitch({
++      businessId,
++      status: "switching",
++    });
++
++    try {
++      const result = await switchActiveBusinessAction(businessId);
++
++      if (!result.ok) {
++        setCurrentBusinessId(previousBusinessId || null);
++        setError(result.error);
++        broadcastInstantBusinessSwitch({
++          businessId: previousBusinessId,
++          status: "rollback",
++          error: result.error,
++        });
++        setBusy("");
++        return;
++      }
++
++      broadcastInstantBusinessSwitch({
++        businessId,
++        status: "committed",
++      });
+       setBusy("");
+-      return;
+-    }
+-
+-    setCurrentBusinessId(businessId);
+-    router.prefetch("/business/overview");
+-    router.replace("/business/overview");
++      router.prefetch("/business/overview");
++      router.replace("/business/overview");
++    } catch (switchError) {
++      const message =
++        switchError instanceof Error && switchError.message
++          ? switchError.message
++          : "The active business could not be changed.";
++
++      setCurrentBusinessId(previousBusinessId || null);
++      setError(message);
++      broadcastInstantBusinessSwitch({
++        businessId: previousBusinessId,
++        status: "rollback",
++        error: message,
++      });
++      setBusy("");
++    }
+   }
+ 
+   function cardClickIsOnControl(target: EventTarget | null) {
+
+--- a/components/BusinessSidebar.module.css
++++ b/components/BusinessSidebar.module.css
+@@ -61,6 +61,5 @@
+   .accountButton{min-width:53px;padding-inline:4px}.mobileBackButton{width:38px;flex-basis:38px}
+ }
+ 
+-.applyBusinessButton{min-height:28px;padding:0 9px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--accent-primary);color:var(--accent-contrast);font-size:9px;font-weight:900;cursor:pointer}.applyBusinessButton:disabled{opacity:.45;cursor:default}@media(max-width:560px){.applyBusinessButton{display:none}}
+-/* V1.23 — keep draft business selector compact beside its explicit Apply action. */
+-.businessSelector{grid-template-columns:minmax(0,1fr) auto;column-gap:6px;align-items:center}.businessSelector>span{grid-column:1/-1}.businessSelector select{grid-column:1}.businessSelector .applyBusinessButton{grid-column:2}
++/* Business profile selection is immediate; the selector itself is the confirmation. */
++.businessSelector{grid-template-columns:minmax(0,1fr);align-items:center}
+
+--- a/components/BusinessSidebar.tsx
++++ b/components/BusinessSidebar.tsx
+@@ -8,13 +8,13 @@
+   ShoppingCart, Truck, UserRound, Users, WalletCards,
+ } from "lucide-react";
+ import type { LucideIcon } from "lucide-react";
+-import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
++import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+ import { createClient } from "@/lib/supabase/client";
+ import type { Business } from "@/lib/business/types";
+-import { switchActiveBusinessAction } from "@/app/business/actions";
+ import { Brand } from "./Brand";
+ import { LanguageSelector } from "./LanguageSelector";
+ import { NotificationCenter } from "./NotificationCenter";
++import { useInstantBusinessSwitch } from "./useInstantBusinessSwitch";
+ import styles from "./BusinessSidebar.module.css";
+ 
+ type BusinessLink = readonly [href: string, icon: LucideIcon, label: string, manageOnly?: boolean, platformOnly?: boolean];
+@@ -60,33 +60,23 @@
+   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+   const [pendingHref, setPendingHref] = useState<string | null>(null);
+   const [openGroup, setOpenGroup] = useState<string | null>(null);
+-  const [switching, setSwitching] = useState(false);
+-  const [switchError, setSwitchError] = useState("");
+-  const [selectedBusinessId, setSelectedBusinessId] = useState(business?.id ?? "");
+-  const [pendingBusinessId, setPendingBusinessId] = useState("");
+-  const [switchTransitionPending, startSwitchTransition] = useTransition();
++  const {
++    businessId: displayedBusinessId,
++    switchBusiness,
++    switching,
++    error: switchError,
++  } = useInstantBusinessSwitch(business?.id ?? null);
+   const displayName = user.displayName.trim() || user.email.split("@")[0] || "Member";
+-  const businessLogoUrl = business?.logo_path
+-    ? supabase.storage.from("business-assets").getPublicUrl(business.logo_path).data.publicUrl
++  const activeBusinesses = businesses.filter((item) => item.status !== "archived");
++  const displayedBusiness =
++    activeBusinesses.find((item) => item.id === displayedBusinessId) ?? business;
++  const businessLogoUrl = displayedBusiness?.logo_path
++    ? supabase.storage.from("business-assets").getPublicUrl(displayedBusiness.logo_path).data.publicUrl
+     : "";
+-  const activeBusinesses = businesses.filter((item) => item.status !== "archived");
+   const archivedCount = businesses.length - activeBusinesses.length;
+   const mobileRootPaths = new Set(["/business", "/business/overview", "/business/sales", "/business/transactions"]);
+   const showBackCommand = !mobileRootPaths.has(pathname);
+   const fallbackBackHref = "/business/overview";
+-
+-  useEffect(() => {
+-    if (pendingBusinessId) {
+-      if (business?.id === pendingBusinessId) {
+-        setSelectedBusinessId(business.id);
+-        setPendingBusinessId("");
+-      }
+-      return;
+-    }
+-
+-    // Route changes discard an un-applied business selection.
+-    setSelectedBusinessId(business?.id ?? "");
+-  }, [business?.id, pathname, pendingBusinessId]);
+ 
+   useEffect(() => {
+     setPendingHref(null);
+@@ -134,30 +124,6 @@
+       document.removeEventListener("keydown", handleKeyDown);
+     };
+   }, [accountMenuOpen]);
+-
+-  useEffect(() => {
+-    if (!pendingBusinessId || business?.id === pendingBusinessId) return;
+-    const fallbackId = window.setTimeout(() => window.location.replace(window.location.href), 1800);
+-    return () => window.clearTimeout(fallbackId);
+-  }, [business?.id, pendingBusinessId]);
+-
+-  async function applyBusinessSwitch() {
+-    const nextBusinessId = selectedBusinessId;
+-    if (!nextBusinessId || nextBusinessId === business?.id || switching || switchTransitionPending) return;
+-    const previousBusinessId = business?.id || "";
+-    setSwitching(true);
+-    setSwitchError("");
+-    const result = await switchActiveBusinessAction(nextBusinessId);
+-    if (!result.ok) {
+-      setSelectedBusinessId(previousBusinessId);
+-      setSwitchError(result.error);
+-      setSwitching(false);
+-      return;
+-    }
+-    setPendingBusinessId(nextBusinessId);
+-    setSwitching(false);
+-    startSwitchTransition(() => router.refresh());
+-  }
+ 
+   function resolveBackTarget() {
+     if (typeof window !== "undefined") {
+@@ -248,21 +214,17 @@
+           {business ? (
+             <div className={styles.businessSelector}>
+               <span>Active business</span>
+-              <select value={selectedBusinessId || business.id} onChange={(event) => setSelectedBusinessId(event.target.value)} disabled={switching || switchTransitionPending} aria-label="Select active business">
++              <select
++                value={displayedBusinessId || business.id}
++                onChange={(event) => void switchBusiness(event.target.value)}
++                disabled={switching}
++                aria-label="Select active business"
++              >
+                 {activeBusinesses.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
+               </select>
+-              <button
+-                type="button"
+-                className={styles.applyBusinessButton}
+-                disabled={switching || switchTransitionPending || !selectedBusinessId || selectedBusinessId === business.id}
+-                onClick={() => void applyBusinessSwitch()}
+-              >
+-                {switching || switchTransitionPending ? "Applying…" : "Apply"}
+-              </button>
+             </div>
+           ) : <Link className={styles.createLink} href="/business/setup">Create business</Link>}
+-          {pendingBusinessId ? <small className={styles.status}>Updating…</small> : null}
+-          {switchError ? <small className={styles.switchError}>{switchError}</small> : null}
++          {switchError ? <small className={styles.switchError} role="status" aria-live="polite">{switchError}</small> : null}
+           {archivedCount ? <span className={styles.archiveNotice}><Archive size={12} />{archivedCount} archived</span> : null}
+         </div>
+ 
+
+--- a/components/FiconterNativeAppChrome.module.css
++++ b/components/FiconterNativeAppChrome.module.css
+@@ -1406,7 +1406,20 @@
+ }
+ 
+ 
+-/* V1.23 — business selection is a draft until explicitly applied. */
+-.businessProfileApply,.drawerBusinessApply{min-height:32px;padding:0 10px;border:1px solid var(--ficonter-chrome-border,var(--border-subtle));border-radius:9px;background:var(--accent-primary);color:var(--accent-contrast);font:inherit;font-size:9px;font-weight:900;cursor:pointer}.businessProfileApply:disabled,.drawerBusinessApply:disabled{opacity:.45;cursor:default}.drawerBusinessApply{width:100%;margin-top:7px}
+-/* V1.23 — reserve a compact column for the explicit business Apply action. */
+-.businessProfileBar{grid-template-columns:30px auto minmax(0,1fr) auto 18px}
++/* Business selection is immediate; no separate Apply control is rendered. */
++.businessSwitchToast{
++  position:absolute;
++  z-index:3;
++  top:calc(100% + 5px);
++  right:6px;
++  left:6px;
++  padding:6px 8px;
++  border:1px solid color-mix(in srgb,var(--burgundy) 34%,var(--border-subtle));
++  border-radius:9px;
++  color:var(--burgundy);
++  background:color-mix(in srgb,var(--surface-raised) 96%,transparent);
++  box-shadow:0 8px 24px rgba(0,0,0,.12);
++  font-size:10px;
++  font-weight:720;
++  line-height:1.25;
++}
+
+--- a/components/FiconterNativeAppChrome.tsx
++++ b/components/FiconterNativeAppChrome.tsx
+@@ -41,9 +41,9 @@
+   type ComponentType,
+ } from "react";
+ import { createClient } from "@/lib/supabase/client";
+-import { switchActiveBusinessAction } from "@/app/business/actions";
+ import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
+ import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
++import { useInstantBusinessSwitch } from "./useInstantBusinessSwitch";
+ import styles from "./FiconterNativeAppChrome.module.css";
+ 
+ type Workspace = "personal" | "business";
+@@ -502,11 +502,12 @@
+   const [drawerOpen, setDrawerOpen] = useState(false);
+   const [accountOpen, setAccountOpen] = useState(false);
+   const [signingOut, setSigningOut] = useState(false);
+-  const [switchingBusiness, setSwitchingBusiness] = useState(false);
+-  const [businessSwitchError, setBusinessSwitchError] = useState("");
+-  const [selectedBusinessId, setSelectedBusinessId] = useState(
+-    activeBusinessId ?? "",
+-  );
++  const {
++    businessId: displayedBusinessId,
++    switchBusiness,
++    switching: switchingBusiness,
++    error: businessSwitchError,
++  } = useInstantBusinessSwitch(activeBusinessId, workspace === "business");
+   const [avatarUrl, setAvatarUrl] = useState("");
+   const moreButtonRef = useRef<HTMLButtonElement>(null);
+   const accountButtonRef = useRef<HTMLButtonElement>(null);
+@@ -551,9 +552,13 @@
+   const fallbackBackHref =
+     workspace === "business" ? "/business/overview" : "/dashboard/overview";
+ 
++  const displayedBusinessName =
++    businessProfiles.find((profile) => profile.id === displayedBusinessId)?.name ??
++    businessName;
++
+   const identity =
+     workspace === "business"
+-      ? businessName.trim() || "Business workspace"
++      ? displayedBusinessName.trim() || "Business workspace"
+       : displayName.trim() || "Personal workspace";
+ 
+   const accountName = displayName.trim() || email.split("@")[0] || "Account";
+@@ -696,11 +701,6 @@
+   }, [currentHref]);
+ 
+   useEffect(() => {
+-    setSelectedBusinessId(activeBusinessId ?? "");
+-    setBusinessSwitchError("");
+-  }, [activeBusinessId, pathname]);
+-
+-  useEffect(() => {
+     let active = true;
+ 
+     async function loadAvatar() {
+@@ -845,34 +845,6 @@
+     setDrawerOpen(false);
+     setAccountOpen(true);
+     router.prefetch("/dashboard/settings?section=profile");
+-  }
+-
+-  async function applyBusinessProfile() {
+-    const nextBusinessId = selectedBusinessId;
+-    if (
+-      workspace !== "business" ||
+-      !nextBusinessId ||
+-      nextBusinessId === activeBusinessId ||
+-      switchingBusiness
+-    ) {
+-      return;
+-    }
+-
+-    const previousBusinessId = activeBusinessId || "";
+-    setSwitchingBusiness(true);
+-    setBusinessSwitchError("");
+-
+-    const result = await switchActiveBusinessAction(nextBusinessId);
+-
+-    if (!result.ok) {
+-      setSelectedBusinessId(previousBusinessId);
+-      setBusinessSwitchError(result.error);
+-      setSwitchingBusiness(false);
+-      return;
+-    }
+-
+-    setSwitchingBusiness(false);
+-    router.refresh();
+   }
+ 
+   function goBackInstant() {
+@@ -1011,8 +983,8 @@
+             </span>
+             <span className={styles.businessProfileLabel}>Active business</span>
+             <select
+-              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+-              onChange={(event) => setSelectedBusinessId(event.target.value)}
++              value={displayedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
++              onChange={(event) => void switchBusiness(event.target.value)}
+               disabled={switchingBusiness}
+               aria-label="Change active business profile"
+             >
+@@ -1022,15 +994,12 @@
+                 </option>
+               ))}
+             </select>
+-            <button
+-              type="button"
+-              className={styles.businessProfileApply}
+-              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
+-              onClick={() => void applyBusinessProfile()}
+-            >
+-              {switchingBusiness ? "Applying…" : "Apply"}
+-            </button>
+             <ChevronRight className={styles.businessProfileChevron} size={16} aria-hidden="true" />
++            {businessSwitchError ? (
++              <small className={styles.businessSwitchToast} role="status" aria-live="polite">
++                {businessSwitchError}
++              </small>
++            ) : null}
+           </div>
+         ) : null}
+       </header>
+@@ -1193,8 +1162,8 @@
+           <div className={styles.drawerBusinessSelector}>
+             <span>Business profile</span>
+             <select
+-              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+-              onChange={(event) => setSelectedBusinessId(event.target.value)}
++              value={displayedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
++              onChange={(event) => void switchBusiness(event.target.value)}
+               disabled={switchingBusiness}
+               aria-label="Change active business profile"
+             >
+@@ -1204,15 +1173,11 @@
+                 </option>
+               ))}
+             </select>
+-            <button
+-              type="button"
+-              className={styles.drawerBusinessApply}
+-              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
+-              onClick={() => void applyBusinessProfile()}
+-            >
+-              {switchingBusiness ? "Applying…" : "Apply business"}
+-            </button>
+-            {businessSwitchError ? <small className={styles.businessProfileError}>{businessSwitchError}</small> : null}
++            {businessSwitchError ? (
++              <small className={styles.businessProfileError} role="status" aria-live="polite">
++                {businessSwitchError}
++              </small>
++            ) : null}
+           </div>
+         ) : null}
+ 
+
+--- a/components/useInstantBusinessSwitch.ts
++++ b/components/useInstantBusinessSwitch.ts
+@@ -0,0 +1,166 @@
++"use client";
++
++import { useCallback, useEffect, useState, useTransition } from "react";
++import { useRouter } from "next/navigation";
++import { switchActiveBusinessAction } from "@/app/business/actions";
++
++const ACTIVE_BUSINESS_UI_EVENT = "ficonter:active-business-ui";
++
++export type BusinessSwitchUiStatus = "switching" | "committed" | "rollback";
++
++export type BusinessSwitchUiDetail = {
++  businessId: string;
++  status: BusinessSwitchUiStatus;
++  error?: string;
++};
++
++export function broadcastInstantBusinessSwitch(detail: BusinessSwitchUiDetail) {
++  if (typeof window === "undefined") return;
++  window.dispatchEvent(
++    new CustomEvent<BusinessSwitchUiDetail>(ACTIVE_BUSINESS_UI_EVENT, {
++      detail,
++    }),
++  );
++}
++
++function setBusinessSwitchingDocumentState(active: boolean) {
++  if (typeof document === "undefined") return;
++  if (active) {
++    document.documentElement.dataset.ficonterBusinessSwitching = "true";
++  } else {
++    delete document.documentElement.dataset.ficonterBusinessSwitching;
++  }
++}
++
++/**
++ * Immediate Business-profile switching for every client shell.
++ *
++ * The selected profile is reflected optimistically across desktop/mobile UI,
++ * persisted through the guarded server action, rolled back on failure, then
++ * reconciled with server-rendered Business data via a client-side RSC refresh.
++ */
++export function useInstantBusinessSwitch(
++  activeBusinessId: string | null,
++  enabled = true,
++) {
++  const router = useRouter();
++  const [optimisticBusinessId, setOptimisticBusinessId] = useState(
++    activeBusinessId ?? "",
++  );
++  const [persisting, setPersisting] = useState(false);
++  const [externalSwitchPending, setExternalSwitchPending] = useState(false);
++  const [error, setError] = useState("");
++  const [refreshPending, startRefreshTransition] = useTransition();
++
++  useEffect(() => {
++    setOptimisticBusinessId(activeBusinessId ?? "");
++    setExternalSwitchPending(false);
++    setError("");
++    setBusinessSwitchingDocumentState(false);
++  }, [activeBusinessId]);
++
++  useEffect(() => {
++    function handleBusinessSwitch(event: Event) {
++      const detail = (event as CustomEvent<BusinessSwitchUiDetail>).detail;
++      if (!detail || typeof detail.businessId !== "string") return;
++
++      setOptimisticBusinessId(detail.businessId);
++      const transitionStillPending = detail.status !== "rollback";
++      setExternalSwitchPending(transitionStillPending);
++      setBusinessSwitchingDocumentState(transitionStillPending);
++
++      if (detail.status === "rollback") {
++        setError(detail.error || "The active business could not be changed.");
++      } else {
++        setError("");
++      }
++    }
++
++    window.addEventListener(ACTIVE_BUSINESS_UI_EVENT, handleBusinessSwitch);
++    return () =>
++      window.removeEventListener(ACTIVE_BUSINESS_UI_EVENT, handleBusinessSwitch);
++  }, []);
++
++  const switchBusiness = useCallback(
++    async (nextBusinessId: string) => {
++      const previousBusinessId = optimisticBusinessId || activeBusinessId || "";
++
++      if (
++        !enabled ||
++        !nextBusinessId ||
++        nextBusinessId === previousBusinessId ||
++        persisting ||
++        externalSwitchPending ||
++        refreshPending
++      ) {
++        return;
++      }
++
++      // Selecting the profile is the confirmation. Reflect it everywhere now.
++      setError("");
++      setOptimisticBusinessId(nextBusinessId);
++      setPersisting(true);
++      broadcastInstantBusinessSwitch({
++        businessId: nextBusinessId,
++        status: "switching",
++      });
++
++      try {
++        const result = await switchActiveBusinessAction(nextBusinessId);
++
++        if (!result.ok) {
++          const message = result.error || "The active business could not be changed.";
++          setOptimisticBusinessId(previousBusinessId);
++          setError(message);
++          broadcastInstantBusinessSwitch({
++            businessId: previousBusinessId,
++            status: "rollback",
++            error: message,
++          });
++          return;
++        }
++
++        broadcastInstantBusinessSwitch({
++          businessId: nextBusinessId,
++          status: "committed",
++        });
++
++        // RSC reconciliation is client-side; it does not reload the browser page.
++        startRefreshTransition(() => {
++          router.refresh();
++        });
++      } catch (switchError) {
++        const message =
++          switchError instanceof Error && switchError.message
++            ? switchError.message
++            : "The active business could not be changed.";
++
++        setOptimisticBusinessId(previousBusinessId);
++        setError(message);
++        broadcastInstantBusinessSwitch({
++          businessId: previousBusinessId,
++          status: "rollback",
++          error: message,
++        });
++      } finally {
++        setPersisting(false);
++      }
++    },
++    [
++      activeBusinessId,
++      enabled,
++      externalSwitchPending,
++      optimisticBusinessId,
++      persisting,
++      refreshPending,
++      router,
++    ],
++  );
++
++  return {
++    businessId: optimisticBusinessId,
++    switchBusiness,
++    switching: persisting || externalSwitchPending || refreshPending,
++    error,
++  };
++}
+
+--- a/package.json
++++ b/package.json
+@@ -45,7 +45,8 @@
+     "verify:export-branding-v126": "node scripts/verify-export-branding-v126.mjs",
+     "verify:v129": "node scripts/verify-navigation-theme-v129.mjs",
+     "verify:v132": "node scripts/verify-surface-opacity-v132.mjs",
+-    "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs"
++    "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
++    "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.7.0",
+
+--- a/scripts/verify-explicit-save-governance-v123.mjs
++++ b/scripts/verify-explicit-save-governance-v123.mjs
+@@ -12,6 +12,7 @@
+ const support = read('components/SupportInbox.tsx');
+ const businessSidebar = read('components/BusinessSidebar.tsx');
+ const mobileChrome = read('components/FiconterNativeAppChrome.tsx');
++const instantBusinessSwitch = read('components/useInstantBusinessSwitch.ts');
+ 
+ const checks = [
+   ['Settings keeps committed preference snapshot', settings.includes('savedPreferences') && settings.includes('setSavedPreferences(next)')],
+@@ -31,10 +32,12 @@
+   ['Effortless Entry mode has explicit Save', entry.includes('Save entry style') && entry.includes('async function saveMode()')],
+   ['Support status uses draft select', support.includes('value={statusDraft}') && support.includes('setStatusDraft(event.target.value as SupportStatus)')],
+   ['Support status requires explicit Save', support.includes('Save status') && support.includes('updateStatus(statusDraft)')],
+-  ['Desktop business switch is draft until Apply', businessSidebar.includes('setSelectedBusinessId(event.target.value)') && businessSidebar.includes('applyBusinessSwitch')],
+-  ['Mobile business switch is draft until Apply', mobileChrome.includes('setSelectedBusinessId(event.target.value)') && mobileChrome.includes('applyBusinessProfile')],
++  ['Business switching is the deliberate immediate-action exception', instantBusinessSwitch.includes('Selecting the profile is the confirmation') && instantBusinessSwitch.includes('switchActiveBusinessAction(nextBusinessId)')],
++  ['Desktop business selector switches directly with no Apply draft', businessSidebar.includes('onChange={(event) => void switchBusiness(event.target.value)}') && !businessSidebar.includes('applyBusinessSwitch') && !businessSidebar.includes('selectedBusinessId')],
++  ['Mobile business selectors switch directly with no Apply draft', mobileChrome.includes('onChange={(event) => void switchBusiness(event.target.value)}') && !mobileChrome.includes('applyBusinessProfile') && !mobileChrome.includes('selectedBusinessId')],
++  ['Business switch failure rolls the UI back', instantBusinessSwitch.includes('status: "rollback"') && instantBusinessSwitch.includes('setOptimisticBusinessId(previousBusinessId)')],
++  ['Business switch uses client-side RSC reconciliation, not browser reload', instantBusinessSwitch.includes('router.refresh()') && !businessSidebar.includes('window.location.replace(window.location.href)')],
+   ['No direct support status persistence from select change', !support.includes('onChange={(event) => void updateStatus')],
+-  ['No direct business profile persistence from select change', !mobileChrome.includes('onChange={(event) => void switchBusinessProfile') && !businessSidebar.includes('onChange={switchBusiness}')],
+ ];
+ 
+ let failed = 0;
+
+--- a/scripts/verify-instant-business-switching.mjs
++++ b/scripts/verify-instant-business-switching.mjs
+@@ -0,0 +1,44 @@
++import fs from 'node:fs';
++
++function read(path) {
++  return fs.readFileSync(path, 'utf8');
++}
++
++const desktop = read('components/BusinessSidebar.tsx');
++const mobile = read('components/FiconterNativeAppChrome.tsx');
++const manager = read('components/BusinessManager.tsx');
++const hook = read('components/useInstantBusinessSwitch.ts');
++const action = read('app/business/actions.ts');
++const desktopCss = read('components/BusinessSidebar.module.css');
++const mobileCss = read('components/FiconterNativeAppChrome.module.css');
++const businessInterfaceCss = read('app/business-interface.css');
++
++const checks = [
++  ['Desktop selector switches on selection', desktop.includes('onChange={(event) => void switchBusiness(event.target.value)}')],
++  ['Desktop old selectedBusinessId draft removed', !desktop.includes('selectedBusinessId')],
++  ['Desktop old pendingBusinessId draft removed', !desktop.includes('pendingBusinessId')],
++  ['Desktop Apply workflow removed', !desktop.includes('applyBusinessSwitch') && !desktop.includes('applyBusinessButton') && !desktopCss.includes('applyBusinessButton')],
++  ['Desktop hard browser reload fallback removed', !desktop.includes('window.location.replace(window.location.href)')],
++  ['Mobile selectors switch on selection', (mobile.match(/onChange=\{\(event\) => void switchBusiness\(event\.target\.value\)\}/g) ?? []).length >= 2],
++  ['Mobile old selectedBusinessId draft removed', !mobile.includes('selectedBusinessId')],
++  ['Mobile Apply workflow removed', !mobile.includes('applyBusinessProfile') && !mobile.includes('businessProfileApply') && !mobile.includes('drawerBusinessApply') && !mobileCss.includes('businessProfileApply') && !mobileCss.includes('drawerBusinessApply')],
++  ['Shared switch is optimistic', hook.includes('setOptimisticBusinessId(nextBusinessId)') && hook.includes('status: "switching"')],
++  ['Shared switch rolls back on server/action failure', hook.includes('setOptimisticBusinessId(previousBusinessId)') && hook.includes('status: "rollback"')],
++  ['Shared switch synchronizes desktop/mobile shells', hook.includes('ficonter:active-business-ui') && hook.includes('CustomEvent<BusinessSwitchUiDetail>')],
++  ['Shared switch reconciles Business server data client-side', hook.includes('startRefreshTransition') && hook.includes('router.refresh()')],
++  ['Stale Business module interaction is blocked during reconciliation', hook.includes('ficonterBusinessSwitching') && businessInterfaceCss.includes('html[data-ficonter-business-switching="true"] .app-main.business-interface') && businessInterfaceCss.includes('pointer-events: none')],
++  ['Switch errors are presented as small live status messages', desktop.includes('aria-live="polite"') && mobile.includes('businessProfileError') && mobile.includes('businessSwitchToast')],
++  ['Manage-business card path uses guarded server action', manager.includes('switchActiveBusinessAction(businessId)') && !manager.includes('supabase.rpc(\n      "set_active_business_workspace"')],
++  ['Manage-business card path broadcasts optimistic + rollback state', manager.includes('broadcastInstantBusinessSwitch') && manager.includes('status: "rollback"')],
++  ['Server action keeps subscription guard', action.includes('requireSubscriptionFeature("business_workspace")')],
++  ['Server action revalidates Business layout after persistence', action.includes('revalidatePath("/business", "layout")')],
++];
++
++let failed = 0;
++for (const [label, ok] of checks) {
++  console.log(`${ok ? 'PASS' : 'FAIL'} - ${label}`);
++  if (!ok) failed += 1;
++}
++
++console.log(`\n${checks.length - failed}/${checks.length} instant-business-switching checks passed.`);
++if (failed) process.exit(1);
+

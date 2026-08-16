@@ -59,25 +59,6 @@ const principles = [
   [Users, "Personal and business", "Move between household and business finances without mixing the records that matter."],
 ] as const;
 
-const landingPreview = {
-  income: 8420,
-  spentSoFar: 3060,
-  stillToPay: 2160,
-  healthScore: 78,
-} as const;
-
-const availableNow = landingPreview.income - landingPreview.spentSoFar;
-const leftAfterEverythingIsPaid = availableNow - landingPreview.stillToPay;
-const comparisonBars = [
-  { label: "Income", value: landingPreview.income, tone: "income" },
-  { label: "Spent so far", value: landingPreview.spentSoFar, tone: "spent" },
-  { label: "Available now", value: availableNow, tone: "available" },
-  { label: "Still to pay", value: landingPreview.stillToPay, tone: "committed" },
-  { label: "Left after everything is paid", value: leftAfterEverythingIsPaid, tone: "leftAfterPaid" },
-] as const;
-const comparisonBarMax = Math.max(...comparisonBars.map((item) => item.value));
-const formatEuro = (value: number) => `€${value.toLocaleString("en-US")}`;
-
 export default async function HomePage({
   searchParams,
 }: {
@@ -162,25 +143,37 @@ export default async function HomePage({
 
               <div className={styles.heroMetricGrid}>
                 <div className={styles.heroPrimaryMetric}>
-                  <span>Available now</span>
-                  <strong>{formatEuro(availableNow)}</strong>
-                  <p>Income minus spending so far.</p>
+                  <span>Available after planning</span>
+                  <strong>€6,260</strong>
+                  <p>Across active personal accounts</p>
                 </div>
                 <div className={styles.heroHealthMetric}>
                   <span>Financial health</span>
-                  <div><strong>{landingPreview.healthScore}</strong><small>/ 100</small></div>
+                  <div><strong>78</strong><small>/ 100</small></div>
                   <p>Stable and improving</p>
                 </div>
               </div>
 
               <div className={styles.miniProgress}><span /></div>
-              <p className={styles.progressCopy}>This month is on track and fully mapped.</p>
+              <p className={styles.progressCopy}>72% of this month’s plan is already funded.</p>
 
               <div className={styles.heroMiniStats}>
-                <div><span>Income</span><strong>{formatEuro(landingPreview.income)}</strong></div>
-                <div><span>Still to pay</span><strong>{formatEuro(landingPreview.stillToPay)}</strong></div>
-                <div><span>Left after paid</span><strong>{formatEuro(leftAfterEverythingIsPaid)}</strong></div>
+                <div><span>Income</span><strong>€8,420</strong></div>
+                <div><span>Committed</span><strong>€2,160</strong></div>
+                <div><span>Reserve</span><strong>€1,850</strong></div>
               </div>
+            </div>
+          </div>
+
+          <div className={styles.heroSupportCard}>
+            <div className={styles.heroSupportBadge}>Personal & Business</div>
+            <div className={styles.heroSupportImage}>
+              <Image
+                src="/landing/ficonter-business-workspace.webp"
+                alt="A business team reviewing plans together in Ficonter"
+                fill
+                sizes="(max-width: 900px) 70vw, 280px"
+              />
             </div>
           </div>
         </div>
@@ -231,46 +224,30 @@ export default async function HomePage({
             </div>
             <div className={styles.overviewGrid}>
               <article className={styles.availableCard}>
-                <span>Available now</span>
-                <strong>{formatEuro(availableNow)}</strong>
-                <p>Income minus spending so far.</p>
+                <span>Available after planning</span>
+                <strong>€6,260</strong>
+                <p>Across active personal accounts</p>
                 <div className={styles.availableSplit}>
-                  <div><span>Income</span><b>{formatEuro(landingPreview.income)}</b></div>
-                  <div><span>Spent so far</span><b>{formatEuro(landingPreview.spentSoFar)}</b></div>
-                  <div><span>Still to pay</span><b>{formatEuro(landingPreview.stillToPay)}</b></div>
-                  <div><span>Left after everything is paid</span><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
+                  <div><span>Committed</span><b>€2,160</b></div>
+                  <div><span>Reserve</span><b>€1,850</b></div>
                 </div>
               </article>
               <article className={styles.healthCard}>
                 <span>Financial health</span>
-                <div><strong>{landingPreview.healthScore}</strong><small>/ 100<br />Stable and improving</small></div>
+                <div><strong>78</strong><small>/ 100<br />Stable and improving</small></div>
                 <div className={styles.healthBar}><i /></div>
-                <p>Cash flow and obligations are stable and improving.</p>
+                <p>Emergency reserve is moving in the right direction.</p>
               </article>
               <article className={styles.cashFlowCard}>
                 <span>Monthly cash flow</span>
                 <div className={styles.flowTotals}>
-                  <div><small>Available now</small><b>{formatEuro(availableNow)}</b></div>
-                  <div><small>Left after everything is paid</small><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
+                  <div><small>Income</small><b>€8,420</b></div>
+                  <div><small>Spent</small><b>€4,910</b></div>
                 </div>
-                <p className={styles.flowCaption}>This month at a glance.</p>
-                <div className={styles.flowBars} aria-label="This month at a glance.">
-                  {comparisonBars.map((item) => {
-                    const height = Math.max(16, Math.round((item.value / comparisonBarMax) * 100));
-
-                    return (
-                      <div className={styles.flowBarColumn} key={item.label}>
-                        <small>{item.label}</small>
-                        <div className={styles.flowBarTrack}>
-                          <i
-                            className={`${styles.flowBarValue} ${styles[`flowBar${item.tone.charAt(0).toUpperCase()}${item.tone.slice(1)}`]}`}
-                            style={{ height: `${height}%` }}
-                          />
-                        </div>
-                        <b>{formatEuro(item.value)}</b>
-                      </div>
-                    );
-                  })}
+                <div className={styles.flowBars} aria-hidden="true">
+                  {[34, 48, 41, 62, 78, 55].map((height, index) => (
+                    <i key={index} style={{ height: `${height}%` }} />
+                  ))}
                 </div>
               </article>
             </div>

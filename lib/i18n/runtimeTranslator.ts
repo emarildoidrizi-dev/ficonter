@@ -28,6 +28,11 @@ function row(
  * dates, percentages or live financial values.
  */
 const RUNTIME_TRANSLATIONS: Record<string, TranslationRow> = {
+  "Navigation recovery": row("Navigationswiederherstellung", "Recuperación de navegación", "Rikuperimi i navigimit", "استعادة التنقل", "Recuperação da navegação", "Ripristino della navigazione", "Восстановление навигации"),
+  "This section could not open cleanly.": row("Dieser Bereich konnte nicht ordnungsgemäß geöffnet werden.", "Esta sección no se pudo abrir correctamente.", "Ky seksion nuk mund të hapej siç duhet.", "تعذر فتح هذا القسم بشكل صحيح.", "Não foi possível abrir esta secção corretamente.", "Non è stato possibile aprire correttamente questa sezione.", "Не удалось корректно открыть этот раздел."),
+  "Your workspace is still safe. Retry this section, or return to Overview.": row("Ihr Arbeitsbereich ist weiterhin sicher. Versuchen Sie diesen Bereich erneut oder kehren Sie zur Übersicht zurück.", "Tu espacio de trabajo sigue seguro. Vuelve a intentar esta sección o regresa a Resumen.", "Hapësira juaj e punës është ende e sigurt. Provojeni përsëri këtë seksion ose kthehuni te Përmbledhja.", "مساحة عملك ما زالت آمنة. أعد محاولة هذا القسم أو ارجع إلى النظرة العامة.", "O seu espaço de trabalho continua seguro. Tente esta secção novamente ou volte à Visão geral.", "Il tuo spazio di lavoro è ancora al sicuro. Riprova questa sezione o torna alla Panoramica.", "Ваше рабочее пространство остаётся в безопасности. Повторите попытку или вернитесь к обзору."),
+  "Retrying…": row("Erneuter Versuch…", "Reintentando…", "Duke provuar përsëri…", "جارٍ إعادة المحاولة…", "A tentar novamente…", "Nuovo tentativo…", "Повторная попытка…"),
+  "Retry": row("Erneut versuchen", "Reintentar", "Provo përsëri", "إعادة المحاولة", "Tentar novamente", "Riprova", "Повторить"),
   "Current plan": row("Aktueller Tarif", "Plan actual", "Plani aktual", "الخطة الحالية", "Plano atual", "Piano attuale", "Текущий тариф"),
   "Free plan": row("Kostenloser Tarif", "Plan gratuito", "Plani falas", "الخطة المجانية", "Plano gratuito", "Piano gratuito", "Бесплатный тариф"),
   "Recommended": row("Empfohlen", "Recomendado", "Rekomanduar", "موصى به", "Recomendado", "Consigliato", "Рекомендуется"),

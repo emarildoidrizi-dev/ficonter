@@ -3,6 +3,10 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
+  FICONTER_NAVIGATION_SETTLED_EVENT,
+  isFiconterNavigationPending,
+} from "@/lib/navigationRuntime";
+import {
   ficonterRealtimeKeys,
   parseFiconterDataChange,
   type FiconterDataChange,
@@ -86,6 +90,7 @@ export function RealtimeRefreshBridge() {
   const timerRef = useRef<number | null>(null);
   const lastRefreshRef = useRef(Date.now());
   const pendingWhileHiddenRef = useRef(false);
+  const pendingWhileNavigatingRef = useRef(false);
   const rememberedNoncesRef = useRef<string[]>([]);
   const rememberedNonceSetRef = useRef(new Set<string>());
 
@@ -119,6 +124,15 @@ export function RealtimeRefreshBridge() {
         return;
       }
 
+      // Route changes always win over passive data refreshes. A refresh racing
+      // an App Router transition can force the current RSC tree to reconcile
+      // while the destination is also loading, which is both slower and less
+      // deterministic. The destination already fetches current server data.
+      if (isFiconterNavigationPending()) {
+        pendingWhileNavigatingRef.current = true;
+        return;
+      }
+
       if (timerRef.current) window.clearTimeout(timerRef.current);
       const elapsed = Date.now() - lastRefreshRef.current;
       const delay = Math.max(
@@ -127,9 +141,16 @@ export function RealtimeRefreshBridge() {
       );
 
       timerRef.current = window.setTimeout(() => {
+        if (isFiconterNavigationPending()) {
+          pendingWhileNavigatingRef.current = true;
+          timerRef.current = null;
+          return;
+        }
+
         router.refresh();
         lastRefreshRef.current = Date.now();
         pendingWhileHiddenRef.current = false;
+        pendingWhileNavigatingRef.current = false;
         timerRef.current = null;
       }, delay);
     }
@@ -171,9 +192,19 @@ export function RealtimeRefreshBridge() {
       refreshSoon(parseFiconterDataChange(event.data));
     }
 
+    function onNavigationSettled() {
+      if (!pendingWhileNavigatingRef.current) return;
+      pendingWhileNavigatingRef.current = false;
+
+      // Let the destination route commit its pathname before deciding whether
+      // a queued realtime refresh is relevant to the newly visible screen.
+      window.requestAnimationFrame(() => refreshSoon());
+    }
+
     window.addEventListener("ficonter:data-changed", onCustomEvent);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", onFocus);
+    window.addEventListener(FICONTER_NAVIGATION_SETTLED_EVENT, onNavigationSettled);
     document.addEventListener("visibilitychange", onVisibility);
 
     let channel: BroadcastChannel | null = null;
@@ -189,6 +220,7 @@ export function RealtimeRefreshBridge() {
       window.removeEventListener("ficonter:data-changed", onCustomEvent);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener(FICONTER_NAVIGATION_SETTLED_EVENT, onNavigationSettled);
       document.removeEventListener("visibilitychange", onVisibility);
       channel?.removeEventListener("message", onChannelMessage);
       channel?.close();

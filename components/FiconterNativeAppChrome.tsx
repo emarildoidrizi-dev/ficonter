@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import {
   ArrowLeft,
   BarChart3,
@@ -41,9 +42,9 @@ import {
   type ComponentType,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { switchActiveBusinessAction } from "@/app/business/actions";
 import { getSubscriptionUpgradeHref, subscriptionFeatureForPersonalRoute } from "@/lib/subscriptionNavigation";
 import { hasSubscriptionFeature, type SubscriptionPlanCode } from "@/lib/subscriptionPlans";
+import { useInstantBusinessSwitch } from "./useInstantBusinessSwitch";
 import styles from "./FiconterNativeAppChrome.module.css";
 
 type Workspace = "personal" | "business";
@@ -502,11 +503,12 @@ export function FiconterNativeAppChrome({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [switchingBusiness, setSwitchingBusiness] = useState(false);
-  const [businessSwitchError, setBusinessSwitchError] = useState("");
-  const [selectedBusinessId, setSelectedBusinessId] = useState(
-    activeBusinessId ?? "",
-  );
+  const {
+    businessId: displayedBusinessId,
+    switchBusiness,
+    switching: switchingBusiness,
+    error: businessSwitchError,
+  } = useInstantBusinessSwitch(activeBusinessId, workspace === "business");
   const [avatarUrl, setAvatarUrl] = useState("");
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const accountButtonRef = useRef<HTMLButtonElement>(null);
@@ -551,9 +553,13 @@ export function FiconterNativeAppChrome({
   const fallbackBackHref =
     workspace === "business" ? "/business/overview" : "/dashboard/overview";
 
+  const displayedBusinessName =
+    businessProfiles.find((profile) => profile.id === displayedBusinessId)?.name ??
+    businessName;
+
   const identity =
     workspace === "business"
-      ? businessName.trim() || "Business workspace"
+      ? displayedBusinessName.trim() || "Business workspace"
       : displayName.trim() || "Personal workspace";
 
   const accountName = displayName.trim() || email.split("@")[0] || "Account";
@@ -696,11 +702,6 @@ export function FiconterNativeAppChrome({
   }, [currentHref]);
 
   useEffect(() => {
-    setSelectedBusinessId(activeBusinessId ?? "");
-    setBusinessSwitchError("");
-  }, [activeBusinessId, pathname]);
-
-  useEffect(() => {
     let active = true;
 
     async function loadAvatar() {
@@ -833,46 +834,15 @@ export function FiconterNativeAppChrome({
   function openDrawer() {
     setAccountOpen(false);
     setDrawerOpen(true);
-
-    routes.forEach((item, index) => {
-      window.setTimeout(() => {
-        router.prefetch(item.href);
-      }, index * 45);
-    });
+    // NavigationSpeedBoost already warms critical routes and prefetches a
+    // destination on pointer/touch intent. Re-prefetching every route each
+    // time More opens only creates avoidable network contention.
   }
 
   function openAccount() {
     setDrawerOpen(false);
     setAccountOpen(true);
     router.prefetch("/dashboard/settings?section=profile");
-  }
-
-  async function applyBusinessProfile() {
-    const nextBusinessId = selectedBusinessId;
-    if (
-      workspace !== "business" ||
-      !nextBusinessId ||
-      nextBusinessId === activeBusinessId ||
-      switchingBusiness
-    ) {
-      return;
-    }
-
-    const previousBusinessId = activeBusinessId || "";
-    setSwitchingBusiness(true);
-    setBusinessSwitchError("");
-
-    const result = await switchActiveBusinessAction(nextBusinessId);
-
-    if (!result.ok) {
-      setSelectedBusinessId(previousBusinessId);
-      setBusinessSwitchError(result.error);
-      setSwitchingBusiness(false);
-      return;
-    }
-
-    setSwitchingBusiness(false);
-    router.refresh();
   }
 
   function goBackInstant() {
@@ -896,6 +866,7 @@ export function FiconterNativeAppChrome({
       navigatingBackRef.current = true;
       setPreviousAppPath(stack[stack.length - 1] ?? null);
       router.prefetch(target);
+      if (!requestFiconterNavigationIntent(target, currentHref)) return;
       router.push(target, { scroll: false });
       return;
     }
@@ -907,6 +878,7 @@ export function FiconterNativeAppChrome({
 
     navigatingBackRef.current = true;
     router.prefetch(fallbackBackHref);
+    if (!requestFiconterNavigationIntent(fallbackBackHref, currentHref)) return;
     router.push(fallbackBackHref, { scroll: false });
   }
 
@@ -1011,8 +983,8 @@ export function FiconterNativeAppChrome({
             </span>
             <span className={styles.businessProfileLabel}>Active business</span>
             <select
-              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
-              onChange={(event) => setSelectedBusinessId(event.target.value)}
+              value={displayedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+              onChange={(event) => void switchBusiness(event.target.value)}
               disabled={switchingBusiness}
               aria-label="Change active business profile"
             >
@@ -1022,15 +994,12 @@ export function FiconterNativeAppChrome({
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              className={styles.businessProfileApply}
-              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
-              onClick={() => void applyBusinessProfile()}
-            >
-              {switchingBusiness ? "Applying…" : "Apply"}
-            </button>
             <ChevronRight className={styles.businessProfileChevron} size={16} aria-hidden="true" />
+            {businessSwitchError ? (
+              <small className={styles.businessSwitchToast} role="status" aria-live="polite">
+                {businessSwitchError}
+              </small>
+            ) : null}
           </div>
         ) : null}
       </header>
@@ -1070,7 +1039,7 @@ export function FiconterNativeAppChrome({
           title="Add transaction"
           onClick={() => {
             if (pathname === transactionsHref) {
-              if (currentHref !== addHref) {
+              if (currentHref !== addHref && requestFiconterNavigationIntent(addHref, currentHref)) {
                 router.replace(addHref, { scroll: false });
               }
               window.requestAnimationFrame(() => {
@@ -1080,6 +1049,7 @@ export function FiconterNativeAppChrome({
             }
 
             router.prefetch(addHref);
+            if (!requestFiconterNavigationIntent(addHref, currentHref)) return;
             router.push(addHref, { scroll: false });
           }}
         >
@@ -1193,8 +1163,8 @@ export function FiconterNativeAppChrome({
           <div className={styles.drawerBusinessSelector}>
             <span>Business profile</span>
             <select
-              value={selectedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
-              onChange={(event) => setSelectedBusinessId(event.target.value)}
+              value={displayedBusinessId || activeBusinessId || businessProfiles[0]?.id || ""}
+              onChange={(event) => void switchBusiness(event.target.value)}
               disabled={switchingBusiness}
               aria-label="Change active business profile"
             >
@@ -1204,15 +1174,11 @@ export function FiconterNativeAppChrome({
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              className={styles.drawerBusinessApply}
-              disabled={switchingBusiness || !selectedBusinessId || selectedBusinessId === activeBusinessId}
-              onClick={() => void applyBusinessProfile()}
-            >
-              {switchingBusiness ? "Applying…" : "Apply business"}
-            </button>
-            {businessSwitchError ? <small className={styles.businessProfileError}>{businessSwitchError}</small> : null}
+            {businessSwitchError ? (
+              <small className={styles.businessProfileError} role="status" aria-live="polite">
+                {businessSwitchError}
+              </small>
+            ) : null}
           </div>
         ) : null}
 

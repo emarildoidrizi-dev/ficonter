@@ -29,6 +29,7 @@ import {
 } from "@/lib/finance/currencyEngine";
 import { finiteNumber, roundConvertedAmount } from "@/lib/finance/money";
 import { useRouter } from "next/navigation";
+import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 
 type Workspace = "personal" | "business";
 
@@ -176,7 +177,7 @@ export function CurrencyDisplayProvider({
       return;
     }
 
-    if (workspace === "personal") {
+    if (workspace === "personal" && !isFiconterNavigationPending()) {
       router.refresh();
     }
   }, [baseCurrency, latestRate, reportingCurrency, router, workspace]);

@@ -19,6 +19,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import {
   SUPPORT_CATEGORIES,
   SUPPORT_LIMITS,
@@ -233,7 +234,9 @@ export function ContactSupportModal({
               onClick={() => {
                 const threadId = receipt.threadId;
                 close();
-                router.push(`/dashboard/inbox?thread=${threadId}`);
+                const target = `/dashboard/inbox?thread=${threadId}`;
+                const current = `${window.location.pathname}${window.location.search}`;
+                if (requestFiconterNavigationIntent(target, current)) router.push(target);
               }}
               data-primary-action="true"
             >

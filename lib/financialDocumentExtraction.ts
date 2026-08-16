@@ -383,19 +383,28 @@ function allDates(line: string) {
 }
 
 function findDateNearKeywords(lines: string[], keywords: string[]): string {
-  let best: { date: string; score: number } | null = null;
-  lines.forEach((line, index) => {
+  let bestDate = "";
+  let bestScore = -1;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
     const score = keywordScore(line, keywords);
-    if (!score) return;
+    if (!score) continue;
+
     const candidates = [line, lines[index + 1] ?? "", lines[index - 1] ?? ""];
-    candidates.forEach((candidate, proximityIndex) => {
+    for (let proximityIndex = 0; proximityIndex < candidates.length; proximityIndex += 1) {
+      const candidate = candidates[proximityIndex] ?? "";
       for (const date of allDates(candidate)) {
         const finalScore = score * 10 + (3 - proximityIndex);
-        if (!best || finalScore > best.score) best = { date, score: finalScore };
+        if (finalScore > bestScore) {
+          bestDate = date;
+          bestScore = finalScore;
+        }
       }
-    });
-  });
-  return best?.date ?? "";
+    }
+  }
+
+  return bestDate;
 }
 
 function firstLikelyDate(lines: string[]) {

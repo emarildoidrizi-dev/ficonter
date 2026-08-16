@@ -14,12 +14,12 @@ import {
   X,
 } from "lucide-react";
 import { CATEGORY_ITEMS, CURRENCY_CODES, formatCurrency } from "@/lib/financialOptions";
-import type {
+import {
   BILL_IMPORT_CATEGORIES,
-  ExtractedBillDraft,
-  ExtractedDebtDraft,
-  ExtractedTransactionDraft,
-  FinancialDocumentExtraction,
+  type ExtractedBillDraft,
+  type ExtractedDebtDraft,
+  type ExtractedTransactionDraft,
+  type FinancialDocumentExtraction,
 } from "@/lib/financialDocumentExtraction";
 import type { FinancialDocument } from "@/lib/documentVault";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";

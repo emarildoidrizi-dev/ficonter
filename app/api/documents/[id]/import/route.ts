@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CATEGORY_ITEMS } from "@/lib/financialOptions";
 import { BILL_IMPORT_CATEGORIES } from "@/lib/financialDocumentExtraction";
+import type { BillRecurrence, DebtCategory } from "@/lib/supabase/database.contract";
 import { isSameOriginRequest, noStoreHeaders } from "@/lib/security/request";
 import { createClient } from "@/lib/supabase/server";
 import { subscriptionApiAccessError } from "@/lib/subscriptionApiAccess";
@@ -78,7 +79,7 @@ type ImportPayload = {
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
-const DEBT_CATEGORIES = new Set([
+const DEBT_CATEGORIES = new Set<DebtCategory>([
   "Credit card",
   "Personal loan",
   "Mortgage",
@@ -93,7 +94,7 @@ const DEBT_CATEGORIES = new Set([
   "Other",
 ]);
 const BILL_CATEGORIES = new Set<string>(BILL_IMPORT_CATEGORIES);
-const BILL_RECURRENCES = new Set([
+const BILL_RECURRENCES = new Set<BillRecurrence>([
   "none",
   "weekly",
   "biweekly",
@@ -102,6 +103,14 @@ const BILL_RECURRENCES = new Set([
   "semiannual",
   "yearly",
 ]);
+
+function isDebtCategory(value: string): value is DebtCategory {
+  return DEBT_CATEGORIES.has(value as DebtCategory);
+}
+
+function isBillRecurrence(value: string): value is BillRecurrence {
+  return BILL_RECURRENCES.has(value as BillRecurrence);
+}
 
 function errorResponse(error: string, status = 400) {
   return NextResponse.json({ error }, { status, headers: noStoreHeaders() });
@@ -266,7 +275,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const converted = parseConvertedMoney(bill);
       const forceImport = bill.forceImport === true;
 
-      if (!name || !BILL_CATEGORIES.has(category) || !CURRENCY_PATTERN.test(currency) || !dueDate || !BILL_RECURRENCES.has(recurrence) || !converted) {
+      if (!name || !BILL_CATEGORIES.has(category) || !CURRENCY_PATTERN.test(currency) || !dueDate || !isBillRecurrence(recurrence) || !converted) {
         return errorResponse("Review the bill name, amount, currency, due date, category and exchange rate.");
       }
 
@@ -335,7 +344,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (
       !name ||
-      !DEBT_CATEGORIES.has(category) ||
+      !isDebtCategory(category) ||
       !CURRENCY_PATTERN.test(currency) ||
       !originalBalance ||
       !currentBalance ||

@@ -1,0 +1,1 @@
+perf(navigation): harden client routing and eliminate refresh races

@@ -1,0 +1,41 @@
+{
+  "target_branch": "feature/navigation-performance-hardening",
+  "base_snapshot": "feature/instant-business-switching",
+  "git_history_present": false,
+  "changed_files": [
+    "COMMIT_MESSAGE_NAVIGATION_HARDENING.txt",
+    "NAVIGATION_PERFORMANCE_HARDENING.md",
+    "NAVIGATION_PERFORMANCE_HARDENING.patch",
+    "app/business/error.tsx",
+    "app/business/loading.tsx",
+    "app/dashboard/error.tsx",
+    "components/BusinessSidebar.tsx",
+    "components/CommandPalette.tsx",
+    "components/ContactSupportModal.tsx",
+    "components/CurrencyDisplayProvider.tsx",
+    "components/DashboardLiveOverview.tsx",
+    "components/FiconterNativeAppChrome.tsx",
+    "components/NavigationSpeedBoost.tsx",
+    "components/NotificationCenter.tsx",
+    "components/RealtimeRefreshBridge.tsx",
+    "components/Sidebar.tsx",
+    "components/WorkspaceRouteError.module.css",
+    "components/WorkspaceRouteError.tsx",
+    "lib/i18n/runtimeTranslator.ts",
+    "lib/navigationRuntime.ts",
+    "package.json",
+    "scripts/verify-navigation-performance-hardening.mjs"
+  ],
+  "verification": {
+    "navigation_hardening": "22/22",
+    "mobile_single_navigation_v111": "11/11",
+    "responsive_navigation_v113": "13/13",
+    "mobile_back_v119": "12/12",
+    "instant_business_switching": "18/18",
+    "explicit_save": "23/23",
+    "navigation_theme_v129": "19/19",
+    "localization": "PASS",
+    "release_candidate": "67 suites PASS",
+    "typescript_syntax": "PASS"
+  }
+}

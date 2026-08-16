@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isFinancialDataScope, subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
+import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
 import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
@@ -140,6 +141,10 @@ export function DashboardLiveOverview({
       if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
       refreshTimer.current = window.setTimeout(() => {
         refreshTimer.current = null;
+        // If the user is already leaving Overview, the destination route will
+        // fetch current data. Refreshing the old route here only creates an RSC
+        // race and can make navigation feel stuck.
+        if (isFiconterNavigationPending()) return;
         router.refresh();
       }, 220);
     };

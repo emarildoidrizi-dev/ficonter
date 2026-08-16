@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import {
   ArrowLeft,
   BarChart3,
@@ -833,12 +834,9 @@ export function FiconterNativeAppChrome({
   function openDrawer() {
     setAccountOpen(false);
     setDrawerOpen(true);
-
-    routes.forEach((item, index) => {
-      window.setTimeout(() => {
-        router.prefetch(item.href);
-      }, index * 45);
-    });
+    // NavigationSpeedBoost already warms critical routes and prefetches a
+    // destination on pointer/touch intent. Re-prefetching every route each
+    // time More opens only creates avoidable network contention.
   }
 
   function openAccount() {
@@ -868,6 +866,7 @@ export function FiconterNativeAppChrome({
       navigatingBackRef.current = true;
       setPreviousAppPath(stack[stack.length - 1] ?? null);
       router.prefetch(target);
+      if (!requestFiconterNavigationIntent(target, currentHref)) return;
       router.push(target, { scroll: false });
       return;
     }
@@ -879,6 +878,7 @@ export function FiconterNativeAppChrome({
 
     navigatingBackRef.current = true;
     router.prefetch(fallbackBackHref);
+    if (!requestFiconterNavigationIntent(fallbackBackHref, currentHref)) return;
     router.push(fallbackBackHref, { scroll: false });
   }
 
@@ -1039,7 +1039,7 @@ export function FiconterNativeAppChrome({
           title="Add transaction"
           onClick={() => {
             if (pathname === transactionsHref) {
-              if (currentHref !== addHref) {
+              if (currentHref !== addHref && requestFiconterNavigationIntent(addHref, currentHref)) {
                 router.replace(addHref, { scroll: false });
               }
               window.requestAnimationFrame(() => {
@@ -1049,6 +1049,7 @@ export function FiconterNativeAppChrome({
             }
 
             router.prefetch(addHref);
+            if (!requestFiconterNavigationIntent(addHref, currentHref)) return;
             router.push(addHref, { scroll: false });
           }}
         >

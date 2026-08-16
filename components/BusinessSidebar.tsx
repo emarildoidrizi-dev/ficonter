@@ -10,6 +10,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import type { Business } from "@/lib/business/types";
 import { Brand } from "./Brand";
 import { LanguageSelector } from "./LanguageSelector";
@@ -167,6 +168,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     if (target === currentRoute) return;
 
     router.prefetch(target);
+    if (!requestFiconterNavigationIntent(target, currentRoute)) return;
     router.push(target, { scroll: false });
   }
 

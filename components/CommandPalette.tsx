@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
 import { ArrowRight, Command, Search, X } from "lucide-react";
 import { FICONTER_COMMANDS } from "@/lib/commandPalette";
 import styles from "./CommandPalette.module.css";
@@ -61,6 +62,8 @@ export function CommandPalette() {
 
   function select(href: string) {
     setOpen(false);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (!requestFiconterNavigationIntent(href, current)) return;
     router.push(href);
   }
 

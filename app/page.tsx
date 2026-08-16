@@ -164,18 +164,6 @@ export default async function HomePage({
               </div>
             </div>
           </div>
-
-          <div className={styles.heroSupportCard}>
-            <div className={styles.heroSupportBadge}>Personal & Business</div>
-            <div className={styles.heroSupportImage}>
-              <Image
-                src="/landing/ficonter-business-workspace.webp"
-                alt="A business team reviewing plans together in Ficonter"
-                fill
-                sizes="(max-width: 900px) 70vw, 280px"
-              />
-            </div>
-          </div>
         </div>
       </section>
 

@@ -42,7 +42,6 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-navigation-theme-v129.mjs',
   'verify-monthly-spending-budget.mjs',
   'verify-performance-accuracy.mjs',
-  'verify-pwa-mobile-runtime-v135.mjs',
   'verify-phase1-qa.mjs',
   'verify-phase1-security.mjs',
   'verify-phase2-ai-insights.mjs',

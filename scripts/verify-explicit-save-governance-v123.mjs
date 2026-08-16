@@ -12,6 +12,7 @@ const entry = read('components/EffortlessEntryWorkspace.tsx');
 const support = read('components/SupportInbox.tsx');
 const businessSidebar = read('components/BusinessSidebar.tsx');
 const mobileChrome = read('components/FiconterNativeAppChrome.tsx');
+const instantBusinessSwitch = read('components/useInstantBusinessSwitch.ts');
 
 const checks = [
   ['Settings keeps committed preference snapshot', settings.includes('savedPreferences') && settings.includes('setSavedPreferences(next)')],
@@ -31,10 +32,12 @@ const checks = [
   ['Effortless Entry mode has explicit Save', entry.includes('Save entry style') && entry.includes('async function saveMode()')],
   ['Support status uses draft select', support.includes('value={statusDraft}') && support.includes('setStatusDraft(event.target.value as SupportStatus)')],
   ['Support status requires explicit Save', support.includes('Save status') && support.includes('updateStatus(statusDraft)')],
-  ['Desktop business switch is draft until Apply', businessSidebar.includes('setSelectedBusinessId(event.target.value)') && businessSidebar.includes('applyBusinessSwitch')],
-  ['Mobile business switch is draft until Apply', mobileChrome.includes('setSelectedBusinessId(event.target.value)') && mobileChrome.includes('applyBusinessProfile')],
+  ['Business switching is the deliberate immediate-action exception', instantBusinessSwitch.includes('Selecting the profile is the confirmation') && instantBusinessSwitch.includes('switchActiveBusinessAction(nextBusinessId)')],
+  ['Desktop business selector switches directly with no Apply draft', businessSidebar.includes('onChange={(event) => void switchBusiness(event.target.value)}') && !businessSidebar.includes('applyBusinessSwitch') && !businessSidebar.includes('selectedBusinessId')],
+  ['Mobile business selectors switch directly with no Apply draft', mobileChrome.includes('onChange={(event) => void switchBusiness(event.target.value)}') && !mobileChrome.includes('applyBusinessProfile') && !mobileChrome.includes('selectedBusinessId')],
+  ['Business switch failure rolls the UI back', instantBusinessSwitch.includes('status: "rollback"') && instantBusinessSwitch.includes('setOptimisticBusinessId(previousBusinessId)')],
+  ['Business switch uses client-side RSC reconciliation, not browser reload', instantBusinessSwitch.includes('router.refresh()') && !businessSidebar.includes('window.location.replace(window.location.href)')],
   ['No direct support status persistence from select change', !support.includes('onChange={(event) => void updateStatus')],
-  ['No direct business profile persistence from select change', !mobileChrome.includes('onChange={(event) => void switchBusinessProfile') && !businessSidebar.includes('onChange={switchBusiness}')],
 ];
 
 let failed = 0;

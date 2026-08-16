@@ -32,7 +32,9 @@ import {
   currencySymbol,
 } from "@/lib/financialOptions";
 import type { Business } from "@/lib/business/types";
+import { switchActiveBusinessAction } from "@/app/business/actions";
 import { AutoFitSingleLineText } from "@/components/AutoFitSingleLineText";
+import { broadcastInstantBusinessSwitch } from "@/components/useInstantBusinessSwitch";
 import styles from "./BusinessManager.module.css";
 
 const BUSINESS_TYPES = [
@@ -442,23 +444,54 @@ export function BusinessManager({
       return;
     }
 
+    const previousBusinessId = currentBusinessId ?? "";
     setBusy(`switch-${businessId}`);
     clearMessages();
 
-    const { error: switchError } = await supabase.rpc(
-      "set_active_business_workspace",
-      { p_business_id: businessId },
-    );
-
-    if (switchError) {
-      setError(switchError.message);
-      setBusy("");
-      return;
-    }
-
+    // Opening another business is an immediate action, not an editable form.
     setCurrentBusinessId(businessId);
-    router.prefetch("/business/overview");
-    router.replace("/business/overview");
+    broadcastInstantBusinessSwitch({
+      businessId,
+      status: "switching",
+    });
+
+    try {
+      const result = await switchActiveBusinessAction(businessId);
+
+      if (!result.ok) {
+        setCurrentBusinessId(previousBusinessId || null);
+        setError(result.error);
+        broadcastInstantBusinessSwitch({
+          businessId: previousBusinessId,
+          status: "rollback",
+          error: result.error,
+        });
+        setBusy("");
+        return;
+      }
+
+      broadcastInstantBusinessSwitch({
+        businessId,
+        status: "committed",
+      });
+      setBusy("");
+      router.prefetch("/business/overview");
+      router.replace("/business/overview");
+    } catch (switchError) {
+      const message =
+        switchError instanceof Error && switchError.message
+          ? switchError.message
+          : "The active business could not be changed.";
+
+      setCurrentBusinessId(previousBusinessId || null);
+      setError(message);
+      broadcastInstantBusinessSwitch({
+        businessId: previousBusinessId,
+        status: "rollback",
+        error: message,
+      });
+      setBusy("");
+    }
   }
 
   function cardClickIsOnControl(target: EventTarget | null) {

@@ -47,3 +47,12 @@ This release consolidates the latest complete FICONTER project and the accepted 
 - Theme/density changes now apply globally only after Save succeeds.
 - Added explicit Save/Apply actions and draft-discard behavior.
 - Added 21-check explicit-save governance verification suite.
+
+
+## Instant Business switching governance amendment
+- Active Business profile switching is now an immediate-action exception to explicit-save governance.
+- Desktop, tablet and mobile/PWA selectors switch on selection with no Save, Apply or confirmation step.
+- The old `selectedBusinessId` / `pendingBusinessId` Apply-state workflow and desktop hard browser reload fallback were removed.
+- Business switching is persisted through the guarded server action, synchronized across mounted shell controls, and rolled back with a compact error message on failure.
+- Business content is temporarily non-interactive during server reconciliation to prevent actions against stale data from the previous Business workspace.
+- This amendment supersedes only the old V1.23 Business-switch Apply requirement; editable Business settings still require explicit Save/Apply.

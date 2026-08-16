@@ -33,8 +33,6 @@ const TEXT_SELECTOR = [
 // lower ratio, but one consistent threshold keeps financial labels and values
 // readable at every responsive size.
 const MIN_CONTRAST = 4.5;
-const MOBILE_AUDIT_BATCH_SIZE = 18;
-const DESKTOP_AUDIT_BATCH_SIZE = 72;
 
 function parseColor(value: string): Rgba | null {
   if (!value || value === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
@@ -264,11 +262,8 @@ export function ThemeContrastGuard() {
     let fullAuditFrame = 0;
     let fullAuditTimer = 0;
     let incrementalFrame = 0;
-    let contrastBatchFrame = 0;
     const adjusted = new Set<HTMLElement>();
     const pendingScopes = new Set<Element>();
-    const contrastQueue: HTMLElement[] = [];
-    const queuedElements = new Set<HTMLElement>();
 
     function removeAdjustment(element: HTMLElement) {
       element.classList.remove("ficonter-auto-contrast");
@@ -315,47 +310,14 @@ export function ThemeContrastGuard() {
       return elements;
     }
 
-    function queueElements(elements: HTMLElement[]) {
-      for (const element of elements) {
-        if (queuedElements.has(element)) continue;
-        queuedElements.add(element);
-        contrastQueue.push(element);
-      }
-
-      if (!contrastBatchFrame && contrastQueue.length) {
-        contrastBatchFrame = window.requestAnimationFrame(runContrastBatch);
-      }
-    }
-
-    function runContrastBatch() {
-      contrastBatchFrame = 0;
-      const nativePhone =
-        root.dataset.ficonterNativeApp === "true" &&
-        root.dataset.ficonterDevice === "phone";
-      const batchSize = nativePhone ? MOBILE_AUDIT_BATCH_SIZE : DESKTOP_AUDIT_BATCH_SIZE;
-
-      for (let index = 0; index < batchSize && contrastQueue.length; index += 1) {
-        const element = contrastQueue.shift();
-        if (!element) break;
-        queuedElements.delete(element);
-        if (element.isConnected) auditElement(element);
-      }
-
-      if (contrastQueue.length) {
-        contrastBatchFrame = window.requestAnimationFrame(runContrastBatch);
-      }
-    }
-
     function auditScope(scope: ParentNode) {
-      queueElements(collectTextElements(scope));
+      for (const element of collectTextElements(scope)) auditElement(element);
     }
 
     function runFullAudit() {
       fullAuditFrame = 0;
       fullAuditTimer = 0;
       clearAdjustments();
-      contrastQueue.length = 0;
-      queuedElements.clear();
       const scope = document.querySelector(".app-shell") ?? document.body;
       auditScope(scope);
     }
@@ -422,11 +384,8 @@ export function ThemeContrastGuard() {
       window.removeEventListener("ficonter:preferences-updated", handlePreferences);
       if (fullAuditFrame) window.cancelAnimationFrame(fullAuditFrame);
       if (incrementalFrame) window.cancelAnimationFrame(incrementalFrame);
-      if (contrastBatchFrame) window.cancelAnimationFrame(contrastBatchFrame);
       if (fullAuditTimer) window.clearTimeout(fullAuditTimer);
       pendingScopes.clear();
-      contrastQueue.length = 0;
-      queuedElements.clear();
       clearAdjustments();
     };
   }, []);

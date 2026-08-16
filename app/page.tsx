@@ -82,11 +82,11 @@ export default async function HomePage({
           <div className={styles.headerActions}>
             <nav className={styles.navigation} aria-label="Public navigation">
               <a href="#platform">Platform</a>
-              <a href="#for-you">For you</a>
+              <a href="#for-you">Personal & Business</a>
               <a href="#privacy">Privacy</a>
               <Link className={styles.loginLink} href="/login">Log in</Link>
               <Link className={styles.headerCta} href="/register">
-                Create account
+                Start free
               </Link>
             </nav>
             <div className={styles.headerLanguage}>
@@ -99,7 +99,7 @@ export default async function HomePage({
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <div className={styles.eyebrow}>Financial Control Center</div>
-          <h1>Know where you stand. Decide what comes next.</h1>
+          <h1><span>Know where you stand.</span><span>Decide what comes next.</span></h1>
           <p className={styles.heroLead}>
             Ficonter brings personal and business finances into one private,
             considered workspace—so every number has context and every plan has
@@ -121,33 +121,60 @@ export default async function HomePage({
         </div>
 
         <div className={styles.heroVisual}>
-          <Image
-            src="/landing/ficonter-personal-finance.webp"
-            alt="A couple reviewing their finances together on Ficonter at home"
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 54vw"
-          />
-          <div className={styles.photoShade} />
-          <div className={styles.heroPhotoCaption}>
-            <span>One shared picture</span>
-            <strong>Plan together, with confidence.</strong>
-          </div>
+          <div className={styles.heroGlow} aria-hidden="true" />
+
           <div className={styles.floatingDashboard}>
             <div className={styles.floatingHeader}>
-              <div>
-                <span className={styles.demoLabel}>Demo workspace</span>
-                <strong>This month</strong>
+              <div className={styles.workspaceIdentity}>
+                <span className={styles.workspaceDot} aria-hidden="true" />
+                <span>Ficonter · Personal workspace</span>
               </div>
               <span className={styles.healthPill}>Healthy</span>
             </div>
-            <div className={styles.balanceLine}>
-              <div><span>Income</span><strong>€8,420</strong></div>
-              <ArrowRight size={16} />
-              <div><span>Available</span><strong>€6,260</strong></div>
+
+            <div className={styles.floatingBody}>
+              <div className={styles.floatingTitleRow}>
+                <div>
+                  <span className={styles.demoLabel}>Demo workspace</span>
+                  <strong>This month</strong>
+                </div>
+                <span className={styles.demoTag}>Fictional demo data</span>
+              </div>
+
+              <div className={styles.heroMetricGrid}>
+                <div className={styles.heroPrimaryMetric}>
+                  <span>Available after planning</span>
+                  <strong>€6,260</strong>
+                  <p>Across active personal accounts</p>
+                </div>
+                <div className={styles.heroHealthMetric}>
+                  <span>Financial health</span>
+                  <div><strong>78</strong><small>/ 100</small></div>
+                  <p>Stable and improving</p>
+                </div>
+              </div>
+
+              <div className={styles.miniProgress}><span /></div>
+              <p className={styles.progressCopy}>72% of this month’s plan is already funded.</p>
+
+              <div className={styles.heroMiniStats}>
+                <div><span>Income</span><strong>€8,420</strong></div>
+                <div><span>Committed</span><strong>€2,160</strong></div>
+                <div><span>Reserve</span><strong>€1,850</strong></div>
+              </div>
             </div>
-            <div className={styles.miniProgress}><span /></div>
-            <p>72% of this month’s plan is already funded.</p>
+          </div>
+
+          <div className={styles.heroSupportCard}>
+            <div className={styles.heroSupportBadge}>Personal & Business</div>
+            <div className={styles.heroSupportImage}>
+              <Image
+                src="/landing/ficonter-business-workspace.webp"
+                alt="A business team reviewing plans together in Ficonter"
+                fill
+                sizes="(max-width: 900px) 70vw, 280px"
+              />
+            </div>
           </div>
         </div>
       </section>

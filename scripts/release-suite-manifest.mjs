@@ -17,6 +17,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-export-branding-v126.mjs',
   'verify-final-release-hygiene.mjs',
   'verify-financial-consistency.mjs',
+  'verify-financial-document-import.mjs',
   'verify-financial-gps.mjs',
   'verify-financial-setup.mjs',
   'verify-fixed-redesign-layout.mjs',

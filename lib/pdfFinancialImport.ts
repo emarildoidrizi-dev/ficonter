@@ -1,3 +1,5 @@
+import { financialTextIncludes, normalizeFinancialCurrencyMarkers, normalizeFinancialDigits, normalizeFinancialText } from "@/lib/financialDocumentLanguage";
+
 export type PdfTextItem = {
   str?: string;
   transform?: number[];
@@ -28,53 +30,52 @@ type ParsedPdfTransaction = {
 
 const DATE_PATTERN = /(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})/;
 const DATE_PATTERN_GLOBAL = /(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})/g;
-const MONEY_PATTERN = /(?<![\d.,])([+-]?\s*(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d{2})\s*-?)(?:\s*(EUR|USD|GBP|CHF|CAD|AUD|JPY|CNY|PLN|SEK|NOK|DKK|CZK|HUF|RON|BGN|TRY|ALL|MKD|RSD|BAM|€|\$|£|CHF))?(?![\d.,])/gi;
+const MONEY_PATTERN = /(?<![\d.,])([+-]?\s*(?:\d{1,3}(?:[.\s,]\d{3})+|\d+)(?:[.,]\d{2})\s*-?)(?:\s*(EUR|USD|GBP|CHF|CAD|AUD|JPY|CNY|PLN|SEK|NOK|DKK|CZK|HUF|RON|BGN|TRY|ALL|MKD|RSD|BAM|RUB|AED|SAR|QAR|€|\$|£|₽))?(?![\d.,])/giu;
 
 const INCOME_TERMS = [
-  "gutschrift",
-  "gehalt",
-  "salary",
-  "payroll",
-  "lohn",
-  "wages",
-  "refund",
-  "rückerstattung",
-  "erstattung",
-  "credit",
-  "incoming",
-  "eingang",
-  "deposit",
-  "überweisung von",
-  "ueberweisung von",
-  "interest credit",
-  "zinsen",
+  // English / German
+  "gutschrift", "gehalt", "salary", "payroll", "lohn", "wages", "refund", "rückerstattung", "erstattung", "credit", "incoming", "eingang", "deposit", "überweisung von", "ueberweisung von", "interest credit", "zinsen",
+  // Spanish
+  "ingreso", "abono", "nómina", "nomina", "salario", "sueldo", "transferencia recibida", "reembolso",
+  // Albanian
+  "hyrje", "kreditim", "paga", "rroga", "transfertë hyrëse", "transferte hyrese", "rimbursim",
+  // Arabic
+  "إيداع", "ايداع", "راتب", "تحويل وارد", "استرداد", "دائن",
+  // Portuguese
+  "crédito", "credito", "salário", "salario", "ordenado", "entrada", "transferência recebida", "transferencia recebida", "reembolso",
+  // Italian
+  "accredito", "stipendio", "bonifico ricevuto", "rimborso", "entrata",
+  // Russian
+  "зачисление", "зарплата", "поступление", "входящий перевод", "возврат",
 ];
 
 const EXPENSE_TERMS = [
-  "lastschrift",
-  "direct debit",
-  "debit",
-  "kartenzahlung",
-  "card payment",
-  "payment",
-  "ausgang",
-  "überweisung an",
-  "ueberweisung an",
-  "withdrawal",
-  "abhebung",
-  "fee",
-  "gebühr",
-  "gebuehr",
-  "rent",
-  "miete",
+  // English / German
+  "lastschrift", "direct debit", "debit", "kartenzahlung", "card payment", "payment", "ausgang", "überweisung an", "ueberweisung an", "withdrawal", "abhebung", "fee", "gebühr", "gebuehr", "rent", "miete",
+  // Spanish
+  "cargo", "débito", "debito", "pago", "transferencia enviada", "retirada", "comisión", "comision", "alquiler",
+  // Albanian
+  "pagesë", "pagese", "debitim", "dalje", "transfertë dalëse", "transferte dalese", "tërheqje", "terheqje", "komision", "qira",
+  // Arabic
+  "خصم", "دفع", "تحويل صادر", "سحب", "مدين", "رسوم", "إيجار", "ايجار",
+  // Portuguese
+  "débito", "debito", "pagamento", "saída", "saida", "transferência enviada", "transferencia enviada", "levantamento", "taxa", "aluguel",
+  // Italian
+  "addebito", "pagamento", "uscita", "bonifico inviato", "prelievo", "commissione", "affitto",
+  // Russian
+  "списание", "оплата", "расход", "исходящий перевод", "снятие", "комиссия", "аренда",
 ];
+
+function normalizeFinancialLine(value: string) {
+  return normalizeFinancialCurrencyMarkers(value);
+}
 
 function normalizeSpaces(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
 function normalizeDate(value: string) {
-  const clean = value.trim();
+  const clean = normalizeFinancialDigits(value).trim();
   const iso = clean.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (iso) {
     return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
@@ -98,7 +99,7 @@ function normalizeDate(value: string) {
 }
 
 function parseAmount(value: string) {
-  let clean = value.replace(/\s/g, "").trim();
+  let clean = normalizeFinancialDigits(value).replace(/\s/g, "").trim();
   if (!clean) return null;
   let negative = clean.startsWith("-") || clean.endsWith("-");
   const positive = clean.startsWith("+");
@@ -139,6 +140,10 @@ function currencyCode(value: string | undefined, fullLine: string) {
   if (/£|\bGBP\b/i.test(fullLine)) return "GBP";
   if (/\bCHF\b/i.test(fullLine)) return "CHF";
   if (/\bUSD\b/i.test(fullLine)) return "USD";
+  if (/₽|\bRUB\b/i.test(fullLine)) return "RUB";
+  if (/\bAED\b/i.test(fullLine)) return "AED";
+  if (/\bSAR\b/i.test(fullLine)) return "SAR";
+  if (/\bQAR\b/i.test(fullLine)) return "QAR";
   return "EUR";
 }
 
@@ -146,11 +151,11 @@ function inferDirection(line: string, explicitSign: number) {
   if (explicitSign !== 0) {
     return { sign: explicitSign, assumed: false };
   }
-  const normalized = line.toLowerCase();
-  if (INCOME_TERMS.some((term) => normalized.includes(term))) {
+  const normalized = normalizeFinancialText(line);
+  if (INCOME_TERMS.some((term) => financialTextIncludes(normalized, term))) {
     return { sign: 1, assumed: false };
   }
-  if (EXPENSE_TERMS.some((term) => normalized.includes(term))) {
+  if (EXPENSE_TERMS.some((term) => financialTextIncludes(normalized, term))) {
     return { sign: -1, assumed: false };
   }
   return { sign: -1, assumed: true };
@@ -162,8 +167,8 @@ function descriptionFromLine(line: string, dateText: string, amountText: string)
       .replace(dateText, " ")
       .replace(DATE_PATTERN_GLOBAL, " ")
       .replace(amountText, " ")
-      .replace(/\b(EUR|USD|GBP|CHF|CAD|AUD|JPY|CNY|PLN|SEK|NOK|DKK|CZK|HUF|RON|BGN|TRY|ALL|MKD|RSD|BAM)\b/gi, " ")
-      .replace(/[€$£]/g, " ")
+      .replace(/\b(EUR|USD|GBP|CHF|CAD|AUD|JPY|CNY|PLN|SEK|NOK|DKK|CZK|HUF|RON|BGN|TRY|ALL|MKD|RSD|BAM|RUB|AED|SAR|QAR)\b/gi, " ")
+      .replace(/[€$£₽]/g, " ")
       .replace(/\t/g, " ")
       .replace(/[|]+/g, " ")
       .replace(/^[-–—:;,.\s]+|[-–—:;,.\s]+$/g, " "),
@@ -171,6 +176,7 @@ function descriptionFromLine(line: string, dateText: string, amountText: string)
 }
 
 function parseTransactionCandidate(candidate: string): ParsedPdfTransaction | null {
+  candidate = normalizeFinancialLine(candidate);
   const dateMatch = candidate.match(DATE_PATTERN);
   if (!dateMatch) return null;
   const date = normalizeDate(dateMatch[0]);
@@ -199,7 +205,7 @@ function parseTransactionCandidate(candidate: string): ParsedPdfTransaction | nu
 export function groupPdfTextItemsIntoLines(items: PdfTextItem[]) {
   const positioned: PositionedText[] = items
     .map((item) => ({
-      text: normalizeSpaces(item.str ?? ""),
+      text: normalizeSpaces(normalizeFinancialLine(item.str ?? "")),
       x: Number(item.transform?.[4] ?? 0),
       y: Number(item.transform?.[5] ?? 0),
       width: Number(item.width ?? 0),
@@ -223,14 +229,22 @@ export function groupPdfTextItemsIntoLines(items: PdfTextItem[]) {
   return groups
     .sort((a, b) => b.y - a.y)
     .map((group) => {
-      const sorted = group.items.sort((a, b) => a.x - b.x);
+      const joinedText = group.items.map((item) => item.text).join(" ");
+      const arabicCharacters = (joinedText.match(/[\u0600-\u06FF]/g) ?? []).length;
+      const letterCharacters = (joinedText.match(/\p{L}/gu) ?? []).length;
+      const rtl = letterCharacters > 0 && arabicCharacters / letterCharacters >= 0.35;
+      const sorted = group.items.sort((a, b) => rtl ? b.x - a.x : a.x - b.x);
       let output = "";
-      let previousRight = 0;
+      let previousEdge = 0;
       sorted.forEach((item, index) => {
-        const gap = index === 0 ? 0 : item.x - previousRight;
+        const gap = index === 0
+          ? 0
+          : rtl
+            ? previousEdge - (item.x + item.width)
+            : item.x - previousEdge;
         if (index > 0) output += gap > 16 ? "\t" : " ";
         output += item.text;
-        previousRight = item.x + item.width;
+        previousEdge = rtl ? item.x : item.x + item.width;
       });
       return normalizeSpaces(output.replace(/\t+/g, "\t"));
     })
@@ -241,7 +255,7 @@ export function extractTransactionsFromPdfLines(lines: string[], maxRows = 2000)
   const transactions: ParsedPdfTransaction[] = [];
 
   for (let index = 0; index < lines.length && transactions.length < maxRows; index += 1) {
-    const line = lines[index];
+    const line = normalizeFinancialLine(lines[index]);
     if (!DATE_PATTERN.test(line)) continue;
 
     let candidate = line;

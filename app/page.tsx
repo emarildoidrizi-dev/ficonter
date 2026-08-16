@@ -68,14 +68,12 @@ const landingPreview = {
 
 const availableNow = landingPreview.income - landingPreview.spentSoFar;
 const leftAfterEverythingIsPaid = availableNow - landingPreview.stillToPay;
-const comparisonBars = [
-  { label: "Income", value: landingPreview.income, tone: "income" },
-  { label: "Spent so far", value: landingPreview.spentSoFar, tone: "spent" },
-  { label: "Available now", value: availableNow, tone: "available" },
-  { label: "Still to pay", value: landingPreview.stillToPay, tone: "committed" },
-  { label: "Left after everything is paid", value: leftAfterEverythingIsPaid, tone: "leftAfterPaid" },
+const extraGoalContribution = 400;
+const smartInsightRows = [
+  { icon: TrendingUp, label: "Spending pace", status: "On track" },
+  { icon: ShieldCheck, label: "Upcoming obligations", status: "Covered" },
+  { icon: Target, label: "Savings capacity", status: "Improving" },
 ] as const;
-const comparisonBarMax = Math.max(...comparisonBars.map((item) => item.value));
 const formatEuro = (value: number) => `€${value.toLocaleString("en-US")}`;
 
 export default async function HomePage({
@@ -247,30 +245,30 @@ export default async function HomePage({
                 <div className={styles.healthBar}><i /></div>
                 <p>Cash flow and obligations are stable and improving.</p>
               </article>
-              <article className={styles.cashFlowCard}>
-                <span>Monthly cash flow</span>
-                <div className={styles.flowTotals}>
-                  <div><small>Available now</small><b>{formatEuro(availableNow)}</b></div>
-                  <div><small>Left after everything is paid</small><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
-                </div>
-                <p className={styles.flowCaption}>This month at a glance.</p>
-                <div className={styles.flowBars} aria-label="This month at a glance.">
-                  {comparisonBars.map((item) => {
-                    const height = Math.max(16, Math.round((item.value / comparisonBarMax) * 100));
-
-                    return (
-                      <div className={styles.flowBarColumn} key={item.label}>
-                        <small>{item.label}</small>
-                        <div className={styles.flowBarTrack}>
-                          <i
-                            className={`${styles.flowBarValue} ${styles[`flowBar${item.tone.charAt(0).toUpperCase()}${item.tone.slice(1)}`]}`}
-                            style={{ height: `${height}%` }}
-                          />
-                        </div>
-                        <b>{formatEuro(item.value)}</b>
+              <article className={styles.insightCard}>
+                <span>Smart insight</span>
+                <h4>You are on track this month.</h4>
+                <p>
+                  Current spending and upcoming obligations leave room to strengthen savings without
+                  creating a shortfall.
+                </p>
+                <div className={styles.insightRows}>
+                  {smartInsightRows.map(({ icon: Icon, label, status }) => (
+                    <div className={styles.insightRow} key={label}>
+                      <div className={styles.insightRowLabel}>
+                        <Icon size={18} />
+                        <span>{label}</span>
                       </div>
-                    );
-                  })}
+                      <div className={styles.insightRowStatus}>
+                        <strong>{status}</strong>
+                        <i aria-hidden="true" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.insightHighlight}>
+                  <Sparkles size={18} />
+                  <span>Potential extra goal contribution: {formatEuro(extraGoalContribution)}</span>
                 </div>
               </article>
             </div>

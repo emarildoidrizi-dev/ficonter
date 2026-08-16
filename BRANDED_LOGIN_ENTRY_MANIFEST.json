@@ -5,8 +5,8 @@
   "behavior": {
     "pwa_start_url": "/login?entry=app",
     "landing_login_entry": "/login?entry=brand",
-    "normal_animation_ms": 980,
-    "reduced_motion_ms": 300,
+    "normal_animation_ms": 3200,
+    "reduced_motion_ms": 2200,
     "extra_route_hop": false,
     "full_page_refresh": false,
     "authenticated_login_bypass": "/dashboard"

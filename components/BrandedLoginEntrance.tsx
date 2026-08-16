@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import styles from "./BrandedLoginEntrance.module.css";
 
-const STANDARD_DURATION_MS = 980;
-const REDUCED_MOTION_DURATION_MS = 300;
+const STANDARD_DURATION_MS = 3200;
+const REDUCED_MOTION_DURATION_MS = 2200;
 
 export function BrandedLoginEntrance() {
   const [visible, setVisible] = useState(true);

@@ -9,10 +9,10 @@ Give the FICONTER app a polished brand entrance without slowing or destabilizing
 - The FICONTER emblem scales in with a restrained bounce/settle motion.
 - The FICONTER wordmark and `Financial Control Center` descriptor follow smoothly.
 - A short brand-colored sweep completes the transition.
-- The entrance fades away in under one second and reveals the already-loaded login form.
+- The standard entrance remains visible for about 3.2 seconds, then fades smoothly to reveal the already-loaded login form.
 - No intermediate route, browser refresh, or extra network navigation is introduced.
 - After the animation, the `entry` query is removed with `history.replaceState`, so it does not pollute Back navigation.
-- `prefers-reduced-motion` receives a short non-bouncing alternative.
+- `prefers-reduced-motion` receives a non-bouncing alternative that remains visible for about 2.2 seconds before fading.
 
 ## Session behavior
 - If a user is already authenticated and reaches `/login`, the server redirects directly to `/dashboard` and the entrance is skipped.

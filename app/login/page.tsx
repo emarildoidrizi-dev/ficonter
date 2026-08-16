@@ -1,13 +1,30 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/AuthForm";
 import { Brand } from "@/components/Brand";
+import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
-export default async function LoginPage() {
-  const betaEntry = await isFiconterBetaEntryEnvironment();
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ entry?: string }>;
+}) {
+  const [{ user }, betaEntry, params] = await Promise.all([
+    getCurrentUser(),
+    isFiconterBetaEntryEnvironment(),
+    searchParams,
+  ]);
+
+  if (user) redirect("/dashboard");
+
+  const showEntrance = params.entry === "app" || params.entry === "brand";
 
   return (
-    <main className="auth-shell">
+    <>
+      {showEntrance ? <BrandedLoginEntrance /> : null}
+      <main className="auth-shell">
       <section className="auth-art">
         <Brand />
         <div>
@@ -40,6 +57,7 @@ export default async function LoginPage() {
           </p>
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

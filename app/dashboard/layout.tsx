@@ -67,7 +67,7 @@ export default async function DashboardLayout({
     requireAdmin(),
     getCurrentUser(),
   ]);
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?entry=app");
 
   const [{ data: profile }, subscriptionAccess] = await Promise.all([
     supabase

@@ -3,6 +3,7 @@
 // left by old ZIP-overwrite deployments cannot break the release quality gate.
 export const CURRENT_RELEASE_SUITES = [
   'verify-bill-paid-unpaid-sync.mjs',
+  'verify-branded-login-entry.mjs',
   'verify-contact-support.mjs',
   'verify-credit-card-management.mjs',
   'verify-currency-foundation.mjs',

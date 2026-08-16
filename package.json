@@ -47,7 +47,8 @@
     "verify:v132": "node scripts/verify-surface-opacity-v132.mjs",
     "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
     "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs",
-    "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs"
+    "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs",
+    "verify:branded-login-entry": "node scripts/verify-branded-login-entry.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -1,0 +1,40 @@
+{
+  "feature": "branded-login-entry",
+  "suggested_branch": "feature/branded-login-entry",
+  "base_snapshot": "ficonter-feature-navigation-performance-hardening.zip",
+  "behavior": {
+    "pwa_start_url": "/login?entry=app",
+    "landing_login_entry": "/login?entry=brand",
+    "normal_animation_ms": 980,
+    "reduced_motion_ms": 300,
+    "extra_route_hop": false,
+    "full_page_refresh": false,
+    "authenticated_login_bypass": "/dashboard"
+  },
+  "modified_files": [
+    "app/business/layout.tsx",
+    "app/dashboard/layout.tsx",
+    "app/login/page.tsx",
+    "app/manifest.ts",
+    "app/page.tsx",
+    "lib/i18n/runtimeTranslator.ts",
+    "package.json",
+    "scripts/release-suite-manifest.mjs"
+  ],
+  "added_files": [
+    "components/BrandedLoginEntrance.tsx",
+    "components/BrandedLoginEntrance.module.css",
+    "scripts/verify-branded-login-entry.mjs",
+    "BRANDED_LOGIN_ENTRY_V1.md",
+    "COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt",
+    "BRANDED_LOGIN_ENTRY.patch",
+    "BRANDED_LOGIN_ENTRY_MANIFEST.json"
+  ],
+  "validation": {
+    "branded_entry_checks": "18/18",
+    "release_candidate_suites": "68/68",
+    "localization_uncovered_strings": 0,
+    "modified_ts_tsx_transpile": "pass",
+    "css_structure": "pass"
+  }
+}

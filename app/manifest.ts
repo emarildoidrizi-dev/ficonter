@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Ficonter",
     short_name: "Ficonter",
     description: "Your private financial command center.",
-    start_url: "/dashboard",
+    start_url: "/login?entry=app",
     scope: "/",
     display: "standalone",
     background_color: "#0d1512",

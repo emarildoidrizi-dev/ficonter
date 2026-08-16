@@ -1,3 +1,4 @@
+Ignoring retired/unlisted verification scripts: verify-instant-business-switching.mjs, verify-navigation-performance-hardening.mjs
 
 ===== scripts/verify-bill-paid-unpaid-sync.mjs =====
 PASS  BillsManager prefers the atomic mark_bill_unpaid RPC
@@ -17,6 +18,28 @@ PASS  The RPC is scoped to the authenticated customer
 PASS  PostgREST schema cache is refreshed after SQL deployment
 
 Bill paid/unpaid synchronization verification passed.
+
+===== scripts/verify-branded-login-entry.mjs =====
+PASS  PWA opens the login route directly
+PASS  Login page renders the branded entrance
+PASS  App and brand entry intents are explicit
+PASS  Authenticated users bypass login and continue to dashboard
+PASS  Desktop protected shell uses branded login recovery
+PASS  Business protected shell uses branded login recovery
+PASS  Public landing login links request the entrance
+PASS  Entrance uses the canonical FICONTER mark
+PASS  Entrance identifies FICONTER Financial Control Center
+PASS  Entrance is a client visual layer without a route hop
+PASS  Entrance query is cleaned without adding browser history
+PASS  Normal entrance stays under one second
+PASS  Reduced-motion timing is short
+PASS  Bounce/settle animation is restrained
+PASS  Entrance fades instead of disappearing abruptly
+PASS  Reduced-motion accessibility is present
+PASS  Entrance sits above the already-rendered login form
+PASS  Brand animation is responsive on phones
+
+Branded login entry verification passed (18/18).
 
 ===== scripts/verify-contact-support.mjs =====
 Contact support verification passed (18 checks).
@@ -148,6 +171,43 @@ All Debt <-> Transactions synchronization checks passed.
 
 29 Effortless Entry checks passed.
 
+===== scripts/verify-explicit-save-governance-v123.mjs =====
+PASS - Settings keeps committed preference snapshot
+PASS - Settings discards drafts when section changes
+PASS - Theme selection previews immediately without persistence
+PASS - Density selection no longer applies globally before Save
+PASS - Remember-device toggle is draft only
+PASS - Remember-device preference has explicit Save
+PASS - Language is the deliberate immediate-confirm exception
+PASS - Language picker has no separate Save action
+PASS - Language selection persists through the stable provider
+PASS - Language is applied only after successful persistence
+PASS - Monthly Planner start balance has explicit Save
+PASS - Monthly Planner no longer saves start balance on blur
+PASS - Planner breakdown view is not auto-persisted
+PASS - Effortless Entry mode uses draft mode
+PASS - Effortless Entry mode has explicit Save
+PASS - Support status uses draft select
+PASS - Support status requires explicit Save
+PASS - Business switching is the deliberate immediate-action exception
+PASS - Desktop business selector switches directly with no Apply draft
+PASS - Mobile business selectors switch directly with no Apply draft
+PASS - Business switch failure rolls the UI back
+PASS - Business switch uses client-side RSC reconciliation, not browser reload
+PASS - No direct support status persistence from select change
+
+23/23 explicit-save governance checks passed.
+
+===== scripts/verify-export-branding-v126.mjs =====
+✓ PDF exports reference the current FICONTER emblem asset.
+✓ PDF page headers render the current emblem image.
+✓ PDF exports use the current FICONTER wordmark.
+✓ PDF exports use the current brand descriptor.
+✓ Legacy synthetic circle-F PDF emblem has been removed.
+✓ Primary current emblem assets are synchronized.
+✓ PWA static cache is versioned so stale brand assets are replaced.
+Export branding V1.26 verification passed.
+
 ===== scripts/verify-final-release-hygiene.mjs =====
 PASS - No stale baseline_restore source snapshot is packaged
 PASS - No stale upload-to-repository source snapshot is packaged
@@ -166,7 +226,7 @@ PASS - No 'as any' escape hatches remain in app source
 PASS - No local TypeScript build cache is packaged
 PASS - All local imports resolve
 
-16/16 final release hygiene checks passed across 219 source files.
+16/16 final release hygiene checks passed across 232 source files.
 
 ===== scripts/verify-financial-consistency.mjs =====
 Financial consistency verification passed: 35 semantic and migration checks.
@@ -189,29 +249,57 @@ FICONTER global theme governance V1.18: 26 checks passed.
 ===== scripts/verify-interface-themes.mjs =====
 FICONTER interface themes: 18 checks passed.
 
-===== scripts/verify-language-speed-v117.mjs =====
-PASS - language selector no longer blocks on saving state
-PASS - language trigger is not disabled during account persistence
-PASS - language selection closes menu immediately
-PASS - account persistence runs without awaiting before UI response
-PASS - stale language-save messages are guarded
-PASS - document translation is deferred to next frame
-PASS - account language persistence is serialized
-PASS - language trigger uses manipulation touch action
-PASS - expensive menu backdrop blur removed
+===== scripts/verify-instant-theme-preview-v134.mjs =====
+PASS - a dedicated live appearance preview function exists
+PASS - theme DOM mutation is centralized in one synchronous function
+PASS - live preview updates the global theme attribute directly
+PASS - live preview resolves light/dark system state in the same DOM commit
+PASS - preview uses the same global DOM theme source of truth
+PASS - preview does not persist into localStorage
+PASS - preview does not wait for Supabase persistence
+PASS - theme click applies the live preview immediately
+PASS - DOM theme switches before the React state rerender
+PASS - theme click requires no refresh or navigation
+PASS - leaving Appearance restores the last saved theme when the preview was not saved
+PASS - leaving Settings entirely restores the last saved appearance
+PASS - Save appearance commits the preview and updates the saved snapshot
+PASS - typography is controlled by the same data-theme attribute as the palette
+PASS - font family has no transition delay
+PASS - theme palette is also rooted in data-theme
+PASS - PWA cache is versioned for the instant preview release
+FICONTER V1.34 instant theme + typography preview verification passed.
 
-9/9 checks passed.
+===== scripts/verify-layout-density-v124.mjs =====
+PASS - comfortable page padding is materially spacious
+PASS - compact page padding is materially tight
+PASS - comfortable cards use larger padding
+PASS - compact cards use smaller padding
+PASS - comfortable controls are larger
+PASS - compact controls are smaller
+PASS - density governs generic panels and KPI cards
+PASS - comfortable card radius is distinct
+PASS - compact card radius is distinct
+PASS - phone/tablet comfortable padding is density-aware
+PASS - phone/tablet compact padding is density-aware
+PASS - mobile compact controls retain practical touch height
+PASS - Settings comfortable mode is visibly wider
+PASS - Settings compact mode is visibly tighter
+PASS - density preview communicates extra compact content
+PASS - density selection remains draft-only
+PASS - density copy explains meaningful compact difference
+
+17/17 FICONTER V1.24 layout-density checks passed.
 
 ===== scripts/verify-localization.mjs =====
 Localization verification passed.
 - Languages: en, de, es, sq, ar, pt, it, ru
-- Full static UI catalog entries: 2468
-- Landing UI catalog entries: 125
+- Full static UI catalog entries: 2482
+- Landing UI catalog entries: 130
 - Wealth runtime catalog entries: 188
 - Runtime template entries: 147
-- Static interface strings scanned: 2615
+- Static interface strings scanned: 2636
 - Wealth Engine runtime strings scanned: 489
-- Dynamic interface templates scanned: 122
+- Dynamic interface templates scanned: 123
 - Uncovered static interface strings: 0
 - Uncovered Wealth Engine runtime strings: 0
 - Uncovered dynamic interface templates: 0
@@ -294,6 +382,29 @@ FICONTER mobile UI Phase 6: 24 full-shell/UI checks passed.
 ===== scripts/verify-mobile-unified-v1.mjs =====
 FICONTER unified mobile UI V1: 17 consolidation checks passed.
 
+===== scripts/verify-navigation-theme-v129.mjs =====
+PASS  V1.29 visibility layer loads after global theme governance
+PASS  Navigation warms critical routes before interaction
+PASS  Secondary modules are warmed during browser idle time
+PASS  Background prefetch respects data saver and slow networks
+PASS  Instant routes do not flash a loading bar
+PASS  Personal desktop links allow Next.js route prefetch
+PASS  Business desktop links allow Next.js route prefetch
+PASS  Runtime contrast guard also protects phone/tablet content
+PASS  Contrast guard no longer rescans on every character mutation
+PASS  Theme changes trigger a full contrast re-audit
+PASS  Banners, bars, cards, panels and drawers inherit readable theme foreground
+PASS  Financial values and numbers use the primary theme foreground
+PASS  Menus and dialogs receive theme-aware opaque-enough surfaces
+PASS  Inputs, placeholders and select options follow semantic theme colors
+PASS  Interactive icons inherit the foreground of their controls
+PASS  Base light theme secondary/faint text tokens were strengthened
+PASS  Coastal light theme faint text meets the strengthened visibility baseline
+PASS  Ocean and Sandstone faint text use strengthened palette values
+PASS  PWA cache generation is bumped so installed apps receive V1.29 assets
+
+19/19 FICONTER V1.29 navigation and theme checks passed.
+
 ===== scripts/verify-monthly-spending-budget.mjs =====
 FICONTER synchronized monthly spending budget verification passed: 9 checks.
 
@@ -317,13 +428,16 @@ PASS  Planner excludes linked bill transactions from expenses
 PASS  Bills use the authenticated cached exchange-rate endpoint
 PASS  Server dashboard auth is request-cached
 PASS  Admin role lookup is request-cached
+PASS  Historical currency date dependencies are content-stable
+PASS  Initial currency bootstrap cannot race client navigation with router.refresh
+PASS  Desktop sign-out uses a deterministic hard exit from the dashboard shell
 PASS  Dashboard pages reuse the request-cached authenticated client
 
-20 performance and accuracy checks passed.
+23 performance and accuracy checks passed.
 
 ===== scripts/verify-phase1-qa.mjs =====
 Phase 1 QA verification: 71 checks passed.
-  PASS  221 TypeScript/TSX files passed syntax transpilation.
+  PASS  234 TypeScript/TSX files passed syntax transpilation.
   PASS  No obsolete predecessor branding remains in source or filenames.
   PASS  SQL migration defines record_goal_investment.
   PASS  SQL migration defines reverse_goal_investment.
@@ -396,7 +510,7 @@ Phase 1 QA verification: 71 checks passed.
   PASS  The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health and Wealth Score sources of truth.
 
 ===== scripts/verify-phase1-security.mjs =====
-Phase 1 security verification: 76 checks passed.
+Phase 1 security verification: 86 checks passed.
   PASS  Account deletion requires same-origin, authentication, and super-admin protection.
   PASS  Admin directory endpoint requires an authenticated administrator.
   PASS  Admin mutation endpoint enforces origin, role, and identifier validation.
@@ -414,6 +528,7 @@ Phase 1 security verification: 76 checks passed.
   PASS  components/BaseCurrencyBootstrap.tsx does not reference privileged Supabase credentials.
   PASS  components/BetaDomainAccessGate.tsx does not reference privileged Supabase credentials.
   PASS  components/BillsManager.tsx does not reference privileged Supabase credentials.
+  PASS  components/BrandedLoginEntrance.tsx does not reference privileged Supabase credentials.
   PASS  components/BusinessAdministration.tsx does not reference privileged Supabase credentials.
   PASS  components/BusinessCostControl.tsx does not reference privileged Supabase credentials.
   PASS  components/BusinessInventory.tsx does not reference privileged Supabase credentials.
@@ -439,6 +554,7 @@ Phase 1 security verification: 76 checks passed.
   PASS  components/EmergencyFundIntelligence.tsx does not reference privileged Supabase credentials.
   PASS  components/FiconterNativeAppChrome.tsx does not reference privileged Supabase credentials.
   PASS  components/FinancialGps.tsx does not reference privileged Supabase credentials.
+  PASS  components/FinancialHealthScore.tsx does not reference privileged Supabase credentials.
   PASS  components/FinancialIndependence.tsx does not reference privileged Supabase credentials.
   PASS  components/FinancialSetupGuide.tsx does not reference privileged Supabase credentials.
   PASS  components/GlobalLanguageControl.tsx does not reference privileged Supabase credentials.
@@ -458,10 +574,13 @@ Phase 1 security verification: 76 checks passed.
   PASS  components/PasswordInput.tsx does not reference privileged Supabase credentials.
   PASS  components/PayPalSubscriptionCheckout.tsx does not reference privileged Supabase credentials.
   PASS  components/PlatformUsageDirectory.tsx does not reference privileged Supabase credentials.
+  PASS  components/PublicPreviewGreeting.tsx does not reference privileged Supabase credentials.
   PASS  components/RealtimeRefreshBridge.tsx does not reference privileged Supabase credentials.
   PASS  components/SavingsIntelligence.tsx does not reference privileged Supabase credentials.
+  PASS  components/SettingsLanguageCleanup.tsx does not reference privileged Supabase credentials.
   PASS  components/SettingsWorkspace.tsx does not reference privileged Supabase credentials.
   PASS  components/Sidebar.tsx does not reference privileged Supabase credentials.
+  PASS  components/SignOutButton.tsx does not reference privileged Supabase credentials.
   PASS  components/SupportConversations.tsx does not reference privileged Supabase credentials.
   PASS  components/SupportDeleteDialog.tsx does not reference privileged Supabase credentials.
   PASS  components/SupportInbox.tsx does not reference privileged Supabase credentials.
@@ -472,7 +591,12 @@ Phase 1 security verification: 76 checks passed.
   PASS  components/UpdatePasswordForm.tsx does not reference privileged Supabase credentials.
   PASS  components/UsageHeartbeat.tsx does not reference privileged Supabase credentials.
   PASS  components/WealthScore.tsx does not reference privileged Supabase credentials.
+  PASS  components/WorkspaceRouteError.tsx does not reference privileged Supabase credentials.
+  PASS  components/WorkspaceSwitcher.tsx does not reference privileged Supabase credentials.
   PASS  components/useBaseCurrencySourceData.ts does not reference privileged Supabase credentials.
+  PASS  components/useInstantBusinessSwitch.ts does not reference privileged Supabase credentials.
+  PASS  app/business/error.tsx does not reference privileged Supabase credentials.
+  PASS  app/dashboard/error.tsx does not reference privileged Supabase credentials.
 
 ===== scripts/verify-phase2-ai-insights.mjs =====
 Phase 2 Smart Insights verification passed (37 checks).
@@ -770,6 +894,9 @@ PASS Documents navigation stays intact
 PASS Pending email UI is styled
 PASS 11 profile identity checks
 
+===== scripts/verify-profile-routing-v131.mjs =====
+FICONTER V1.31 Profile routing verification passed (9/9).
+
 ===== scripts/verify-read-receipts-document-toast.mjs =====
 PASS shared support-read event
 PASS customer read event
@@ -789,17 +916,17 @@ PASS - phone replacement CSS is device-class scoped
 PASS - tablet keeps settings navigation visible
 PASS - tablet keeps settings detail panel visible
 PASS - legacy second transition stylesheet stays unloaded
-PASS - Profile is removed from Settings section list
-PASS - Profile is not accepted as a Settings section id
-PASS - Settings defaults to Account & security
-PASS - legacy Settings profile URL redirects to dedicated Profile page
-PASS - Settings copy no longer advertises profile management
-PASS - Profile page links to account Settings without claiming Settings owns Profile
+PASS - Profile is restored to the Settings section list
+PASS - Profile is accepted as a Settings section id
+PASS - Settings defaults to Account & security when no section is requested
+PASS - Settings profile URL stays inside Settings
+PASS - Settings copy includes profile management again
+PASS - Legacy Profile route permanently redirects into Settings profile preferences
 
 13/13 checks passed.
 
 ===== scripts/verify-scene-wallpapers.mjs =====
-FICONTER photographic wallpaper verification passed (3 legacy real scenes + 3 paid dayparts + fixed Free fallback).
+FICONTER photographic wallpaper verification passed (3 legacy real scenes + 3 protected dayparts + fixed customer fallback).
 
 ===== scripts/verify-settings-save-feedback.mjs =====
 Settings local save-feedback verification passed.
@@ -825,6 +952,32 @@ PASS - Tablet Settings contract remains present
 
 12/12 checks passed.
 
+===== scripts/verify-surface-opacity-v132.mjs =====
+PASS - surface opacity has a safe 55% minimum
+PASS - surface opacity caps at 100%
+PASS - surface opacity defaults to the current fully solid presentation
+PASS - surface opacity is normalized centrally
+PASS - Settings preference model stores surface opacity
+PASS - Appearance exposes a compact 55–100% range control
+PASS - slider edits only the local Settings draft
+PASS - UI explains draft-only opacity behavior
+PASS - surface opacity commits through the existing explicit Save appearance action
+PASS - committed surface opacity persists locally after Save
+PASS - committed surface opacity updates the global semantic surface variable
+PASS - authenticated interface bootstrap accepts stored opacity
+PASS - authenticated bootstrap restores and synchronizes opacity
+PASS - Personal workspace hydrates saved opacity from account metadata
+PASS - Business workspace hydrates saved opacity from account metadata
+PASS - pre-hydration script limits saved opacity to authenticated workspaces
+PASS - base semantic surfaces preserve solid colors and mix transparency separately
+PASS - premium theme surfaces are opacity-aware
+PASS - coastal workspace surfaces are opacity-aware
+PASS - opacity is never applied to containers, so text/icons/logos remain fully opaque
+PASS - Appearance includes an isolated surface preview without changing the live platform
+PASS - account PDF export records the saved opacity preference
+
+22/22 FICONTER V1.32 surface-opacity checks passed.
+
 ===== scripts/verify-sidebar-atmosphere-removal.mjs =====
 Sidebar atmosphere removal verification passed.
 
@@ -844,10 +997,36 @@ PASS: Customer state updater does not re-read an optional payload
 Support selected-state verification passed (6 checks).
 
 ===== scripts/verify-theme-contrast-and-budget-use.mjs =====
-FICONTER theme contrast and monthly budget use: 18 checks passed.
+FICONTER theme contrast and monthly budget use: 23 checks passed.
+
+===== scripts/verify-theme-typography-v133.mjs =====
+PASS - theme typography stylesheet exists
+PASS - theme typography stylesheet is loaded globally
+PASS - light has an explicit typography profile
+PASS - dark has an explicit typography profile
+PASS - midnight has an explicit typography profile
+PASS - emerald has an explicit typography profile
+PASS - bordeaux has an explicit typography profile
+PASS - ocean has an explicit typography profile
+PASS - sandstone has an explicit typography profile
+PASS - system theme typography follows the resolved light/dark theme
+PASS - interface font token is defined
+PASS - display font token is defined
+PASS - numeric font token is defined
+PASS - controls and body consume the interface font token
+PASS - headings consume the display font token
+PASS - financial figures consume the numeric font token
+PASS - financial figures retain tabular numeric alignment
+PASS - font family is not delayed by an animation
+PASS - typography uses the existing theme source of truth instead of a second state
+PASS - PWA cache is versioned for the typography release or a newer theme runtime
+FICONTER V1.33 theme-synchronised typography verification passed.
 
 ===== scripts/verify-transaction-bulk-actions.mjs =====
 Transaction bulk-action verification passed (19 checks).
+
+===== scripts/verify-wallpaper-role-governance-v122.mjs =====
+FICONTER wallpaper role governance V1.22 passed (17/17).
 
 ===== scripts/verify-wealth-empty-state.mjs =====
 PASS Financial Health has zero-data and incomplete-profile states
@@ -866,4 +1045,4 @@ PASS Primary confirmation dialogs expose Enter confirmation markers
 
 13 empty-state and keyboard checks passed.
 
-FICONTER Release Candidate verification passed (59 current suites).
+FICONTER Release Candidate verification passed (68 current suites).

@@ -1,0 +1,210 @@
+.entrance {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(217, 194, 141, 0.14), transparent 31%),
+    linear-gradient(145deg, #0d1713 0%, #13231b 52%, #0b1511 100%);
+  opacity: 1;
+  animation: entranceFade 220ms cubic-bezier(0.22, 1, 0.36, 1) 720ms forwards;
+}
+
+.ambientGlow {
+  position: absolute;
+  width: min(58vw, 560px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(166, 209, 194, 0.12), rgba(166, 209, 194, 0) 68%);
+  filter: blur(10px);
+  opacity: 0;
+  transform: scale(0.72);
+  animation: glowIn 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.brandStage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 36px;
+  text-align: center;
+}
+
+.markHalo {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(241, 215, 155, 0.18);
+  border-radius: 31px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow:
+    0 24px 72px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: translateY(14px) scale(0.72);
+  animation: emblemArrival 580ms cubic-bezier(0.16, 1, 0.3, 1) 40ms forwards;
+}
+
+.mark {
+  width: 78px;
+  height: 78px;
+  display: block;
+  border-radius: 23px;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.25));
+}
+
+.identity {
+  display: grid;
+  gap: 7px;
+  opacity: 0;
+  transform: translateY(9px);
+  animation: identityIn 360ms cubic-bezier(0.22, 1, 0.36, 1) 250ms forwards;
+}
+
+.wordmark {
+  color: #f1d79b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 4vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  line-height: 1;
+}
+
+.descriptor {
+  color: #9bd1c6;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.entryLine {
+  width: 104px;
+  height: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  opacity: 0;
+  animation: lineReveal 170ms ease 350ms forwards;
+}
+
+.entryLine span {
+  display: block;
+  width: 48%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(241, 215, 155, 0), #f1d79b, rgba(241, 215, 155, 0));
+  transform: translateX(-120%);
+  animation: lineSweep 440ms cubic-bezier(0.4, 0, 0.2, 1) 380ms forwards;
+}
+
+@keyframes emblemArrival {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.72);
+  }
+  52% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.075);
+  }
+  76% {
+    opacity: 1;
+    transform: translateY(1px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes identityIn {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lineReveal {
+  to { opacity: 1; }
+}
+
+@keyframes lineSweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(245%); }
+}
+
+@keyframes glowIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  55% { opacity: 1; }
+  100% {
+    opacity: 0.62;
+    transform: scale(1);
+  }
+}
+
+@keyframes entranceFade {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 640px) {
+  .brandStage { gap: 16px; }
+
+  .markHalo {
+    width: 102px;
+    height: 102px;
+    border-radius: 29px;
+  }
+
+  .mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 21px;
+  }
+
+  .descriptor { font-size: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrance {
+    animation: entranceFade 80ms linear 190ms forwards;
+  }
+
+  .ambientGlow {
+    opacity: 0.5;
+    transform: none;
+    animation: none;
+  }
+
+  .markHalo,
+  .identity,
+  .entryLine {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .entryLine span {
+    transform: none;
+    width: 100%;
+    opacity: 0.55;
+    animation: none;
+  }
+}

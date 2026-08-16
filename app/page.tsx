@@ -84,7 +84,7 @@ export default async function HomePage({
               <a href="#platform">Platform</a>
               <a href="#for-you">Personal & Business</a>
               <a href="#privacy">Privacy</a>
-              <Link className={styles.loginLink} href="/login">Log in</Link>
+              <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
               <Link className={styles.headerCta} href="/register">
                 Start free
               </Link>
@@ -371,7 +371,7 @@ export default async function HomePage({
           <Link className={styles.primaryButton} href="/register">
             Create your account <ArrowRight size={18} />
           </Link>
-          <Link className={styles.secondaryButton} href="/login">Log in</Link>
+          <Link className={styles.secondaryButton} href="/login?entry=brand">Log in</Link>
         </div>
       </section>
 
@@ -381,7 +381,7 @@ export default async function HomePage({
         <div>
           <a href="#platform">Platform</a>
           <a href="#privacy">Privacy</a>
-          <Link href="/login">Log in</Link>
+          <Link href="/login?entry=brand">Log in</Link>
         </div>
       </footer>
     </main>

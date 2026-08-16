@@ -1,0 +1,484 @@
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/business/layout.tsx /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/business/layout.tsx
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/business/layout.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/business/layout.tsx	2026-08-16 08:50:44.848810975 +0000
+@@ -69,7 +69,7 @@
+     requireAdmin(),
+   ]);
+ 
+-  if (!user) redirect("/login");
++  if (!user) redirect("/login?entry=app");
+ 
+   const subscriptionAccess = await getCurrentSubscriptionAccess();
+   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/dashboard/layout.tsx /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/dashboard/layout.tsx
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/dashboard/layout.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/dashboard/layout.tsx	2026-08-16 08:50:44.848532702 +0000
+@@ -67,7 +67,7 @@
+     requireAdmin(),
+     getCurrentUser(),
+   ]);
+-  if (!user) redirect("/login");
++  if (!user) redirect("/login?entry=app");
+ 
+   const [{ data: profile }, subscriptionAccess] = await Promise.all([
+     supabase
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/login/page.tsx /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/login/page.tsx
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/login/page.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/login/page.tsx	2026-08-16 08:50:22.247763079 +0000
+@@ -1,13 +1,30 @@
+ import Link from "next/link";
++import { redirect } from "next/navigation";
+ import { AuthForm } from "@/components/AuthForm";
+ import { Brand } from "@/components/Brand";
++import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
+ import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
++import { getCurrentUser } from "@/lib/auth/currentUser";
+ 
+-export default async function LoginPage() {
+-  const betaEntry = await isFiconterBetaEntryEnvironment();
++export default async function LoginPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ entry?: string }>;
++}) {
++  const [{ user }, betaEntry, params] = await Promise.all([
++    getCurrentUser(),
++    isFiconterBetaEntryEnvironment(),
++    searchParams,
++  ]);
++
++  if (user) redirect("/dashboard");
++
++  const showEntrance = params.entry === "app" || params.entry === "brand";
+ 
+   return (
+-    <main className="auth-shell">
++    <>
++      {showEntrance ? <BrandedLoginEntrance /> : null}
++      <main className="auth-shell">
+       <section className="auth-art">
+         <Brand />
+         <div>
+@@ -40,6 +57,7 @@
+           </p>
+         </div>
+       </section>
+-    </main>
++      </main>
++    </>
+   );
+ }
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/manifest.ts /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/manifest.ts
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/manifest.ts	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/manifest.ts	2026-08-16 08:50:22.247967653 +0000
+@@ -5,7 +5,7 @@
+     name: "Ficonter",
+     short_name: "Ficonter",
+     description: "Your private financial command center.",
+-    start_url: "/dashboard",
++    start_url: "/login?entry=app",
+     scope: "/",
+     display: "standalone",
+     background_color: "#0d1512",
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/page.tsx /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/page.tsx
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/app/page.tsx	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/app/page.tsx	2026-08-16 08:50:22.248068843 +0000
+@@ -84,7 +84,7 @@
+               <a href="#platform">Platform</a>
+               <a href="#for-you">Personal & Business</a>
+               <a href="#privacy">Privacy</a>
+-              <Link className={styles.loginLink} href="/login">Log in</Link>
++              <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
+               <Link className={styles.headerCta} href="/register">
+                 Start free
+               </Link>
+@@ -371,7 +371,7 @@
+           <Link className={styles.primaryButton} href="/register">
+             Create your account <ArrowRight size={18} />
+           </Link>
+-          <Link className={styles.secondaryButton} href="/login">Log in</Link>
++          <Link className={styles.secondaryButton} href="/login?entry=brand">Log in</Link>
+         </div>
+       </section>
+ 
+@@ -381,7 +381,7 @@
+         <div>
+           <a href="#platform">Platform</a>
+           <a href="#privacy">Privacy</a>
+-          <Link href="/login">Log in</Link>
++          <Link href="/login?entry=brand">Log in</Link>
+         </div>
+       </footer>
+     </main>
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.module.css /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.module.css
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.module.css	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.module.css	2026-08-16 08:51:08.202888282 +0000
+@@ -0,0 +1,210 @@
++.entrance {
++  position: fixed;
++  inset: 0;
++  z-index: 10000;
++  display: grid;
++  place-items: center;
++  overflow: hidden;
++  background:
++    radial-gradient(circle at 50% 42%, rgba(217, 194, 141, 0.14), transparent 31%),
++    linear-gradient(145deg, #0d1713 0%, #13231b 52%, #0b1511 100%);
++  opacity: 1;
++  animation: entranceFade 220ms cubic-bezier(0.22, 1, 0.36, 1) 720ms forwards;
++}
++
++.ambientGlow {
++  position: absolute;
++  width: min(58vw, 560px);
++  aspect-ratio: 1;
++  border-radius: 50%;
++  background: radial-gradient(circle, rgba(166, 209, 194, 0.12), rgba(166, 209, 194, 0) 68%);
++  filter: blur(10px);
++  opacity: 0;
++  transform: scale(0.72);
++  animation: glowIn 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
++}
++
++.brandStage {
++  position: relative;
++  z-index: 1;
++  display: grid;
++  justify-items: center;
++  gap: 18px;
++  padding: 36px;
++  text-align: center;
++}
++
++.markHalo {
++  width: 112px;
++  height: 112px;
++  display: grid;
++  place-items: center;
++  border: 1px solid rgba(241, 215, 155, 0.18);
++  border-radius: 31px;
++  background: rgba(255, 255, 255, 0.045);
++  box-shadow:
++    0 24px 72px rgba(0, 0, 0, 0.28),
++    inset 0 1px 0 rgba(255, 255, 255, 0.08);
++  opacity: 0;
++  transform: translateY(14px) scale(0.72);
++  animation: emblemArrival 580ms cubic-bezier(0.16, 1, 0.3, 1) 40ms forwards;
++}
++
++.mark {
++  width: 78px;
++  height: 78px;
++  display: block;
++  border-radius: 23px;
++  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.25));
++}
++
++.identity {
++  display: grid;
++  gap: 7px;
++  opacity: 0;
++  transform: translateY(9px);
++  animation: identityIn 360ms cubic-bezier(0.22, 1, 0.36, 1) 250ms forwards;
++}
++
++.wordmark {
++  color: #f1d79b;
++  font-family: Georgia, "Times New Roman", serif;
++  font-size: clamp(25px, 4vw, 32px);
++  font-weight: 700;
++  letter-spacing: 0.11em;
++  line-height: 1;
++}
++
++.descriptor {
++  color: #9bd1c6;
++  font-family: Inter, Arial, sans-serif;
++  font-size: 9px;
++  font-weight: 800;
++  letter-spacing: 0.2em;
++  line-height: 1;
++  text-transform: uppercase;
++}
++
++.entryLine {
++  width: 104px;
++  height: 2px;
++  margin-top: 3px;
++  overflow: hidden;
++  border-radius: 999px;
++  background: rgba(255, 255, 255, 0.09);
++  opacity: 0;
++  animation: lineReveal 170ms ease 350ms forwards;
++}
++
++.entryLine span {
++  display: block;
++  width: 48%;
++  height: 100%;
++  border-radius: inherit;
++  background: linear-gradient(90deg, rgba(241, 215, 155, 0), #f1d79b, rgba(241, 215, 155, 0));
++  transform: translateX(-120%);
++  animation: lineSweep 440ms cubic-bezier(0.4, 0, 0.2, 1) 380ms forwards;
++}
++
++@keyframes emblemArrival {
++  0% {
++    opacity: 0;
++    transform: translateY(14px) scale(0.72);
++  }
++  52% {
++    opacity: 1;
++    transform: translateY(-5px) scale(1.075);
++  }
++  76% {
++    opacity: 1;
++    transform: translateY(1px) scale(0.985);
++  }
++  100% {
++    opacity: 1;
++    transform: translateY(0) scale(1);
++  }
++}
++
++@keyframes identityIn {
++  from {
++    opacity: 0;
++    transform: translateY(9px);
++  }
++  to {
++    opacity: 1;
++    transform: translateY(0);
++  }
++}
++
++@keyframes lineReveal {
++  to { opacity: 1; }
++}
++
++@keyframes lineSweep {
++  0% { transform: translateX(-120%); }
++  100% { transform: translateX(245%); }
++}
++
++@keyframes glowIn {
++  0% {
++    opacity: 0;
++    transform: scale(0.72);
++  }
++  55% { opacity: 1; }
++  100% {
++    opacity: 0.62;
++    transform: scale(1);
++  }
++}
++
++@keyframes entranceFade {
++  to {
++    opacity: 0;
++    visibility: hidden;
++  }
++}
++
++@media (max-width: 640px) {
++  .brandStage { gap: 16px; }
++
++  .markHalo {
++    width: 102px;
++    height: 102px;
++    border-radius: 29px;
++  }
++
++  .mark {
++    width: 72px;
++    height: 72px;
++    border-radius: 21px;
++  }
++
++  .descriptor { font-size: 8px; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .entrance {
++    animation: entranceFade 80ms linear 190ms forwards;
++  }
++
++  .ambientGlow {
++    opacity: 0.5;
++    transform: none;
++    animation: none;
++  }
++
++  .markHalo,
++  .identity,
++  .entryLine {
++    opacity: 1;
++    transform: none;
++    animation: none;
++  }
++
++  .entryLine span {
++    transform: none;
++    width: 100%;
++    opacity: 0.55;
++    animation: none;
++  }
++}
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.tsx /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.tsx
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/components/BrandedLoginEntrance.tsx	2026-08-16 08:51:08.202702897 +0000
+@@ -0,0 +1,66 @@
++"use client";
++
++import { useEffect, useState } from "react";
++import styles from "./BrandedLoginEntrance.module.css";
++
++const STANDARD_DURATION_MS = 980;
++const REDUCED_MOTION_DURATION_MS = 300;
++
++export function BrandedLoginEntrance() {
++  const [visible, setVisible] = useState(true);
++
++  useEffect(() => {
++    const reduceMotion = window.matchMedia(
++      "(prefers-reduced-motion: reduce)",
++    ).matches;
++    const duration = reduceMotion
++      ? REDUCED_MOTION_DURATION_MS
++      : STANDARD_DURATION_MS;
++
++    const timer = window.setTimeout(() => {
++      setVisible(false);
++
++      const url = new URL(window.location.href);
++      if (url.pathname === "/login" && url.searchParams.has("entry")) {
++        url.searchParams.delete("entry");
++        const next = `${url.pathname}${url.search}${url.hash}`;
++        window.history.replaceState(window.history.state, "", next);
++      }
++    }, duration);
++
++    return () => window.clearTimeout(timer);
++  }, []);
++
++  if (!visible) return null;
++
++  return (
++    <div
++      className={styles.entrance}
++      role="status"
++      aria-live="polite"
++      aria-label="Opening FICONTER secure login"
++    >
++      <div className={styles.ambientGlow} aria-hidden="true" />
++      <div className={styles.brandStage}>
++        <div className={styles.markHalo} aria-hidden="true">
++          <img
++            className={styles.mark}
++            src="/ficonter-mark.svg"
++            alt=""
++            width={92}
++            height={92}
++          />
++        </div>
++
++        <div className={styles.identity} aria-hidden="true">
++          <div className={styles.wordmark}>FICONTER</div>
++          <div className={styles.descriptor}>Financial Control Center</div>
++        </div>
++
++        <div className={styles.entryLine} aria-hidden="true">
++          <span />
++        </div>
++      </div>
++    </div>
++  );
++}
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/lib/i18n/runtimeTranslator.ts /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/lib/i18n/runtimeTranslator.ts
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/lib/i18n/runtimeTranslator.ts	2026-08-16 07:59:28.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/lib/i18n/runtimeTranslator.ts	2026-08-16 08:52:10.825057966 +0000
+@@ -28,6 +28,7 @@
+  * dates, percentages or live financial values.
+  */
+ const RUNTIME_TRANSLATIONS: Record<string, TranslationRow> = {
++  "Opening FICONTER secure login": row("Sicheren FICONTER-Login öffnen", "Abriendo el acceso seguro de FICONTER", "Po hapet hyrja e sigurt e FICONTER", "جارٍ فتح تسجيل الدخول الآمن إلى FICONTER", "A abrir o início de sessão seguro da FICONTER", "Apertura dell’accesso sicuro a FICONTER", "Открывается безопасный вход в FICONTER"),
+   "Navigation recovery": row("Navigationswiederherstellung", "Recuperación de navegación", "Rikuperimi i navigimit", "استعادة التنقل", "Recuperação da navegação", "Ripristino della navigazione", "Восстановление навигации"),
+   "This section could not open cleanly.": row("Dieser Bereich konnte nicht ordnungsgemäß geöffnet werden.", "Esta sección no se pudo abrir correctamente.", "Ky seksion nuk mund të hapej siç duhet.", "تعذر فتح هذا القسم بشكل صحيح.", "Não foi possível abrir esta secção corretamente.", "Non è stato possibile aprire correttamente questa sezione.", "Не удалось корректно открыть этот раздел."),
+   "Your workspace is still safe. Retry this section, or return to Overview.": row("Ihr Arbeitsbereich ist weiterhin sicher. Versuchen Sie diesen Bereich erneut oder kehren Sie zur Übersicht zurück.", "Tu espacio de trabajo sigue seguro. Vuelve a intentar esta sección o regresa a Resumen.", "Hapësira juaj e punës është ende e sigurt. Provojeni përsëri këtë seksion ose kthehuni te Përmbledhja.", "مساحة عملك ما زالت آمنة. أعد محاولة هذا القسم أو ارجع إلى النظرة العامة.", "O seu espaço de trabalho continua seguro. Tente esta secção novamente ou volte à Visão geral.", "Il tuo spazio di lavoro è ancora al sicuro. Riprova questa sezione o torna alla Panoramica.", "Ваше рабочее пространство остаётся в безопасности. Повторите попытку или вернитесь к обзору."),
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/package.json /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/package.json
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/package.json	2026-08-16 07:58:29.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/package.json	2026-08-16 08:51:31.795896819 +0000
+@@ -47,7 +47,8 @@
+     "verify:v132": "node scripts/verify-surface-opacity-v132.mjs",
+     "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
+     "verify:instant-business-switching": "node scripts/verify-instant-business-switching.mjs",
+-    "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs"
++    "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs",
++    "verify:branded-login-entry": "node scripts/verify-branded-login-entry.mjs"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.7.0",
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/scripts/release-suite-manifest.mjs /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/scripts/release-suite-manifest.mjs
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/scripts/release-suite-manifest.mjs	2026-08-16 07:21:48.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/scripts/release-suite-manifest.mjs	2026-08-16 08:51:31.796040062 +0000
+@@ -3,6 +3,7 @@
+ // left by old ZIP-overwrite deployments cannot break the release quality gate.
+ export const CURRENT_RELEASE_SUITES = [
+   'verify-bill-paid-unpaid-sync.mjs',
++  'verify-branded-login-entry.mjs',
+   'verify-contact-support.mjs',
+   'verify-credit-card-management.mjs',
+   'verify-currency-foundation.mjs',
+diff -ruN '--exclude=BRANDED_LOGIN_ENTRY_V1.md' '--exclude=COMMIT_MESSAGE_BRANDED_LOGIN_ENTRY.txt' /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/scripts/verify-branded-login-entry.mjs /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/scripts/verify-branded-login-entry.mjs
+--- /mnt/data/ficonter-login-entry-original/ficonter-feature-navigation-performance-hardening/scripts/verify-branded-login-entry.mjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/ficonter-login-entry-animation/ficonter-feature-navigation-performance-hardening/scripts/verify-branded-login-entry.mjs	2026-08-16 08:51:31.344275009 +0000
+@@ -0,0 +1,49 @@
++import { readFileSync } from "node:fs";
++import path from "node:path";
++import { fileURLToPath } from "node:url";
++
++const here = path.dirname(fileURLToPath(import.meta.url));
++const root = path.resolve(here, "..");
++const read = (name) => readFileSync(path.join(root, name), "utf8");
++
++const component = read("components/BrandedLoginEntrance.tsx");
++const css = read("components/BrandedLoginEntrance.module.css");
++const login = read("app/login/page.tsx");
++const manifest = read("app/manifest.ts");
++const home = read("app/page.tsx");
++const dashboardLayout = read("app/dashboard/layout.tsx");
++const businessLayout = read("app/business/layout.tsx");
++
++const checks = [
++  ["PWA opens the login route directly", manifest.includes('start_url: "/login?entry=app"')],
++  ["Login page renders the branded entrance", login.includes("<BrandedLoginEntrance />")],
++  ["App and brand entry intents are explicit", login.includes('params.entry === "app"') && login.includes('params.entry === "brand"')],
++  ["Authenticated users bypass login and continue to dashboard", login.includes('if (user) redirect("/dashboard")')],
++  ["Desktop protected shell uses branded login recovery", dashboardLayout.includes('redirect("/login?entry=app")')],
++  ["Business protected shell uses branded login recovery", businessLayout.includes('redirect("/login?entry=app")')],
++  ["Public landing login links request the entrance", (home.match(/href="\/login\?entry=brand"/g) ?? []).length >= 3],
++  ["Entrance uses the canonical FICONTER mark", component.includes('src="/ficonter-mark.svg"')],
++  ["Entrance identifies FICONTER Financial Control Center", component.includes("FICONTER") && component.includes("Financial Control Center")],
++  ["Entrance is a client visual layer without a route hop", component.includes('"use client"') && !component.includes("router.push") && !component.includes("router.replace") && !component.includes("window.location.assign")],
++  ["Entrance query is cleaned without adding browser history", component.includes("window.history.replaceState")],
++  ["Normal entrance stays under one second", component.includes("STANDARD_DURATION_MS = 980")],
++  ["Reduced-motion timing is short", component.includes("REDUCED_MOTION_DURATION_MS = 300")],
++  ["Bounce/settle animation is restrained", css.includes("@keyframes emblemArrival") && css.includes("scale(1.075)") && css.includes("scale(0.985)")],
++  ["Entrance fades instead of disappearing abruptly", css.includes("@keyframes entranceFade")],
++  ["Reduced-motion accessibility is present", css.includes("@media (prefers-reduced-motion: reduce)")],
++  ["Entrance sits above the already-rendered login form", css.includes("position: fixed") && css.includes("z-index: 10000")],
++  ["Brand animation is responsive on phones", css.includes("@media (max-width: 640px)")],
++];
++
++let failures = 0;
++for (const [name, ok] of checks) {
++  console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
++  if (!ok) failures += 1;
++}
++
++if (failures) {
++  console.error(`\nBranded login entry verification failed (${failures}/${checks.length}).`);
++  process.exit(1);
++}
++
++console.log(`\nBranded login entry verification passed (${checks.length}/${checks.length}).`);

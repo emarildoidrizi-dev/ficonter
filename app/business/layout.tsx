@@ -69,7 +69,7 @@ export default async function BusinessLayout({
     requireAdmin(),
   ]);
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?entry=app");
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);

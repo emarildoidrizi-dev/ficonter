@@ -43,6 +43,44 @@ const smartInsightRows = [
   { icon: ShieldCheck, label: "Upcoming obligations", status: "Covered" },
   { icon: Target, label: "Savings capacity", status: "Improving" },
 ] as const;
+const connectedSystemModules = [
+  {
+    key: "transactions",
+    icon: WalletCards,
+    title: "Transactions",
+    copy: "Expense recorded and categorised instantly.",
+  },
+  {
+    key: "planning",
+    icon: CircleDollarSign,
+    title: "Planning",
+    copy: "Monthly expenses and balances refresh in context.",
+  },
+  {
+    key: "health",
+    icon: ShieldCheck,
+    title: "Financial Health",
+    copy: "Your score updates with the new monthly picture.",
+  },
+  {
+    key: "obligations",
+    icon: Landmark,
+    title: "Obligations",
+    copy: "Upcoming commitments stay covered and visible.",
+  },
+  {
+    key: "goals",
+    icon: Target,
+    title: "Goals",
+    copy: "Contribution room adjusts without losing direction.",
+  },
+  {
+    key: "wealth",
+    icon: TrendingUp,
+    title: "Wealth",
+    copy: "Long-term progress stays aligned with today’s changes.",
+  },
+] as const;
 const formatEuro = (value: number) => `€${value.toLocaleString("en-US")}`;
 
 const productViews = [
@@ -284,6 +322,43 @@ export default async function HomePage({
             </article>
           ))}
         </div>
+      </section>
+
+      <section className={styles.connectedSection}>
+        <div className={styles.sectionIntro}>
+          <div className={styles.eyebrow}>Connected financial system</div>
+          <h2>Everything works together.</h2>
+          <p>
+            One financial action can update the rest of your financial picture—so the platform stays
+            aligned without repeated manual work.
+          </p>
+        </div>
+
+        <div className={styles.connectedStage}>
+          <div className={styles.connectedGrid}>
+            {connectedSystemModules.map(({ key, icon: Icon, title, copy }) => (
+              <article
+                key={key}
+                className={`${styles.connectedNode} ${styles[`connectedNode${key.charAt(0).toUpperCase()}${key.slice(1)}`]}`}
+              >
+                <div className={styles.connectedNodeIcon}><Icon size={18} /></div>
+                <div>
+                  <strong>{title}</strong>
+                  <p>{copy}</p>
+                </div>
+              </article>
+            ))}
+
+            <article className={styles.connectedHub}>
+              <span>Example action</span>
+              <strong>Add expense</strong>
+              <b>{formatEuro(120)}</b>
+              <p>A single update that instantly flows through the platform.</p>
+            </article>
+          </div>
+        </div>
+
+        <p className={styles.connectedClosing}>One action. One connected financial system.</p>
       </section>
 
       <section id="for-you" className={styles.peopleSection}>

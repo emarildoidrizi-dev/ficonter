@@ -17,6 +17,7 @@ const businessLayout = read("app/business/layout.tsx");
 const checks = [
   ["PWA opens the login route directly", manifest.includes('start_url: "/login?entry=app"')],
   ["Login page renders the branded entrance", login.includes("<BrandedLoginEntrance />")],
+  ["App login hides the public homepage link", login.includes("{!showEntrance ? (") && login.includes('href="/">← Back to homepage</Link>')],
   ["App and brand entry intents are explicit", login.includes('params.entry === "app"') && login.includes('params.entry === "brand"')],
   ["Authenticated users bypass login and continue to dashboard", login.includes('if (user) redirect("/dashboard")')],
   ["Desktop protected shell uses branded login recovery", dashboardLayout.includes('redirect("/login?entry=app")')],

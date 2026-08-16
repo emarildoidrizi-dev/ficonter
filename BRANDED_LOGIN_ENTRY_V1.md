@@ -23,3 +23,4 @@ The public marketing homepage remains intact. Its Log in links request `/login?e
 
 ## Performance principle
 The animation is deliberately a visual overlay on the final login route. It does not add a splash route or client-side route transition, preserving the navigation-performance hardening work.
+- App/PWA branded login entry hides the public “Back to homepage” link; ordinary website login keeps it.

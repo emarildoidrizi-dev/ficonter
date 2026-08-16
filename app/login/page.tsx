@@ -52,9 +52,11 @@ export default async function LoginPage({
             </>
           ) : null}
           <AuthForm mode="login" betaEntry={betaEntry} />
-          <p className="center">
-            <Link href="/">← Back to homepage</Link>
-          </p>
+          {!showEntrance ? (
+            <p className="center">
+              <Link href="/">← Back to homepage</Link>
+            </p>
+          ) : null}
         </div>
       </section>
       </main>

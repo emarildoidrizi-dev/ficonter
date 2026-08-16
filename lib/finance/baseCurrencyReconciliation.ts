@@ -284,6 +284,10 @@ export function debtMinimumAmount(
   debt: CurrencySourceDebt,
   context: BaseCurrencyReconciliationContext,
 ): number {
+  if (debt.category?.toLowerCase() === "credit card") {
+    return roundMoney(debtCurrentAmount(debt, context) * 0.03);
+  }
+
   return currentRecordAmountInBaseCurrency({
     originalAmount: debt.minimum_payment,
     originalCurrency: debt.currency,

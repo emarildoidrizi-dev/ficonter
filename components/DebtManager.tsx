@@ -250,14 +250,19 @@ export function DebtManager({
     [currencyContext],
   );
   const minimumDebtValue = useCallback(
-    (debt: Debt) =>
-      currentRecordAmountInBaseCurrency({
+    (debt: Debt) => {
+      if (debt.category.toLowerCase() === "credit card") {
+        return roundMoney(currentDebtValue(debt) * 0.03);
+      }
+
+      return currentRecordAmountInBaseCurrency({
         originalAmount: debt.minimum_payment,
         originalCurrency: debt.currency,
         amountEur: debt.minimum_payment_eur,
         context: currencyContext,
-      }),
-    [currencyContext],
+      });
+    },
+    [currencyContext, currentDebtValue],
   );
   const paymentValue = useCallback(
     (payment: DebtPayment) =>

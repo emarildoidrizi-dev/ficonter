@@ -67,8 +67,8 @@ check(
   "The confusing Minimum remaining label has been removed."
 );
 check(
-  manager.includes("automaticMinimumPayment(statementBalance)"),
-  "Statement saving derives minimum payment from statement balance."
+  manager.includes("selectedMonth === monthKey() ? cardCurrent(card) : statementBalance"),
+  "Current-month minimum payment derives from Current balance while historical records stay historical."
 );
 check(
   manager.includes("readOnly") &&

@@ -2640,6 +2640,8 @@ export const FULL_UI_TRANSLATIONS: Record<string, FullUiTranslationRow> = {
   "Saved with the historical monthly record.": { de: "Mit dem historischen Monatsdatensatz gespeichert.", es: "Guardado con el registro mensual histórico.", sq: "Ruhet me regjistrimin historik mujor.", ar: "يتم حفظه مع السجل الشهري التاريخي.", pt: "Guardado com o registo mensal histórico.", it: "Salvato con il record mensile storico.", ru: "Сохраняется вместе с исторической месячной записью." },
 
   "{0} · historical record": { de: "{0} · historischer Datensatz", es: "{0} · registro histórico", sq: "{0} · regjistrim historik", ar: "{0} · سجل تاريخي", pt: "{0} · registo histórico", it: "{0} · record storico", ru: "{0} · историческая запись" },
+  "{0} · saved record": { de: "{0} · gespeicherter Datensatz", es: "{0} · registro guardado", sq: "{0} · regjistrim i ruajtur", ar: "{0} · سجل محفوظ", pt: "{0} · registo guardado", it: "{0} · record salvato", ru: "{0} · сохранённая запись" },
+  "Carried forward into {0} · save statement to freeze record": { de: "In {0} vorgetragen · Abrechnung speichern, um den Datensatz festzuhalten", es: "Arrastrado a {0} · guarda el extracto para fijar el registro", sq: "Bartur në {0} · ruaj deklaratën për ta fiksuar regjistrimin", ar: "مُرحّل إلى {0} · احفظ كشف الحساب لتثبيت السجل", pt: "Transitado para {0} · guarde o extrato para fixar o registo", it: "Riportato in {0} · salva l'estratto per fissare il record", ru: "Перенесено в {0} · сохраните выписку, чтобы зафиксировать запись" },
 
 };
 

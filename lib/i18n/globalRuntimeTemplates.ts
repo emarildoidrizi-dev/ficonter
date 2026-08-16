@@ -108,6 +108,8 @@ export const GLOBAL_RUNTIME_TEMPLATES: Record<string, TemplateRow> = {
   "Send another link in {0}s": row("Neuen Link in {0}s senden", "Enviar otro enlace en {0}s", "Dërgo lidhje tjetër pas {0}s", "إرسال رابط آخر خلال {0} ث", "Enviar outro link em {0}s", "Invia un altro link tra {0}s", "Отправить новую ссылку через {0} с"),
   "Resend in {0}s": row("Erneut senden in {0}s", "Reenviar en {0}s", "Ridërgo pas {0}s", "إعادة الإرسال خلال {0} ث", "Reenviar em {0}s", "Invia di nuovo tra {0}s", "Отправить снова через {0} с"),
   "{0} · historical record": row("{0} · historischer Datensatz", "{0} · registro histórico", "{0} · regjistrim historik", "{0} · سجل تاريخي", "{0} · registo histórico", "{0} · record storico", "{0} · историческая запись"),
+  "{0} · saved record": row("{0} · gespeicherter Datensatz", "{0} · registro guardado", "{0} · regjistrim i ruajtur", "{0} · سجل محفوظ", "{0} · registo guardado", "{0} · record salvato", "{0} · сохранённая запись"),
+  "Carried forward into {0} · save statement to freeze record": row("In {0} vorgetragen · Abrechnung speichern, um den Datensatz festzuhalten", "Arrastrado a {0} · guarda el extracto para fijar el registro", "Bartur në {0} · ruaj deklaratën për ta fiksuar regjistrimin", "مُرحّل إلى {0} · احفظ كشف الحساب لتثبيت السجل", "Transitado para {0} · guarde o extrato para fixar o registo", "Riportato in {0} · salva l'estratto per fissare il record", "Перенесено в {0} · сохраните выписку, чтобы зафиксировать запись"),
 
 };
 

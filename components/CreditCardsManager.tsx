@@ -388,6 +388,77 @@ export function CreditCardsManager({
   const activityAmountBase = useCallback((activity: CreditCardActivity) => historicalField(activity.amount, activity.currency, activity.amount_eur, activity.occurred_at), [historicalField]);
   const activityEffectBase = useCallback((activity: CreditCardActivity) => historicalField(activity.balance_effect, activity.currency, activity.balance_effect_eur, activity.occurred_at), [historicalField]);
   const recordFieldBase = useCallback((record: CreditCardMonthlyRecord, native: unknown, eur: unknown) => historicalField(native, record.currency, eur, record.statement_date), [historicalField]);
+
+  // Carry-forward is the balance that existed at the start of a month.
+  // Reconstruct it from the live balance by reversing every later card effect:
+  // activity effects are removed, while payments are added back because they
+  // reduced the live balance. This lets Statement balance remain a historical
+  // record without forcing it to mirror Current balance during the month.
+  const carriedForwardNative = useCallback((card: CreditCardDebt, month: string) => {
+    const start = new Date(`${month}-01T00:00:00`).getTime();
+    const activityEffectsAfterStart = sumMoney(
+      activities
+        .filter((activity) =>
+          activity.debt_id === card.id &&
+          new Date(activity.occurred_at).getTime() >= start,
+        )
+        .map((activity) => finiteNumber(activity.balance_effect)),
+    );
+    const paymentsAfterStart = sumMoney(
+      payments
+        .filter((payment) =>
+          payment.debt_id === card.id &&
+          new Date(payment.paid_at).getTime() >= start,
+        )
+        .map((payment) => finiteNumber(payment.amount)),
+    );
+
+    return Math.max(
+      0,
+      roundMoney(
+        finiteNumber(card.current_balance) -
+          activityEffectsAfterStart +
+          paymentsAfterStart,
+      ),
+    );
+  }, [activities, payments]);
+
+  const carriedForwardEur = useCallback((card: CreditCardDebt, month: string) => {
+    const start = new Date(`${month}-01T00:00:00`).getTime();
+    const activityEffectsAfterStart = sumMoney(
+      activities
+        .filter((activity) =>
+          activity.debt_id === card.id &&
+          new Date(activity.occurred_at).getTime() >= start,
+        )
+        .map((activity) => finiteNumber(activity.balance_effect_eur)),
+    );
+    const paymentsAfterStart = sumMoney(
+      payments
+        .filter((payment) =>
+          payment.debt_id === card.id &&
+          new Date(payment.paid_at).getTime() >= start,
+        )
+        .map((payment) => finiteNumber(payment.amount_eur)),
+    );
+
+    return Math.max(
+      0,
+      roundMoney(
+        finiteNumber(card.current_balance_eur) -
+          activityEffectsAfterStart +
+          paymentsAfterStart,
+      ),
+    );
+  }, [activities, payments]);
+
+  const carriedForwardBase = useCallback((card: CreditCardDebt, month: string) =>
+    currentField(
+      carriedForwardNative(card, month),
+      card.currency,
+      carriedForwardEur(card, month),
+    ),
+  [carriedForwardEur, carriedForwardNative, currentField]);
   const [selectedMonth, setSelectedMonth] = useState(monthKey());
   const [cardForm, setCardForm] = useState<CardForm>(EMPTY_CARD);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -599,10 +670,14 @@ export function CreditCardsManager({
     const recordedStatementBalance = record
       ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur)
       : 0;
-    // Statement balance is always a historical issuer snapshot. It never
-    // mirrors or drives the live card balance. Balance left to pay is the
-    // live amount owed and therefore mirrors Current balance instead.
-    const statementBalance = recordedStatementBalance;
+    const carriedForwardBalance = carriedForwardBase(card, selectedMonth);
+    // Statement balance is a monthly record. When the month has no saved
+    // statement yet, show the amount carried in from the previous month as
+    // the provisional statement basis. Saving the statement freezes it.
+    // Current balance / Balance left to pay continue moving live on their own.
+    const statementBalance = record
+      ? recordedStatementBalance
+      : carriedForwardBalance;
     const minimumRemaining = isCurrentMonth
       ? minimumPayment
       : Math.max(
@@ -642,6 +717,7 @@ export function CreditCardsManager({
       minimumRemaining,
       statementBalance,
       recordedStatementBalance,
+      carriedForwardBalance,
       statementRemaining,
       isCurrentMonth,
       interest,
@@ -688,13 +764,16 @@ export function CreditCardsManager({
       }),
     );
     const statementBalances = sumMoney(
-      monthRecords.map((record) =>
-        recordFieldBase(
-          record,
-          record.statement_balance,
-          record.statement_balance_eur,
-        ),
-      ),
+      cards.map((card) => {
+        const record = monthRecords.find((item) => item.debt_id === card.id);
+        return record
+          ? recordFieldBase(
+              record,
+              record.statement_balance,
+              record.statement_balance_eur,
+            )
+          : carriedForwardBase(card, selectedMonth);
+      }),
     );
     const remainingByCard = cards.map((card) => {
       const record = monthRecords.find(
@@ -766,7 +845,7 @@ export function CreditCardsManager({
       statementRemaining,
       interest,
     };
-  }, [activities, activityAmountBase, cards, monthlyRecords, paymentBase, payments, recordFieldBase, selectedMonth]);
+  }, [activities, activityAmountBase, cards, carriedForwardBase, monthlyRecords, paymentBase, payments, recordFieldBase, selectedMonth]);
 
   function resetCardForm() {
     setCardForm({ ...EMPTY_CARD, start_date: localDateKey() });
@@ -802,9 +881,7 @@ export function CreditCardsManager({
     defaultDue.setDate(defaultDue.getDate() + 21);
     const statementBalance = finiteNumber(
       record?.statement_balance ??
-        (inMonth(card.statement_date, selectedMonth)
-          ? card.statement_balance
-          : card.current_balance),
+        carriedForwardNative(card, selectedMonth),
     );
     const minimumBasis =
       selectedMonth === monthKey() ? cardCurrent(card) : statementBalance;
@@ -1659,15 +1736,11 @@ export function CreditCardsManager({
                 <div className={styles.statementGrid}>
                   <div>
                     <span>Statement balance</span>
-                    <strong>
-                      {metrics.record
-                        ? displayMoney(metrics.statementBalance)
-                        : "Not recorded"}
-                    </strong>
+                    <strong>{displayMoney(metrics.statementBalance)}</strong>
                     <small>
                       {metrics.record
-                        ? readableDate(metrics.record.statement_date)
-                        : `${monthTitle(selectedMonth)} · historical record`}
+                        ? `${readableDate(metrics.record.statement_date)} · saved record`
+                        : `Carried forward into ${monthTitle(selectedMonth)} · save statement to freeze record`}
                     </small>
                   </div>
                   <div>

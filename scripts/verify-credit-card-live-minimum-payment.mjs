@@ -13,7 +13,7 @@ const checks = [
   ['UI explicitly says minimum follows current balance', 'Automatic 3% of Current balance · updates live'],
   ['cross-module reconciliation calculates credit-card min live', 'return roundMoney(debtCurrentAmount(debt, context) * 0.03);'],
   ['Debt bridge calculates credit-card min live', 'return roundMoney(currentDebtValue(debt) * 0.03);'],
-  ['statement balance stays historical', 'const statementBalance = recordedStatementBalance;'],
+  ['statement balance stays historical once recorded', 'const statementBalance = record\n      ? recordedStatementBalance\n      : carriedForwardBalance;'],
   ['balance left remains live', 'const statementRemaining = cardCurrent(card);'],
 ];
 

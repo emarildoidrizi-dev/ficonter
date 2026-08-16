@@ -50,7 +50,10 @@
     "verify:navigation-hardening": "node scripts/verify-navigation-performance-hardening.mjs",
     "verify:branded-login-entry": "node scripts/verify-branded-login-entry.mjs",
     "verify:account-recovery": "node scripts/verify-account-recovery.mjs",
-    "verify:password-recovery-link": "node scripts/verify-password-recovery-link-fix.mjs"
+    "verify:password-recovery-link": "node scripts/verify-password-recovery-link-fix.mjs",
+    "verify:financial-document-import": "node scripts/verify-financial-document-import.mjs",
+    "verify:financial-document-multilingual": "node scripts/verify-financial-document-multilingual.mjs",
+    "verify:owner-music": "node scripts/verify-owner-music.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -3,3 +3,6 @@
 
 /* High-volume document directory. */
 .grid{max-height:min(75vh,900px);overflow-y:auto;padding-right:6px;align-content:start}
+.cardActions{grid-template-columns:repeat(5,1fr)}
+.cardActions button:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:760px){.cardActions{grid-template-columns:1fr 1fr}.cardActions button:first-child{grid-column:1/-1}}

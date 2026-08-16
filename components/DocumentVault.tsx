@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   Pencil,
   Search,
+  ScanLine,
   ShieldCheck,
   Trash2,
   UploadCloud,
@@ -28,6 +29,7 @@ import {
   type FinancialDocument,
 } from "@/lib/documentVault";
 import { createClient } from "@/lib/supabase/client";
+import { FinancialDocumentExtractionModal } from "./FinancialDocumentExtractionModal";
 import styles from "./DocumentVault.module.css";
 
 type DocumentForm = {
@@ -57,6 +59,7 @@ export function DocumentVault() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialDocument | null>(null);
   const [deleting, setDeleting] = useState<FinancialDocument | null>(null);
+  const [extracting, setExtracting] = useState<FinancialDocument | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -194,6 +197,12 @@ export function DocumentVault() {
               <div className={styles.cardActions}>
                 <button type="button" onClick={() => void accessDocument(document, false)}><Eye size={15} /> Preview</button>
                 <button type="button" onClick={() => void accessDocument(document, true)}><Download size={15} /> Download</button>
+                <button
+                  type="button"
+                  onClick={() => setExtracting(document)}
+                  disabled={document.mimeType !== "application/pdf"}
+                  title={document.mimeType === "application/pdf" ? "Extract financial data and review it before import" : "V1 extracts searchable PDFs; OCR for images comes later"}
+                ><ScanLine size={15} /> Extract data</button>
                 <button type="button" onClick={() => setEditing(document)}><Pencil size={15} /> Edit</button>
                 <button type="button" className={styles.deleteButton} onClick={() => setDeleting(document)}><Trash2 size={15} /> Delete</button>
               </div>
@@ -216,6 +225,15 @@ export function DocumentVault() {
           setUploadOpen(false);
           setSuccess(`${document.displayName} was saved privately.`);
         }} />,
+        document.body,
+      ) : null}
+
+      {portalReady && extracting ? createPortal(
+        <FinancialDocumentExtractionModal
+          document={extracting}
+          onClose={() => setExtracting(null)}
+          onImported={(message) => setSuccess(message)}
+        />,
         document.body,
       ) : null}
 

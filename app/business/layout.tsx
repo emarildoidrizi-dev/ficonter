@@ -12,8 +12,9 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
+import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { getBusinessContext } from "@/lib/business/server";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 import { shouldShowBetaDomainAccessGate } from "@/lib/betaDomainGate";
 import { getSubscriptionUpgradeHref } from "@/lib/subscriptionNavigation";
@@ -75,6 +76,7 @@ export default async function BusinessLayout({
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
   // Platform Owner and Super Admin are the only roles allowed to use wallpapers.
   const canManageWallpapers = admin?.role === "super_admin";
+  const isPlatformOwner = isOwnerEmail(user.email);
 
   const showBetaGate = await shouldShowBetaDomainAccessGate({
     userId: user.id,
@@ -123,6 +125,7 @@ export default async function BusinessLayout({
         cacheKey={business?.id ?? "none"}
       />
       <CommandPalette />
+      {isPlatformOwner ? <OwnerMusicPlayer /> : null}
       <FiconterNativeAppChrome
         workspace="business"
         subscriptionPlanCode={subscriptionPlanCode}

@@ -1,4 +1,5 @@
 import { CATEGORY_ITEMS } from "@/lib/financialOptions";
+import { foldFinancialText, normalizeFinancialDigits } from "@/lib/financialDocumentLanguage";
 
 export type StatementDateFormat =
   | "auto"
@@ -62,62 +63,62 @@ export type PreparedStatementRow = {
 };
 
 const DATE_HEADER_HINTS = [
-  "date",
-  "transaction date",
-  "booking date",
-  "value date",
-  "buchungstag",
-  "buchungsdatum",
-  "valutadatum",
-  "datum",
+  "date", "transaction date", "booking date", "value date", "buchungstag", "buchungsdatum", "valutadatum", "datum",
+  "fecha", "fecha de operación", "fecha de operacion", "fecha valor",
+  "data", "data e transaksionit", "data e veprimit",
+  "التاريخ", "تاريخ العملية", "تاريخ المعاملة",
+  "data da transação", "data da transacao", "data de lançamento", "data de lancamento",
+  "data operazione", "data valuta",
+  "дата", "дата операции", "дата проводки",
 ];
 const DESCRIPTION_HEADER_HINTS = [
-  "description",
-  "merchant",
-  "payee",
-  "purpose",
-  "memo",
-  "details",
-  "buchungstext",
-  "verwendungszweck",
-  "empfaenger",
-  "empfänger",
-  "auftraggeber",
-  "name",
+  "description", "merchant", "payee", "purpose", "memo", "details", "buchungstext", "verwendungszweck", "empfaenger", "empfänger", "auftraggeber", "name",
+  "descripción", "descripcion", "concepto", "beneficiario", "comercio",
+  "përshkrimi", "pershkrimi", "qëllimi", "qellimi", "përfituesi", "perfituesi",
+  "الوصف", "البيان", "التفاصيل", "المستفيد", "الغرض",
+  "descrição", "descricao", "detalhes", "beneficiário", "beneficiario",
+  "descrizione", "causale", "beneficiario",
+  "описание", "назначение", "получатель", "детали",
 ];
 const EXTRA_DESCRIPTION_HEADER_HINTS = [
-  "reference",
-  "note",
-  "additional information",
-  "zusatzinformation",
-  "kundenreferenz",
+  "reference", "note", "additional information", "zusatzinformation", "kundenreferenz",
+  "referencia", "nota", "información adicional", "informacion adicional",
+  "referenca", "shënim", "shenim", "informacion shtesë", "informacion shtese",
+  "المرجع", "ملاحظة", "معلومات إضافية", "معلومات اضافية",
+  "referência", "referencia", "nota", "informação adicional", "informacao adicional",
+  "riferimento", "nota", "informazioni aggiuntive",
+  "ссылка", "примечание", "дополнительная информация",
 ];
 const AMOUNT_HEADER_HINTS = [
-  "amount",
-  "transaction amount",
-  "value",
-  "betrag",
-  "umsatz",
+  "amount", "transaction amount", "value", "betrag", "umsatz",
+  "importe", "monto", "valor",
+  "shuma", "vlera",
+  "المبلغ", "القيمة",
+  "valor", "montante",
+  "importo", "valore",
+  "сумма", "значение",
 ];
 const DEBIT_HEADER_HINTS = [
-  "debit",
-  "money out",
-  "withdrawal",
-  "paid out",
-  "soll",
-  "belastung",
-  "ausgang",
+  "debit", "money out", "withdrawal", "paid out", "soll", "belastung", "ausgang",
+  "débito", "debito", "cargo", "salida", "retirada",
+  "debit", "dalje", "tërheqje", "terheqje",
+  "مدين", "خصم", "سحب", "مبلغ خارج",
+  "débito", "debito", "saída", "saida", "levantamento",
+  "addebito", "uscita", "prelievo",
+  "дебет", "списание", "расход", "снятие",
 ];
 const CREDIT_HEADER_HINTS = [
-  "credit",
-  "money in",
-  "deposit",
-  "paid in",
-  "haben",
-  "gutschrift",
-  "eingang",
+  "credit", "money in", "deposit", "paid in", "haben", "gutschrift", "eingang",
+  "crédito", "credito", "abono", "ingreso",
+  "kredit", "hyrje", "depozitë", "depozite",
+  "دائن", "إيداع", "ايداع", "مبلغ داخل",
+  "crédito", "credito", "entrada", "depósito", "deposito",
+  "accredito", "entrata", "deposito",
+  "кредит", "зачисление", "поступление",
 ];
-const CURRENCY_HEADER_HINTS = ["currency", "ccy", "währung", "waehrung"];
+const CURRENCY_HEADER_HINTS = [
+  "currency", "ccy", "währung", "waehrung", "moneda", "valuta", "monedha", "العملة", "moeda", "valuta", "валюта",
+];
 
 const STOP_WORDS = new Set([
   "sepa",
@@ -146,22 +147,22 @@ const BUILT_IN_CATEGORY_RULES: Array<{
   category: string;
   type?: "income" | "expense";
 }> = [
-  { terms: ["gehalt", "salary", "lohn", "payroll", "wages"], category: "Salary", type: "income" },
-  { terms: ["bonus"], category: "Bonus", type: "income" },
-  { terms: ["refund", "rückerstattung", "erstattung"], category: "Refund", type: "income" },
-  { terms: ["miete", "rent"], category: "Rent", type: "expense" },
-  { terms: ["rewe", "aldi", "lidl", "edeka", "kaufland", "netto", "penny"], category: "Groceries", type: "expense" },
-  { terms: ["dm drogerie", "rossmann", "mueller drogerie", "müller drogerie"], category: "Toiletries", type: "expense" },
+  { terms: ["gehalt", "salary", "lohn", "payroll", "wages", "nómina", "nomina", "salario", "sueldo", "paga", "rroga", "راتب", "salário", "ordenado", "stipendio", "зарплата", "заработная плата"], category: "Salary", type: "income" },
+  { terms: ["bonus", "bonificación", "bonificacion", "shpërblim", "shperblim", "مكافأة", "مكافاه", "bónus", "premio", "бонус", "премия"], category: "Bonus", type: "income" },
+  { terms: ["refund", "rückerstattung", "erstattung", "reembolso", "rimbursim", "استرداد", "rimborso", "возврат"], category: "Refund", type: "income" },
+  { terms: ["miete", "rent", "alquiler", "qira", "إيجار", "ايجار", "aluguel", "affitto", "аренда"], category: "Rent", type: "expense" },
+  { terms: ["rewe", "aldi", "lidl", "edeka", "kaufland", "netto", "penny", "supermercado", "ushqimore", "سوبرماركت", "supermercato", "продукты", "супермаркет"], category: "Groceries", type: "expense" },
+  { terms: ["dm drogerie", "rossmann", "mueller drogerie", "müller drogerie", "droguería", "drogueria", "kozmetikë", "kozmetike", "صيدلية تجميل", "drogaria", "profumeria", "косметика"], category: "Toiletries", type: "expense" },
   { terms: ["netflix", "prime video", "disney plus", "disney+"], category: "Streaming", type: "expense" },
   { terms: ["spotify", "apple music", "deezer"], category: "Music", type: "expense" },
-  { terms: ["vodafone", "telekom", "telefonica", "o2 germany"], category: "Mobile phone", type: "expense" },
-  { terms: ["stadtwerke", "eon", "e.on", "vattenfall", "enbw"], category: "Electricity", type: "expense" },
-  { terms: ["shell", "aral", "esso", "totalenergies", "tankstelle"], category: "Fuel", type: "expense" },
-  { terms: ["deutsche bahn", "db vertrieb", "bahn.de"], category: "Rail travel", type: "expense" },
-  { terms: ["uber", "bolt", "free now", "taxi"], category: "Taxi / rideshare", type: "expense" },
-  { terms: ["friseur", "haircut", "barber"], category: "Haircut", type: "expense" },
-  { terms: ["apotheke", "pharmacy"], category: "Pharmacy", type: "expense" },
-  { terms: ["amazon", "mediamarkt", "saturn"], category: "Electronics", type: "expense" },
+  { terms: ["vodafone", "telekom", "telefonica", "o2 germany", "telefonía móvil", "telefonia movil", "telefon celular", "هاتف محمول", "telefonia móvel", "telefonia movel", "telefonia mobile", "мобильная связь"], category: "Mobile phone", type: "expense" },
+  { terms: ["stadtwerke", "eon", "e.on", "vattenfall", "enbw", "electricidad", "energji elektrike", "كهرباء", "eletricidade", "energia elettrica", "электроэнергия"], category: "Electricity", type: "expense" },
+  { terms: ["shell", "aral", "esso", "totalenergies", "tankstelle", "gasolina", "combustible", "karburant", "وقود", "combustível", "combustivel", "carburante", "топливо", "азс"], category: "Fuel", type: "expense" },
+  { terms: ["deutsche bahn", "db vertrieb", "bahn.de", "tren", "hekurudhë", "hekurudhe", "قطار", "comboio", "trem", "treno", "поезд", "железная дорога"], category: "Rail travel", type: "expense" },
+  { terms: ["uber", "bolt", "free now", "taxi", "taksi", "تاكسي", "такси"], category: "Taxi / rideshare", type: "expense" },
+  { terms: ["friseur", "haircut", "barber", "peluquería", "peluqueria", "berber", "parukeri", "حلاق", "cabeleireiro", "barbiere", "парикмахер"], category: "Haircut", type: "expense" },
+  { terms: ["apotheke", "pharmacy", "farmacia", "farmaci", "صيدلية", "farmácia", "аптека"], category: "Pharmacy", type: "expense" },
+  { terms: ["amazon", "mediamarkt", "saturn", "electrónica", "electronica", "elektronikë", "elektronike", "إلكترونيات", "الكترونيات", "eletrónica", "eletronica", "elettronica", "электроника"], category: "Electronics", type: "expense" },
   { terms: ["paypal"], category: "Other / custom", type: "expense" },
 ];
 
@@ -171,14 +172,10 @@ function normalizeWhitespace(value: string) {
 
 export function normalizeDescription(value: string) {
   return normalizeWhitespace(
-    value
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9äöüß\s]/gi, " "),
+    foldFinancialText(value)
+      .replace(/[^\p{L}\p{N}\s]/gu, " "),
   );
 }
-
 export function deriveMerchantKey(description: string) {
   const tokens = normalizeDescription(description)
     .split(" ")
@@ -310,7 +307,7 @@ export function detectDelimiter(text: string) {
 }
 
 export function parseMoney(value: string, format: StatementNumberFormat) {
-  let cleaned = value.trim().replace(/\u00a0/g, "");
+  let cleaned = normalizeFinancialDigits(value).trim().replace(/\u00a0/g, "");
   if (!cleaned) return null;
   let negative = false;
   if (/^\(.*\)$/.test(cleaned)) {
@@ -363,7 +360,7 @@ function validDateParts(year: number, month: number, day: number) {
 }
 
 export function parseStatementDate(value: string, format: StatementDateFormat) {
-  const clean = value.trim();
+  const clean = normalizeFinancialDigits(value).trim();
   if (!clean) return null;
 
   const isoMatch = clean.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);

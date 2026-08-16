@@ -1,0 +1,1 @@
+fix(documents): resolve Vercel TypeScript build errors in multilingual import

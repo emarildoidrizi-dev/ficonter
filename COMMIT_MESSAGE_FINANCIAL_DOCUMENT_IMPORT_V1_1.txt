@@ -1,0 +1,1 @@
+feat(documents): add multilingual financial document extraction

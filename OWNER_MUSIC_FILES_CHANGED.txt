@@ -1,0 +1,19 @@
+Added:
+- app/api/owner/music/route.ts
+- app/api/owner/music/upload-url/route.ts
+- components/OwnerMusicPlayer.tsx
+- components/OwnerMusicPlayer.module.css
+- lib/ownerMusic/config.ts
+- lib/ownerMusic/playerStore.ts
+- lib/ownerMusic/server.ts
+- scripts/verify-owner-music.mjs
+- OWNER_MUSIC_V1.md
+- COMMIT_MESSAGE_OWNER_MUSIC.txt
+
+Modified:
+- app/dashboard/layout.tsx
+- app/business/layout.tsx
+- lib/i18n/fullUiCatalog.ts
+- scripts/verify-phase1-qa.mjs
+- scripts/release-suite-manifest.mjs
+- package.json

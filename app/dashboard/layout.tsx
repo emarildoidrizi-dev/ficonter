@@ -10,7 +10,8 @@ import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBoot
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
-import { requireAdmin } from "@/lib/admin/access";
+import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 
@@ -80,6 +81,7 @@ export default async function DashboardLayout({
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
   // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
+  const isPlatformOwner = isOwnerEmail(user.email);
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -113,6 +115,7 @@ export default async function DashboardLayout({
         cacheKey={user.id}
       />
       <CommandPalette />
+      {isPlatformOwner ? <OwnerMusicPlayer /> : null}
       <FiconterNativeAppChrome
         workspace="personal"
         subscriptionPlanCode={subscriptionPlanCode}

@@ -120,7 +120,14 @@ const registration = await source("components/AuthForm.tsx");
 const recovery = await source("components/AccountRecoveryForm.tsx");
 const callback = await source("app/auth/callback/route.ts");
 check(registration.includes("/auth/callback?next=/dashboard"), "Registration confirmation returns users to the dashboard.");
-check(recovery.includes("/auth/callback?next=/update-password"), "Password recovery exchanges its code before password update.");
+const recoveryConfirm = await source("app/auth/recovery/confirm/route.ts");
+check(
+  recovery.includes('new URL("/auth/recovery"') &&
+    !recovery.includes('recoveryUrl.searchParams.set("next"') &&
+    recoveryConfirm.includes("verifyOtp") &&
+    recoveryConfirm.includes('type: "recovery"'),
+  "Password recovery verifies the one-time recovery token before password update.",
+);
 check(callback.includes("exchangeCodeForSession"), "Auth callback securely exchanges PKCE codes.");
 
 const settings = await source("components/SettingsWorkspace.tsx");

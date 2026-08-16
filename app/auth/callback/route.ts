@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeAuthEntry, withAuthEntry } from "@/lib/auth/recovery";
 
 function safeNextPath(value: string | null, fallback = "/dashboard"): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
@@ -20,6 +21,12 @@ function publicOrigin(request: NextRequest): string {
   return request.nextUrl.origin;
 }
 
+function recoveryFailurePath(next: string, error: "invalid_link" | "expired_link") {
+  const nextUrl = new URL(next, "https://ficonter.invalid");
+  const entry = normalizeAuthEntry(nextUrl.searchParams.get("entry"));
+  return withAuthEntry(`/recover-account?mode=password&error=${error}`, entry);
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const next = safeNextPath(request.nextUrl.searchParams.get("next"));
@@ -27,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/recover-account?mode=password&error=invalid_link", origin),
+      new URL(recoveryFailurePath(next, "invalid_link"), origin),
     );
   }
 
@@ -36,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      new URL("/recover-account?mode=password&error=expired_link", origin),
+      new URL(recoveryFailurePath(next, "expired_link"), origin),
     );
   }
 

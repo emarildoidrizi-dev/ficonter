@@ -62,9 +62,22 @@ const principles = [
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string }>;
+  searchParams: Promise<{ code?: string; token_hash?: string; type?: string; entry?: string }>;
 }) {
   const params = await searchParams;
+
+  // Recovery safety net: if Supabase or an older email template ever lands a
+  // recovery token on the public root URL, never expose the landing page.
+  // Route the untouched one-time token envelope to the scanner-safe recovery
+  // interstitial instead. The token is still not consumed on this GET.
+  if (params.token_hash && params.type === "recovery") {
+    const recoveryParams = new URLSearchParams({
+      token_hash: params.token_hash,
+      type: "recovery",
+    });
+    if (params.entry) recoveryParams.set("entry", params.entry);
+    redirect(`/auth/recovery?${recoveryParams.toString()}`);
+  }
 
   if (params.code) {
     redirect(

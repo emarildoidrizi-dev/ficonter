@@ -10,6 +10,7 @@ import {
 } from "@/lib/financialOptions";
 import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import { useLanguage } from "./LanguageProvider";
+import { type AuthEntry, withAuthEntry } from "@/lib/auth/recovery";
 import {
   createClient,
   saveTrustedDevicePreference,
@@ -18,9 +19,10 @@ import {
 type AuthFormProps = {
   mode: "login" | "register";
   betaEntry?: boolean;
+  entry?: AuthEntry | null;
 };
 
-export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
+export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProps) {
   const { language, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
@@ -279,14 +281,14 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
 
       <div className="field">
         <div style={fieldHeaderStyle}>
-          <label htmlFor="ficonter-username">Email address</label>
+          <label htmlFor="ficonter-username">Email address <span className="muted">(your FICONTER login)</span></label>
 
           {mode === "login" ? (
             <Link
-              href="/recover-account?mode=username"
+              href={withAuthEntry("/recover-account?mode=username", entry)}
               style={recoveryLinkStyle}
             >
-              Forgot username?
+              Forgot email / username?
             </Link>
           ) : null}
         </div>
@@ -336,7 +338,7 @@ export function AuthForm({ mode, betaEntry = false }: AuthFormProps) {
 
           {mode === "login" ? (
             <Link
-              href="/recover-account?mode=password"
+              href={withAuthEntry("/recover-account?mode=password", entry)}
               style={recoveryLinkStyle}
             >
               Forgot password?

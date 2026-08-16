@@ -5,6 +5,7 @@ import { Brand } from "@/components/Brand";
 import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { normalizeAuthEntry } from "@/lib/auth/recovery";
 
 export default async function LoginPage({
   searchParams,
@@ -19,7 +20,8 @@ export default async function LoginPage({
 
   if (user) redirect("/dashboard");
 
-  const showEntrance = params.entry === "app" || params.entry === "brand";
+  const entry = normalizeAuthEntry(params.entry);
+  const showEntrance = Boolean(entry);
 
   return (
     <>
@@ -51,7 +53,7 @@ export default async function LoginPage({
               <p className="muted">Enter your Ficonter account details.</p>
             </>
           ) : null}
-          <AuthForm mode="login" betaEntry={betaEntry} />
+          <AuthForm mode="login" betaEntry={betaEntry} entry={entry} />
           {!showEntrance ? (
             <p className="center">
               <Link href="/">← Back to homepage</Link>

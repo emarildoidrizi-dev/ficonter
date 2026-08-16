@@ -696,9 +696,9 @@
 
 .flowBarIncome { background: linear-gradient(180deg, #7ec5d4, #337979); }
 .flowBarSpent { background: linear-gradient(180deg, #8bc0cb, #416f7a); }
-.flowBarCommitted { background: linear-gradient(180deg, #99c3b9, #517a73); }
-.flowBarReserve { background: linear-gradient(180deg, #c8bb8d, #8d7a46); }
-.flowBarRemaining { background: linear-gradient(180deg, #d7ddd7, #7a888c); }
+.flowBarAvailable { background: linear-gradient(180deg, #9ecfbe, #4f8077); }
+.flowBarCommitted { background: linear-gradient(180deg, #c8bb8d, #8d7a46); }
+.flowBarLeftAfterPaid { background: linear-gradient(180deg, #d7ddd7, #7a888c); }
 
 .flowBarColumn b {
   color: #223b43;

@@ -61,21 +61,19 @@ const principles = [
 
 const landingPreview = {
   income: 8420,
-  committed: 2160,
-  reserve: 1850,
-  spent: 3060,
+  spentSoFar: 3060,
+  stillToPay: 2160,
   healthScore: 78,
 } as const;
 
-const availableAfterPlanning = landingPreview.income - landingPreview.committed;
-const remainingAvailable =
-  availableAfterPlanning - landingPreview.reserve - landingPreview.spent;
+const availableNow = landingPreview.income - landingPreview.spentSoFar;
+const leftAfterEverythingIsPaid = availableNow - landingPreview.stillToPay;
 const comparisonBars = [
   { label: "Income", value: landingPreview.income, tone: "income" },
-  { label: "Spent", value: landingPreview.spent, tone: "spent" },
-  { label: "Committed", value: landingPreview.committed, tone: "committed" },
-  { label: "Reserve", value: landingPreview.reserve, tone: "reserve" },
-  { label: "Remaining", value: remainingAvailable, tone: "remaining" },
+  { label: "Spent so far", value: landingPreview.spentSoFar, tone: "spent" },
+  { label: "Available now", value: availableNow, tone: "available" },
+  { label: "Still to pay", value: landingPreview.stillToPay, tone: "committed" },
+  { label: "Left after everything is paid", value: leftAfterEverythingIsPaid, tone: "leftAfterPaid" },
 ] as const;
 const comparisonBarMax = Math.max(...comparisonBars.map((item) => item.value));
 const formatEuro = (value: number) => `€${value.toLocaleString("en-US")}`;
@@ -164,9 +162,9 @@ export default async function HomePage({
 
               <div className={styles.heroMetricGrid}>
                 <div className={styles.heroPrimaryMetric}>
-                  <span>Available after planning</span>
-                  <strong>{formatEuro(availableAfterPlanning)}</strong>
-                  <p>Across active personal accounts</p>
+                  <span>Available now</span>
+                  <strong>{formatEuro(availableNow)}</strong>
+                  <p>Income minus spending so far.</p>
                 </div>
                 <div className={styles.heroHealthMetric}>
                   <span>Financial health</span>
@@ -176,12 +174,12 @@ export default async function HomePage({
               </div>
 
               <div className={styles.miniProgress}><span /></div>
-              <p className={styles.progressCopy}>72% of this month’s plan is already funded.</p>
+              <p className={styles.progressCopy}>This month is on track and fully mapped.</p>
 
               <div className={styles.heroMiniStats}>
                 <div><span>Income</span><strong>{formatEuro(landingPreview.income)}</strong></div>
-                <div><span>Committed</span><strong>{formatEuro(landingPreview.committed)}</strong></div>
-                <div><span>Reserve</span><strong>{formatEuro(landingPreview.reserve)}</strong></div>
+                <div><span>Still to pay</span><strong>{formatEuro(landingPreview.stillToPay)}</strong></div>
+                <div><span>Left after paid</span><strong>{formatEuro(leftAfterEverythingIsPaid)}</strong></div>
               </div>
             </div>
           </div>
@@ -233,28 +231,30 @@ export default async function HomePage({
             </div>
             <div className={styles.overviewGrid}>
               <article className={styles.availableCard}>
-                <span>Available after planning</span>
-                <strong>{formatEuro(availableAfterPlanning)}</strong>
-                <p>Across active personal accounts</p>
+                <span>Available now</span>
+                <strong>{formatEuro(availableNow)}</strong>
+                <p>Income minus spending so far.</p>
                 <div className={styles.availableSplit}>
-                  <div><span>Committed</span><b>{formatEuro(landingPreview.committed)}</b></div>
-                  <div><span>Reserve</span><b>{formatEuro(landingPreview.reserve)}</b></div>
+                  <div><span>Income</span><b>{formatEuro(landingPreview.income)}</b></div>
+                  <div><span>Spent so far</span><b>{formatEuro(landingPreview.spentSoFar)}</b></div>
+                  <div><span>Still to pay</span><b>{formatEuro(landingPreview.stillToPay)}</b></div>
+                  <div><span>Left after everything is paid</span><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
                 </div>
               </article>
               <article className={styles.healthCard}>
                 <span>Financial health</span>
                 <div><strong>{landingPreview.healthScore}</strong><small>/ 100<br />Stable and improving</small></div>
                 <div className={styles.healthBar}><i /></div>
-                <p>Emergency reserve is moving in the right direction.</p>
+                <p>Cash flow and obligations are stable and improving.</p>
               </article>
               <article className={styles.cashFlowCard}>
                 <span>Monthly cash flow</span>
                 <div className={styles.flowTotals}>
-                  <div><small>Income</small><b>{formatEuro(landingPreview.income)}</b></div>
-                  <div><small>Remaining</small><b>{formatEuro(remainingAvailable)}</b></div>
+                  <div><small>Available now</small><b>{formatEuro(availableNow)}</b></div>
+                  <div><small>Left after everything is paid</small><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
                 </div>
-                <p className={styles.flowCaption}>Comparison of this month’s key amounts.</p>
-                <div className={styles.flowBars} aria-label="Comparison of this month’s key amounts.">
+                <p className={styles.flowCaption}>This month at a glance.</p>
+                <div className={styles.flowBars} aria-label="This month at a glance.">
                   {comparisonBars.map((item) => {
                     const height = Math.max(16, Math.round((item.value / comparisonBarMax) * 100));
 

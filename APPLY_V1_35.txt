@@ -1,0 +1,26 @@
+FICONTER V1.35 — PWA MOBILE RUNTIME RECOVERY
+
+IMPORTANT BRANCH RULE
+---------------------
+Do NOT apply this hotfix on feature/landing-page-v2.
+Create hotfix/pwa-mobile-runtime-v135 FROM the latest main, switch GitHub Desktop to that hotfix branch, then extract this ZIP into the repository root.
+
+The ZIP overlays these current files only. It deletes nothing.
+
+After extraction:
+1. GitHub Desktop should show the modified/new files.
+2. Commit:
+   fix(pwa): recover mobile runtime and prevent stale app blank screens
+3. Push origin.
+4. Wait for GitHub Actions and Vercel preview checks.
+5. Test the installed PWA on phone.
+6. Merge the hotfix PR to main only after checks pass.
+7. Update feature/landing-page-v2 from the new main before continuing landing-page work.
+
+FIRST PHONE RECOVERY AFTER DEPLOYMENT
+-------------------------------------
+Because the currently installed PWA may still be running the old service worker/runtime:
+- fully close the installed FICONTER app;
+- reopen it with internet access;
+- if it still shows the old blank runtime, remove the installed FICONTER PWA once and install it again from the live site.
+Future deployments are protected by the V1.35 controller-change and chunk-recovery logic.

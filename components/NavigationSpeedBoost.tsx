@@ -308,13 +308,26 @@ export function NavigationSpeedBoost({
       }
     }
 
-    // Warm the routes users are most likely to choose immediately after the
-    // shell becomes interactive. Staggering prevents a burst of RSC requests.
-    criticalRoutes.forEach((route, index) => {
-      scheduled.push(window.setTimeout(() => warm(route), 40 + index * 70));
-    });
+    const nativePhone = isNativePhoneApp();
+
+    // Installed/native phones must not prefetch the entire financial app in
+    // the background. That creates avoidable RSC traffic and memory pressure
+    // on the smallest devices. Warm only the two closest root destinations;
+    // every touched/pressed link is still prefetched immediately above.
+    if (nativePhone) {
+      criticalRoutes.slice(0, 2).forEach((route, index) => {
+        scheduled.push(window.setTimeout(() => warm(route), 160 + index * 140));
+      });
+    } else {
+      // Desktop/tablet browsers can safely warm the routes users are most
+      // likely to choose immediately after the shell becomes interactive.
+      criticalRoutes.forEach((route, index) => {
+        scheduled.push(window.setTimeout(() => warm(route), 40 + index * 70));
+      });
+    }
 
     const warmSecondary = () => {
+      if (nativePhone) return;
       if (!allowsBackgroundPrefetch() || document.visibilityState !== "visible") return;
       secondaryRoutes.forEach((route, index) => {
         scheduled.push(window.setTimeout(() => warm(route), index * 85));
@@ -322,10 +335,12 @@ export function NavigationSpeedBoost({
       scheduled.push(window.setTimeout(() => warm(oppositeWorkspace), 180));
     };
 
-    if (idleWindow.requestIdleCallback) {
-      idleHandle = idleWindow.requestIdleCallback(warmSecondary, { timeout: 900 });
-    } else {
-      scheduled.push(window.setTimeout(warmSecondary, 650));
+    if (!nativePhone) {
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(warmSecondary, { timeout: 900 });
+      } else {
+        scheduled.push(window.setTimeout(warmSecondary, 650));
+      }
     }
 
     return () => {

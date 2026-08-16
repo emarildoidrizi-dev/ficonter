@@ -45,7 +45,8 @@
     "verify:export-branding-v126": "node scripts/verify-export-branding-v126.mjs",
     "verify:v129": "node scripts/verify-navigation-theme-v129.mjs",
     "verify:v132": "node scripts/verify-surface-opacity-v132.mjs",
-    "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs"
+    "verify:v134": "node scripts/verify-instant-theme-preview-v134.mjs",
+    "verify:pwa-v135": "node scripts/verify-pwa-mobile-runtime-v135.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -1,4 +1,5 @@
-const CACHE_NAME = "ficonter-pwa-static-v13-instant-theme-preview-v134";
+const CACHE_NAME = "ficonter-pwa-static-v14-mobile-runtime-recovery-v135";
+const RUNTIME_VERSION = "v135";
 
 const PRECACHE_URLS = [
   "/offline.html",
@@ -22,33 +23,41 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    Promise.all([
-      caches
-        .keys()
-        .then((keys) =>
-          Promise.all(
-            keys
-              .filter(
-                (key) =>
-                  key.startsWith("ficonter-pwa-") &&
-                  key !== CACHE_NAME,
-              )
-              .map((key) => caches.delete(key)),
-          ),
-        ),
-      self.clients.claim(),
-    ]),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key.startsWith("ficonter-pwa-") && key !== CACHE_NAME)
+          .map((key) => caches.delete(key)),
+      );
+
+      await self.clients.claim();
+
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      clients.forEach((client) => {
+        client.postMessage({ type: "FICONTER_SW_ACTIVATED", version: RUNTIME_VERSION });
+      });
+    })(),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    event.waitUntil(self.skipWaiting());
+  }
 });
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-
   if (url.origin !== self.location.origin) return;
+
+  // Never proxy Next.js build assets through the service-worker cache. Their
+  // build-specific URLs must stay aligned with the HTML/RSC payload currently
+  // served by the deployment. The browser HTTP cache can still cache them.
+  if (url.pathname.startsWith("/_next/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -61,7 +70,6 @@ self.addEventListener("fetch", (event) => {
   }
 
   const isSafeStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/wallpapers/") ||
     url.pathname === "/icon.svg" ||
@@ -73,19 +81,22 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(request).then(async (cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
+      const networkPromise = fetch(request)
+        .then(async (networkResponse) => {
+          if (networkResponse.ok && networkResponse.type === "basic") {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, networkResponse.clone());
+          }
+          return networkResponse;
+        })
+        .catch(() => null);
 
-      const networkResponse = await fetch(request);
-
-      if (
-        networkResponse.ok &&
-        networkResponse.type === "basic"
-      ) {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, networkResponse.clone());
+      if (cachedResponse) {
+        event.waitUntil(networkPromise.then(() => undefined));
+        return cachedResponse;
       }
 
-      return networkResponse;
+      return (await networkPromise) || Response.error();
     }),
   );
 });

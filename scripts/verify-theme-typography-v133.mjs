@@ -50,7 +50,7 @@ expect(
   "typography uses the existing theme source of truth instead of a second state",
 );
 expect(
-  sw.includes("theme-typography-v133") || sw.includes("instant-theme-preview-v134"),
+  sw.includes("theme-typography-v133") || sw.includes("instant-theme-preview-v134") || sw.includes("mobile-runtime-recovery-v135"),
   "PWA cache is versioned for the typography release or a newer theme runtime",
 );
 

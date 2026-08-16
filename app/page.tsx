@@ -22,36 +22,6 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 
 import styles from "./page.module.css";
 
-const productViews = [
-  {
-    icon: WalletCards,
-    title: "Overview",
-    copy: "Balance, monthly movement, commitments and financial health in one composed view.",
-    stat: "€6,260",
-    statLabel: "available after planning",
-  },
-  {
-    icon: Target,
-    title: "Planning",
-    copy: "Turn budgets, bills and goals into a plan that stays understandable as life changes.",
-    stat: "72%",
-    statLabel: "monthly plan funded",
-  },
-  {
-    icon: TrendingUp,
-    title: "Wealth",
-    copy: "Follow net worth, reserves and long-term independence without losing sight of today.",
-    stat: "+8.4%",
-    statLabel: "twelve-month progress",
-  },
-  {
-    icon: BriefcaseBusiness,
-    title: "Business",
-    copy: "Keep business revenue, costs, inventory and reporting distinct but close at hand.",
-    stat: "31.6%",
-    statLabel: "operating margin",
-  },
-] as const;
 
 const principles = [
   [ShieldCheck, "Private by design", "Authenticated workspaces and database-level access policies keep each account isolated."],
@@ -61,20 +31,50 @@ const principles = [
 
 const landingPreview = {
   income: 8420,
-  spentSoFar: 3060,
-  stillToPay: 2160,
+  expenses: 1500,
+  obligations: 2500,
   healthScore: 78,
 } as const;
 
-const availableNow = landingPreview.income - landingPreview.spentSoFar;
-const leftAfterEverythingIsPaid = availableNow - landingPreview.stillToPay;
-const extraGoalContribution = 400;
+const remainingBalance =
+  landingPreview.income - landingPreview.expenses - landingPreview.obligations;
 const smartInsightRows = [
   { icon: TrendingUp, label: "Spending pace", status: "On track" },
   { icon: ShieldCheck, label: "Upcoming obligations", status: "Covered" },
   { icon: Target, label: "Savings capacity", status: "Improving" },
 ] as const;
 const formatEuro = (value: number) => `€${value.toLocaleString("en-US")}`;
+
+const productViews = [
+  {
+    icon: WalletCards,
+    title: "Overview",
+    copy: "Income, expenses, obligations and financial health in one composed view.",
+    stat: formatEuro(landingPreview.income),
+    statLabel: "Income",
+  },
+  {
+    icon: Target,
+    title: "Planning",
+    copy: "Turn budgets, bills and goals into a plan that stays understandable as life changes.",
+    stat: formatEuro(landingPreview.obligations),
+    statLabel: "Obligations",
+  },
+  {
+    icon: TrendingUp,
+    title: "Wealth",
+    copy: "Follow net worth, reserves and long-term independence without losing sight of today.",
+    stat: formatEuro(remainingBalance),
+    statLabel: "Remaining Balance",
+  },
+  {
+    icon: BriefcaseBusiness,
+    title: "Business",
+    copy: "Keep business revenue, costs, inventory and reporting distinct but close at hand.",
+    stat: "Dedicated",
+    statLabel: "business workspace",
+  },
+] as const;
 
 export default async function HomePage({
   searchParams,
@@ -160,9 +160,9 @@ export default async function HomePage({
 
               <div className={styles.heroMetricGrid}>
                 <div className={styles.heroPrimaryMetric}>
-                  <span>Available now</span>
-                  <strong>{formatEuro(availableNow)}</strong>
-                  <p>Income minus spending so far.</p>
+                  <span>Income</span>
+                  <strong>{formatEuro(landingPreview.income)}</strong>
+                  <p>Monthly income before expenses and obligations.</p>
                 </div>
                 <div className={styles.heroHealthMetric}>
                   <span>Financial health</span>
@@ -171,13 +171,11 @@ export default async function HomePage({
                 </div>
               </div>
 
-              <div className={styles.miniProgress}><span /></div>
-              <p className={styles.progressCopy}>This month is on track and fully mapped.</p>
 
               <div className={styles.heroMiniStats}>
-                <div><span>Income</span><strong>{formatEuro(landingPreview.income)}</strong></div>
-                <div><span>Still to pay</span><strong>{formatEuro(landingPreview.stillToPay)}</strong></div>
-                <div><span>Left after paid</span><strong>{formatEuro(leftAfterEverythingIsPaid)}</strong></div>
+                <div><span>Expenses</span><strong>{formatEuro(landingPreview.expenses)}</strong></div>
+                <div><span>Obligations</span><strong>{formatEuro(landingPreview.obligations)}</strong></div>
+                <div><span>Remaining Balance</span><strong>{formatEuro(remainingBalance)}</strong></div>
               </div>
             </div>
           </div>
@@ -229,14 +227,13 @@ export default async function HomePage({
             </div>
             <div className={styles.overviewGrid}>
               <article className={styles.availableCard}>
-                <span>Available now</span>
-                <strong>{formatEuro(availableNow)}</strong>
-                <p>Income minus spending so far.</p>
+                <span>Income</span>
+                <strong>{formatEuro(landingPreview.income)}</strong>
+                <p>Monthly income before expenses and obligations.</p>
                 <div className={styles.availableSplit}>
-                  <div><span>Income</span><b>{formatEuro(landingPreview.income)}</b></div>
-                  <div><span>Spent so far</span><b>{formatEuro(landingPreview.spentSoFar)}</b></div>
-                  <div><span>Still to pay</span><b>{formatEuro(landingPreview.stillToPay)}</b></div>
-                  <div><span>Left after everything is paid</span><b>{formatEuro(leftAfterEverythingIsPaid)}</b></div>
+                  <div><span>Expenses</span><b>{formatEuro(landingPreview.expenses)}</b></div>
+                  <div><span>Obligations</span><b>{formatEuro(landingPreview.obligations)}</b></div>
+                  <div className={styles.remainingBalanceTile}><span>Remaining Balance</span><b>{formatEuro(remainingBalance)}</b></div>
                 </div>
               </article>
               <article className={styles.healthCard}>
@@ -249,8 +246,7 @@ export default async function HomePage({
                 <span>Smart insight</span>
                 <h4>You are on track this month.</h4>
                 <p>
-                  Current spending and upcoming obligations leave room to strengthen savings without
-                  creating a shortfall.
+                  Expenses and obligations remain covered while the month retains a positive remaining balance.
                 </p>
                 <div className={styles.insightRows}>
                   {smartInsightRows.map(({ icon: Icon, label, status }) => (
@@ -268,7 +264,7 @@ export default async function HomePage({
                 </div>
                 <div className={styles.insightHighlight}>
                   <Sparkles size={18} />
-                  <span>Potential extra goal contribution: {formatEuro(extraGoalContribution)}</span>
+                  <span>Remaining Balance stays positive after expenses and obligations.</span>
                 </div>
               </article>
             </div>

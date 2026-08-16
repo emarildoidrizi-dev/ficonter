@@ -370,7 +370,6 @@
   font-size: 9px;
 }
 
-.miniProgress,
 .healthBar {
   height: 6px;
   margin-top: 14px;
@@ -379,19 +378,11 @@
   background: #dbe3df;
 }
 
-.miniProgress span,
 .healthBar i {
   display: block;
-  width: 72%;
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--landing-gold), var(--landing-teal));
-}
-
-.progressCopy {
-  margin: 7px 0 0;
-  color: #66767b;
-  font-size: 9px;
 }
 
 .heroMiniStats {
@@ -624,6 +615,19 @@
   gap: 6px;
   border-radius: 12px;
   background: rgba(207, 218, 207, 0.38);
+}
+
+.remainingBalanceTile {
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(226, 237, 229, 0.78), rgba(239, 233, 211, 0.72)) !important;
+  border: 1px solid rgba(85, 117, 103, 0.12);
+}
+
+.remainingBalanceTile b {
+  color: #2f6f63;
+  font-size: 15px;
 }
 
 .availableSplit span,

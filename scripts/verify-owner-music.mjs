@@ -17,6 +17,7 @@ const server = read("lib/ownerMusic/server.ts");
 const libraryApi = read("app/api/owner/music/route.ts");
 const uploadApi = read("app/api/owner/music/upload-url/route.ts");
 const css = read("components/OwnerMusicPlayer.module.css");
+const nextConfig = read("next.config.ts");
 
 check(dashboard.includes("isOwnerEmail(user.email)"), "Personal workspace derives the platform Owner explicitly");
 check(dashboard.includes("isPlatformOwner ? <OwnerMusicPlayer /> : null"), "Personal workspace renders music only for Owner");
@@ -30,6 +31,7 @@ check(config.includes("50 * 1024 * 1024"), "Per-track upload limit is bounded at
 check(uploadApi.includes("createSignedUploadUrl"), "Uploads use short-lived signed upload authorization");
 check(uploadApi.includes("isSameOriginRequest"), "Upload authorization is protected against cross-site mutation requests");
 check(libraryApi.includes("createSignedUrl"), "Playback uses private signed read URLs");
+check(nextConfig.includes("media-src 'self' blob: https://*.supabase.co"), "CSP explicitly allows private Supabase audio playback");
 check(libraryApi.includes("isSameOriginRequest") && libraryApi.includes("DELETE"), "Track deletion is same-origin protected");
 check(!libraryApi.includes("getPublicUrl"), "Private tracks are never exposed with public storage URLs");
 check(player.includes("uploadToSignedUrl"), "Large audio files upload directly to Supabase instead of proxying through Vercel");
@@ -40,6 +42,7 @@ check(store.includes("new Audio()") && store.includes("audio.play()"), "Playback
 check(store.includes("mediaSession") && store.includes("MediaMetadata"), "Supported PWA/mobile browsers receive media-session controls");
 check(store.includes("ficonter:owner-music-volume"), "Owner volume preference persists locally");
 check(css.includes("position:fixed") && css.includes("bottom:88px"), "Mini-player stays reachable on desktop and above the mobile dock");
+check(player.includes("playbackErrorMessage") && player.includes("startCurrentTrack"), "Playback failures are surfaced instead of failing silently");
 check(player.includes("Owner only · private storage"), "The library clearly communicates Owner-only privacy");
 check(config.includes("OWNER_MUSIC_MAX_TRACKS = 100"), "V1 library size is explicitly bounded");
 

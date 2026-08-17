@@ -1,74 +1,75 @@
-# FICONTER
+# FICONTER — Global Money Input System
 
-**A private financial-management and decision platform.**
+This package replaces the device-specific decimal workaround with one platform-wide money-input contract.
 
-FICONTER helps customers record, understand, plan and improve their financial position. It does not hold, move, lend or invest customer money.
+## Goal
 
-## Release status
+All FICONTER monetary inputs must accept both comma and dot decimals on:
+- iPhone / iPad
+- Android
+- Windows
+- macOS
+- Chrome
+- Safari
+- Edge
+- installed PWA
+- normal browser
 
-This repository is **FICONTER Release Candidate 1**. It consolidates the latest complete project with the accepted performance, precision and Realtime TypeScript hardening work.
+Accepted examples:
+- `2345,67`
+- `2345.67`
+- `2.345,67`
+- `2,345.67`
 
-## Main capabilities
+All resolve to the same monetary value before storage.
 
-- Transactions with multicurrency EUR normalization
-- Bills with paid/unpaid synchronization
-- Monthly Planner and Recorded Activity views
-- Debt, Goals, Savings and Emergency Fund tracking
-- Net Worth and Financial Independence
-- Financial Health Score, Wealth Score and Smart Insights
-- Financial GPS and guided financial setup
-- Financial File Import
-- Customer support messaging and Document Vault
-- Privacy-safe administration
-- Premium themes and real photographic scene wallpapers
-- CSV, JSON and PDF account exports
+## Package contents
 
-## Technology
+- `components/MoneyInput.tsx`
+  Shared cross-platform money input component.
 
-- Next.js 16
-- React 19
-- TypeScript
-- Supabase Auth, PostgreSQL, Realtime and Storage
-- Vercel
+- `money.ts.patch`
+  Shared parser/sanitizer patch for `lib/finance/money.ts`.
 
-## Local setup
+- `GLOBAL_MONEY_INPUT_MIGRATION.md`
+  Exact rules for replacing existing money-entry controls across FICONTER.
 
-```bash
-npm install
-npm run dev
-```
+- `scripts/verify-global-money-inputs.mjs`
+  Static regression audit for obvious remaining native numeric money fields.
 
-Required environment variables:
+## Critical implementation rule
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-SUPABASE_SERVICE_ROLE_KEY=server-only-service-role-key
-```
+Money entry must never rely on browser-native `type="number"` validation.
 
-Never expose `SUPABASE_SERVICE_ROLE_KEY` through a `NEXT_PUBLIC_` variable.
+Use:
+- `type="text"`
+- `inputMode="decimal"`
+- shared `MoneyInput`
+- `parseMoneyInput()` at save boundaries
+- `roundMoney()` after successful parsing
+
+## Recommended branch
+
+`fix/global-money-input-system`
+
+## Suggested commit
+
+`fix(finance): standardize decimal money input across FICONTER`
 
 ## Verification
 
-```bash
-npm run verify:release-candidate
-npm run lint
-npm run build
-```
+Test at least:
+1. Transaction `2345,67`
+2. Transaction `2345.67`
+3. Monthly Budget `2345,67`
+4. Bill `19,99`
+5. Debt payment `150,50`
+6. Savings `0,50`
+7. Credit-card amount `1.355,88`
+8. Business monetary form
+9. iPhone installed PWA
+10. Android/browser
+11. Desktop Chrome
+12. Safari
 
-The repository contains 31 project-specific verification suites. Vercel's production build remains the authoritative dependency and framework compilation check.
-
-## Database
-
-No new SQL migration was created specifically for consolidation. The deployed Supabase project must already include the migrations in `supabase/`, especially:
-
-- `phase1_qa_finalization.sql`
-- `bill_paid_unpaid_reversal.sql`
-- `debt_transaction_bidirectional_sync.sql`
-- Phase 2 aggregate migrations
-- Support and Document Vault migrations
-
-## Deployment
-
-See `DEPLOYMENT_STEPS.md` and `CONSOLIDATION_REPORT.md`.
+The code in this ZIP is intentionally manual: it does not modify GitHub or your branch automatically.

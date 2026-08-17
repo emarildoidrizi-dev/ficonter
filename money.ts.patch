@@ -1,0 +1,72 @@
+diff --git a/lib/finance/money.ts b/lib/finance/money.ts
+--- a/lib/finance/money.ts
++++ b/lib/finance/money.ts
+@@
+ export const EUR_DECIMALS = 2;
+ export const RATE_DECIMALS = 8;
+ export const CONVERTED_AMOUNT_DECIMALS = 6;
+
++export function sanitizeMoneyInputDraft(value: string): string {
++  if (!value) return "";
++  let draft = value
++    .replace(/\s|\u00A0/g, "")
++    .replace(/[^\d,.\-]/g, "");
++  const negative = draft.startsWith("-");
++  draft = draft.replace(/-/g, "");
++  return `${negative ? "-" : ""}${draft}`;
++}
++
++export function parseMoneyInput(value: unknown): number {
++  if (typeof value === "number") {
++    return Number.isFinite(value) ? value : Number.NaN;
++  }
++
++  if (typeof value !== "string") {
++    const numeric = Number(value);
++    return Number.isFinite(numeric) ? numeric : Number.NaN;
++  }
++
++  let raw = sanitizeMoneyInputDraft(value).trim();
++  if (!raw) return Number.NaN;
++
++  const negative = raw.startsWith("-");
++  raw = raw.replace(/-/g, "");
++
++  const lastComma = raw.lastIndexOf(",");
++  const lastDot = raw.lastIndexOf(".");
++  let normalized = raw;
++
++  if (lastComma >= 0 && lastDot >= 0) {
++    const decimalSeparator = lastComma > lastDot ? "," : ".";
++    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
++    normalized = raw
++      .split(thousandsSeparator)
++      .join("")
++      .replace(decimalSeparator, ".");
++  } else {
++    const separator = lastComma >= 0 ? "," : lastDot >= 0 ? "." : "";
++    if (separator) {
++      const parts = raw.split(separator);
++      const trailing = parts.at(-1) ?? "";
++
++      if (parts.length === 2 && trailing.length > 0 && trailing.length <= 2) {
++        normalized = `${parts[0]}.${trailing}`;
++      } else if (parts.length > 2 && trailing.length > 0 && trailing.length <= 2) {
++        normalized = `${parts.slice(0, -1).join("")}.${trailing}`;
++      } else {
++        normalized = parts.join("");
++      }
++    }
++  }
++
++  if (negative) normalized = `-${normalized}`;
++  const numeric = Number(normalized);
++  return Number.isFinite(numeric) ? numeric : Number.NaN;
++}
++
+ export function finiteNumber(value: unknown, fallback = 0): number {
+-  const numeric = typeof value === "number" ? value : Number(value);
++  const numeric =
++    typeof value === "string" ? parseMoneyInput(value) : Number(value);
+   return Number.isFinite(numeric) ? numeric : fallback;
+ }

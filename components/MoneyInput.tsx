@@ -3,10 +3,8 @@
 import {
   forwardRef,
   type ChangeEvent,
-  type FormEvent,
   type InputHTMLAttributes,
 } from "react";
-import { sanitizeMoneyInputDraft } from "@/lib/finance/money";
 
 export type MoneyInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -17,14 +15,28 @@ export type MoneyInputProps = Omit<
   onValueChange?: (value: string) => void;
 };
 
+function sanitizeDraft(value: string): string {
+  if (!value) return "";
+
+  let draft = value
+    .replace(/\s|\u00A0/g, "")
+    .replace(/[^\d,.\-]/g, "");
+
+  const negative = draft.startsWith("-");
+  draft = draft.replace(/-/g, "");
+
+  return `${negative ? "-" : ""}${draft}`;
+}
+
 /**
- * Shared FICONTER money input.
+ * Shared FICONTER monetary input.
  *
- * Cross-platform contract:
- * - never uses native type="number"
- * - keeps iOS/Android decimal keyboards via inputMode="decimal"
- * - preserves comma and dot while typing
- * - leaves locale normalization to parseMoneyInput() at save time
+ * Cross-platform rules:
+ * - never uses native type="number" for money
+ * - uses inputMode="decimal" so mobile devices show a numeric keyboard
+ * - allows both comma and dot while the user is typing
+ * - does not force locale conversion while typing
+ * - final parsing/rounding happens at the save boundary
  */
 export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
   function MoneyInput(
@@ -32,51 +44,23 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
       value,
       defaultValue,
       onValueChange,
-      onBeforeInput,
-      onInput,
       autoComplete = "off",
       enterKeyHint = "done",
       ...props
     },
     ref,
   ) {
-    function emit(nextValue: string) {
-      onValueChange?.(sanitizeMoneyInputDraft(nextValue));
-    }
-
-    function handleBeforeInput(event: FormEvent<HTMLInputElement>) {
-      onBeforeInput?.(event);
-      if (event.defaultPrevented) return;
-
-      const nativeEvent = event.nativeEvent as InputEvent;
-      const separator = nativeEvent.data;
-
-      if (
-        nativeEvent.inputType !== "insertText" ||
-        (separator !== "," && separator !== ".")
-      ) {
-        return;
-      }
-
-      const input = event.currentTarget;
-      const start = input.selectionStart ?? input.value.length;
-      const end = input.selectionEnd ?? start;
-      const nextValue =
-        input.value.slice(0, start) +
-        separator +
-        input.value.slice(end);
-
-      event.preventDefault();
-      emit(nextValue);
-
-      requestAnimationFrame(() => {
-        const caret = start + 1;
-        input.setSelectionRange(caret, caret);
-      });
-    }
+    const controlled = value !== undefined;
 
     function handleChange(event: ChangeEvent<HTMLInputElement>) {
-      emit(event.target.value);
+      const nextValue = sanitizeDraft(event.currentTarget.value);
+
+      // Keep uncontrolled/FormData usages clean without forcing React state.
+      if (!controlled && nextValue !== event.currentTarget.value) {
+        event.currentTarget.value = nextValue;
+      }
+
+      onValueChange?.(nextValue);
     }
 
     return (
@@ -87,10 +71,10 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         inputMode="decimal"
         autoComplete={autoComplete}
         enterKeyHint={enterKeyHint}
+        autoCapitalize="off"
+        spellCheck={false}
         value={value}
         defaultValue={defaultValue}
-        onBeforeInput={handleBeforeInput}
-        onInput={onInput}
         onChange={handleChange}
       />
     );

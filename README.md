@@ -1,75 +1,63 @@
-# FICONTER — Global Money Input System
+# FICONTER Global Money Input — Build Hotfix
 
-This package replaces the device-specific decimal workaround with one platform-wide money-input contract.
+This fixes the Vercel/TypeScript errors shown in the deployment log.
 
-## Goal
+## What to do
 
-All FICONTER monetary inputs must accept both comma and dot decimals on:
-- iPhone / iPad
-- Android
-- Windows
-- macOS
-- Chrome
-- Safari
-- Edge
-- installed PWA
-- normal browser
+Replace the existing:
 
-Accepted examples:
+`components/MoneyInput.tsx`
+
+with the file included in this ZIP.
+
+## Why the previous build failed
+
+The earlier component:
+- imported `sanitizeMoneyInputDraft` from `lib/finance/money.ts`, but that export was not present in the deployed branch;
+- used an incompatible React event type for `onBeforeInput`.
+
+This replacement removes both failure points.
+
+## Cross-platform behavior
+
+The component now uses:
+
+```tsx
+type="text"
+inputMode="decimal"
+```
+
+This is the global FICONTER rule for monetary inputs.
+
+It accepts:
 - `2345,67`
 - `2345.67`
 - `2.345,67`
 - `2,345.67`
 
-All resolve to the same monetary value before storage.
+Do not use `type="number"` for monetary values.
 
-## Package contents
+## Controlled example
 
-- `components/MoneyInput.tsx`
-  Shared cross-platform money input component.
+```tsx
+<MoneyInput
+  value={amount}
+  onValueChange={setAmount}
+  placeholder="0.00"
+/>
+```
 
-- `money.ts.patch`
-  Shared parser/sanitizer patch for `lib/finance/money.ts`.
+## FormData example
 
-- `GLOBAL_MONEY_INPUT_MIGRATION.md`
-  Exact rules for replacing existing money-entry controls across FICONTER.
+```tsx
+<MoneyInput
+  name="amount"
+  placeholder="0.00"
+/>
+```
 
-- `scripts/verify-global-money-inputs.mjs`
-  Static regression audit for obvious remaining native numeric money fields.
+Continue using FICONTER's existing money parser when the value is saved.
 
-## Critical implementation rule
+## Suggested commit message
 
-Money entry must never rely on browser-native `type="number"` validation.
-
-Use:
-- `type="text"`
-- `inputMode="decimal"`
-- shared `MoneyInput`
-- `parseMoneyInput()` at save boundaries
-- `roundMoney()` after successful parsing
-
-## Recommended branch
-
-`fix/global-money-input-system`
-
-## Suggested commit
-
-`fix(finance): standardize decimal money input across FICONTER`
-
-## Verification
-
-Test at least:
-1. Transaction `2345,67`
-2. Transaction `2345.67`
-3. Monthly Budget `2345,67`
-4. Bill `19,99`
-5. Debt payment `150,50`
-6. Savings `0,50`
-7. Credit-card amount `1.355,88`
-8. Business monetary form
-9. iPhone installed PWA
-10. Android/browser
-11. Desktop Chrome
-12. Safari
-
-The code in this ZIP is intentionally manual: it does not modify GitHub or your branch automatically.
+`fix(finance): repair global money input build and cross-platform entry`

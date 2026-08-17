@@ -4,6 +4,7 @@ export const FICONTER_NAVIGATION_STALLED_EVENT = "ficonter:navigation-stalled";
 
 const ROUTE_INTENT_GUARD_MS = 320;
 const DUPLICATE_INTENT_GUARD_MS = 1_600;
+const STALE_INTENT_MS = 12_000;
 
 export type FiconterNavigationIntentDetail = {
   target: string;
@@ -19,6 +20,26 @@ export function isFiconterNavigationPending(): boolean {
 export function currentFiconterNavigationTarget(): string | null {
   if (typeof document === "undefined") return null;
   return document.documentElement.dataset.ficonterRouteTarget ?? null;
+}
+
+export function navigationIntentAgeMs(): number {
+  if (typeof document === "undefined") return Number.POSITIVE_INFINITY;
+  const startedAt = Number(
+    document.documentElement.dataset.ficonterRouteIntentAt ?? "0",
+  );
+  if (!Number.isFinite(startedAt) || startedAt <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.max(0, Date.now() - startedAt);
+}
+
+export function clearFiconterNavigationState(): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.removeAttribute("data-ficonter-route-loading");
+  root.removeAttribute("data-ficonter-route-pending");
+  root.removeAttribute("data-ficonter-route-target");
+  root.removeAttribute("data-ficonter-route-intent-at");
 }
 
 /**
@@ -41,6 +62,16 @@ export function requestFiconterNavigationIntent(
   const existingTarget = root.dataset.ficonterRouteTarget ?? null;
   const existingStartedAt = Number(root.dataset.ficonterRouteIntentAt ?? "0");
   const elapsed = existingStartedAt > 0 ? now - existingStartedAt : Number.POSITIVE_INFINITY;
+
+  // A bfcache restore, interrupted PWA transition, or crashed client render can
+  // leave DOM navigation flags behind after the timers that owned them are gone.
+  // Never let that stale state block a legitimate future tap indefinitely.
+  if (
+    root.dataset.ficonterRoutePending === "true" &&
+    elapsed >= STALE_INTENT_MS
+  ) {
+    clearFiconterNavigationState();
+  }
 
   if (
     root.dataset.ficonterRoutePending === "true" &&

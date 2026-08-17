@@ -64,6 +64,59 @@ const SAVING_WORDS = [
   "education fund",
 ];
 
+const MONTHLY_BUDGET_DEBT_WORDS = [
+  "debt",
+  "loan",
+  "credit-card",
+  "credit card",
+  "mortgage principal",
+  "student-loan",
+  "student loan",
+  "personal-loan",
+  "personal loan",
+  "debt repayment",
+];
+
+const MONTHLY_BUDGET_TRANSFER_WORDS = [
+  "account transfer",
+  "cash deposit",
+  "cash withdrawal",
+  "opening balance",
+  "balance correction",
+  "currency conversion",
+  "refund adjustment",
+];
+
+/**
+ * Monthly spending budgets intentionally measure the Expenses bucket only.
+ * Savings, debt repayments, transfers/adjustments, goals and bill-linked
+ * transactions are separate financial commitments and must not consume the
+ * user's discretionary expense budget.
+ */
+export function isMonthlyBudgetExpenseTransaction(
+  transaction: PlatformTransaction,
+): boolean {
+  if (isIncome(transaction) || isSaving(transaction)) return false;
+
+  const description = (transaction.description ?? "").trim().toLowerCase();
+  if (description.startsWith("goal investment ·")) return false;
+
+  const category = (transaction.category ?? "").trim().toLowerCase();
+  if (MONTHLY_BUDGET_DEBT_WORDS.some((word) => category.includes(word))) {
+    return false;
+  }
+  if (MONTHLY_BUDGET_TRANSFER_WORDS.some((word) => category.includes(word))) {
+    return false;
+  }
+
+  const type = transaction.type.trim().toLowerCase();
+  if (["saving", "savings", "debt", "transfer", "adjustment"].includes(type)) {
+    return false;
+  }
+
+  return true;
+}
+
 function localDateKey(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

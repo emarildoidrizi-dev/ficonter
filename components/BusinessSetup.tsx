@@ -62,7 +62,6 @@ export function BusinessSetup() {
     }
 
     router.replace("/business/overview");
-    router.refresh();
   }
 
   return (

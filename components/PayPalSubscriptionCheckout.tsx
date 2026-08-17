@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type PaidPlan = "personal_pro" | "business_pro";
 type BillingInterval = "monthly" | "annual";
@@ -105,6 +106,7 @@ export default function PayPalSubscriptionCheckout({
   billingInterval,
   onApproved,
 }: PayPalSubscriptionCheckoutProps) {
+  const router = useRouter();
   const reactId = useId();
   const containerId = `paypal-subscription-${reactId.replace(/:/g, "")}`;
 
@@ -211,7 +213,7 @@ export default function PayPalSubscriptionCheckout({
     setApprovedSubscriptionId(subscriptionId);
     onApproved?.(subscriptionId);
 
-    window.location.reload();
+    router.refresh();
   } catch (confirmationError) {
     setError(
       confirmationError instanceof Error
@@ -251,7 +253,7 @@ export default function PayPalSubscriptionCheckout({
     return () => {
       cancelled = true;
     };
-  }, [billingInterval, containerId, onApproved, planCode]);
+  }, [billingInterval, containerId, onApproved, planCode, router]);
 
   if (approvedSubscriptionId) {
     return (

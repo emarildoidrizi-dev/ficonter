@@ -12,6 +12,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
+import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { getBusinessContext } from "@/lib/business/server";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
@@ -119,6 +120,7 @@ export default async function BusinessLayout({
       />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
+      <RuntimeStabilityBridge />
       <UsageHeartbeat workspace="business" />
       <NavigationSpeedBoost
         workspace="business"

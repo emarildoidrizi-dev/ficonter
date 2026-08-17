@@ -303,7 +303,6 @@ export function BusinessManager({
     }
 
     router.replace("/business/overview");
-    router.refresh();
   }
 
   async function saveBusiness(event: FormEvent<HTMLFormElement>) {
@@ -583,7 +582,6 @@ export function BusinessManager({
     } else {
       router.replace("/business/manage");
     }
-    router.refresh();
   }
 
   async function restoreBusiness(business: Business) {
@@ -623,7 +621,6 @@ export function BusinessManager({
     setBusy("");
     setNotice("Business restored and opened.");
     router.replace("/business/overview");
-    router.refresh();
   }
 
   function beginDelete(business: Business) {
@@ -705,7 +702,6 @@ export function BusinessManager({
       }
       router.replace("/business/manage");
     }
-    router.refresh();
   }
 
   return (

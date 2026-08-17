@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type SubscriptionSnapshot = {
   plan_code?: string | null;
@@ -36,6 +37,7 @@ function planName(planCode: string | null | undefined) {
 }
 
 export function CustomerSubscriptionManager({ subscription }: Props) {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +94,7 @@ export function CustomerSubscriptionManager({ subscription }: Props) {
         );
       }
 
-      window.location.reload();
+      router.refresh();
     } catch (caught) {
       setError(
         caught instanceof Error

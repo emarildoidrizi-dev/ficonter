@@ -53,7 +53,8 @@
     "verify:password-recovery-link": "node scripts/verify-password-recovery-link-fix.mjs",
     "verify:financial-document-import": "node scripts/verify-financial-document-import.mjs",
     "verify:financial-document-multilingual": "node scripts/verify-financial-document-multilingual.mjs",
-    "verify:owner-music": "node scripts/verify-owner-music.mjs"
+    "verify:owner-music": "node scripts/verify-owner-music.mjs",
+    "verify:performance-stability-v2": "node scripts/verify-platform-performance-stability-v2.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

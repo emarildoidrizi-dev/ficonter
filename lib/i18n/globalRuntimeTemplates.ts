@@ -16,6 +16,7 @@ function row(
 }
 
 export const GLOBAL_RUNTIME_TEMPLATES: Record<string, TemplateRow> = {
+  "View {0}": row("{0} anzeigen", "Ver {0}", "Shiko {0}", "عرض {0}", "Ver {0}", "Visualizza {0}", "Просмотреть {0}"),
   "{0} — account": row("{0} — Konto", "{0} — cuenta", "{0} — llogaria", "{0} — الحساب", "{0} — conta", "{0} — account", "{0} — аккаунт"),
   "Open profile menu for {0}": row("Profilmenü für {0} öffnen", "Abrir el menú de perfil de {0}", "Hap menunë e profilit për {0}", "فتح قائمة الملف الشخصي لـ {0}", "Abrir o menu de perfil de {0}", "Apri il menu profilo di {0}", "Открыть меню профиля для {0}"),
   "A new reply is available for {0}.": row("Für {0} ist eine neue Antwort verfügbar.", "Hay una nueva respuesta disponible para {0}.", "Një përgjigje e re është e disponueshme për {0}.", "يتوفر رد جديد لـ {0}.", "Está disponível uma nova resposta para {0}.", "È disponibile una nuova risposta per {0}.", "Для {0} доступен новый ответ."),

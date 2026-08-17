@@ -12,6 +12,7 @@ import { addMoney, finiteNumber, roundMoney, subtractMoney, sumMoney } from "@/l
 import {
   billActivityDate,
   calculateMonthlyCashActuals,
+  isMonthlyBudgetExpenseTransaction,
   transactionActivityDate,
 } from "@/lib/finance/monthlyCashActuals";
 import { formatCurrency } from "@/lib/financialOptions";
@@ -203,6 +204,10 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const paidBillTxIds=useMemo(()=>new Set(financeBills.filter(b=>b.transaction_id).map(b=>b.transaction_id as string)),[financeBills]);
   const monthTx=useMemo(()=>financeTransactions.filter(t=>inMonth(transactionActivityDate(t),month)),[financeTransactions,month]);
   const expenseTransactions=useMemo(()=>[...monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses")].sort((a,b)=>(b.occurred_at??b.transaction_date).localeCompare(a.occurred_at??a.transaction_date)),[monthTx,paidBillTxIds]);
+  const monthlyBudgetExpenseTransactions=useMemo(
+    ()=>expenseTransactions.filter(isMonthlyBudgetExpenseTransaction),
+    [expenseTransactions],
+  );
   const actualBySection=useMemo(()=>{
     const totals:Record<Section,number>={income:0,bills:0,expenses:0,savings:0,debt:0};
     monthTx.forEach(t=>{
@@ -229,8 +234,9 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const totalGoalInvested=sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.current_amount,currencyContext)));
   const totalGoalTarget=sumMoney(goals.map(goal=>canonicalAmountInBaseCurrency(goal.target_amount,currencyContext)));
   const totalOut=synchronizedCashActuals.outflow;
-  const budgetUsedPercent=spendingBudget>0?Math.max(0,totalOut/spendingBudget*100):null;
-  const budgetRemaining=spendingBudget>0?subtractMoney(spendingBudget,totalOut):0;
+  const monthlyBudgetExpenses=sumMoney(monthlyBudgetExpenseTransactions.map(transaction=>transaction.amount_eur));
+  const budgetUsedPercent=spendingBudget>0?Math.max(0,monthlyBudgetExpenses/spendingBudget*100):null;
+  const budgetRemaining=spendingBudget>0?subtractMoney(spendingBudget,monthlyBudgetExpenses):0;
   // Goal investments reduce available cash independently.
   // They never update the Monthly Planner Savings card.
   const left=subtractMoney(incomeCardTotal,totalOut);
@@ -254,7 +260,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const gradient=breakdownParts.length
     ?`conic-gradient(${breakdownParts.map(part=>{const start=cursor;cursor+=part.value/Math.max(breakdownTotal,1)*100;return `${part.color} ${start}% ${cursor}%`}).join(",")})`
     :"conic-gradient(var(--breakdown-track) 0 100%)";
-  const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthTx.filter(t=>t.type!=="income"&&!paidBillTxIds.has(t.id)&&!isGoalInvestment(t)&&classify(t)==="expenses").reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthTx,paidBillTxIds]);
+  const spendingBreakdown=useMemo<Array<[string,number]>>(()=>Object.entries(monthlyBudgetExpenseTransactions.reduce<Record<string,number>>((rows,t)=>{rows[t.category]=addMoney(rows[t.category]||0,t.amount_eur);return rows},{})).sort((a,b)=>b[1]-a[1]).slice(0,10),[monthlyBudgetExpenseTransactions]);
 
   function shiftMonth(n:number){const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+n);setMonth(monthKey(d));}
   async function saveStartBalance(v:string){
@@ -328,7 +334,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       <div className={styles.monthlyBudgetIntro}>
         <span>Monthly spending limit</span>
         <h3>Monthly budget</h3>
-        <p>Set the total amount you plan to spend in {monthTitle(month)}.</p>
+        <p>Set the amount you plan to use for Expenses in {monthTitle(month)}. Bills, savings, debt, goals and transfers are excluded.</p>
       </div>
       <form className={styles.monthlyBudgetForm} onSubmit={saveMonthlyBudget}>
         <label htmlFor="monthly-budget-amount">Budget amount</label>
@@ -340,8 +346,8 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
         <p className={styles.monthlyBudgetStatus} aria-live="polite">{budgetStatus||"Enter 0 to clear the budget."}</p>
       </form>
       <div className={styles.monthlyBudgetMetric}>
-        <span>Spent so far</span>
-        <strong>{money(totalOut)}</strong>
+        <span>Expenses so far</span>
+        <strong>{money(monthlyBudgetExpenses)}</strong>
       </div>
       <div className={styles.monthlyBudgetMetric}>
         <span>{budgetRemaining<0?"Over budget":"Remaining"}</span>
@@ -350,7 +356,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
       <div className={styles.monthlyBudgetProgress}>
         <div><span>Budget used</span><strong>{budgetUsedPercent===null?"Set a budget":`${budgetUsedPercent.toFixed(1)}%`}</strong></div>
         <i aria-label={budgetUsedPercent===null?"No monthly budget set":`${budgetUsedPercent.toFixed(1)} percent of monthly budget used`}><em style={{width:`${Math.min(100,budgetUsedPercent??0)}%`}}/></i>
-        <small>{spendingBudget>0?`${money(totalOut)} of ${money(spendingBudget)}`:"Add a monthly budget to track spending in real time."}</small>
+        <small>{spendingBudget>0?`${money(monthlyBudgetExpenses)} of ${money(spendingBudget)}`:"Add a monthly budget to track expenses in real time."}</small>
       </div>
     </article>
     <div className={styles.cashFlow}><h3>Cash flow</h3><div><span>Income<b>{money(incomeCardTotal)}</b></span><span>Bills & expenses<b>-{money(addMoney(actual("bills"),actual("expenses")))}</b></span><span>Savings<b>-{money(actual("savings"))}</b></span><span>Goals<b>-{money(goalInvestments)}</b></span><span>Debt<b>-{money(actual("debt"))}</b></span><span className={styles.left}>Left<b>{showAdvancedPosition?money(left):"Personal Pro"}</b></span></div></div>

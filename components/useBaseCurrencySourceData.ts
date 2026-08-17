@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
+import { isFinancialDataScope, parseFiconterDataChange, type FiconterDataChange } from "@/lib/ficonterRealtime";
 import {
   useCurrencyDisplay,
   useHistoricalReportingRates,
@@ -26,20 +28,43 @@ export function useBaseCurrencySourceData(userId: string) {
   const { baseCurrency, latestRate } = useCurrencyDisplay();
   const [source, setSource] = useState<CurrencySourceData>(EMPTY_SOURCE);
   const [loading, setLoading] = useState(true);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const queuedRef = useRef(false);
+  const loadedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const eventTimerRef = useRef<number | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (eventTimerRef.current) window.clearTimeout(eventTimerRef.current);
+    };
+  }, []);
 
-    const [
-      transactions,
-      bills,
-      debts,
-      debtPayments,
-      goals,
-      plans,
-      items,
-    ] = await Promise.all([
+  const refresh = useCallback((): Promise<void> => {
+    if (!userId) return Promise.resolve();
+
+    if (inFlightRef.current) {
+      queuedRef.current = true;
+      return inFlightRef.current;
+    }
+
+    const task = (async () => {
+      if (!loadedRef.current && mountedRef.current) setLoading(true);
+
+      do {
+        queuedRef.current = false;
+
+        const [
+          transactions,
+          bills,
+          debts,
+          debtPayments,
+          goals,
+          plans,
+          items,
+        ] = await Promise.all([
       supabase
         .from("transactions")
         .select(
@@ -74,18 +99,32 @@ export function useBaseCurrencySourceData(userId: string) {
         .from("monthly_budget_items")
         .select("month,section,planned_amount")
         .eq("user_id", userId),
-    ]);
+        ]);
 
-    setSource({
-      transactions: (transactions.data ?? []) as CurrencySourceData["transactions"],
-      bills: (bills.data ?? []) as CurrencySourceData["bills"],
-      debts: (debts.data ?? []) as CurrencySourceData["debts"],
-      debtPayments: (debtPayments.data ?? []) as CurrencySourceData["debtPayments"],
-      goals: (goals.data ?? []) as CurrencySourceData["goals"],
-      plans: (plans.data ?? []) as CurrencySourceData["plans"],
-      items: (items.data ?? []) as CurrencySourceData["items"],
+        if (mountedRef.current) {
+          setSource({
+            transactions: (transactions.data ?? []) as CurrencySourceData["transactions"],
+            bills: (bills.data ?? []) as CurrencySourceData["bills"],
+            debts: (debts.data ?? []) as CurrencySourceData["debts"],
+            debtPayments: (debtPayments.data ?? []) as CurrencySourceData["debtPayments"],
+            goals: (goals.data ?? []) as CurrencySourceData["goals"],
+            plans: (plans.data ?? []) as CurrencySourceData["plans"],
+            items: (items.data ?? []) as CurrencySourceData["items"],
+          });
+          loadedRef.current = true;
+          setLoading(false);
+        }
+      } while (
+        queuedRef.current &&
+        mountedRef.current &&
+        !isFiconterNavigationPending()
+      );
+    })().finally(() => {
+      inFlightRef.current = null;
     });
-    setLoading(false);
+
+    inFlightRef.current = task;
+    return task;
   }, [supabase, userId]);
 
   useEffect(() => {
@@ -93,12 +132,30 @@ export function useBaseCurrencySourceData(userId: string) {
   }, [refresh, baseCurrency]);
 
   useEffect(() => {
-    const schedule = () => void refresh();
+    const schedule = (event?: Event) => {
+      if (event?.type === "ficonter:data-changed") {
+        const change = parseFiconterDataChange(
+          (event as CustomEvent<FiconterDataChange>).detail,
+        );
+        if (change && !isFinancialDataScope(change.scope)) return;
+      }
+
+      if (isFiconterNavigationPending()) return;
+      if (document.visibilityState !== "visible") return;
+
+      if (eventTimerRef.current) window.clearTimeout(eventTimerRef.current);
+      eventTimerRef.current = window.setTimeout(() => {
+        eventTimerRef.current = null;
+        if (!isFiconterNavigationPending()) void refresh();
+      }, 180);
+    };
+
     window.addEventListener("ficonter:data-changed", schedule);
     window.addEventListener("ficonter:transaction-created", schedule);
     window.addEventListener("ficonter:transaction-upserted", schedule);
     window.addEventListener("ficonter:transaction-deleted", schedule);
     return () => {
+      if (eventTimerRef.current) window.clearTimeout(eventTimerRef.current);
       window.removeEventListener("ficonter:data-changed", schedule);
       window.removeEventListener("ficonter:transaction-created", schedule);
       window.removeEventListener("ficonter:transaction-upserted", schedule);

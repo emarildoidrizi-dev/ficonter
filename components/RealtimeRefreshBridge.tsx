@@ -14,7 +14,8 @@ import {
 } from "@/lib/ficonterRealtime";
 
 const REFRESH_DEBOUNCE_MS = 180;
-const MIN_REFRESH_INTERVAL_MS = 650;
+const MIN_REFRESH_INTERVAL_MS = 800;
+const POST_NAVIGATION_SETTLE_GRACE_MS = 700;
 const PASSIVE_STALE_AFTER_MS = 60_000;
 const MAX_REMEMBERED_NONCES = 160;
 
@@ -88,9 +89,11 @@ export function RealtimeRefreshBridge() {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const timerRef = useRef<number | null>(null);
+  const postNavigationTimerRef = useRef<number | null>(null);
   const lastRefreshRef = useRef(Date.now());
   const pendingWhileHiddenRef = useRef(false);
   const pendingWhileNavigatingRef = useRef(false);
+  const pendingNavigationChangeAtRef = useRef(0);
   const rememberedNoncesRef = useRef<string[]>([]);
   const rememberedNonceSetRef = useRef(new Set<string>());
 
@@ -130,6 +133,10 @@ export function RealtimeRefreshBridge() {
       // deterministic. The destination already fetches current server data.
       if (isFiconterNavigationPending()) {
         pendingWhileNavigatingRef.current = true;
+        pendingNavigationChangeAtRef.current = Math.max(
+          pendingNavigationChangeAtRef.current,
+          change?.at ?? Date.now(),
+        );
         return;
       }
 
@@ -143,6 +150,10 @@ export function RealtimeRefreshBridge() {
       timerRef.current = window.setTimeout(() => {
         if (isFiconterNavigationPending()) {
           pendingWhileNavigatingRef.current = true;
+          pendingNavigationChangeAtRef.current = Math.max(
+            pendingNavigationChangeAtRef.current,
+            change?.at ?? Date.now(),
+          );
           timerRef.current = null;
           return;
         }
@@ -151,6 +162,7 @@ export function RealtimeRefreshBridge() {
         lastRefreshRef.current = Date.now();
         pendingWhileHiddenRef.current = false;
         pendingWhileNavigatingRef.current = false;
+        pendingNavigationChangeAtRef.current = 0;
         timerRef.current = null;
       }, delay);
     }
@@ -192,13 +204,42 @@ export function RealtimeRefreshBridge() {
       refreshSoon(parseFiconterDataChange(event.data));
     }
 
-    function onNavigationSettled() {
+    function onNavigationSettled(event: Event) {
       if (!pendingWhileNavigatingRef.current) return;
-      pendingWhileNavigatingRef.current = false;
 
-      // Let the destination route commit its pathname before deciding whether
-      // a queued realtime refresh is relevant to the newly visible screen.
-      window.requestAnimationFrame(() => refreshSoon());
+      const detail = (
+        event as CustomEvent<{ startedAt?: number }>
+      ).detail;
+      const navigationStartedAt = Number(detail?.startedAt ?? 0);
+      const pendingChangeAt = pendingNavigationChangeAtRef.current;
+      pendingWhileNavigatingRef.current = false;
+      pendingNavigationChangeAtRef.current = 0;
+
+      // Changes that happened before navigation began are already represented
+      // by the destination route's fresh server render. Refreshing again would
+      // immediately reconcile the just-mounted RSC tree and is a common source
+      // of the "stuck for a moment" feeling after fast navigation.
+      if (
+        navigationStartedAt > 0 &&
+        pendingChangeAt > 0 &&
+        pendingChangeAt <= navigationStartedAt
+      ) {
+        return;
+      }
+
+      // If data changed while the destination was in flight, keep correctness
+      // but let the new screen become interactive before reconciling again.
+      if (postNavigationTimerRef.current) {
+        window.clearTimeout(postNavigationTimerRef.current);
+      }
+      postNavigationTimerRef.current = window.setTimeout(() => {
+        postNavigationTimerRef.current = null;
+        if (document.visibilityState !== "visible") {
+          pendingWhileHiddenRef.current = true;
+          return;
+        }
+        refreshSoon();
+      }, POST_NAVIGATION_SETTLE_GRACE_MS);
     }
 
     window.addEventListener("ficonter:data-changed", onCustomEvent);
@@ -217,6 +258,9 @@ export function RealtimeRefreshBridge() {
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
+      if (postNavigationTimerRef.current) {
+        window.clearTimeout(postNavigationTimerRef.current);
+      }
       window.removeEventListener("ficonter:data-changed", onCustomEvent);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);

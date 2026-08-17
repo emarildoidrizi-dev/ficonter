@@ -178,8 +178,7 @@ export function BusinessSidebar({ businesses, business, canManage, isPlatformAdm
     setSigningOut(true);
     const { error } = await supabase.auth.signOut();
     if (error) { setSigningOut(false); return; }
-    router.replace("/");
-    router.refresh();
+    window.location.replace("/login");
   }
 
   function trackRoute(href: string) {

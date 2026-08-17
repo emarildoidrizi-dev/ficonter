@@ -15,16 +15,19 @@ const migration = read("supabase/migrations/20260813170000_monthly_spending_budg
 
 expect(planner, "spending_budget", "Monthly Planner must load and save a dedicated spending budget.");
 expect(planner, "saveMonthlyBudget", "Monthly Planner must provide an explicit budget save action.");
-expect(planner, "Spent so far", "Monthly Planner must display the synchronized spent amount.");
+expect(planner, "Expenses so far", "Monthly Planner must display expense-only budget usage.");
+expect(planner, "monthlyBudgetExpenses", "Monthly Planner budget must use Expenses only.");
+expect(planner, "expenseTransactions.filter(isMonthlyBudgetExpenseTransaction)", "Monthly Planner must exclude non-budget financial movements.");
 expect(planner, "budgetUsedPercent", "Monthly Planner must calculate real budget usage.");
 expect(planner, "notifyFiconterDataChange(\"planner\")", "Saving a budget must notify live financial surfaces.");
 expect(overviewPage, '.select("month,spending_budget")', "Overview must load the dedicated budget source.");
 expect(overview, "initialBudgetPlans.find", "Overview must select the current month's dedicated budget.");
-expect(overview, "spendingAmount / spendingBudget", "Overview must calculate usage from real spending and budget values.");
+expect(overview, "monthlyBudgetExpenseTotals", "Overview budget must use expense-only totals.");
+expect(overview, "spendingAmount / spendingBudget", "Overview must calculate usage from real expense spending and budget values.");
 expect(migration, "check (spending_budget >= 0)", "The database must reject negative monthly budgets.");
 
 if (overview.includes("const spendingBudget = Math.max(0, financialHealthInputs.planner.plannedOutflow)")) {
   throw new Error("Overview still infers the budget from category plans instead of the dedicated monthly value.");
 }
 
-console.log("FICONTER synchronized monthly spending budget verification passed: 9 checks.");
+console.log("FICONTER expense-only monthly spending budget verification passed: 12 checks.");

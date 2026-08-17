@@ -6,6 +6,7 @@ import {
   FICONTER_NAVIGATION_INTENT_EVENT,
   FICONTER_NAVIGATION_SETTLED_EVENT,
   FICONTER_NAVIGATION_STALLED_EVENT,
+  clearFiconterNavigationState,
   requestFiconterNavigationIntent,
   type FiconterNavigationIntentDetail,
 } from "@/lib/navigationRuntime";
@@ -31,8 +32,10 @@ type IdleWindow = Window & {
 
 const ROUTE_LOADING_DELAY_MS = 140;
 const ROUTE_LOADING_MAX_MS = 12_000;
-const ROUTE_CLIENT_RETRY_MS = 5_500;
-const ROUTE_HARD_RECOVERY_MS = 11_000;
+const ROUTE_CLIENT_RETRY_MS = 4_000;
+const ROUTE_HARD_RECOVERY_MS = 8_000;
+const MAX_WARMED_CONTEXTS = 12;
+const MAX_WARMED_ROUTES_PER_CONTEXT = 40;
 
 const personalCriticalRoutes = [
   "/dashboard/overview",
@@ -113,6 +116,23 @@ function allowsBackgroundPrefetch() {
   return !["slow-2g", "2g"].includes(connection?.effectiveType ?? "");
 }
 
+function trimWarmCache() {
+  while (warmedByContext.size > MAX_WARMED_CONTEXTS) {
+    const oldest = warmedByContext.keys().next().value as string | undefined;
+    if (!oldest) break;
+    warmedByContext.delete(oldest);
+  }
+}
+
+function rememberWarmedRoute(set: Set<string>, route: string) {
+  set.add(route);
+  while (set.size > MAX_WARMED_ROUTES_PER_CONTEXT) {
+    const oldest = set.values().next().value as string | undefined;
+    if (!oldest) break;
+    set.delete(oldest);
+  }
+}
+
 
 function navigationTargetSettled(routeKey: string, target: string) {
   if (routeKey === target) return true;
@@ -169,6 +189,7 @@ export function NavigationSpeedBoost({
     const contextKey = `${workspace}:${cacheKey}`;
     const existing = warmedByContext.get(contextKey) ?? new Set<string>();
     warmedByContext.set(contextKey, existing);
+    trimWarmCache();
     warmedRoutes.current = existing;
   }, [cacheKey, workspace]);
 
@@ -196,15 +217,17 @@ export function NavigationSpeedBoost({
       if (recoveryTimer.current) window.clearTimeout(recoveryTimer.current);
       retryTimer.current = null;
       recoveryTimer.current = null;
+      const settledIntentStartedAt = intentStartedAt.current;
       pendingTarget.current = null;
       pendingOrigin.current = null;
       intentStartedAt.current = 0;
+      clearFiconterNavigationState();
+      // Keep the legacy marker explicit for release verification and older
+      // embedded shells; the shared helper above already clears it too.
       root.removeAttribute("data-ficonter-route-pending");
-      root.removeAttribute("data-ficonter-route-target");
-      root.removeAttribute("data-ficonter-route-intent-at");
       window.dispatchEvent(
         new CustomEvent(FICONTER_NAVIGATION_SETTLED_EVENT, {
-          detail: { target, route: routeKey },
+          detail: { target, route: routeKey, startedAt: settledIntentStartedAt },
         }),
       );
     }
@@ -266,7 +289,7 @@ export function NavigationSpeedBoost({
   useEffect(() => {
     function warmRoute(route: string | null) {
       if (!route || route === currentRouteKey.current || warmedRoutes.current.has(route)) return;
-      warmedRoutes.current.add(route);
+      rememberWarmedRoute(warmedRoutes.current, route);
       try {
         router.prefetch(route);
       } catch {
@@ -357,6 +380,7 @@ export function NavigationSpeedBoost({
               detail: { target: route, route: currentRouteKey.current },
             }),
           );
+          clearFiconterNavigationState();
           window.location.assign(route);
         }
         recoveryTimer.current = null;
@@ -389,10 +413,7 @@ export function NavigationSpeedBoost({
       loadingMaxTimer.current = null;
       retryTimer.current = null;
       recoveryTimer.current = null;
-      document.documentElement.removeAttribute("data-ficonter-route-loading");
-      document.documentElement.removeAttribute("data-ficonter-route-pending");
-      document.documentElement.removeAttribute("data-ficonter-route-target");
-      document.documentElement.removeAttribute("data-ficonter-route-intent-at");
+      clearFiconterNavigationState();
 
       if (transitionTimer.current) {
         window.clearTimeout(transitionTimer.current);
@@ -414,7 +435,7 @@ export function NavigationSpeedBoost({
 
     function warm(route: string) {
       if (route === pathname || warmedRoutes.current.has(route)) return;
-      warmedRoutes.current.add(route);
+      rememberWarmedRoute(warmedRoutes.current, route);
       try {
         router.prefetch(route);
       } catch {
@@ -422,11 +443,14 @@ export function NavigationSpeedBoost({
       }
     }
 
-    // Warm the routes users are most likely to choose immediately after the
-    // shell becomes interactive. Staggering prevents a burst of RSC requests.
-    criticalRoutes.forEach((route, index) => {
-      scheduled.push(window.setTimeout(() => warm(route), 40 + index * 70));
-    });
+    // Warm likely destinations only when the network can afford background
+    // work. On Save-Data/2G links, pointer/touch intent still prefetches the
+    // exact route, but FICONTER avoids saturating the connection at startup.
+    if (allowsBackgroundPrefetch() && document.visibilityState === "visible") {
+      criticalRoutes.forEach((route, index) => {
+        scheduled.push(window.setTimeout(() => warm(route), 60 + index * 90));
+      });
+    }
 
     const warmSecondary = () => {
       if (!allowsBackgroundPrefetch() || document.visibilityState !== "visible") return;

@@ -1420,28 +1420,6 @@ export function CreditCardsManager({
           </p>
         </div>
         <div className={styles.heroActions}>
-          <div className={styles.monthNav}>
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              aria-label="Previous month"
-            >
-              <ChevronLeft size={19} />
-            </button>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(event) => setSelectedMonth(event.target.value)}
-              aria-label="Credit-card month"
-            />
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              aria-label="Next month"
-            >
-              <ChevronRight size={19} />
-            </button>
-          </div>
           <button
             type="button"
             className={styles.primaryButton}
@@ -1455,6 +1433,68 @@ export function CreditCardsManager({
           </button>
         </div>
       </header>
+
+      <section className={styles.monthCalendarBar} aria-label="Credit card month navigation">
+        <button
+          type="button"
+          className={styles.monthArrow}
+          onClick={() => shiftMonth(-1)}
+          aria-label="Previous month"
+          title="Previous month"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <div className={styles.monthRail} role="list" aria-label="Available months">
+          {Array.from({ length: 7 }, (_, index) => {
+            const offset = index - 3;
+            const date = new Date(`${selectedMonth}-01T12:00:00`);
+            date.setMonth(date.getMonth() + offset);
+            const key = monthKey(date);
+            const isSelected = key === selectedMonth;
+            const isCurrent = key === monthKey();
+            const shortMonth = new Intl.DateTimeFormat("en-GB", { month: "short" }).format(date);
+            return (
+              <button
+                key={key}
+                type="button"
+                role="listitem"
+                className={`${styles.monthChip} ${isSelected ? styles.monthChipActive : ""}`}
+                onClick={() => setSelectedMonth(key)}
+                aria-current={isSelected ? "date" : undefined}
+                aria-label={`View ${monthTitle(key)}`}
+              >
+                <span>{shortMonth}</span>
+                <strong>{date.getFullYear()}</strong>
+                {isCurrent ? <em>Current</em> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className={styles.monthArrow}
+          onClick={() => shiftMonth(1)}
+          aria-label="Next month"
+          title="Next month"
+        >
+          <ChevronRight size={20} />
+        </button>
+
+        <label className={styles.monthPicker}>
+          <CalendarDays size={18} aria-hidden="true" />
+          <span className={styles.srOnly}>Choose month</span>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(event) => {
+              if (event.target.value) setSelectedMonth(event.target.value);
+            }}
+            aria-label="Choose credit-card month"
+          />
+        </label>
+      </section>
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
 

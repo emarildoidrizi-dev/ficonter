@@ -80,6 +80,7 @@ export function OwnerMusicPlayer() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const libraryLoadedRef = useRef(false);
   const supabase = useMemo(() => createClient(), []);
 
   const currentTrack = player.tracks.find((track) => track.id === player.currentId) ?? null;
@@ -92,6 +93,7 @@ export function OwnerMusicPlayer() {
       const payload = (await response.json().catch(() => ({}))) as LibraryResponse;
       if (!response.ok) throw new Error(payload.error || "The music library could not be loaded.");
       setOwnerMusicTracks(Array.isArray(payload.tracks) ? payload.tracks : []);
+      libraryLoadedRef.current = true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The music library could not be loaded.");
     } finally {
@@ -100,12 +102,34 @@ export function OwnerMusicPlayer() {
   }, []);
 
   useEffect(() => {
-    void loadLibrary();
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+
+    const run = () => {
+      if (!libraryLoadedRef.current) void loadLibrary();
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(run, { timeout: 1_800 });
+    } else {
+      timeoutId = window.setTimeout(run, 900);
+    }
+
+    return () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+    };
   }, [loadLibrary]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      void loadLibrary();
+      if (document.visibilityState === "visible") void loadLibrary();
     }, 4 * 60 * 60 * 1000);
     return () => window.clearInterval(timer);
   }, [loadLibrary]);
@@ -114,10 +138,11 @@ export function OwnerMusicPlayer() {
     function openOwnerMusic() {
       setExpanded(true);
       setLibraryOpen(true);
+      if (!libraryLoadedRef.current && !loading) void loadLibrary();
     }
     window.addEventListener("ficonter:owner-music-open", openOwnerMusic);
     return () => window.removeEventListener("ficonter:owner-music-open", openOwnerMusic);
-  }, []);
+  }, [loadLibrary, loading]);
 
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
@@ -195,6 +220,11 @@ export function OwnerMusicPlayer() {
   }
 
   const canSeek = player.duration > 0;
+
+  function openPlayer() {
+    setExpanded(true);
+    if (!libraryLoadedRef.current && !loading) void loadLibrary();
+  }
 
   return (
     <aside className={`${styles.dock}${expanded ? ` ${styles.dockExpanded}` : ""}`} aria-label="Owner Music">
@@ -308,14 +338,14 @@ export function OwnerMusicPlayer() {
         </div>
       ) : (
         <div className={styles.miniPlayer}>
-          <button type="button" className={styles.miniIdentity} onClick={() => setExpanded(true)} title="Open Owner Music">
+          <button type="button" className={styles.miniIdentity} onClick={openPlayer} title="Open Owner Music">
             <span className={`${styles.miniIcon}${player.playing ? ` ${styles.miniIconPlaying}` : ""}`}><Music2 size={17} /></span>
             <span className={styles.miniText}><small>OWNER MUSIC</small><strong>{currentTrack?.title ?? "Music"}</strong></span>
           </button>
           <button type="button" className={styles.miniPlay} onClick={() => player.playing ? pause() : void startCurrentTrack()} disabled={!player.tracks.length} aria-label={player.playing ? "Pause music" : "Play music"}>
             {player.playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
           </button>
-          <button type="button" className={styles.miniClose} onClick={() => setExpanded(true)} aria-label="Open music library"><ListMusic size={16} /></button>
+          <button type="button" className={styles.miniClose} onClick={openPlayer} aria-label="Open music library"><ListMusic size={16} /></button>
         </div>
       )}
     </aside>

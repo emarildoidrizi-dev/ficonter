@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
@@ -480,6 +480,7 @@ export function SettingsWorkspace({
   canManageWallpapers = false,
 }: Props) {
   const { language, locale } = useLanguage();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
@@ -1451,8 +1452,8 @@ export function SettingsWorkspace({
       }
 
       setBetaActivationCode("");
-      showSuccess("Private Beta access activated. Reloading your account…");
-      window.setTimeout(() => window.location.reload(), 500);
+      showSuccess("Private Beta access activated. Updating your account…");
+      window.setTimeout(() => router.refresh(), 250);
     } catch (error) {
       showError(error, "Beta access could not be activated.");
       setBetaActivating(false);
@@ -1485,7 +1486,7 @@ export function SettingsWorkspace({
       }
 
       setDialog(null);
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       showError(error, "The subscription could not be canceled.");
       setSubscriptionCanceling(false);

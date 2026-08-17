@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isFinancialDataScope, subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 import { calculateBaseCurrencyCashActuals, originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
+import { isMonthlyBudgetExpenseTransaction } from "@/lib/finance/monthlyCashActuals";
 import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
@@ -221,6 +222,22 @@ export function DashboardLiveOverview({
     return totals;
   })();
 
+  const monthlyBudgetExpenseTotals = (() => {
+    const totals: Record<string, number> = {
+      [currentMonthKey]: 0,
+      [previousMonthKey]: 0,
+    };
+    initialTransactions.forEach((transaction) => {
+      if (transaction.transaction_date > today) return;
+      const key = transaction.transaction_date.slice(0, 7);
+      if (!Object.prototype.hasOwnProperty.call(totals, key) || linkedTransactionIds.has(transaction.id)) return;
+      if (!isMonthlyBudgetExpenseTransaction(transaction)) return;
+      const amount = transactionAmount(transaction);
+      if (amount !== null) totals[key] += amount;
+    });
+    return totals;
+  })();
+
   const stillToPay = initialBills.reduce((total, bill) => {
       if (bill.status === "paid" || bill.status === "cancelled") return total;
       return total + (billAmount(bill) ?? 0);
@@ -235,15 +252,16 @@ export function DashboardLiveOverview({
     0,
     canonicalAmountInBaseCurrency(selectedBudgetPlan?.spending_budget ?? 0, context),
   );
-  const spendingAmount = monthTotals[currentMonthKey].spent;
+  const spendingAmount = monthlyBudgetExpenseTotals[currentMonthKey];
   // A percentage has no mathematical meaning until the customer has set a
   // monthly spending budget. Preserve the real ratio above 100% so an
   // overspent month is reported honestly instead of being capped at 100%.
   const spendingRhythm = spendingBudget > 0
     ? Math.max(0, (spendingAmount / spendingBudget) * 100)
     : null;
-  const previousMonthChange = monthTotals[previousMonthKey].spent > 0
-    ? ((spendingAmount - monthTotals[previousMonthKey].spent) / monthTotals[previousMonthKey].spent) * 100
+  const previousMonthBudgetExpenses = monthlyBudgetExpenseTotals[previousMonthKey];
+  const previousMonthChange = previousMonthBudgetExpenses > 0
+    ? ((spendingAmount - previousMonthBudgetExpenses) / previousMonthBudgetExpenses) * 100
     : null;
 
   return (
@@ -255,7 +273,7 @@ export function DashboardLiveOverview({
       stillToPay={stillToPay}
       monthLabel={new Intl.DateTimeFormat("en-GB", { month: "long" }).format(now)}
       monthIncome={monthTotals[currentMonthKey].income}
-      monthSpent={spendingAmount}
+      monthSpent={monthTotals[currentMonthKey].spent}
       financialHealth={financialHealth}
       upcomingBills={upcomingBills}
       spendingRhythm={spendingRhythm}

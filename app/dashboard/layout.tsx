@@ -10,6 +10,7 @@ import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBoot
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
+import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -110,6 +111,7 @@ export default async function DashboardLayout({
       />
       <LivingThemeBackdrop />
       <RealtimeRefreshBridge />
+      <RuntimeStabilityBridge />
       <NavigationSpeedBoost
         workspace="personal"
         cacheKey={user.id}

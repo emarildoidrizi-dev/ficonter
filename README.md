@@ -1,74 +1,63 @@
-# FICONTER
+# FICONTER Global Money Input — Build Hotfix
 
-**A private financial-management and decision platform.**
+This fixes the Vercel/TypeScript errors shown in the deployment log.
 
-FICONTER helps customers record, understand, plan and improve their financial position. It does not hold, move, lend or invest customer money.
+## What to do
 
-## Release status
+Replace the existing:
 
-This repository is **FICONTER Release Candidate 1**. It consolidates the latest complete project with the accepted performance, precision and Realtime TypeScript hardening work.
+`components/MoneyInput.tsx`
 
-## Main capabilities
+with the file included in this ZIP.
 
-- Transactions with multicurrency EUR normalization
-- Bills with paid/unpaid synchronization
-- Monthly Planner and Recorded Activity views
-- Debt, Goals, Savings and Emergency Fund tracking
-- Net Worth and Financial Independence
-- Financial Health Score, Wealth Score and Smart Insights
-- Financial GPS and guided financial setup
-- Financial File Import
-- Customer support messaging and Document Vault
-- Privacy-safe administration
-- Premium themes and real photographic scene wallpapers
-- CSV, JSON and PDF account exports
+## Why the previous build failed
 
-## Technology
+The earlier component:
+- imported `sanitizeMoneyInputDraft` from `lib/finance/money.ts`, but that export was not present in the deployed branch;
+- used an incompatible React event type for `onBeforeInput`.
 
-- Next.js 16
-- React 19
-- TypeScript
-- Supabase Auth, PostgreSQL, Realtime and Storage
-- Vercel
+This replacement removes both failure points.
 
-## Local setup
+## Cross-platform behavior
 
-```bash
-npm install
-npm run dev
+The component now uses:
+
+```tsx
+type="text"
+inputMode="decimal"
 ```
 
-Required environment variables:
+This is the global FICONTER rule for monetary inputs.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-SUPABASE_SERVICE_ROLE_KEY=server-only-service-role-key
+It accepts:
+- `2345,67`
+- `2345.67`
+- `2.345,67`
+- `2,345.67`
+
+Do not use `type="number"` for monetary values.
+
+## Controlled example
+
+```tsx
+<MoneyInput
+  value={amount}
+  onValueChange={setAmount}
+  placeholder="0.00"
+/>
 ```
 
-Never expose `SUPABASE_SERVICE_ROLE_KEY` through a `NEXT_PUBLIC_` variable.
+## FormData example
 
-## Verification
-
-```bash
-npm run verify:release-candidate
-npm run lint
-npm run build
+```tsx
+<MoneyInput
+  name="amount"
+  placeholder="0.00"
+/>
 ```
 
-The repository contains 31 project-specific verification suites. Vercel's production build remains the authoritative dependency and framework compilation check.
+Continue using FICONTER's existing money parser when the value is saved.
 
-## Database
+## Suggested commit message
 
-No new SQL migration was created specifically for consolidation. The deployed Supabase project must already include the migrations in `supabase/`, especially:
-
-- `phase1_qa_finalization.sql`
-- `bill_paid_unpaid_reversal.sql`
-- `debt_transaction_bidirectional_sync.sql`
-- Phase 2 aggregate migrations
-- Support and Document Vault migrations
-
-## Deployment
-
-See `DEPLOYMENT_STEPS.md` and `CONSOLIDATION_REPORT.md`.
+`fix(finance): repair global money input build and cross-platform entry`

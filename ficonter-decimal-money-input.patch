@@ -1,0 +1,130 @@
+diff --git a/lib/finance/money.ts b/lib/finance/money.ts
+--- a/lib/finance/money.ts
++++ b/lib/finance/money.ts
+@@
+ export const EUR_DECIMALS = 2;
+ export const RATE_DECIMALS = 8;
+ export const CONVERTED_AMOUNT_DECIMALS = 6;
+
++/**
++ * Parse a user-entered money value.
++ *
++ * Accepts:
++ *   2345,67
++ *   2345.67
++ *   2.345,67
++ *   2,345.67
++ *
++ * The right-most comma/dot is treated as the decimal separator when both
++ * separators are present. With only one separator, up to 2 trailing digits
++ * are treated as decimals; otherwise the separator is treated as grouping.
++ */
++export function parseMoneyInput(value: unknown): number {
++  if (typeof value === "number") {
++    return Number.isFinite(value) ? value : Number.NaN;
++  }
++
++  if (typeof value !== "string") {
++    const numeric = Number(value);
++    return Number.isFinite(numeric) ? numeric : Number.NaN;
++  }
++
++  let raw = value.trim();
++  if (!raw) return Number.NaN;
++
++  // Keep only digits, separators and a leading minus sign.
++  raw = raw.replace(/\s|\u00A0/g, "").replace(/[^\d,.\-]/g, "");
++
++  const negative = raw.startsWith("-");
++  raw = raw.replace(/-/g, "");
++  if (!raw) return Number.NaN;
++
++  const lastComma = raw.lastIndexOf(",");
++  const lastDot = raw.lastIndexOf(".");
++
++  let normalized = raw;
++
++  if (lastComma >= 0 && lastDot >= 0) {
++    const decimalSeparator = lastComma > lastDot ? "," : ".";
++    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
++
++    normalized = raw
++      .split(thousandsSeparator)
++      .join("")
++      .replace(decimalSeparator, ".");
++  } else {
++    const separator = lastComma >= 0 ? "," : lastDot >= 0 ? "." : "";
++
++    if (separator) {
++      const parts = raw.split(separator);
++      const trailing = parts.at(-1) ?? "";
++
++      if (parts.length === 2 && trailing.length > 0 && trailing.length <= 2) {
++        normalized = `${parts[0]}.${trailing}`;
++      } else if (parts.length > 2 && trailing.length > 0 && trailing.length <= 2) {
++        normalized = `${parts.slice(0, -1).join("")}.${trailing}`;
++      } else {
++        normalized = parts.join("");
++      }
++    }
++  }
++
++  if (negative) normalized = `-${normalized}`;
++
++  const numeric = Number(normalized);
++  return Number.isFinite(numeric) ? numeric : Number.NaN;
++}
++
+ export function finiteNumber(value: unknown, fallback = 0): number {
+-  const numeric = typeof value === "number" ? value : Number(value);
++  const numeric =
++    typeof value === "string" ? parseMoneyInput(value) : Number(value);
+   return Number.isFinite(numeric) ? numeric : fallback;
+ }
+diff --git a/components/TransactionForm.tsx b/components/TransactionForm.tsx
+--- a/components/TransactionForm.tsx
++++ b/components/TransactionForm.tsx
+@@
+-            <input
++            <input
+               id="simple-amount"
+               name="amount"
+-              type="number"
+-              min="0.01"
+-              step="0.01"
++              type="text"
+               inputMode="decimal"
+               required
+               autoFocus={!preset}
+               value={amount}
+               onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                 setAmount(event.target.value)
+               }
+-              placeholder="0.00"
++              placeholder="0,00"
+             />
+diff --git a/components/MonthlyPlanner.tsx b/components/MonthlyPlanner.tsx
+--- a/components/MonthlyPlanner.tsx
++++ b/components/MonthlyPlanner.tsx
+@@
+-import { convertToReportingCurrency, finiteNumber, roundMoney, roundRate } from "@/lib/finance/money";
++import { convertToReportingCurrency, finiteNumber, parseMoneyInput, roundMoney, roundRate } from "@/lib/finance/money";
+@@
+   async function saveMonthlyBudget(event:FormEvent<HTMLFormElement>){
+     event.preventDefault();
+-    const entered=Number(new FormData(event.currentTarget).get("spending_budget"));
++    const entered=parseMoneyInput(new FormData(event.currentTarget).get("spending_budget"));
+     if(!Number.isFinite(entered)||entered<0){
+       setBudgetStatus("Enter a valid budget amount.");
+       return;
+@@
+-          <input key={`${month}-${baseCurrency}-${spendingBudget}`} id="monthly-budget-amount" name="spending_budget" inputMode="decimal" min="0" step="0.01" type="number" defaultValue={spendingBudget>0?roundMoney(spendingBudget):""} placeholder="0.00"/>
++          <input
++            key={`${month}-${baseCurrency}-${spendingBudget}`}
++            id="monthly-budget-amount"
++            name="spending_budget"
++            inputMode="decimal"
++            type="text"
++            defaultValue={spendingBudget>0?String(roundMoney(spendingBudget)):""}
++            placeholder="0,00"
++          />

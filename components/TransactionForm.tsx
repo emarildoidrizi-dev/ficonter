@@ -560,7 +560,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
 
       window.dispatchEvent(
         new CustomEvent("ficonter:transaction-created", {
-          detail: savedTransaction,
+          detail: { ...savedTransaction, ...payload },
         }),
       );
 

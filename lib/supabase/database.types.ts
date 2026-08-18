@@ -2768,6 +2768,8 @@ export type Database = {
           created_at: string
           currency: string
           description: string
+          encrypted_payload: string | null
+          encryption_version: number | null
           exchange_rate_date: string | null
           exchange_rate_source: string | null
           exchange_rate_to_eur: number
@@ -2784,6 +2786,8 @@ export type Database = {
           created_at?: string
           currency?: string
           description: string
+          encrypted_payload?: string | null
+          encryption_version?: number | null
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
           exchange_rate_to_eur: number
@@ -2800,6 +2804,8 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          encrypted_payload?: string | null
+          encryption_version?: number | null
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
           exchange_rate_to_eur?: number

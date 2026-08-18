@@ -18,7 +18,96 @@ import {
   BASE_CURRENCY_CHANGED_EVENT,
   readBrowserBaseCurrency,
 } from "@/components/BaseCurrencyBootstrap";
+const E2EE_CANARY_KEY_STORAGE = "ficonter:e2ee-canary-key:v1";
 
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+async function getOrCreateCanaryKey(): Promise<CryptoKey> {
+  const existingKey = localStorage.getItem(E2EE_CANARY_KEY_STORAGE);
+
+  if (existingKey) {
+    return crypto.subtle.importKey(
+      "raw",
+      base64ToBytes(existingKey),
+      { name: "AES-GCM" },
+      false,
+      ["encrypt", "decrypt"],
+    );
+  }
+
+  const generatedKey = await crypto.subtle.generateKey(
+    {
+      name: "AES-GCM",
+      length: 256,
+    },
+    true,
+    ["encrypt", "decrypt"],
+  );
+
+  const rawKey = new Uint8Array(
+    await crypto.subtle.exportKey("raw", generatedKey),
+  );
+
+  localStorage.setItem(
+    E2EE_CANARY_KEY_STORAGE,
+    bytesToBase64(rawKey),
+  );
+
+  return crypto.subtle.importKey(
+    "raw",
+    rawKey,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function encryptTransactionCanary(
+  financialPayload: Record<string, unknown>,
+  userId: string,
+): Promise<string> {
+  const key = await getOrCreateCanaryKey();
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const additionalData = new TextEncoder().encode(
+    `ficonter:transaction:${userId}:v1`,
+  );
+
+  const plaintext = new TextEncoder().encode(
+    JSON.stringify(financialPayload),
+  );
+
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData,
+      },
+      key,
+      plaintext,
+    ),
+  );
+
+  return JSON.stringify({
+    v: 1,
+    alg: "A256GCM",
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(ciphertext),
+  });
+}
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
@@ -356,8 +445,24 @@ export function TransactionForm({
       ) {
         throw new Error("Choose a monthly repeat day between 1 and 31.");
       }
-
-      const payload = {
+const encryptedPayload = await encryptTransactionCanary(
+  {
+    description: finalDescription,
+    amount: originalAmount,
+    currency,
+    amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+    exchange_rate_to_eur: roundRate(rate.rate),
+    exchange_rate_date: rate.date,
+    exchange_rate_source: rate.source,
+    type,
+    category: finalCategory,
+    transaction_date: resolvedOccurredAt.slice(0, 10),
+    occurred_at: localInstant.toISOString(),
+  },
+  user.id,
+);
+      const payload = {encrypted_payload: encryptedPayload,
+encryption_version: 1,
         user_id: user.id,
         description: finalDescription,
         amount: originalAmount,

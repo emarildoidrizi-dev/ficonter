@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";

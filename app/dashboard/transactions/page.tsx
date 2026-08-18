@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { EncryptedTransactionsWorkspace } from "@/components/EncryptedTransactionsWorkspace";
 import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";

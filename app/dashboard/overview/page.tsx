@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
 import {

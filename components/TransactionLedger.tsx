@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
@@ -209,7 +209,8 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       window.removeEventListener("ficonter:transaction-save-failed", handleSaveFailed);
     };
   }, []);
-
+
+
 
   const categories = useMemo(
     () => [...new Set(transactions.map((item) => item.category))].sort(),

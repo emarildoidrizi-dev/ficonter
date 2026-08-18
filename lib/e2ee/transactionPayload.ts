@@ -1,4 +1,4 @@
-﻿export type EncryptedTransactionRow = {
+export type EncryptedTransactionRow = {
   id: string;
   user_id?: string;
   encrypted_payload: string | null;

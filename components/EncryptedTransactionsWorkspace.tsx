@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";

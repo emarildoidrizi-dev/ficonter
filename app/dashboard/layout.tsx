@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { VaultProvider } from "@/components/VaultProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -148,7 +149,7 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
-        {children}
+        <VaultProvider>{children}</VaultProvider>
       </main>
       </div>
     </CurrencyDisplayProvider>

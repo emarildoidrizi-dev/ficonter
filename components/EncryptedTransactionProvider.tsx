@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -68,6 +68,8 @@ export function EncryptedTransactionProvider({
           "id,user_id,encrypted_payload,encryption_version,created_at",
         )
         .eq("user_id", user.id)
+        .eq("encryption_version", 1)
+        .not("encrypted_payload", "is", null)
         .order("created_at", { ascending: false });
 
       if (queryError) throw queryError;

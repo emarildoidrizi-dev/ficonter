@@ -107,6 +107,45 @@ async function encryptTransactionCanary(
     iv: bytesToBase64(iv),
     ct: bytesToBase64(ciphertext),
   });
+}async function decryptTransactionCanary(
+  encryptedPayload: string,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  const envelope = JSON.parse(encryptedPayload) as {
+    v: number;
+    alg: string;
+    iv: string;
+    ct: string;
+  };
+
+  if (
+    envelope.v !== 1 ||
+    envelope.alg !== "A256GCM" ||
+    !envelope.iv ||
+    !envelope.ct
+  ) {
+    throw new Error("Invalid E2EE canary payload.");
+  }
+
+  const key = await getOrCreateCanaryKey();
+
+  const additionalData = new TextEncoder().encode(
+    `ficonter:transaction:${userId}:v1`,
+  );
+
+  const plaintext = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: base64ToBytes(envelope.iv),
+      additionalData,
+    },
+    key,
+    base64ToBytes(envelope.ct),
+  );
+
+  return JSON.parse(
+    new TextDecoder().decode(plaintext),
+  ) as Record<string, unknown>;
 }
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
@@ -486,7 +525,37 @@ encryption_version: 1,
       if (insertError) throw insertError;
       if (!savedTransaction) {
         throw new Error("The saved transaction could not be returned.");
-      }
+      }if (
+  !savedTransaction.encrypted_payload ||
+  savedTransaction.encryption_version !== 1
+) {
+  throw new Error("E2EE canary payload was not saved correctly.");
+}
+
+const decryptedCanary = await decryptTransactionCanary(
+  savedTransaction.encrypted_payload,
+  user.id,
+);
+
+const expectedCanary = {
+  description: finalDescription,
+  amount: originalAmount,
+  currency,
+  amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
+  exchange_rate_to_eur: roundRate(rate.rate),
+  exchange_rate_date: rate.date,
+  exchange_rate_source: rate.source,
+  type,
+  category: finalCategory,
+  transaction_date: resolvedOccurredAt.slice(0, 10),
+  occurred_at: localInstant.toISOString(),
+};
+
+if (JSON.stringify(decryptedCanary) !== JSON.stringify(expectedCanary)) {
+  throw new Error("E2EE canary decryption verification failed.");
+}
+
+console.info("FICONTER E2EE canary round-trip verified.");
 
       if (preset?.templateId && preset.periodKey) {
         const { error: postingError } = await supabase

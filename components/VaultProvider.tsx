@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { clearActiveVaultKey, setActiveVaultKey } from "@/lib/e2ee/sessionKey";
 
 import {
   createNewVault,
@@ -70,6 +71,7 @@ export function VaultProvider({ children }: Props) {
         } = await supabase.auth.getUser();
 
         if (userError || !user) {
+          clearActiveVaultKey();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");
@@ -92,6 +94,7 @@ export function VaultProvider({ children }: Props) {
         }
 
         if (!data) {
+          clearActiveVaultKey();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("not_created");
@@ -104,6 +107,7 @@ export function VaultProvider({ children }: Props) {
           setStatus("locked");
         }
       } catch (caughtError) {
+        clearActiveVaultKey();
         setVaultKey(null);
         setRecoveryCode(null);
 
@@ -173,6 +177,7 @@ export function VaultProvider({ children }: Props) {
         }
 
         setVaultKey(newVault.vaultKey);
+        setActiveVaultKey(newVault.vaultKey);
         setRecoveryCode(
           newVault.recoveryCode,
         );
@@ -232,6 +237,7 @@ export function VaultProvider({ children }: Props) {
             );
 
           setVaultKey(unlockedKey);
+          setActiveVaultKey(unlockedKey);
           setRecoveryCode(null);
           setStatus("unlocked");
 
@@ -244,6 +250,7 @@ export function VaultProvider({ children }: Props) {
             })
             .eq("user_id", user.id);
         } catch (caughtError) {
+          clearActiveVaultKey();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");
@@ -262,6 +269,7 @@ export function VaultProvider({ children }: Props) {
 
   const lockVault =
     useCallback(() => {
+      clearActiveVaultKey();
       setVaultKey(null);
       setRecoveryCode(null);
       setError(null);
@@ -278,6 +286,7 @@ export function VaultProvider({ children }: Props) {
         if (
           event === "SIGNED_OUT"
         ) {
+          clearActiveVaultKey();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");

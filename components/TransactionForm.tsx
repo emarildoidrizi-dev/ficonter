@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "./LanguageProvider";
@@ -34,45 +35,16 @@ function base64ToBytes(value: string) {
 }
 
 async function getOrCreateCanaryKey(): Promise<CryptoKey> {
-  const existingKey = localStorage.getItem(E2EE_CANARY_KEY_STORAGE);
+  const key = getActiveVaultKey();
 
-  if (existingKey) {
-    return crypto.subtle.importKey(
-      "raw",
-      base64ToBytes(existingKey),
-      { name: "AES-GCM" },
-      false,
-      ["encrypt", "decrypt"],
+  if (!key) {
+    throw new Error(
+      "Unlock your Financial Vault before adding a transaction.",
     );
   }
 
-  const generatedKey = await crypto.subtle.generateKey(
-    {
-      name: "AES-GCM",
-      length: 256,
-    },
-    true,
-    ["encrypt", "decrypt"],
-  );
-
-  const rawKey = new Uint8Array(
-    await crypto.subtle.exportKey("raw", generatedKey),
-  );
-
-  localStorage.setItem(
-    E2EE_CANARY_KEY_STORAGE,
-    bytesToBase64(rawKey),
-  );
-
-  return crypto.subtle.importKey(
-    "raw",
-    rawKey,
-    { name: "AES-GCM" },
-    false,
-    ["encrypt", "decrypt"],
-  );
+  return key;
 }
-
 async function encryptTransactionCanary(
   financialPayload: Record<string, unknown>,
   userId: string,
@@ -693,7 +665,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
   const exchangePreview = (
     <div className="fx-preview" aria-live="polite">
       {rateLoading ? (
-        <span>Retrieving the latest reference rate…</span>
+        <span>Retrieving the latest reference rateâ€¦</span>
       ) : rateError ? (
         <span className="fx-preview-error">{rateError}</span>
       ) : (
@@ -705,7 +677,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
           <small>
             {currency === baseCurrency
               ? "No display conversion required."
-              : `Displayed in ${baseCurrency} · reference date ${rate.date}`}
+              : `Displayed in ${baseCurrency} Â· reference date ${rate.date}`}
           </small>
         </>
       )}
@@ -912,9 +884,9 @@ console.info("FICONTER E2EE canary round-trip verified.");
           disabled={loading || rateLoading || Boolean(rateError)}
         >
           {loading
-            ? "Saving…"
+            ? "Savingâ€¦"
             : rateLoading
-              ? "Retrieving rate…"
+              ? "Retrieving rateâ€¦"
               : actionLabel(type)}
         </button>
         <p className="effortless-mode-footnote">
@@ -1093,7 +1065,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
                 >
                   {currencyOptions.map((option) => (
                     <option key={option.code} value={option.code}>
-                      {option.symbol} {option.code} — {option.name}
+                      {option.symbol} {option.code} â€” {option.name}
                     </option>
                   ))}
                 </select>
@@ -1134,9 +1106,9 @@ console.info("FICONTER E2EE canary round-trip verified.");
                 disabled={loading || rateLoading || Boolean(rateError)}
               >
                 {loading
-                  ? "Saving…"
+                  ? "Savingâ€¦"
                   : rateLoading
-                    ? "Retrieving rate…"
+                    ? "Retrieving rateâ€¦"
                     : actionLabel(type)}
               </button>
             </div>
@@ -1223,7 +1195,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
           >
             {currencyOptions.map((option) => (
               <option key={option.code} value={option.code}>
-                {option.symbol} {option.code} — {option.name}
+                {option.symbol} {option.code} â€” {option.name}
               </option>
             ))}
           </select>
@@ -1253,9 +1225,9 @@ console.info("FICONTER E2EE canary round-trip verified.");
         disabled={loading || rateLoading || Boolean(rateError)}
       >
         {loading
-          ? "Saving…"
+          ? "Savingâ€¦"
           : rateLoading
-            ? "Retrieving rate…"
+            ? "Retrieving rateâ€¦"
             : "Save complete transaction"}
       </button>
     </form>

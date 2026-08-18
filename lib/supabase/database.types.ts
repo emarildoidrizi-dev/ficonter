@@ -2817,6 +2817,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_financial_vaults: {
+        Row: {
+          created_at: string
+          id: string
+          key_version: number
+          last_unlocked_at: string | null
+          recovery_version: number
+          updated_at: string
+          user_id: string
+          vault_status: string
+          wrapped_vault_key: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_version?: number
+          last_unlocked_at?: string | null
+          recovery_version?: number
+          updated_at?: string
+          user_id: string
+          vault_status?: string
+          wrapped_vault_key: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_version?: number
+          last_unlocked_at?: string | null
+          recovery_version?: number
+          updated_at?: string
+          user_id?: string
+          vault_status?: string
+          wrapped_vault_key?: Json
+        }
+        Relationships: []
+      }
       user_notifications: {
         Row: {
           body: string

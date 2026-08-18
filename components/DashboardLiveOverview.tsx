@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { isMonthlyBudgetExpenseTransaction } from "@/lib/finance/monthlyCashActu
 import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import { CoastalOverview, type CoastalUpcomingBill } from "@/components/CoastalOverview";
 import { calculateFinancialHealth, type FinancialHealthInputs } from "@/lib/wealth/financialHealth";
 import type { AiInsightsInputs } from "@/lib/wealth/aiInsights";
@@ -96,6 +97,7 @@ export function DashboardLiveOverview({
   const router = useRouter();
   const refreshTimer = useRef<number | null>(null);
   const supabase = useMemo(() => createClient(), []);
+  const { transactions, error: encryptedTransactionsError } = useEncryptedTransactions();
   const [daypart, setDaypart] = useState<Daypart>(() => daypartForDate());
   const { baseCurrency } = useCurrencyDisplay();
   const { source, context } = useBaseCurrencySourceData(userId);
@@ -105,10 +107,10 @@ export function DashboardLiveOverview({
   const previousMonthKey = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
   const historicalDates = useMemo(
     () => [
-      ...initialTransactions.map((transaction) => transaction.transaction_date),
+      ...transactions.map((transaction) => transaction.transaction_date),
       ...initialBills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
     ],
-    [initialBills, initialTransactions],
+    [initialBills, transactions],
   );
   const { rateForDate } = useHistoricalReportingRates(historicalDates);
 
@@ -184,7 +186,7 @@ export function DashboardLiveOverview({
     });
 
   const actuals = calculateBaseCurrencyCashActuals({
-      transactions: initialTransactions,
+      transactions,
       bills: initialBills,
       baseCurrency,
       throughDate: today,
@@ -201,7 +203,7 @@ export function DashboardLiveOverview({
       [currentMonthKey]: { income: 0, spent: 0 },
       [previousMonthKey]: { income: 0, spent: 0 },
     };
-    initialTransactions.forEach((transaction) => {
+    transactions.forEach((transaction) => {
       if (transaction.transaction_date > today) return;
       const key = transaction.transaction_date.slice(0, 7);
       if (!totals[key] || linkedTransactionIds.has(transaction.id)) return;
@@ -227,7 +229,7 @@ export function DashboardLiveOverview({
       [currentMonthKey]: 0,
       [previousMonthKey]: 0,
     };
-    initialTransactions.forEach((transaction) => {
+    transactions.forEach((transaction) => {
       if (transaction.transaction_date > today) return;
       const key = transaction.transaction_date.slice(0, 7);
       if (!Object.prototype.hasOwnProperty.call(totals, key) || linkedTransactionIds.has(transaction.id)) return;
@@ -281,7 +283,7 @@ export function DashboardLiveOverview({
       spendingBudget={spendingBudget}
       financialGps={financialGps}
       previousMonthChange={previousMonthChange}
-      errorMessages={[initialError, initialHealthError, initialGpsError]}
+      errorMessages={[initialError, initialHealthError, initialGpsError, encryptedTransactionsError]}
     />
   );
 }

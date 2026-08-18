@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
 import {
@@ -27,10 +27,10 @@ export default async function DashboardPage() {
     supabase
       .from("transactions")
       .select(
-        "id,user_id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,type,category,transaction_date,occurred_at,created_at",
+        "id,user_id,encrypted_payload,encryption_version,created_at",
       )
       .eq("user_id", user.id)
-      .order("occurred_at", { ascending: false }),
+      .order("created_at", { ascending: false }),
     supabase
       .from("bills")
       .select("id,name,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
@@ -44,7 +44,7 @@ export default async function DashboardPage() {
     supabase.rpc("get_ai_insights_inputs"),
   ]);
 
-  const transactions = transactionResult.data ?? [];
+  const transactions: never[] = [];
   const bills = billResult.data ?? [];
   const healthInputs = reconcileFinancialHealthInputs(
     normalizeFinancialHealthInputs(healthResult.data),

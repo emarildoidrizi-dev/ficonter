@@ -74,7 +74,7 @@ export function EncryptedTransactionProvider({
 
       if (queryError) throw queryError;
 
-      const decrypted = await Promise.all(
+      const results = await Promise.allSettled(
         ((data ?? []) as EncryptedTransactionRow[]).map(
           (row) =>
             decryptTransactionPayload(
@@ -84,6 +84,17 @@ export function EncryptedTransactionProvider({
             ),
         ),
       );
+
+      const decrypted = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+
+      const failedCount = results.length - decrypted.length;
+      if (failedCount > 0) {
+        console.warn(
+          `Skipped ${failedCount} encrypted transaction row(s) that could not be decrypted with the current vault key.`,
+        );
+      }
 
       setTransactions(decrypted);
     } catch (caughtError) {

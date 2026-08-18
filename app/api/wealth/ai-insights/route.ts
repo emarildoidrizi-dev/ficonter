@@ -35,38 +35,16 @@ function ageMilliseconds(value: string): number {
     : Number.POSITIVE_INFINITY;
 }
 
-async function loadInputsAndUser() {
+async function loadUser() {
   const supabase = await createClient();
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return {
-      supabase,
-      user: null,
-      context: null,
-      error: "Not authenticated.",
-    };
-  }
-
-  const { data, error } = await supabase.rpc("get_ai_insights_inputs");
-  if (error) {
-    return {
-      supabase,
-      user,
-      context: null,
-      error: "Smart insight data could not be prepared.",
-    };
-  }
-
-  const inputs = normalizeAiInsightsInputs(data);
   return {
     supabase,
-    user,
-    context: calculateAiInsightsContext(inputs),
-    error: "",
+    user: userError ? null : user,
   };
 }
 
@@ -77,11 +55,22 @@ export async function POST(request: NextRequest) {
     return jsonError("Invalid request origin.", 403);
   }
 
-  const state = await loadInputsAndUser();
-  if (!state.user) return jsonError(state.error, 401);
-  if (!state.context) return jsonError(state.error, 503);
+  const { supabase, user } = await loadUser();
+  if (!user) return jsonError("Not authenticated.", 401);
 
-  const { supabase, user, context } = state;
+  const payload = (await request.json().catch(() => null)) as
+    | { inputs?: unknown }
+    | null;
+  if (!payload?.inputs) {
+    return jsonError("Smart insight inputs are required.", 400);
+  }
+
+  // Transaction contents are decrypted and reconciled in the browser. The API
+  // receives only the existing Smart Insights aggregate input model (which is
+  // explicitly designed without raw transactions/vendor descriptions), then
+  // recalculates and validates the deterministic context server-side.
+  const inputs = normalizeAiInsightsInputs(payload.inputs);
+  const context = calculateAiInsightsContext(inputs);
 
   if (!context.assessed || context.dataCoverage <= 0) {
     return jsonError(

@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import { encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
@@ -170,14 +172,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    function handleCreated(event: Event) {
-      const created = (event as CustomEvent<Transaction>).detail;
-      if (!created?.id) return;
-
-      setTransactions((current) => {
-        const withoutDuplicate = current.filter((item) => item.id !== created.id);
-        return [created, ...withoutDuplicate];
-      });
+    function handleCreated() {
+      // The shared encrypted provider owns transaction contents. This event is
+      // only a refresh/UX signal; never trust event detail as financial data.
       // A newly created record must always be visible immediately, even if
       // the user previously had filters or an older sort order selected.
       setSearch("");
@@ -628,17 +625,58 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       transaction_date: editOccurredAt.slice(0, 10),
       occurred_at: occurred.toISOString(),
     };
-    const { data, error: updateError } = await supabase
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (authError || !user) {
+      setError("Please log in again.");
+      setLoading(false);
+      return;
+    }
+
+    const vaultKey = getActiveVaultKey();
+    if (!vaultKey) {
+      setError("Unlock your Financial Vault before editing a transaction.");
+      setLoading(false);
+      return;
+    }
+
+    const encryptedPayload = await encryptTransactionPayload(
+      vaultKey,
+      user.id,
+      update,
+    );
+    const { error: updateError } = await supabase
       .from("transactions")
-      .update(update)
+      .update({
+        encrypted_payload: encryptedPayload,
+        encryption_version: 1,
+        description: null,
+        amount: null,
+        currency: null,
+        amount_eur: null,
+        exchange_rate_to_eur: null,
+        exchange_rate_date: null,
+        exchange_rate_source: null,
+        type: null,
+        category: null,
+        transaction_date: null,
+        occurred_at: null,
+      })
       .eq("id", editTarget.id)
-      .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
-      .single();
+      .eq("user_id", user.id);
+
     if (updateError) setError(updateError.message);
-    else if (data) {
-      setTransactions((current) => current.map((item) => (item.id === data.id ? data : item)));
+    else {
+      setTransactions((current) =>
+        current.map((item) =>
+          item.id === editTarget.id ? { ...item, ...update } : item,
+        ),
+      );
       setEditTarget(null);
       notifyFiconterDataChange("all");
+      window.dispatchEvent(new CustomEvent("ficonter:transaction-upserted", {
+        detail: { id: editTarget.id, encryption_version: 1 },
+      }));
       setNotice("Transaction updated.");
       window.setTimeout(() => setNotice(""), 2600);
     }

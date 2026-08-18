@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import { decryptTransactionPayload, encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "./LanguageProvider";
@@ -19,106 +20,6 @@ import {
   BASE_CURRENCY_CHANGED_EVENT,
   readBrowserBaseCurrency,
 } from "@/components/BaseCurrencyBootstrap";
-const E2EE_CANARY_KEY_STORAGE = "ficonter:e2ee-canary-key:v1";
-
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(value: string) {
-  const binary = atob(value);
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
-async function getOrCreateCanaryKey(): Promise<CryptoKey> {
-  const key = getActiveVaultKey();
-
-  if (!key) {
-    throw new Error(
-      "Unlock your Financial Vault before adding a transaction.",
-    );
-  }
-
-  return key;
-}
-async function encryptTransactionCanary(
-  financialPayload: Record<string, unknown>,
-  userId: string,
-): Promise<string> {
-  const key = await getOrCreateCanaryKey();
-
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-
-  const additionalData = new TextEncoder().encode(
-    `ficonter:transaction:${userId}:v1`,
-  );
-
-  const plaintext = new TextEncoder().encode(
-    JSON.stringify(financialPayload),
-  );
-
-  const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv,
-        additionalData,
-      },
-      key,
-      plaintext,
-    ),
-  );
-
-  return JSON.stringify({
-    v: 1,
-    alg: "A256GCM",
-    iv: bytesToBase64(iv),
-    ct: bytesToBase64(ciphertext),
-  });
-}async function decryptTransactionCanary(
-  encryptedPayload: string,
-  userId: string,
-): Promise<Record<string, unknown>> {
-  const envelope = JSON.parse(encryptedPayload) as {
-    v: number;
-    alg: string;
-    iv: string;
-    ct: string;
-  };
-
-  if (
-    envelope.v !== 1 ||
-    envelope.alg !== "A256GCM" ||
-    !envelope.iv ||
-    !envelope.ct
-  ) {
-    throw new Error("Invalid E2EE canary payload.");
-  }
-
-  const key = await getOrCreateCanaryKey();
-
-  const additionalData = new TextEncoder().encode(
-    `ficonter:transaction:${userId}:v1`,
-  );
-
-  const plaintext = await crypto.subtle.decrypt(
-    {
-      name: "AES-GCM",
-      iv: base64ToBytes(envelope.iv),
-      additionalData,
-    },
-    key,
-    base64ToBytes(envelope.ct),
-  );
-
-  return JSON.parse(
-    new TextDecoder().decode(plaintext),
-  ) as Record<string, unknown>;
-}
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
@@ -456,25 +357,12 @@ export function TransactionForm({
       ) {
         throw new Error("Choose a monthly repeat day between 1 and 31.");
       }
-const encryptedPayload = await encryptTransactionCanary(
-  {
-    description: finalDescription,
-    amount: originalAmount,
-    currency,
-    amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
-    exchange_rate_to_eur: roundRate(rate.rate),
-    exchange_rate_date: rate.date,
-    exchange_rate_source: rate.source,
-    type,
-    category: finalCategory,
-    transaction_date: resolvedOccurredAt.slice(0, 10),
-    occurred_at: localInstant.toISOString(),
-  },
-  user.id,
-);
-      const payload = {encrypted_payload: encryptedPayload,
-encryption_version: 1,
-        user_id: user.id,
+      const vaultKey = getActiveVaultKey();
+      if (!vaultKey) {
+        throw new Error("Unlock your Financial Vault before adding a transaction.");
+      }
+
+      const expectedPayload = {
         description: finalDescription,
         amount: originalAmount,
         currency,
@@ -488,46 +376,49 @@ encryption_version: 1,
         occurred_at: localInstant.toISOString(),
       };
 
+      const encryptedPayload = await encryptTransactionPayload(
+        vaultKey,
+        user.id,
+        expectedPayload,
+      );
+      const payload = {
+        user_id: user.id,
+        encrypted_payload: encryptedPayload,
+        encryption_version: 1,
+      };
+
       const { data: savedTransaction, error: insertError } = await supabase
         .from("transactions")
         .insert(payload)
-        .select("*")
+        .select("id,user_id,encrypted_payload,encryption_version,created_at")
         .single();
 
       if (insertError) throw insertError;
-      if (!savedTransaction) {
-        throw new Error("The saved transaction could not be returned.");
-      }if (
-  !savedTransaction.encrypted_payload ||
-  savedTransaction.encryption_version !== 1
-) {
-  throw new Error("E2EE canary payload was not saved correctly.");
-}
+      if (!savedTransaction?.encrypted_payload || savedTransaction.encryption_version !== 1) {
+        throw new Error("Encrypted transaction payload was not saved correctly.");
+      }
 
-const decryptedCanary = await decryptTransactionCanary(
-  savedTransaction.encrypted_payload,
-  user.id,
-);
-
-const expectedCanary = {
-  description: finalDescription,
-  amount: originalAmount,
-  currency,
-  amount_eur: convertToReportingCurrency(originalAmount, rate.rate),
-  exchange_rate_to_eur: roundRate(rate.rate),
-  exchange_rate_date: rate.date,
-  exchange_rate_source: rate.source,
-  type,
-  category: finalCategory,
-  transaction_date: resolvedOccurredAt.slice(0, 10),
-  occurred_at: localInstant.toISOString(),
-};
-
-if (JSON.stringify(decryptedCanary) !== JSON.stringify(expectedCanary)) {
-  throw new Error("E2EE canary decryption verification failed.");
-}
-
-console.info("FICONTER E2EE canary round-trip verified.");
+      const decryptedRoundTrip = await decryptTransactionPayload(
+        vaultKey,
+        user.id,
+        savedTransaction,
+      );
+      const roundTripPayload = {
+        description: decryptedRoundTrip.description,
+        amount: decryptedRoundTrip.amount,
+        currency: decryptedRoundTrip.currency,
+        amount_eur: decryptedRoundTrip.amount_eur,
+        exchange_rate_to_eur: decryptedRoundTrip.exchange_rate_to_eur,
+        exchange_rate_date: decryptedRoundTrip.exchange_rate_date,
+        exchange_rate_source: decryptedRoundTrip.exchange_rate_source,
+        type: decryptedRoundTrip.type,
+        category: decryptedRoundTrip.category,
+        transaction_date: decryptedRoundTrip.transaction_date,
+        occurred_at: decryptedRoundTrip.occurred_at,
+      };
+      if (JSON.stringify(roundTripPayload) !== JSON.stringify(expectedPayload)) {
+        throw new Error("Encrypted transaction round-trip verification failed.");
+      }
 
       if (preset?.templateId && preset.periodKey) {
         const { error: postingError } = await supabase
@@ -560,7 +451,7 @@ console.info("FICONTER E2EE canary round-trip verified.");
 
       window.dispatchEvent(
         new CustomEvent("ficonter:transaction-created", {
-          detail: { ...savedTransaction, ...payload },
+          detail: { id: savedTransaction.id, encryption_version: 1 },
         }),
       );
 

@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.contract";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import { encryptTransactionPayload, type DecryptedTransaction } from "@/lib/e2ee/transactionPayload";
+import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
 import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/money";
@@ -65,20 +67,8 @@ type Bill = {
   updated_at: string;
 };
 
-type LinkedTransactionRollback = Pick<
-  Database["public"]["Tables"]["transactions"]["Update"],
-  | "description"
-  | "amount"
-  | "currency"
-  | "amount_eur"
-  | "exchange_rate_to_eur"
-  | "exchange_rate_date"
-  | "exchange_rate_source"
-  | "type"
-  | "category"
-  | "transaction_date"
-  | "occurred_at"
->;
+type LinkedTransactionRollback = DecryptedTransaction;
+
 
 const CURRENCIES = [
   "EUR","USD","GBP","CHF","AUD","CAD","JPY","CNY","HKD","SGD","NZD","SEK","NOK",
@@ -200,6 +190,7 @@ export function BillsManager({
   initialError: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { transactions: encryptedTransactions } = useEncryptedTransactions();
   const { baseCurrency, latestRate } = useCurrencyDisplay();
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const billDates = useMemo(
@@ -556,32 +547,60 @@ export function BillsManager({
         let linkedTransactionBefore: LinkedTransactionRollback | null = null;
 
         if (existingBill.status === "paid" && existingBill.transaction_id) {
-          const { data: linkedTransaction, error: linkedReadError } =
-            await supabase
-              .from("transactions")
-              .select(
-                "description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at",
-              )
-              .eq("id", existingBill.transaction_id)
-              .eq("user_id", userId)
-              .maybeSingle();
-          if (linkedReadError) throw linkedReadError;
+          const vaultKey = getActiveVaultKey();
+          if (!vaultKey) {
+            throw new Error(
+              "Unlock your Financial Vault before editing a paid bill.",
+            );
+          }
 
-          if (linkedTransaction) {
+          const linkedTransaction = encryptedTransactions.find(
+            (transaction) => transaction.id === existingBill.transaction_id,
+          );
+          if (!linkedTransaction) {
+            throw new Error(
+              "The encrypted linked transaction is not available yet. Refresh after unlocking the Financial Vault and try again.",
+            );
+          }
+
+          {
             linkedTransactionBefore = linkedTransaction;
+            const linkedPayload = {
+              description: form.company.trim()
+                ? `${form.name.trim()} · ${form.company.trim()}`
+                : form.name.trim(),
+              amount,
+              currency: form.currency,
+              amount_eur: roundMoney(conversion.eur),
+              exchange_rate_to_eur: roundRate(conversion.rate),
+              exchange_rate_date: linkedTransaction.exchange_rate_date,
+              exchange_rate_source: "Bill conversion",
+              type: "expense",
+              category: form.category,
+              transaction_date: linkedTransaction.transaction_date,
+              occurred_at: linkedTransaction.occurred_at,
+            };
+            const encryptedPayload = await encryptTransactionPayload(
+              vaultKey,
+              userId,
+              linkedPayload,
+            );
             const { error: linkedUpdateError } = await supabase
               .from("transactions")
               .update({
-                description: form.company.trim()
-                  ? `${form.name.trim()} · ${form.company.trim()}`
-                  : form.name.trim(),
-                amount,
-                currency: form.currency,
-                amount_eur: roundMoney(conversion.eur),
-                exchange_rate_to_eur: roundRate(conversion.rate),
-                exchange_rate_source: "Bill conversion",
-                type: "expense",
-                category: form.category,
+                encrypted_payload: encryptedPayload,
+                encryption_version: 1,
+                description: null,
+                amount: null,
+                currency: null,
+                amount_eur: null,
+                exchange_rate_to_eur: null,
+                exchange_rate_date: null,
+                exchange_rate_source: null,
+                type: null,
+                category: null,
+                transaction_date: null,
+                occurred_at: null,
               })
               .eq("id", existingBill.transaction_id)
               .eq("user_id", userId);
@@ -599,11 +618,46 @@ export function BillsManager({
 
         if (error) {
           if (linkedTransactionBefore && existingBill.transaction_id) {
-            await supabase
-              .from("transactions")
-              .update(linkedTransactionBefore)
-              .eq("id", existingBill.transaction_id)
-              .eq("user_id", userId);
+            const vaultKey = getActiveVaultKey();
+            if (vaultKey) {
+              const rollbackPayload = {
+                description: linkedTransactionBefore.description,
+                amount: Number(linkedTransactionBefore.amount),
+                currency: linkedTransactionBefore.currency,
+                amount_eur: Number(linkedTransactionBefore.amount_eur),
+                exchange_rate_to_eur: Number(linkedTransactionBefore.exchange_rate_to_eur),
+                exchange_rate_date: linkedTransactionBefore.exchange_rate_date,
+                exchange_rate_source: linkedTransactionBefore.exchange_rate_source,
+                type: linkedTransactionBefore.type,
+                category: linkedTransactionBefore.category,
+                transaction_date: linkedTransactionBefore.transaction_date,
+                occurred_at: linkedTransactionBefore.occurred_at,
+              };
+              const rollbackCiphertext = await encryptTransactionPayload(
+                vaultKey,
+                userId,
+                rollbackPayload,
+              );
+              await supabase
+                .from("transactions")
+                .update({
+                  encrypted_payload: rollbackCiphertext,
+                  encryption_version: 1,
+                  description: null,
+                  amount: null,
+                  currency: null,
+                  amount_eur: null,
+                  exchange_rate_to_eur: null,
+                  exchange_rate_date: null,
+                  exchange_rate_source: null,
+                  type: null,
+                  category: null,
+                  transaction_date: null,
+                  occurred_at: null,
+                })
+                .eq("id", existingBill.transaction_id)
+                .eq("user_id", userId);
+            }
           }
           throw error;
         }

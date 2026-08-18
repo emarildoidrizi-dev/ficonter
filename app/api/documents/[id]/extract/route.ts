@@ -152,7 +152,7 @@ export async function GET(_request: Request, context: RouteContext) {
       );
     }
 
-    const [profileResult, rulesResult, transactionsResult] = await Promise.all([
+    const [profileResult, rulesResult] = await Promise.all([
       service.from("profiles").select("base_currency").eq("id", user.id).maybeSingle(),
       service
         .from("transaction_category_rules")
@@ -160,12 +160,6 @@ export async function GET(_request: Request, context: RouteContext) {
         .eq("user_id", user.id)
         .order("priority", { ascending: false })
         .limit(500),
-      service
-        .from("transactions")
-        .select("description,amount,currency,type,transaction_date")
-        .eq("user_id", user.id)
-        .order("transaction_date", { ascending: false })
-        .limit(5000),
     ]);
 
     const extraction: FinancialDocumentExtraction = extractFinancialDocumentDraft({
@@ -188,13 +182,7 @@ export async function GET(_request: Request, context: RouteContext) {
             : null,
         priority: rule.priority,
       })),
-      existingTransactions: (transactionsResult.data ?? []).map((transaction) => ({
-        description: transaction.description,
-        amount: transaction.amount,
-        currency: transaction.currency || "EUR",
-        type: transaction.type,
-        transaction_date: transaction.transaction_date,
-      })),
+      existingTransactions: [],
     });
 
     return NextResponse.json(

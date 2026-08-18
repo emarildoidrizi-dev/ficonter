@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 import { isFinancialDataScope, parseFiconterDataChange, type FiconterDataChange } from "@/lib/ficonterRealtime";
 import {
@@ -26,6 +27,10 @@ const EMPTY_SOURCE: CurrencySourceData = {
 export function useBaseCurrencySourceData(userId: string) {
   const supabase = useMemo(() => createClient(), []);
   const { baseCurrency, latestRate } = useCurrencyDisplay();
+  const {
+    transactions: encryptedTransactions,
+    loading: encryptedTransactionsLoading,
+  } = useEncryptedTransactions();
   const [source, setSource] = useState<CurrencySourceData>(EMPTY_SOURCE);
   const [loading, setLoading] = useState(true);
   const inFlightRef = useRef<Promise<void> | null>(null);
@@ -57,7 +62,6 @@ export function useBaseCurrencySourceData(userId: string) {
         queuedRef.current = false;
 
         const [
-          transactions,
           bills,
           debts,
           debtPayments,
@@ -65,12 +69,6 @@ export function useBaseCurrencySourceData(userId: string) {
           plans,
           items,
         ] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select(
-          "id,type,description,category,amount,currency,amount_eur,exchange_rate_to_eur,transaction_date,occurred_at",
-        )
-        .eq("user_id", userId),
       supabase
         .from("bills")
         .select(
@@ -103,7 +101,7 @@ export function useBaseCurrencySourceData(userId: string) {
 
         if (mountedRef.current) {
           setSource({
-            transactions: (transactions.data ?? []) as CurrencySourceData["transactions"],
+            transactions: encryptedTransactions as CurrencySourceData["transactions"],
             bills: (bills.data ?? []) as CurrencySourceData["bills"],
             debts: (debts.data ?? []) as CurrencySourceData["debts"],
             debtPayments: (debtPayments.data ?? []) as CurrencySourceData["debtPayments"],
@@ -125,7 +123,7 @@ export function useBaseCurrencySourceData(userId: string) {
 
     inFlightRef.current = task;
     return task;
-  }, [supabase, userId]);
+  }, [encryptedTransactions, supabase, userId]);
 
   useEffect(() => {
     void refresh();
@@ -190,7 +188,7 @@ export function useBaseCurrencySourceData(userId: string) {
     context,
     baseCurrency,
     latestRate,
-    loading,
+    loading: loading || encryptedTransactionsLoading,
     refresh,
   };
 }

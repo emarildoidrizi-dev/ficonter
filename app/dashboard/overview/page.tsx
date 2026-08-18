@@ -18,19 +18,11 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const [
-    transactionResult,
     billResult,
     budgetPlanResult,
     healthResult,
     gpsResult,
   ] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select(
-        "id,user_id,encrypted_payload,encryption_version,created_at",
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
     supabase
       .from("bills")
       .select("id,name,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
@@ -73,7 +65,6 @@ export default async function DashboardPage() {
       )}
       initialGpsInputs={gpsInputs}
       initialError={
-        transactionResult.error?.message ??
         billResult.error?.message ??
         budgetPlanResult.error?.message ??
         ""

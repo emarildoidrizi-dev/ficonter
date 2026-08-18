@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
+import { reconcileFinancialHealthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import {
   normalizeFinancialHealthInputs,
   type FinancialHealthInputs,
@@ -62,6 +64,8 @@ export function FinancialSetupGuide({
   initialError = "",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const { source: currencySource, context: currencyContext } =
+    useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
   const [inputs, setInputs] = useState(initialInputs);
   const [acknowledgements, setAcknowledgements] = useState(
@@ -73,9 +77,18 @@ export function FinancialSetupGuide({
     null,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const reconciledInputs = useMemo(
+    () =>
+      reconcileFinancialHealthToBaseCurrency(
+        inputs,
+        currencySource,
+        currencyContext,
+      ),
+    [currencyContext, currencySource, inputs],
+  );
   const setup = useMemo(
-    () => calculateFinancialSetup(inputs, acknowledgements),
-    [acknowledgements, inputs],
+    () => calculateFinancialSetup(reconciledInputs, acknowledgements),
+    [acknowledgements, reconciledInputs],
   );
 
   const refreshInputs = useCallback(

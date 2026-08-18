@@ -2113,6 +2113,10 @@ export type Database = {
       goal_investments: {
         Row: {
           amount: number
+          original_amount: number | null
+          currency: string | null
+          exchange_rate_to_eur: number | null
+          exchange_rate_date: string | null
           created_at: string
           goal_id: string
           id: string
@@ -2123,6 +2127,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          original_amount?: number | null
+          currency?: string | null
+          exchange_rate_to_eur?: number | null
+          exchange_rate_date?: string | null
           created_at?: string
           goal_id: string
           id?: string
@@ -2133,6 +2141,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          original_amount?: number | null
+          currency?: string | null
+          exchange_rate_to_eur?: number | null
+          exchange_rate_date?: string | null
           created_at?: string
           goal_id?: string
           id?: string
@@ -2762,57 +2774,57 @@ export type Database = {
       }
       transactions: {
         Row: {
-          amount: number
-          amount_eur: number
-          category: string
+          amount: number | null
+          amount_eur: number | null
+          category: string | null
           created_at: string
-          currency: string
-          description: string
+          currency: string | null
+          description: string | null
           encrypted_payload: string | null
           encryption_version: number | null
           exchange_rate_date: string | null
           exchange_rate_source: string | null
-          exchange_rate_to_eur: number
+          exchange_rate_to_eur: number | null
           id: string
-          occurred_at: string
-          transaction_date: string
-          type: string
+          occurred_at: string | null
+          transaction_date: string | null
+          type: string | null
           user_id: string
         }
         Insert: {
-          amount: number
-          amount_eur: number
-          category: string
+          amount?: number | null
+          amount_eur?: number | null
+          category?: string | null
           created_at?: string
-          currency?: string
-          description: string
+          currency?: string | null
+          description?: string | null
           encrypted_payload?: string | null
           encryption_version?: number | null
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
-          exchange_rate_to_eur: number
+          exchange_rate_to_eur?: number | null
           id?: string
-          occurred_at: string
-          transaction_date: string
-          type: string
+          occurred_at?: string | null
+          transaction_date?: string | null
+          type?: string | null
           user_id: string
         }
         Update: {
-          amount?: number
-          amount_eur?: number
-          category?: string
+          amount?: number | null
+          amount_eur?: number | null
+          category?: string | null
           created_at?: string
-          currency?: string
-          description?: string
+          currency?: string | null
+          description?: string | null
           encrypted_payload?: string | null
           encryption_version?: number | null
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
-          exchange_rate_to_eur?: number
+          exchange_rate_to_eur?: number | null
           id?: string
-          occurred_at?: string
-          transaction_date?: string
-          type?: string
+          occurred_at?: string | null
+          transaction_date?: string | null
+          type?: string | null
           user_id?: string
         }
         Relationships: []

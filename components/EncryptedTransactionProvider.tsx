@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   createContext,
@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,6 +18,10 @@ import {
   type DecryptedTransaction,
   type EncryptedTransactionRow,
 } from "@/lib/e2ee/transactionPayload";
+import {
+  finalizePendingServerTransactions,
+  migrateLegacyPlaintextTransactions,
+} from "@/lib/e2ee/transactionMigration";
 
 type EncryptedTransactionContextValue = {
   transactions: DecryptedTransaction[];
@@ -40,6 +45,8 @@ export function EncryptedTransactionProvider({
     useState<DecryptedTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const refreshRunningRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (vaultStatus !== "unlocked" || !vaultKey) {
@@ -49,10 +56,17 @@ export function EncryptedTransactionProvider({
       return;
     }
 
+    if (refreshRunningRef.current) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+    refreshRunningRef.current = true;
     setLoading(true);
     setError("");
 
     try {
+      do {
+        refreshQueuedRef.current = false;
       const {
         data: { user },
         error: userError,
@@ -61,6 +75,17 @@ export function EncryptedTransactionProvider({
       if (userError || !user) {
         throw new Error("Please log in again.");
       }
+
+      await migrateLegacyPlaintextTransactions(
+        supabase,
+        vaultKey,
+        user.id,
+      );
+      await finalizePendingServerTransactions(
+        supabase,
+        vaultKey,
+        user.id,
+      );
 
       const { data, error: queryError } = await supabase
         .from("transactions")
@@ -96,7 +121,8 @@ export function EncryptedTransactionProvider({
         );
       }
 
-      setTransactions(decrypted);
+        setTransactions(decrypted);
+      } while (refreshQueuedRef.current);
     } catch (caughtError) {
       setTransactions([]);
       setError(
@@ -105,6 +131,7 @@ export function EncryptedTransactionProvider({
           : "Encrypted transactions could not be opened.",
       );
     } finally {
+      refreshRunningRef.current = false;
       setLoading(false);
     }
   }, [supabase, vaultKey, vaultStatus]);
@@ -147,18 +174,22 @@ export function EncryptedTransactionProvider({
       window.setTimeout(() => void refresh(), 80);
     };
 
-    window.addEventListener(
+    const transactionEvents = [
       "ficonter:transaction-created",
-      handleCreated,
+      "ficonter:transaction-upserted",
+      "ficonter:transaction-deleted",
+      "ficonter:data-changed",
+    ] as const;
+    transactionEvents.forEach((eventName) =>
+      window.addEventListener(eventName, handleCreated),
     );
 
     void subscribe();
 
     return () => {
       active = false;
-      window.removeEventListener(
-        "ficonter:transaction-created",
-        handleCreated,
+      transactionEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, handleCreated),
       );
       if (channel) void supabase.removeChannel(channel);
     };

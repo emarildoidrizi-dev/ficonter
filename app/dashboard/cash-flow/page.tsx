@@ -27,7 +27,6 @@ export default async function CashFlowPage() {
   const [
     inputResponse,
     paymentResponse,
-    transactionResponse,
     billResponse,
   ] = await Promise.all([
     supabase.rpc("get_cash_flow_intelligence_inputs_v2"),
@@ -36,13 +35,6 @@ export default async function CashFlowPage() {
       .select("debt_id, amount_eur, paid_at")
       .eq("user_id", user.id)
       .gte("paid_at", currentMonthStartIso()),
-    supabase
-      .from("transactions")
-      .select(
-        "id,type,description,category,amount_eur,transaction_date,occurred_at",
-      )
-      .eq("user_id", user.id)
-      .order("transaction_date", { ascending: true }),
     supabase
       .from("bills")
       .select("id,status,amount_eur,due_date,paid_at,transaction_id")
@@ -54,7 +46,7 @@ export default async function CashFlowPage() {
   );
   const synchronizedInputs = reconcileCashFlowMonthlyInputs(
     normalizedInputs,
-    transactionResponse.data,
+    [],
     billResponse.data,
   );
   const activeMonth =
@@ -78,7 +70,6 @@ export default async function CashFlowPage() {
       initialError={
         inputResponse.error?.message ??
         paymentResponse.error?.message ??
-        transactionResponse.error?.message ??
         billResponse.error?.message ??
         planResponse.error?.message ??
         ""

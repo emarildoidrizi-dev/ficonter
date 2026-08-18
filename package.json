@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "verify:e2ee-transactions": "node scripts/verify-e2ee-transactions.mjs",
     "start": "next start",
     "lint": "eslint .",
     "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs",

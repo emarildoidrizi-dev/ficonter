@@ -44,6 +44,47 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return copy.buffer;
 }
 
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+export async function encryptTransactionPayload(
+  vaultKey: CryptoKey,
+  userId: string,
+  financialPayload: Record<string, unknown>,
+): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const additionalData = new TextEncoder().encode(
+    `ficonter:transaction:${userId}:v1`,
+  );
+  const plaintext = new TextEncoder().encode(
+    JSON.stringify(financialPayload),
+  );
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv: toArrayBuffer(iv),
+        additionalData: toArrayBuffer(additionalData),
+      },
+      vaultKey,
+      toArrayBuffer(plaintext),
+    ),
+  );
+
+  const envelope: TransactionCipherEnvelopeV1 = {
+    v: 1,
+    alg: "A256GCM",
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(ciphertext),
+  };
+
+  return JSON.stringify(envelope);
+}
+
 export async function decryptTransactionPayload(
   vaultKey: CryptoKey,
   userId: string,

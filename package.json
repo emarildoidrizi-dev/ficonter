@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "verify:phase1": "node scripts/verify-phase1-security.mjs && node scripts/verify-phase1-qa.mjs",
     "verify:phase2-health": "node scripts/verify-phase2-financial-health.mjs",
-    "verify:all": "npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-net-worth-growth && npm run verify:phase2-cash-flow && npm run verify:phase2-emergency-fund && npm run verify:phase2-savings && npm run verify:phase2-financial-independence && npm run verify:wealth-empty-state && npm run verify:phase2-ai && npm run verify:support && npm run verify:support-platform && npm run verify:financial-consistency",
+    "verify:all": "npm run verify:e2ee-vault && npm run verify:e2ee-transactions && npm run verify:phase1 && npm run verify:phase2-health && npm run verify:phase2-wealth && npm run verify:phase2-net-worth-growth && npm run verify:phase2-cash-flow && npm run verify:phase2-emergency-fund && npm run verify:phase2-savings && npm run verify:phase2-financial-independence && npm run verify:wealth-empty-state && npm run verify:phase2-ai && npm run verify:support && npm run verify:support-platform && npm run verify:financial-consistency",
     "verify:phase2-wealth": "node scripts/verify-phase2-wealth-score.mjs",
     "verify:phase2-cash-flow": "node scripts/verify-phase2-cash-flow.mjs",
     "verify:phase2-emergency-fund": "node scripts/verify-phase2-emergency-fund.mjs",
@@ -55,7 +55,8 @@
     "verify:financial-document-import": "node scripts/verify-financial-document-import.mjs",
     "verify:financial-document-multilingual": "node scripts/verify-financial-document-multilingual.mjs",
     "verify:owner-music": "node scripts/verify-owner-music.mjs",
-    "verify:performance-stability-v2": "node scripts/verify-platform-performance-stability-v2.mjs"
+    "verify:performance-stability-v2": "node scripts/verify-platform-performance-stability-v2.mjs",
+    "verify:e2ee-vault": "node scripts/verify-e2ee-vault.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

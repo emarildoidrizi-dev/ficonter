@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   createContext,
@@ -12,6 +12,11 @@ import {
 
 import { createClient } from "@/lib/supabase/client";
 import { clearActiveVaultKey, setActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import {
+  forgetVaultBrowserSession,
+  rememberVaultKeyForBrowserSession,
+  restoreVaultKeyForBrowserSession,
+} from "@/lib/e2ee/browserVaultSession";
 
 import {
   createNewVault,
@@ -72,6 +77,7 @@ export function VaultProvider({ children }: Props) {
 
         if (userError || !user) {
           clearActiveVaultKey();
+          await forgetVaultBrowserSession();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");
@@ -95,6 +101,7 @@ export function VaultProvider({ children }: Props) {
 
         if (!data) {
           clearActiveVaultKey();
+          await forgetVaultBrowserSession();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("not_created");
@@ -104,7 +111,18 @@ export function VaultProvider({ children }: Props) {
         if (vaultKey) {
           setStatus("unlocked");
         } else {
-          setStatus("locked");
+          const restoredKey =
+            await restoreVaultKeyForBrowserSession(
+              user.id,
+            );
+
+          if (restoredKey) {
+            setVaultKey(restoredKey);
+            setActiveVaultKey(restoredKey);
+            setStatus("unlocked");
+          } else {
+            setStatus("locked");
+          }
         }
       } catch (caughtError) {
         clearActiveVaultKey();
@@ -178,6 +196,10 @@ export function VaultProvider({ children }: Props) {
 
         setVaultKey(newVault.vaultKey);
         setActiveVaultKey(newVault.vaultKey);
+        await rememberVaultKeyForBrowserSession(
+          user.id,
+          newVault.vaultKey,
+        );
         setRecoveryCode(
           newVault.recoveryCode,
         );
@@ -238,6 +260,10 @@ export function VaultProvider({ children }: Props) {
 
           setVaultKey(unlockedKey);
           setActiveVaultKey(unlockedKey);
+          await rememberVaultKeyForBrowserSession(
+            user.id,
+            unlockedKey,
+          );
           setRecoveryCode(null);
           setStatus("unlocked");
 
@@ -251,6 +277,7 @@ export function VaultProvider({ children }: Props) {
             .eq("user_id", user.id);
         } catch (caughtError) {
           clearActiveVaultKey();
+          await forgetVaultBrowserSession();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");
@@ -270,6 +297,7 @@ export function VaultProvider({ children }: Props) {
   const lockVault =
     useCallback(() => {
       clearActiveVaultKey();
+      void forgetVaultBrowserSession();
       setVaultKey(null);
       setRecoveryCode(null);
       setError(null);
@@ -287,6 +315,7 @@ export function VaultProvider({ children }: Props) {
           event === "SIGNED_OUT"
         ) {
           clearActiveVaultKey();
+          void forgetVaultBrowserSession();
           setVaultKey(null);
           setRecoveryCode(null);
           setStatus("locked");

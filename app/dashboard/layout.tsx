@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
+import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -153,8 +154,10 @@ export default async function DashboardLayout({
       <main className="app-main">
         <VaultProvider>
   <EncryptedTransactionProvider>
-    <VaultAccessPanel />
-    {children}
+    <EncryptedBillProvider>
+      <VaultAccessPanel />
+      {children}
+    </EncryptedBillProvider>
   </EncryptedTransactionProvider>
 </VaultProvider>
       </main>

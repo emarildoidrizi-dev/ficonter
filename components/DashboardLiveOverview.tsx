@@ -11,6 +11,7 @@ import { canonicalAmountInBaseCurrency, reconcileAiInsightsToBaseCurrency, recon
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
+import { useEncryptedBills } from "@/components/EncryptedBillProvider";
 import { CoastalOverview, type CoastalUpcomingBill } from "@/components/CoastalOverview";
 import { calculateFinancialHealth, type FinancialHealthInputs } from "@/lib/wealth/financialHealth";
 import type { AiInsightsInputs } from "@/lib/wealth/aiInsights";
@@ -85,7 +86,6 @@ export function DashboardLiveOverview({
   userId,
   name,
   initialTransactions,
-  initialBills,
   initialBudgetPlans,
   initialHealthInputs,
   initialSetupAcknowledgements,
@@ -98,6 +98,7 @@ export function DashboardLiveOverview({
   const refreshTimer = useRef<number | null>(null);
   const supabase = useMemo(() => createClient(), []);
   const { transactions, error: encryptedTransactionsError } = useEncryptedTransactions();
+  const { bills, error: encryptedBillsError } = useEncryptedBills();
   const [daypart, setDaypart] = useState<Daypart>(() => daypartForDate());
   const { baseCurrency } = useCurrencyDisplay();
   const { source, context } = useBaseCurrencySourceData(userId);
@@ -108,9 +109,9 @@ export function DashboardLiveOverview({
   const historicalDates = useMemo(
     () => [
       ...transactions.map((transaction) => transaction.transaction_date),
-      ...initialBills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
+      ...bills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
     ],
-    [initialBills, transactions],
+    [bills, transactions],
   );
   const { rateForDate } = useHistoricalReportingRates(historicalDates);
 
@@ -154,7 +155,6 @@ export function DashboardLiveOverview({
     const channel = supabase
       .channel(`coastal-overview-${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions", filter: `user_id=eq.${userId}` }, scheduleRefresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "bills", filter: `user_id=eq.${userId}` }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "debts", filter: `user_id=eq.${userId}` }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "goals", filter: `user_id=eq.${userId}` }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "monthly_budget_plans", filter: `user_id=eq.${userId}` }, scheduleRefresh)
@@ -187,7 +187,7 @@ export function DashboardLiveOverview({
 
   const actuals = calculateBaseCurrencyCashActuals({
       transactions,
-      bills: initialBills,
+      bills,
       baseCurrency,
       throughDate: today,
       rateForDate,
@@ -196,7 +196,7 @@ export function DashboardLiveOverview({
   const gpsInputs = reconcileAiInsightsToBaseCurrency(initialGpsInputs, source, context);
   const financialHealth = calculateFinancialHealth(financialHealthInputs);
   const financialGps = calculateFinancialGps(gpsInputs, initialSetupAcknowledgements);
-  const linkedTransactionIds = new Set(initialBills.map((bill) => bill.transaction_id).filter(Boolean));
+  const linkedTransactionIds = new Set(bills.map((bill) => bill.transaction_id).filter(Boolean));
 
   const monthTotals = (() => {
     const totals: Record<string, { income: number; spent: number }> = {
@@ -212,7 +212,7 @@ export function DashboardLiveOverview({
       if (transaction.type === "income") totals[key].income += amount;
       else totals[key].spent += amount;
     });
-    initialBills.forEach((bill) => {
+    bills.forEach((bill) => {
       if (bill.status !== "paid") return;
       const activityDate = bill.paid_at?.slice(0, 10) ?? bill.due_date;
       if (activityDate > today) return;
@@ -240,11 +240,11 @@ export function DashboardLiveOverview({
     return totals;
   })();
 
-  const stillToPay = initialBills.reduce((total, bill) => {
+  const stillToPay = bills.reduce((total, bill) => {
       if (bill.status === "paid" || bill.status === "cancelled") return total;
       return total + (billAmount(bill) ?? 0);
     }, 0);
-  const upcomingBills: CoastalUpcomingBill[] = initialBills
+  const upcomingBills: CoastalUpcomingBill[] = bills
       .filter((bill) => bill.status !== "paid" && bill.status !== "cancelled")
       .sort((left, right) => left.due_date.localeCompare(right.due_date))
       .slice(0, 3)
@@ -283,7 +283,7 @@ export function DashboardLiveOverview({
       spendingBudget={spendingBudget}
       financialGps={financialGps}
       previousMonthChange={previousMonthChange}
-      errorMessages={[initialError, initialHealthError, initialGpsError, encryptedTransactionsError]}
+      errorMessages={[initialError, initialHealthError, initialGpsError, encryptedTransactionsError, encryptedBillsError]}
     />
   );
 }

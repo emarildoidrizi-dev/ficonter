@@ -18,6 +18,13 @@ export type DebtPrivatePayloadV1 = {
   annual_interest_rate: number;
   minimum_payment: number;
   minimum_payment_eur: number;
+  card_last_four?: string | null;
+  credit_limit?: number | null;
+  credit_limit_eur?: number | null;
+  statement_balance?: number | null;
+  statement_balance_eur?: number | null;
+  interest_charged?: number | null;
+  interest_charged_eur?: number | null;
 };
 
 export type EncryptedDebtRow = {
@@ -25,6 +32,7 @@ export type EncryptedDebtRow = {
   user_id: string;
   encrypted_payload: VaultCiphertextEnvelopeV1 | null;
   encryption_version: number | null;
+  e2ee_revision?: number | null;
 };
 
 function normalizedText(value: unknown): string {
@@ -37,6 +45,11 @@ function finite(value: unknown, field: string): number {
     throw new Error(`Debt payload contains an invalid ${field}.`);
   }
   return parsed;
+}
+
+function optionalFinite(value: unknown, field: string): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  return finite(value, field);
 }
 
 function normalizePayload(
@@ -74,6 +87,26 @@ function normalizePayload(
     throw new Error("Debt financial values are outside the allowed range.");
   }
 
+  const optionalMoney = {
+    credit_limit: optionalFinite(payload.credit_limit, "credit limit"),
+    credit_limit_eur: optionalFinite(payload.credit_limit_eur, "EUR credit limit"),
+    statement_balance: optionalFinite(payload.statement_balance, "statement balance"),
+    statement_balance_eur: optionalFinite(payload.statement_balance_eur, "EUR statement balance"),
+    interest_charged: optionalFinite(payload.interest_charged, "interest charged"),
+    interest_charged_eur: optionalFinite(payload.interest_charged_eur, "EUR interest charged"),
+  };
+
+  for (const value of Object.values(optionalMoney)) {
+    if (value !== null && value < 0) {
+      throw new Error("Debt optional financial values cannot be negative.");
+    }
+  }
+
+  const cardLastFour = normalizedText(payload.card_last_four);
+  if (cardLastFour && !/^\d{4}$/.test(cardLastFour)) {
+    throw new Error("Credit-card last four digits are invalid.");
+  }
+
   return {
     name,
     lender: normalizedText(payload.lender) || null,
@@ -88,6 +121,8 @@ function normalizePayload(
     annual_interest_rate: annualInterestRate,
     minimum_payment: minimumPayment,
     minimum_payment_eur: minimumPaymentEur,
+    card_last_four: cardLastFour || null,
+    ...optionalMoney,
   };
 }
 

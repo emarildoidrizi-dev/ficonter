@@ -556,7 +556,7 @@ export function TransactionForm({
   const exchangePreview = (
     <div className="fx-preview" aria-live="polite">
       {rateLoading ? (
-        <span>Retrieving the latest reference rateâ€¦</span>
+        <span>Retrieving the latest reference rate…</span>
       ) : rateError ? (
         <span className="fx-preview-error">{rateError}</span>
       ) : (
@@ -568,7 +568,7 @@ export function TransactionForm({
           <small>
             {currency === baseCurrency
               ? "No display conversion required."
-              : `Displayed in ${baseCurrency} Â· reference date ${rate.date}`}
+              : `Displayed in ${baseCurrency} · reference date ${rate.date}`}
           </small>
         </>
       )}
@@ -745,7 +745,7 @@ export function TransactionForm({
           <div className="field">
             <label>Custom category</label>
             <input
-              className="input"
+              className="input effortless-custom-category"
               value={customCategory}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setCustomCategory(event.target.value)
@@ -775,9 +775,9 @@ export function TransactionForm({
           disabled={loading || rateLoading || Boolean(rateError)}
         >
           {loading
-            ? "Savingâ€¦"
+            ? "Saving…"
             : rateLoading
-              ? "Retrieving rateâ€¦"
+              ? "Retrieving rate…"
               : actionLabel(type)}
         </button>
         <p className="effortless-mode-footnote">
@@ -956,7 +956,7 @@ export function TransactionForm({
                 >
                   {currencyOptions.map((option) => (
                     <option key={option.code} value={option.code}>
-                      {option.symbol} {option.code} â€” {option.name}
+                      {option.symbol} {option.code} — {option.name}
                     </option>
                   ))}
                 </select>
@@ -997,9 +997,9 @@ export function TransactionForm({
                 disabled={loading || rateLoading || Boolean(rateError)}
               >
                 {loading
-                  ? "Savingâ€¦"
+                  ? "Saving…"
                   : rateLoading
-                    ? "Retrieving rateâ€¦"
+                    ? "Retrieving rate…"
                     : actionLabel(type)}
               </button>
             </div>
@@ -1086,7 +1086,7 @@ export function TransactionForm({
           >
             {currencyOptions.map((option) => (
               <option key={option.code} value={option.code}>
-                {option.symbol} {option.code} â€” {option.name}
+                {option.symbol} {option.code} — {option.name}
               </option>
             ))}
           </select>
@@ -1116,9 +1116,9 @@ export function TransactionForm({
         disabled={loading || rateLoading || Boolean(rateError)}
       >
         {loading
-          ? "Savingâ€¦"
+          ? "Saving…"
           : rateLoading
-            ? "Retrieving rateâ€¦"
+            ? "Retrieving rate…"
             : "Save complete transaction"}
       </button>
     </form>

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -20,6 +21,7 @@ import {
 import {
   migrateLegacyPlaintextBills,
 } from "@/lib/e2ee/billMigration";
+import { subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 
 type BillOperationalRow = EncryptedBillRow & {
   due_date: string;
@@ -76,6 +78,9 @@ export function EncryptedBillProvider({
   const [error, setError] =
     useState("");
 
+  const refreshRunningRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
+
   const refresh = useCallback(async () => {
     if (
       vaultStatus !== "unlocked" ||
@@ -87,68 +92,78 @@ export function EncryptedBillProvider({
       return;
     }
 
+    if (refreshRunningRef.current) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+
+    refreshRunningRef.current = true;
     setLoading(true);
     setError("");
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      do {
+        refreshQueuedRef.current = false;
 
-      if (userError || !user) {
-        throw new Error(
-          "Please log in again.",
-        );
-      }
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      await migrateLegacyPlaintextBills(
-        supabase,
-        vaultKey,
-        user.id,
-      );
+        if (userError || !user) {
+          throw new Error(
+            "Please log in again.",
+          );
+        }
 
-      const billsTable =
-        supabase.from("bills") as any;
-
-      const {
-        data,
-        error: queryError,
-      } = await billsTable
-        .select(
-          "id,user_id,encrypted_payload,encryption_version,due_date,recurrence,autopay,autopay_record_time,autopay_timezone,autopay_enabled_at,recurrence_anchor_day,recurrence_anchor_month_end,reminder_days,status,paid_at,transaction_id,created_at,updated_at",
-        )
-        .eq("user_id", user.id)
-        .eq("encryption_version", 1)
-        .not(
-          "encrypted_payload",
-          "is",
-          null,
-        )
-        .order("due_date", {
-          ascending: true,
-        });
-
-      if (queryError) {
-        throw queryError;
-      }
-
-      const rows =
-        (data ?? []) as BillOperationalRow[];
-
-      const decrypted =
-        await Promise.all(
-          rows.map(async (row) => ({
-            ...row,
-            ...(await decryptBillPayload(
-              vaultKey,
-              user.id,
-              row,
-            )),
-          })),
+        await migrateLegacyPlaintextBills(
+          supabase,
+          vaultKey,
+          user.id,
         );
 
-      setBills(decrypted);
+        const billsTable =
+          supabase.from("bills") as any;
+
+        const {
+          data,
+          error: queryError,
+        } = await billsTable
+          .select(
+            "id,user_id,encrypted_payload,encryption_version,due_date,recurrence,autopay,autopay_record_time,autopay_timezone,autopay_enabled_at,recurrence_anchor_day,recurrence_anchor_month_end,reminder_days,status,paid_at,transaction_id,created_at,updated_at",
+          )
+          .eq("user_id", user.id)
+          .eq("encryption_version", 1)
+          .not(
+            "encrypted_payload",
+            "is",
+            null,
+          )
+          .order("due_date", {
+            ascending: true,
+          });
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        const rows =
+          (data ?? []) as BillOperationalRow[];
+
+        const decrypted =
+          await Promise.all(
+            rows.map(async (row) => ({
+              ...row,
+              ...(await decryptBillPayload(
+                vaultKey,
+                user.id,
+                row,
+              )),
+            })),
+          );
+
+        setBills(decrypted);
+      } while (refreshQueuedRef.current);
     } catch (caughtError) {
       setBills([]);
 
@@ -158,6 +173,7 @@ export function EncryptedBillProvider({
           : "Encrypted Bills could not be opened.",
       );
     } finally {
+      refreshRunningRef.current = false;
       setLoading(false);
     }
   }, [
@@ -169,6 +185,51 @@ export function EncryptedBillProvider({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (vaultStatus !== "unlocked") return;
+
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function subscribe() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!active || !user) return;
+
+      channel = supabase
+        .channel(`e2ee-bills-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "bills",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            void refresh();
+          },
+        )
+        .subscribe();
+    }
+
+    const unsubscribe = subscribeFiconterDataChanges((change) => {
+      if (change.scope === "bills" || change.scope === "all") {
+        void refresh();
+      }
+    });
+
+    void subscribe();
+
+    return () => {
+      active = false;
+      unsubscribe();
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [refresh, supabase, vaultStatus]);
 
   const value = useMemo(
     () => ({

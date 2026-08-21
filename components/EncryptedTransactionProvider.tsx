@@ -22,6 +22,9 @@ import {
   finalizePendingServerTransactions,
   migrateLegacyPlaintextTransactions,
 } from "@/lib/e2ee/transactionMigration";
+import {
+  finalizePendingEncryptedBillTransactions,
+} from "@/lib/e2ee/pendingBillTransactionFinalizer";
 
 type EncryptedTransactionContextValue = {
   transactions: DecryptedTransaction[];
@@ -77,6 +80,11 @@ export function EncryptedTransactionProvider({
       }
 
       await migrateLegacyPlaintextTransactions(
+        supabase,
+        vaultKey,
+        user.id,
+      );
+      await finalizePendingEncryptedBillTransactions(
         supabase,
         vaultKey,
         user.id,

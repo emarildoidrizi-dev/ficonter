@@ -75,6 +75,15 @@ export async function migrateLegacyPlaintextBills(
         .update({
           encrypted_payload: encryptedPayload,
           encryption_version: 1,
+          name: null,
+          company: null,
+          category: null,
+          amount: null,
+          currency: null,
+          amount_eur: null,
+          exchange_rate_to_eur: null,
+          payment_method: null,
+          notes: null,
         })
         .eq("id", row.id)
         .eq("user_id", userId);

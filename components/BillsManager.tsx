@@ -12,10 +12,11 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import { encryptBillPayload } from "@/lib/e2ee/billPayload";
 import { encryptTransactionPayload, type DecryptedTransaction } from "@/lib/e2ee/transactionPayload";
+import { useEncryptedBills } from "@/components/EncryptedBillProvider";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { convertWithCachedRate } from "@/lib/performance/exchangeRateCache";
@@ -191,8 +192,16 @@ export function BillsManager({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { transactions: encryptedTransactions } = useEncryptedTransactions();
+  const {
+    bills: encryptedBills,
+    loading: encryptedBillsLoading,
+    error: encryptedBillsError,
+    refresh: refreshBills,
+  } = useEncryptedBills();
   const { baseCurrency, latestRate } = useCurrencyDisplay();
-  const [bills, setBills] = useState<Bill[]>(initialBills);
+  const bills = (
+    encryptedBillsLoading ? initialBills : encryptedBills
+  ) as Bill[];
   const billDates = useMemo(
     () => bills.map((bill) => bill.paid_at?.slice(0, 10) ?? bill.due_date),
     [bills],
@@ -243,6 +252,12 @@ export function BillsManager({
   }, [message]);
 
   useEffect(() => {
+    if (encryptedBillsError) {
+      setMessage(encryptedBillsError);
+    }
+  }, [encryptedBillsError]);
+
+  useEffect(() => {
     if (!billPendingDeletion) return;
 
     const previousOverflow = document.body.style.overflow;
@@ -267,27 +282,14 @@ export function BillsManager({
       .channel(`bills-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bills", filter: `user_id=eq.${userId}` },
-        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (payload.eventType === "INSERT") {
-            const record = payload.new as Bill;
-            setBills((current) =>
-              current.some((bill) => bill.id === record.id)
-                ? current
-                : [...current, record],
-            );
-          }
-          if (payload.eventType === "UPDATE") {
-            const record = payload.new as Bill;
-            setBills((current) =>
-              current.map((bill) => (bill.id === record.id ? record : bill)),
-            );
-          }
-          if (payload.eventType === "DELETE") {
-            const record = payload.old as Bill;
-            setBills((current) => current.filter((bill) => bill.id !== record.id));
-          }
-
+        {
+          event: "*",
+          schema: "public",
+          table: "bills",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void refreshBills();
           notifyFiconterDataChange("all");
         },
       )
@@ -296,7 +298,7 @@ export function BillsManager({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, userId]);
+  }, [refreshBills, supabase, userId]);
 
   useEffect(() => {
     const timezone = browserTimezone();
@@ -317,7 +319,7 @@ export function BillsManager({
     let cancelled = false;
 
     void (async () => {
-      const replacements = new Map<string, Bill>();
+      let updated = false;
 
       for (const bill of candidates) {
         const localScheduled = new Date(
@@ -342,7 +344,7 @@ export function BillsManager({
           !Number.isNaN(existingEnabledAt.getTime()) &&
           existingEnabledAt.getTime() <= localScheduled.getTime();
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("bills")
           .update({
             autopay_timezone: timezone,
@@ -354,19 +356,15 @@ export function BillsManager({
           .eq("id", bill.id)
           .eq("user_id", userId)
           .eq("autopay", true)
-          .eq("status", "pending")
-          .select()
-          .single();
+          .eq("status", "pending");
 
         if (error) throw error;
-        replacements.set(bill.id, data as Bill);
+        updated = true;
       }
 
-      if (cancelled || replacements.size === 0) return;
-
-      setBills((current) =>
-        current.map((bill) => replacements.get(bill.id) ?? bill),
-      );
+      if (!cancelled && updated) {
+        await refreshBills();
+      }
     })().catch((error: unknown) => {
       if (cancelled) return;
       setMessage(
@@ -380,7 +378,7 @@ export function BillsManager({
     return () => {
       cancelled = true;
     };
-  }, [bills, supabase, userId]);
+  }, [bills, refreshBills, supabase, userId]);
 
   const todayKey = localDateKey();
 
@@ -514,7 +512,35 @@ export function BillsManager({
           ? existingBill.autopay_enabled_at
           : new Date().toISOString();
 
+      const vaultKey = getActiveVaultKey();
+      if (!vaultKey) {
+        throw new Error(
+          "Unlock your Financial Vault before saving a Bill.",
+        );
+      }
+
       const conversion = await convertToEur(amount, form.currency);
+      const amountEur = roundMoney(conversion.eur);
+      const exchangeRateToEur = roundRate(conversion.rate);
+      const billId = editingId ?? crypto.randomUUID();
+
+      const billCiphertext = await encryptBillPayload(
+        vaultKey,
+        userId,
+        billId,
+        {
+          name: form.name.trim(),
+          company: form.company.trim() || null,
+          category: form.category,
+          amount,
+          currency: form.currency,
+          amount_eur: amountEur,
+          exchange_rate_to_eur: exchangeRateToEur,
+          payment_method: form.payment_method,
+          notes: form.notes.trim() || null,
+        },
+      );
+
       const payload = {
         user_id: userId,
         name: form.name.trim(),
@@ -522,8 +548,8 @@ export function BillsManager({
         category: form.category,
         amount,
         currency: form.currency,
-        amount_eur: roundMoney(conversion.eur),
-        exchange_rate_to_eur: roundRate(conversion.rate),
+        amount_eur: amountEur,
+        exchange_rate_to_eur: exchangeRateToEur,
         due_date: form.due_date,
         recurrence: form.recurrence,
         payment_method: form.payment_method,
@@ -533,11 +559,21 @@ export function BillsManager({
         autopay_enabled_at: automationEnabledAt,
         recurrence_anchor_day: Number(form.due_date.slice(8, 10)),
         recurrence_anchor_month_end: isMonthEnd(form.due_date),
-        reminder_days: Math.min(365, Math.max(0, Math.round(finiteNumber(form.reminder_days)))),
+        reminder_days: Math.min(
+          365,
+          Math.max(
+            0,
+            Math.round(finiteNumber(form.reminder_days)),
+          ),
+        ),
         notes: form.notes.trim() || null,
         status: existingBill?.status ?? ("pending" as BillStatus),
+        encrypted_payload: billCiphertext,
+        encryption_version: 1,
         updated_at: new Date().toISOString(),
       };
+
+      const billsTable = supabase.from("bills") as any;
 
       if (editingId) {
         if (!existingBill) {
@@ -608,13 +644,10 @@ export function BillsManager({
           }
         }
 
-        const { data, error } = await supabase
-          .from("bills")
+        const { error } = await billsTable
           .update(payload)
           .eq("id", editingId)
-          .eq("user_id", userId)
-          .select()
-          .single();
+          .eq("user_id", userId);
 
         if (error) {
           if (linkedTransactionBefore && existingBill.transaction_id) {
@@ -662,21 +695,17 @@ export function BillsManager({
           throw error;
         }
 
-        setBills((current) =>
-          current.map((bill) => (bill.id === editingId ? (data as Bill) : bill)),
-        );
+        await refreshBills();
       } else {
-        const { data, error } = await supabase
-          .from("bills")
-          .insert(payload)
-          .select()
-          .single();
+        const { error } = await billsTable
+          .insert({
+            id: billId,
+            ...payload,
+          });
+
         if (error) throw error;
-        setBills((current) =>
-          current.some((bill) => bill.id === data.id)
-            ? current
-            : [...current, data as Bill],
-        );
+
+        await refreshBills();
       }
 
       setMessage(editingId ? "Bill updated." : "Bill added.");
@@ -765,9 +794,7 @@ export function BillsManager({
         throw new Error("The reopened Bill was not returned by the database.");
       }
 
-      setBills((current) =>
-        current.map((item) => (item.id === bill.id ? reopenedBill : item)),
-      );
+      await refreshBills();
       notifyFiconterDataChange("all");
       setMessage("Bill marked unpaid and its linked transaction removed.");
     } catch (error) {
@@ -803,7 +830,7 @@ export function BillsManager({
         throw new Error("The deleted bill was not returned by the database.");
       }
 
-      setBills((current) => current.filter((item) => item.id !== bill.id));
+      await refreshBills();
       setBillPendingDeletion(null);
       notifyFiconterDataChange("all");
       setMessage(

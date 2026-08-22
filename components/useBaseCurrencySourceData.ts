@@ -6,6 +6,7 @@ import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvi
 import { useEncryptedBills } from "@/components/EncryptedBillProvider";
 import { useVault } from "@/components/VaultProvider";
 import { decryptDebtPayload } from "@/lib/e2ee/debtPayload";
+import { decryptCreditCardPayload } from "@/lib/e2ee/creditCardPayload";
 import { decryptDebtPaymentPayload } from "@/lib/e2ee/debtPaymentPayload";
 import { decryptGoalPayload } from "@/lib/e2ee/goalPayload";
 import { decryptMonthlyPlanPayload } from "@/lib/e2ee/monthlyPlanPayload";
@@ -75,7 +76,7 @@ export function useBaseCurrencySourceData(userId: string) {
         const itemsTable = supabase.from("monthly_budget_items") as any;
 
         const [debtsResult, debtPaymentsResult, goalsResult, plansResult, itemsResult] = await Promise.all([
-          debtsTable.select("id,user_id,name,category,currency,original_balance,current_balance,minimum_payment,original_balance_eur,current_balance_eur,minimum_payment_eur,annual_interest_rate,status,updated_at,encrypted_payload,encryption_version").eq("user_id", userId),
+          debtsTable.select("id,user_id,debt_kind,created_at,name,category,currency,original_balance,current_balance,minimum_payment,original_balance_eur,current_balance_eur,minimum_payment_eur,annual_interest_rate,status,updated_at,encrypted_payload,encryption_version").eq("user_id", userId),
           debtPaymentsTable.select("id,debt_id,user_id,amount,currency,amount_eur,paid_at,encrypted_payload,encryption_version").eq("user_id", userId),
           goalsTable.select("id,user_id,target_amount,current_amount,status,encrypted_payload,encryption_version").eq("user_id", userId),
           plansTable.select("id,user_id,month,start_balance,spending_budget,created_at,updated_at,encrypted_payload,encryption_version,e2ee_revision").eq("user_id", userId),
@@ -89,7 +90,14 @@ export function useBaseCurrencySourceData(userId: string) {
         let itemRows = (itemsResult.data ?? []) as any[];
 
         if (vaultStatus === "unlocked" && vaultKey) {
-          debtRows = await Promise.all(debtRows.map(async (row: any) => row.encryption_version === 1 && row.encrypted_payload ? { ...row, ...(await decryptDebtPayload(vaultKey, userId, row)) } : row));
+          debtRows = await Promise.all(debtRows.map(async (row: any) => {
+            if (row.encryption_version !== 1 || !row.encrypted_payload) return row;
+            if (row.debt_kind === "credit_card") {
+              const decrypted = await decryptCreditCardPayload(vaultKey, userId, row);
+              return { ...row, ...decrypted, category: "Credit card" };
+            }
+            return { ...row, ...(await decryptDebtPayload(vaultKey, userId, row)) };
+          }));
           paymentRows = await Promise.all(paymentRows.map(async (row: any) => row.encryption_version === 1 && row.encrypted_payload ? { ...row, ...(await decryptDebtPaymentPayload(vaultKey, userId, row)) } : row));
           goalRows = await Promise.all(goalRows.map(async (row: any) => row.encryption_version === 1 && row.encrypted_payload ? { ...row, ...(await decryptGoalPayload(vaultKey, userId, row)) } : row));
           planRows = await Promise.all(planRows.map(async (row: any) => row.encryption_version === 1 && row.encrypted_payload ? { ...row, ...(await decryptMonthlyPlanPayload(vaultKey, userId, row)) } : row));

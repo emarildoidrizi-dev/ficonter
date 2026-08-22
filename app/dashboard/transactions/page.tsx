@@ -36,29 +36,22 @@ export default async function TransactionsPage({
   const directAdd = addValue === "1";
   const initialType = setupTransactionType(setupValue);
 
-  const [allowMultiCurrency, allowPdfExport] =
-    await Promise.all([
-      canCurrentUserAccessSubscriptionFeature(
-        "multi_currency_transactions",
-      ),
-      canCurrentUserAccessSubscriptionFeature(
-        "private_pdf_export",
-      ),
-    ]);
+  const [allowMultiCurrency, allowPdfExport] = await Promise.all([
+    canCurrentUserAccessSubscriptionFeature("multi_currency_transactions"),
+    canCurrentUserAccessSubscriptionFeature("private_pdf_export"),
+  ]);
 
   return (
     <>
       <header className="topbar">
         <div className="page-title">
           <h1>Transactions</h1>
-          <p>
-            Review activity or add a transaction without
-            leaving this screen.
-          </p>
+          <p>Review activity or add a transaction without leaving this screen.</p>
         </div>
       </header>
 
       <EncryptedTransactionsWorkspace
+        userId={user.id}
         initialType={initialType}
         allowMultiCurrency={allowMultiCurrency}
         allowPdfExport={allowPdfExport}

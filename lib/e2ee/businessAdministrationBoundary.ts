@@ -7,10 +7,21 @@ import {
 const MAGIC = new TextEncoder().encode("FICONTER-BIZDOC-V1\0");
 const IV_BYTES = 12;
 
-type State = { businessKey: CryptoKey; businessId: string; pendingDocuments: Map<string,{id:string;name:string;mime:string;size:number}> };
+type PendingDocument = { id:string; name:string; mime:string; size:number; storagePath:string };
+type State = { businessKey: CryptoKey; businessId: string; pendingDocuments: Map<string,PendingDocument> };
 const toBuffer = (bytes: Uint8Array) => { const copy=new Uint8Array(bytes.byteLength);copy.set(bytes);return copy.buffer; };
 const aad = (businessId:string,documentId:string) => new TextEncoder().encode(`ficonter:business-document-file:${businessId}:${documentId}:v1`);
-const docIdFromPath = (path:string) => path.split("/").filter(Boolean).at(-2) ?? "";
+function docIdFromPath(path:string) {
+  const parts=path.split("/").filter(Boolean);
+  const last=parts.at(-1) ?? "";
+  if(last.endsWith(".ficonter")) return last.slice(0,-".ficonter".length);
+  return parts.at(-2) ?? "";
+}
+function opaqueDocumentPath(path:string,businessId:string,documentId:string) {
+  const parts=path.split("/").filter(Boolean);
+  const owner=parts[0] ?? "vault";
+  return `${owner}/${businessId}/${documentId}.ficonter`;
+}
 
 async function encryptFile(key:CryptoKey,businessId:string,documentId:string,file:File){
   const iv=crypto.getRandomValues(new Uint8Array(IV_BYTES));
@@ -59,8 +70,9 @@ export function installBusinessAdministrationBoundary(client:any,businessKey:Cry
         }
         if(fn==="create_business_document"){
           const id=String(args?.p_document_id??""); const pending=state.pendingDocuments.get(id);
-          const encrypted=await encryptBusinessPayload(state.businessKey,state.businessId,"document",id,{title:args?.p_title??"",category:args?.p_category??"Other",description:args?.p_description??null,original_filename:args?.p_original_filename??pending?.name??"document",mime_type:args?.p_mime_type??pending?.mime??"application/octet-stream",file_size:Number(args?.p_file_size??pending?.size??0),expires_on:args?.p_expires_on??null});
-          const result=await originalRpc("create_business_document_e2ee",{p_document_id:id,p_business_id:state.businessId,p_file_path:args?.p_file_path,p_ciphertext_size:(pending?.size??Number(args?.p_file_size??0))+MAGIC.length+IV_BYTES+16,p_encrypted_payload:encrypted}); if(result.error||!result.data)return result; state.pendingDocuments.delete(id); return {data:await openPayload(state,"document",id,result.data),error:null};
+          if(!pending) throw new Error("Encrypted business document upload was not prepared.");
+          const encrypted=await encryptBusinessPayload(state.businessKey,state.businessId,"document",id,{title:args?.p_title??"",category:args?.p_category??"Other",description:args?.p_description??null,original_filename:args?.p_original_filename??pending.name,mime_type:args?.p_mime_type??pending.mime,file_size:Number(args?.p_file_size??pending.size),expires_on:args?.p_expires_on??null});
+          const result=await originalRpc("create_business_document_e2ee",{p_document_id:id,p_business_id:state.businessId,p_file_path:pending.storagePath,p_ciphertext_size:pending.size+MAGIC.length+IV_BYTES+16,p_encrypted_payload:encrypted}); if(result.error||!result.data)return result; state.pendingDocuments.delete(id); return {data:await openPayload(state,"document",id,result.data),error:null};
         }
         if(fn==="update_business_document"){
           const id=String(args?.p_document_id??""); const current=await originalFrom("business_documents").select("*").eq("id",id).eq("business_id",state.businessId).single(); if(current.error)return current; const opened=await openPayload(state,"document",id,current.data);
@@ -75,7 +87,13 @@ export function installBusinessAdministrationBoundary(client:any,businessKey:Cry
   raw.storage.from=(bucket:string)=>{
     const storage=originalStorageFrom(bucket); if(bucket!=="business-documents") return storage;
     const originalUpload=storage.upload.bind(storage); const originalSigned=storage.createSignedUrl.bind(storage);
-    storage.upload=async(path:string,file:File,opts?:any)=>{const id=docIdFromPath(path);if(!id)return {data:null,error:new Error("Business document path is invalid.")};state.pendingDocuments.set(id,{id,name:file.name,mime:file.type||"application/octet-stream",size:file.size});const encrypted=await encryptFile(state.businessKey,state.businessId,id,file);return originalUpload(path,encrypted,{...opts,contentType:"application/octet-stream"});};
+    storage.upload=async(path:string,file:File,opts?:any)=>{
+      const id=docIdFromPath(path);if(!id)return {data:null,error:new Error("Business document path is invalid.")};
+      const storagePath=opaqueDocumentPath(path,state.businessId,id);
+      state.pendingDocuments.set(id,{id,name:file.name,mime:file.type||"application/octet-stream",size:file.size,storagePath});
+      const encrypted=await encryptFile(state.businessKey,state.businessId,id,file);
+      return originalUpload(storagePath,encrypted,{...opts,contentType:"application/octet-stream"});
+    };
     storage.createSignedUrl=async(path:string,expires:number,opts?:any)=>{const id=docIdFromPath(path);const signed=await originalSigned(path,expires);if(signed.error||!signed.data?.signedUrl)return signed;const response=await fetch(signed.data.signedUrl);if(!response.ok)return {data:null,error:new Error("Encrypted business document could not be downloaded.")};const plaintext=await decryptFile(state.businessKey,state.businessId,id,await response.arrayBuffer());const row=await originalFrom("business_documents").select("*").eq("id",id).eq("business_id",state.businessId).maybeSingle();let mime="application/octet-stream",name="document";if(row.data){const opened=await openPayload(state,"document",id,row.data);mime=opened.mime_type??mime;name=opened.original_filename??name;}const url=URL.createObjectURL(new Blob([plaintext],{type:mime}));window.setTimeout(()=>URL.revokeObjectURL(url),120000);return {data:{signedUrl:url,path,download:opts?.download??name},error:null};};
     return storage;
   };

@@ -59,7 +59,7 @@ export function BusinessSetup() {
         p_timezone: timezone,
       });
       if (createError || !data) throw createError ?? new Error("The business workspace could not be created.");
-      const businessId = String((data as any).id ?? (data as any).business_id ?? "");
+      const businessId = typeof data === "string" ? data : String((data as any).id ?? (data as any).business_id ?? "");
       if (!businessId) throw new Error("The new business workspace id was not returned.");
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("The signed-in account could not be resolved.");

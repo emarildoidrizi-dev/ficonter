@@ -14,6 +14,41 @@ import { installCreditCardDebtBoundaryCompatibility } from "@/lib/e2ee/creditCar
 import { installCreditCardE2eeBoundary } from "@/lib/e2ee/creditCardClientBoundary";
 import { subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 
+function monthKeyOf(value: unknown) {
+  return typeof value === "string" ? value.slice(0, 7) : "";
+}
+
+function withPostedInterest(monthlyRows: any[], activities: any[]) {
+  return monthlyRows.map((row) => {
+    const month = monthKeyOf(row.month_start || row.statement_date);
+    if (!month) return row;
+
+    const interestActivities = activities.filter(
+      (activity) =>
+        activity.debt_id === row.debt_id &&
+        activity.activity_type === "interest" &&
+        monthKeyOf(activity.occurred_at) === month,
+    );
+
+    if (!interestActivities.length) return row;
+
+    const interestCharged = interestActivities.reduce(
+      (total, activity) => total + Number(activity.amount || 0),
+      0,
+    );
+    const interestChargedEur = interestActivities.reduce(
+      (total, activity) => total + Number(activity.amount_eur || 0),
+      0,
+    );
+
+    return {
+      ...row,
+      interest_charged: Math.round((interestCharged + Number.EPSILON) * 100) / 100,
+      interest_charged_eur: Math.round((interestChargedEur + Number.EPSILON) * 100) / 100,
+    };
+  });
+}
+
 export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const { status: vaultStatus, vaultKey } = useVault();
@@ -128,7 +163,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
         setCards(openedCards);
         setActivities(openedActivities);
         setPayments(openedPayments);
-        setMonthlyRecords(openedMonthly);
+        setMonthlyRecords(withPostedInterest(openedMonthly, openedActivities));
       } while (queuedRef.current);
     } catch (caughtError) {
       setCards([]);

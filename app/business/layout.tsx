@@ -15,9 +15,12 @@ import { VaultProvider } from "@/components/VaultProvider";
 import { BusinessVaultProvider } from "@/components/BusinessVaultProvider";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
-import { getAdminAccess } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getBusinessContext } from "@/lib/business/server";
-import { getSubscriptionAccess } from "@/lib/subscriptions/access";
+import {
+  getCurrentSubscriptionAccess,
+  getEffectiveSubscriptionPlanCode,
+} from "@/lib/subscriptionAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,11 +29,11 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const { user, businesses, business, membership } = await getBusinessContext();
   if (!user) redirect("/login");
 
-  const [admin, subscriptionAccess] = await Promise.all([
-    getAdminAccess(user.id),
-    getSubscriptionAccess(user.id),
+  const [{ admin }, subscriptionAccess] = await Promise.all([
+    requireAdmin(),
+    getCurrentSubscriptionAccess(),
   ]);
-  const isPlatformOwner = admin?.role === "owner";
+  const isPlatformOwner = isOwnerEmail(user.email);
   const canManageBusiness = Boolean(
     business &&
       (business.owner_id === user.id ||
@@ -44,7 +47,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         membership?.role === "admin" ||
         membership?.role === "member"),
   );
-  const subscriptionPlanCode = subscriptionAccess?.planCode ?? null;
+  const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
 
   return (
     <CurrencyDisplayProvider

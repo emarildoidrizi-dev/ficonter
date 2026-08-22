@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { CashFlowIntelligence } from "@/components/CashFlowIntelligence";
+import { EncryptedCashFlowWorkspace } from "@/components/EncryptedCashFlowWorkspace";
 import { reconcileCashFlowMonthlyInputs } from "@/lib/finance/monthlyCashActuals";
 import {
   normalizeCashFlowDebtPayments,
@@ -24,11 +24,7 @@ export default async function CashFlowPage() {
 
   if (!user) redirect("/login");
 
-  const [
-    inputResponse,
-    paymentResponse,
-    billResponse,
-  ] = await Promise.all([
+  const [inputResponse, paymentResponse, billResponse] = await Promise.all([
     supabase.rpc("get_cash_flow_intelligence_inputs_v2"),
     supabase
       .from("debt_payments")
@@ -41,37 +37,22 @@ export default async function CashFlowPage() {
       .eq("user_id", user.id),
   ]);
 
-  const normalizedInputs = normalizeCashFlowIntelligenceInputs(
-    inputResponse.data,
-  );
+  const normalizedInputs = normalizeCashFlowIntelligenceInputs(inputResponse.data);
   const synchronizedInputs = reconcileCashFlowMonthlyInputs(
     normalizedInputs,
     [],
     billResponse.data,
   );
-  const activeMonth =
-    synchronizedInputs.monthly.at(-1)?.month ||
-    synchronizedInputs.generatedAt.slice(0, 7) ||
-    new Date().toISOString().slice(0, 7);
-
-  const planResponse = await supabase
-    .from("monthly_budget_plans")
-    .select("start_balance")
-    .eq("user_id", user.id)
-    .eq("month", activeMonth)
-    .maybeSingle();
 
   return (
-    <CashFlowIntelligence
+    <EncryptedCashFlowWorkspace
       userId={user.id}
       initialInputs={synchronizedInputs}
       initialDebtPayments={normalizeCashFlowDebtPayments(paymentResponse.data)}
-      initialOpeningBalance={Number(planResponse.data?.start_balance ?? 0)}
       initialError={
         inputResponse.error?.message ??
         paymentResponse.error?.message ??
         billResponse.error?.message ??
-        planResponse.error?.message ??
         ""
       }
     />

@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
+import { useEncryptedBills } from "@/components/EncryptedBillProvider";
+import { useVault } from "@/components/VaultProvider";
+import { decryptDebtPayload } from "@/lib/e2ee/debtPayload";
+import { decryptDebtPaymentPayload } from "@/lib/e2ee/debtPaymentPayload";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
-import { isFinancialDataScope, parseFiconterDataChange, type FiconterDataChange } from "@/lib/ficonterRealtime";
+import {
+  isFinancialDataScope,
+  parseFiconterDataChange,
+  type FiconterDataChange,
+} from "@/lib/ficonterRealtime";
 import {
   useCurrencyDisplay,
   useHistoricalReportingRates,
@@ -27,10 +35,15 @@ const EMPTY_SOURCE: CurrencySourceData = {
 export function useBaseCurrencySourceData(userId: string) {
   const supabase = useMemo(() => createClient(), []);
   const { baseCurrency, latestRate } = useCurrencyDisplay();
+  const { status: vaultStatus, vaultKey } = useVault();
   const {
     transactions: encryptedTransactions,
     loading: encryptedTransactionsLoading,
   } = useEncryptedTransactions();
+  const {
+    bills: encryptedBills,
+    loading: encryptedBillsLoading,
+  } = useEncryptedBills();
   const [source, setSource] = useState<CurrencySourceData>(EMPTY_SOURCE);
   const [loading, setLoading] = useState(true);
   const inFlightRef = useRef<Promise<void> | null>(null);
@@ -61,50 +74,79 @@ export function useBaseCurrencySourceData(userId: string) {
       do {
         queuedRef.current = false;
 
-        const [
-          bills,
-          debts,
-          debtPayments,
-          goals,
-          plans,
-          items,
-        ] = await Promise.all([
-      supabase
-        .from("bills")
-        .select(
-          "id,name,category,status,amount,currency,amount_eur,due_date,paid_at,transaction_id",
-        )
-        .eq("user_id", userId),
-      supabase
-        .from("debts")
-        .select(
-          "id,name,category,currency,original_balance,current_balance,minimum_payment,original_balance_eur,current_balance_eur,minimum_payment_eur,annual_interest_rate,status,updated_at",
-        )
-        .eq("user_id", userId),
-      supabase
-        .from("debt_payments")
-        .select("id,debt_id,amount,currency,amount_eur,paid_at")
-        .eq("user_id", userId),
-      supabase
-        .from("goals")
-        .select("id,target_amount,current_amount,status")
-        .eq("user_id", userId),
-      supabase
-        .from("monthly_budget_plans")
-        .select("month,start_balance")
-        .eq("user_id", userId),
-      supabase
-        .from("monthly_budget_items")
-        .select("month,section,planned_amount")
-        .eq("user_id", userId),
-        ]);
+        const [debtsResult, debtPaymentsResult, goals, plans, items] =
+          await Promise.all([
+            supabase
+              .from("debts")
+              .select(
+                "id,user_id,name,category,currency,original_balance,current_balance,minimum_payment,original_balance_eur,current_balance_eur,minimum_payment_eur,annual_interest_rate,status,updated_at,encrypted_payload,encryption_version",
+              )
+              .eq("user_id", userId),
+            supabase
+              .from("debt_payments")
+              .select(
+                "id,debt_id,user_id,amount,currency,amount_eur,paid_at,encrypted_payload,encryption_version",
+              )
+              .eq("user_id", userId),
+            supabase
+              .from("goals")
+              .select("id,target_amount,current_amount,status")
+              .eq("user_id", userId),
+            supabase
+              .from("monthly_budget_plans")
+              .select("month,start_balance")
+              .eq("user_id", userId),
+            supabase
+              .from("monthly_budget_items")
+              .select("month,section,planned_amount")
+              .eq("user_id", userId),
+          ]);
+
+        let debtRows = debtsResult.data ?? [];
+        let paymentRows = debtPaymentsResult.data ?? [];
+
+        if (vaultStatus === "unlocked" && vaultKey) {
+          debtRows = await Promise.all(
+            debtRows.map(async (row: any) => {
+              if (row.encryption_version !== 1 || !row.encrypted_payload) {
+                return row;
+              }
+
+              const decrypted = await decryptDebtPayload(vaultKey, userId, row);
+              return {
+                ...row,
+                ...decrypted,
+              };
+            }),
+          );
+
+          paymentRows = await Promise.all(
+            paymentRows.map(async (row: any) => {
+              if (row.encryption_version !== 1 || !row.encrypted_payload) {
+                return row;
+              }
+
+              const decrypted = await decryptDebtPaymentPayload(
+                vaultKey,
+                userId,
+                row,
+              );
+              return {
+                ...row,
+                ...decrypted,
+              };
+            }),
+          );
+        }
 
         if (mountedRef.current) {
           setSource({
-            transactions: encryptedTransactions as CurrencySourceData["transactions"],
-            bills: (bills.data ?? []) as CurrencySourceData["bills"],
-            debts: (debts.data ?? []) as CurrencySourceData["debts"],
-            debtPayments: (debtPayments.data ?? []) as CurrencySourceData["debtPayments"],
+            transactions:
+              encryptedTransactions as CurrencySourceData["transactions"],
+            bills: encryptedBills as CurrencySourceData["bills"],
+            debts: debtRows as CurrencySourceData["debts"],
+            debtPayments:
+              paymentRows as CurrencySourceData["debtPayments"],
             goals: (goals.data ?? []) as CurrencySourceData["goals"],
             plans: (plans.data ?? []) as CurrencySourceData["plans"],
             items: (items.data ?? []) as CurrencySourceData["items"],
@@ -123,7 +165,14 @@ export function useBaseCurrencySourceData(userId: string) {
 
     inFlightRef.current = task;
     return task;
-  }, [encryptedTransactions, supabase, userId]);
+  }, [
+    encryptedBills,
+    encryptedTransactions,
+    supabase,
+    userId,
+    vaultKey,
+    vaultStatus,
+  ]);
 
   useEffect(() => {
     void refresh();
@@ -188,7 +237,8 @@ export function useBaseCurrencySourceData(userId: string) {
     context,
     baseCurrency,
     latestRate,
-    loading: loading || encryptedTransactionsLoading,
+    loading:
+      loading || encryptedTransactionsLoading || encryptedBillsLoading,
     refresh,
   };
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BusinessAdministration } from "@/components/BusinessAdministration";
 import { useBusinessVault } from "@/components/BusinessVaultProvider";
 import { installBusinessAdministrationBoundary } from "@/lib/e2ee/businessAdministrationBoundary";
+import { installBusinessAdministrationReadBoundary } from "@/lib/e2ee/businessAdministrationReadBoundary";
 import { decryptBusinessPayload, type BusinessCiphertextEnvelopeV1 } from "@/lib/e2ee/businessVault";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/lib/business/types";
@@ -42,6 +43,7 @@ export function EncryptedBusinessAdministrationWorkspace({
       return;
     }
     installBusinessAdministrationBoundary(client, businessKey, serverBusiness.id);
+    installBusinessAdministrationReadBoundary(client);
     setLoading(true);
     setError("");
     void (async () => {

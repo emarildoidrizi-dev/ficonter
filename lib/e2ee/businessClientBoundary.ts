@@ -57,6 +57,70 @@ const TABLES: Record<string, TableConfig> = {
       "reference", "notes",
     ],
   },
+  business_inventory_categories: {
+    recordType: "inventory-category",
+    privateFields: ["name", "description"],
+  },
+  business_inventory_locations: {
+    recordType: "inventory-location",
+    privateFields: ["name", "description"],
+  },
+  business_inventory_items: {
+    recordType: "inventory-item",
+    privateFields: [
+      "name", "sku", "barcode", "unit", "low_stock_threshold",
+      "default_purchase_cost", "default_purchase_currency",
+      "default_purchase_cost_base", "default_exchange_rate_to_base",
+      "selling_price_base", "notes",
+    ],
+  },
+  business_inventory_movements: {
+    recordType: "inventory-movement",
+    privateFields: [
+      "item_name", "item_sku", "movement_type", "quantity_delta",
+      "unit_cost", "currency", "unit_cost_base", "inventory_value_delta_base",
+      "exchange_rate_to_base", "exchange_rate_date", "exchange_rate_source",
+      "supplier_name", "movement_date", "occurred_at", "reference", "notes",
+    ],
+  },
+  business_sales: {
+    recordType: "sale",
+    privateFields: [
+      "sale_number", "customer_name", "customer_email", "currency",
+      "exchange_rate_to_base", "exchange_rate_date", "exchange_rate_source",
+      "subtotal", "discount", "tax", "total", "subtotal_base",
+      "discount_base", "tax_base", "total_base", "net_sales_base",
+      "cogs_base", "gross_profit_base", "line_count", "units_sold",
+      "sale_date", "occurred_at", "payment_method", "reference", "notes",
+    ],
+  },
+  business_sale_lines: {
+    recordType: "sale-line",
+    privateFields: [
+      "item_name", "item_sku", "quantity", "unit_price", "line_subtotal",
+      "line_subtotal_base", "unit_cost_base", "cogs_base", "gross_profit_base",
+    ],
+  },
+  business_supplier_invoices: {
+    recordType: "supplier-invoice",
+    privateFields: [
+      "invoice_number", "description", "category_name", "cost_nature",
+      "amount", "currency", "amount_base", "exchange_rate_to_base",
+      "exchange_rate_date", "exchange_rate_source", "issue_date", "due_date",
+      "payment_method", "notes",
+    ],
+  },
+  business_documents: {
+    recordType: "document",
+    privateFields: [
+      "title", "category", "description", "original_filename", "mime_type",
+      "expires_on",
+    ],
+  },
+  business_audit_log: {
+    recordType: "audit-entry",
+    privateFields: ["actor_label", "summary", "metadata"],
+  },
 };
 
 function deferredMutation(execute: (calls: DeferredCall[]) => Promise<any>) {

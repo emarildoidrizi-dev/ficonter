@@ -21,6 +21,7 @@ import {
   type BusinessWrappedKeyEnvelopeV1,
 } from "@/lib/e2ee/businessVault";
 import { installBusinessE2eeBoundary } from "@/lib/e2ee/businessClientBoundary";
+import { installBusinessSupplierInvoiceBoundary } from "@/lib/e2ee/businessSupplierInvoiceBoundary";
 import { finalizePendingBusinessRecurringCosts } from "@/lib/e2ee/businessRecurringCostFinalizer";
 import type { VaultCiphertextEnvelopeV1 } from "@/lib/e2ee/vault";
 
@@ -149,6 +150,7 @@ export function BusinessVaultProvider({
     (opened: CryptoKey) => {
       if (!businessId) return;
       installBusinessE2eeBoundary(client, opened, businessId);
+      installBusinessSupplierInvoiceBoundary(client, opened, businessId);
       setBusinessKey(opened);
       setStatus("unlocked");
       if (canWrite) {

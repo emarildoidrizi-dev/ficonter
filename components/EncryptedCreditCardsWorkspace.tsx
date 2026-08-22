@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CreditCardsManager } from "@/components/CreditCardsManager";
+import { CreditCardInterestEstimator } from "@/components/CreditCardInterestEstimator";
 import { useVault } from "@/components/VaultProvider";
 import { createClient } from "@/lib/supabase/client";
 import { decryptCreditCardPayload } from "@/lib/e2ee/creditCardPayload";
@@ -208,14 +209,17 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
   }
 
   return (
-    <CreditCardsManager
-      key={`${cards.length}:${activities.length}:${payments.length}:${monthlyRecords.length}:${cards.map((card) => card.e2ee_revision ?? 0).join(",")}`}
-      userId={userId}
-      initialCards={cards}
-      initialActivities={activities}
-      initialPayments={payments}
-      initialMonthlyRecords={monthlyRecords}
-      initialError={error}
-    />
+    <div style={{ display: "grid", gap: 18 }}>
+      <CreditCardInterestEstimator cards={cards} />
+      <CreditCardsManager
+        key={`${cards.length}:${activities.length}:${payments.length}:${monthlyRecords.length}:${cards.map((card) => card.e2ee_revision ?? 0).join(",")}`}
+        userId={userId}
+        initialCards={cards}
+        initialActivities={activities}
+        initialPayments={payments}
+        initialMonthlyRecords={monthlyRecords}
+        initialError={error}
+      />
+    </div>
   );
 }

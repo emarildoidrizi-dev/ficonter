@@ -51,8 +51,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
   return (
     <CurrencyDisplayProvider
-      initialBaseCurrency={business?.base_currency ?? "EUR"}
-      userId={user.id}
+      workspace="business"
+      baseCurrency={business?.base_currency ?? "EUR"}
     >
       <div className="app-shell business-shell">
         <LivingThemeBackdrop />

@@ -26,13 +26,11 @@ export function EncryptedCashFlowWorkspace({ userId }: { userId: string }) {
   );
   const debtPayments = useMemo(
     () =>
-      source.debtPayments
-        .filter((payment) => Boolean(payment.paid_at))
-        .map((payment) => ({
-          debtId: payment.debt_id,
-          amountEur: Math.max(0, finiteNumber(payment.amount_eur)),
-          paidAt: payment.paid_at,
-        })),
+      source.debtPayments.map((payment) => ({
+        debtId: payment.debt_id,
+        amountEur: Math.max(0, finiteNumber(payment.amount_eur)),
+        paidAt: payment.paid_at,
+      })),
     [source.debtPayments],
   );
 
@@ -43,6 +41,7 @@ export function EncryptedCashFlowWorkspace({ userId }: { userId: string }) {
   installMonthlyPlannerE2eeBoundary(supabase, vaultKey, userId);
   installCashFlowIntelligenceE2eeBoundary(
     supabase,
+    userId,
     () => inputs,
     () => source,
   );

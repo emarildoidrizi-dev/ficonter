@@ -25,6 +25,9 @@ import {
 import {
   finalizePendingEncryptedBillTransactions,
 } from "@/lib/e2ee/pendingBillTransactionFinalizer";
+import {
+  finalizePendingEncryptedDebtPayments,
+} from "@/lib/e2ee/pendingDebtPaymentFinalizer";
 
 type EncryptedTransactionContextValue = {
   transactions: DecryptedTransaction[];
@@ -70,64 +73,69 @@ export function EncryptedTransactionProvider({
     try {
       do {
         refreshQueuedRef.current = false;
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        throw new Error("Please log in again.");
-      }
+        if (userError || !user) {
+          throw new Error("Please log in again.");
+        }
 
-      await migrateLegacyPlaintextTransactions(
-        supabase,
-        vaultKey,
-        user.id,
-      );
-      await finalizePendingEncryptedBillTransactions(
-        supabase,
-        vaultKey,
-        user.id,
-      );
-      await finalizePendingServerTransactions(
-        supabase,
-        vaultKey,
-        user.id,
-      );
-
-      const { data, error: queryError } = await supabase
-        .from("transactions")
-        .select(
-          "id,user_id,encrypted_payload,encryption_version,created_at",
-        )
-        .eq("user_id", user.id)
-        .eq("encryption_version", 1)
-        .not("encrypted_payload", "is", null)
-        .order("created_at", { ascending: false });
-
-      if (queryError) throw queryError;
-
-      const results = await Promise.allSettled(
-        ((data ?? []) as EncryptedTransactionRow[]).map(
-          (row) =>
-            decryptTransactionPayload(
-              vaultKey,
-              user.id,
-              row,
-            ),
-        ),
-      );
-
-      const decrypted = results.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
-
-      const failedCount = results.length - decrypted.length;
-      if (failedCount > 0) {
-        console.warn(
-          `Skipped ${failedCount} encrypted transaction row(s) that could not be decrypted with the current vault key.`,
+        await migrateLegacyPlaintextTransactions(
+          supabase,
+          vaultKey,
+          user.id,
         );
-      }
+        await finalizePendingEncryptedBillTransactions(
+          supabase,
+          vaultKey,
+          user.id,
+        );
+        await finalizePendingEncryptedDebtPayments(
+          supabase,
+          vaultKey,
+          user.id,
+        );
+        await finalizePendingServerTransactions(
+          supabase,
+          vaultKey,
+          user.id,
+        );
+
+        const { data, error: queryError } = await supabase
+          .from("transactions")
+          .select(
+            "id,user_id,encrypted_payload,encryption_version,created_at",
+          )
+          .eq("user_id", user.id)
+          .eq("encryption_version", 1)
+          .not("encrypted_payload", "is", null)
+          .order("created_at", { ascending: false });
+
+        if (queryError) throw queryError;
+
+        const results = await Promise.allSettled(
+          ((data ?? []) as EncryptedTransactionRow[]).map(
+            (row) =>
+              decryptTransactionPayload(
+                vaultKey,
+                user.id,
+                row,
+              ),
+          ),
+        );
+
+        const decrypted = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+
+        const failedCount = results.length - decrypted.length;
+        if (failedCount > 0) {
+          console.warn(
+            `Skipped ${failedCount} encrypted transaction row(s) that could not be decrypted with the current vault key.`,
+          );
+        }
 
         setTransactions(decrypted);
       } while (refreshQueuedRef.current);

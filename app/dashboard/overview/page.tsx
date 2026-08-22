@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { DashboardLiveOverview } from "@/components/DashboardLiveOverview";
-import {
-  reconcileAiInsightsInputs,
-  reconcileFinancialHealthInputs,
-} from "@/lib/finance/monthlyCashActuals";
+import { EncryptedDashboardOverview } from "@/components/EncryptedDashboardOverview";
 import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
 import { normalizeAiInsightsInputs } from "@/lib/wealth/aiInsights";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
@@ -17,58 +13,25 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const [
-    billResult,
-    budgetPlanResult,
-    healthResult,
-    gpsResult,
-  ] = await Promise.all([
-    supabase
-      .from("bills")
-      .select("id,name,status,amount,currency,amount_eur,due_date,paid_at,transaction_id")
-      .eq("user_id", user.id),
-    supabase
-      .from("monthly_budget_plans")
-      .select("month,spending_budget")
-      .eq("user_id", user.id)
-      .order("month", { ascending: false }),
+  const [healthResult, gpsResult] = await Promise.all([
     supabase.rpc("get_financial_health_inputs"),
     supabase.rpc("get_ai_insights_inputs"),
   ]);
 
-  const transactions: never[] = [];
-  const bills = billResult.data ?? [];
-  const healthInputs = reconcileFinancialHealthInputs(
-    normalizeFinancialHealthInputs(healthResult.data),
-    transactions,
-    bills,
-  );
-  const gpsInputs = reconcileAiInsightsInputs(
-    normalizeAiInsightsInputs(gpsResult.data),
-    transactions,
-    bills,
-  );
   const name =
     (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
     "there";
 
   return (
-    <DashboardLiveOverview
+    <EncryptedDashboardOverview
       userId={user.id}
       name={name}
-      initialTransactions={transactions}
-      initialBills={bills}
-      initialBudgetPlans={budgetPlanResult.data ?? []}
-      initialHealthInputs={healthInputs}
-      initialSetupAcknowledgements={readSetupAcknowledgements(
-        user.user_metadata,
-      )}
-      initialGpsInputs={gpsInputs}
-      initialError={
-        billResult.error?.message ??
-        budgetPlanResult.error?.message ??
-        ""
-      }
+      initialTransactions={[]}
+      initialBills={[]}
+      initialHealthInputs={normalizeFinancialHealthInputs(healthResult.data)}
+      initialSetupAcknowledgements={readSetupAcknowledgements(user.user_metadata)}
+      initialGpsInputs={normalizeAiInsightsInputs(gpsResult.data)}
+      initialError=""
       initialHealthError={healthResult.error?.message ?? ""}
       initialGpsError={gpsResult.error?.message ?? ""}
     />

@@ -44,6 +44,19 @@ const TABLES: Record<string, TableConfig> = {
       "postal_code", "country_code", "notes",
     ],
   },
+  business_cost_budgets: {
+    recordType: "cost-budget",
+    privateFields: ["amount_base", "notes"],
+  },
+  business_recurring_costs: {
+    recordType: "recurring-cost",
+    privateFields: [
+      "name", "supplier", "category_name", "cost_nature", "amount",
+      "currency", "amount_base", "exchange_rate_to_base",
+      "exchange_rate_date", "exchange_rate_source", "payment_method",
+      "reference", "notes",
+    ],
+  },
 };
 
 function deferredMutation(execute: (calls: DeferredCall[]) => Promise<any>) {

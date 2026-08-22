@@ -74,16 +74,17 @@ export function useBaseCurrencySourceData(userId: string) {
       do {
         queuedRef.current = false;
 
+        const debtsTable = supabase.from("debts") as any;
+        const debtPaymentsTable = supabase.from("debt_payments") as any;
+
         const [debtsResult, debtPaymentsResult, goals, plans, items] =
           await Promise.all([
-            supabase
-              .from("debts")
+            debtsTable
               .select(
                 "id,user_id,name,category,currency,original_balance,current_balance,minimum_payment,original_balance_eur,current_balance_eur,minimum_payment_eur,annual_interest_rate,status,updated_at,encrypted_payload,encryption_version",
               )
               .eq("user_id", userId),
-            supabase
-              .from("debt_payments")
+            debtPaymentsTable
               .select(
                 "id,debt_id,user_id,amount,currency,amount_eur,paid_at,encrypted_payload,encryption_version",
               )
@@ -102,8 +103,8 @@ export function useBaseCurrencySourceData(userId: string) {
               .eq("user_id", userId),
           ]);
 
-        let debtRows = debtsResult.data ?? [];
-        let paymentRows = debtPaymentsResult.data ?? [];
+        let debtRows = (debtsResult.data ?? []) as any[];
+        let paymentRows = (debtPaymentsResult.data ?? []) as any[];
 
         if (vaultStatus === "unlocked" && vaultKey) {
           debtRows = await Promise.all(

@@ -63,18 +63,31 @@ export function BusinessSetup() {
       if (!businessId) throw new Error("The new business workspace id was not returned.");
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("The signed-in account could not be resolved.");
-      const businessKey = await initializeBusinessVaultForOwner(supabase, vaultKey, userData.user.id, businessId);
-      const encryptedProfile = await encryptBusinessPayload(businessKey, businessId, "business-profile", businessId, {
-        legal_name: legalName,
-        tax_id: null,
-        contact_email: null,
-        contact_phone: null,
-        website: null,
-        address_line1: null,
-        address_line2: null,
-        city: null,
-        postal_code: null,
-      });
+
+      const businessKey = await initializeBusinessVaultForOwner(
+        supabase,
+        vaultKey,
+        userData.user.id,
+        businessId,
+      );
+
+      const encryptedProfile = await encryptBusinessPayload(
+        businessKey,
+        businessId,
+        "business-profile",
+        businessId,
+        {
+          legal_name: legalName,
+          tax_id: null,
+          contact_email: null,
+          contact_phone: null,
+          website: null,
+          address_line1: null,
+          address_line2: null,
+          city: null,
+          postal_code: null,
+        },
+      );
       const { error: privateError } = await supabase.rpc("update_business_workspace_e2ee", {
         p_business_id: businessId,
         p_name: name,
@@ -89,6 +102,34 @@ export function BusinessSetup() {
         p_expected_revision: 0,
       });
       if (privateError) throw privateError;
+
+      const encryptedSettings = await encryptBusinessPayload(
+        businessKey,
+        businessId,
+        "business-settings",
+        businessId,
+        {
+          default_timezone: timezone,
+          date_format: "DD/MM/YYYY",
+          number_format: "de-DE",
+          default_payment_method: "Card",
+          default_payment_terms_days: 14,
+          default_sales_tax_rate: 0,
+          invoice_prefix: "INV",
+          next_invoice_number: 1,
+          default_low_stock_threshold: 0,
+        },
+      );
+      const { error: settingsError } = await supabase.rpc(
+        "update_business_administration_settings_e2ee",
+        {
+          p_business_id: businessId,
+          p_encrypted_payload: encryptedSettings,
+          p_expected_revision: 0,
+        },
+      );
+      if (settingsError) throw settingsError;
+
       router.replace("/business/overview");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The business workspace could not be created.");

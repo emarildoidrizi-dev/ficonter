@@ -23,6 +23,7 @@ export function CreditCardLiveInterestView({
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<number | null>(null);
   const { baseCurrency, latestRate } = useCurrencyDisplay();
 
   const labels = useMemo(
@@ -81,9 +82,17 @@ export function CreditCardLiveInterestView({
         (child) => child.tagName === "SMALL",
       ) as HTMLElement | undefined;
 
-      if (label) label.textContent = "Real-time interest charge";
-      if (value) value.textContent = amount;
-      if (helper) helper.style.display = "none";
+      // MutationObserver watches this subtree. Only write when the DOM really
+      // differs, otherwise our own writes would continuously retrigger it.
+      if (label && label.textContent !== "Real-time interest charge") {
+        label.textContent = "Real-time interest charge";
+      }
+      if (value && value.textContent !== amount) {
+        value.textContent = amount;
+      }
+      if (helper && helper.style.display !== "none") {
+        helper.style.display = "none";
+      }
     });
   }, [labels]);
 
@@ -92,10 +101,24 @@ export function CreditCardLiveInterestView({
     const root = rootRef.current;
     if (!root) return;
 
-    const observer = new MutationObserver(() => applyLiveInterest());
+    const scheduleApply = () => {
+      if (frameRef.current !== null) return;
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null;
+        applyLiveInterest();
+      });
+    };
+
+    const observer = new MutationObserver(scheduleApply);
     observer.observe(root, { childList: true, subtree: true, characterData: true });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
   }, [applyLiveInterest]);
 
   return <div ref={rootRef}>{children}</div>;

@@ -62,6 +62,8 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const runningRef = useRef(false);
   const queuedRef = useRef(false);
+  const loadedRef = useRef(false);
+  const migrationCheckedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (vaultStatus !== "unlocked" || !vaultKey) {
@@ -71,6 +73,8 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
       setMonthlyRecords([]);
       setLoading(false);
       setError("");
+      loadedRef.current = false;
+      migrationCheckedRef.current = false;
       return;
     }
 
@@ -80,14 +84,21 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
     }
 
     runningRef.current = true;
-    setLoading(true);
+    if (!loadedRef.current) setLoading(true);
     setError("");
 
     try {
       do {
         queuedRef.current = false;
 
-        await migrateLegacyPlaintextCreditCardData(supabase, vaultKey, userId);
+        // Legacy migration is a one-time compatibility step for the current
+        // unlocked vault session. Re-running it on every Realtime refresh adds
+        // unnecessary reads and can amplify event bursts.
+        if (!migrationCheckedRef.current) {
+          await migrateLegacyPlaintextCreditCardData(supabase, vaultKey, userId);
+          migrationCheckedRef.current = true;
+        }
+
         installCreditCardDebtBoundaryCompatibility(supabase);
         installCreditCardE2eeBoundary(supabase, vaultKey, userId);
 
@@ -166,12 +177,17 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
         setActivities(openedActivities);
         setPayments(openedPayments);
         setMonthlyRecords(withPostedInterest(openedMonthly, openedActivities));
+        loadedRef.current = true;
       } while (queuedRef.current);
     } catch (caughtError) {
-      setCards([]);
-      setActivities([]);
-      setPayments([]);
-      setMonthlyRecords([]);
+      // Preserve already-open data during a background refresh failure. Only
+      // clear state if the initial vault open itself failed.
+      if (!loadedRef.current) {
+        setCards([]);
+        setActivities([]);
+        setPayments([]);
+        setMonthlyRecords([]);
+      }
       setError(caughtError instanceof Error ? caughtError.message : "Credit Card data could not be opened.");
     } finally {
       runningRef.current = false;
@@ -205,7 +221,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
     return <div className="panel"><div className="alert">Unlock your Financial Vault to open Credit Cards.</div></div>;
   }
 
-  if (loading) {
+  if (loading && !loadedRef.current) {
     return <div className="panel"><div className="muted">Opening Credit Card data…</div></div>;
   }
 

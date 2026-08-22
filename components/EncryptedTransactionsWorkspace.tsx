@@ -1,11 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
 import { TransactionLedger } from "@/components/TransactionLedger";
 import { MobileTransactionsLayout } from "@/components/MobileTransactionsLayout";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
+import { useVault } from "@/components/VaultProvider";
+import { createClient } from "@/lib/supabase/client";
+import { installTransactionTemplateE2eeBoundary } from "@/lib/e2ee/transactionTemplateBoundary";
 
 type Props = {
+  userId: string;
   initialType: "expense" | "income" | "saving";
   allowMultiCurrency: boolean;
   allowPdfExport: boolean;
@@ -14,20 +19,24 @@ type Props = {
 };
 
 export function EncryptedTransactionsWorkspace({
+  userId,
   initialType,
   allowMultiCurrency,
   allowPdfExport,
   directAdd,
   setupRequested,
 }: Props) {
-  const { transactions, loading, error } =
-    useEncryptedTransactions();
+  const supabase = useMemo(() => createClient(), []);
+  const { status: vaultStatus, vaultKey } = useVault();
+  const { transactions, loading, error } = useEncryptedTransactions();
+
+  if (vaultStatus === "unlocked" && vaultKey) {
+    installTransactionTemplateE2eeBoundary(supabase, vaultKey, userId);
+  }
 
   return (
     <MobileTransactionsLayout
-      initialView={
-        directAdd || setupRequested ? "add" : "ledger"
-      }
+      initialView={directAdd || setupRequested ? "add" : "ledger"}
       entry={
         <div className="panel transaction-entry-panel transaction-effortless-panel">
           <EffortlessEntryWorkspace
@@ -50,9 +59,7 @@ export function EncryptedTransactionsWorkspace({
           </div>
 
           {loading ? (
-            <div className="alert">
-              Opening encrypted transactionsâ€¦
-            </div>
+            <div className="alert">Opening encrypted transactions…</div>
           ) : error ? (
             <div className="alert alert-error">{error}</div>
           ) : (

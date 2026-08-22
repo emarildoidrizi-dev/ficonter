@@ -33,6 +33,10 @@ import {
   roundRate,
   sumMoney,
 } from "@/lib/finance/money";
+import {
+  creditCardMinimumPayment,
+  creditCardStatementRemaining,
+} from "@/lib/finance/creditCardAccounting";
 import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { currentRecordAmountInBaseCurrency, historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
@@ -258,11 +262,8 @@ const EMPTY_PAYMENT: PaymentForm = {
   notes: "",
 };
 
-const AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03;
-
 function automaticMinimumPayment(balanceValue: unknown) {
-  const balance = Math.max(0, finiteNumber(balanceValue));
-  return Math.min(balance, roundMoney(balance * AUTOMATIC_MINIMUM_PAYMENT_RATE));
+  return creditCardMinimumPayment(balanceValue);
 }
 
 function money(value: unknown, currency = "EUR") {
@@ -389,11 +390,6 @@ export function CreditCardsManager({
   const activityEffectBase = useCallback((activity: CreditCardActivity) => historicalField(activity.balance_effect, activity.currency, activity.balance_effect_eur, activity.occurred_at), [historicalField]);
   const recordFieldBase = useCallback((record: CreditCardMonthlyRecord, native: unknown, eur: unknown) => historicalField(native, record.currency, eur, record.statement_date), [historicalField]);
 
-  // Carry-forward is the balance that existed at the start of a month.
-  // Reconstruct it from the live balance by reversing every later card effect:
-  // activity effects are removed, while payments are added back because they
-  // reduced the live balance. This lets Statement balance remain a historical
-  // record without forcing it to mirror Current balance during the month.
   const carriedForwardNative = useCallback((card: CreditCardDebt, month: string) => {
     const start = new Date(`${month}-01T00:00:00`).getTime();
     const activityEffectsAfterStart = sumMoney(
@@ -660,31 +656,27 @@ export function CreditCardsManager({
     );
     const paidThisMonth = sumMoney(monthPayments.map(paymentBase));
     const paidTowardStatement = paymentsTowardStatement(card, record);
-    const liveMinimumPayment = automaticMinimumPayment(cardCurrent(card));
     const recordedMinimumPayment = record
       ? recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur)
       : 0;
-    const minimumPayment = isCurrentMonth
-      ? liveMinimumPayment
-      : recordedMinimumPayment;
     const recordedStatementBalance = record
       ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur)
       : 0;
     const carriedForwardBalance = carriedForwardBase(card, selectedMonth);
-    // Statement balance is a monthly record. When the month has no saved
-    // statement yet, show the amount carried in from the previous month as
-    // the provisional statement basis. Saving the statement freezes it.
-    // Current balance / Balance left to pay continue moving live on their own.
     const statementBalance = record
       ? recordedStatementBalance
       : carriedForwardBalance;
-    const minimumRemaining = isCurrentMonth
-      ? minimumPayment
-      : Math.max(
-          0,
-          roundMoney(minimumPayment - paidTowardStatement),
-        );
-    const statementRemaining = cardCurrent(card);
+    const minimumPayment = record
+      ? recordedMinimumPayment
+      : automaticMinimumPayment(statementBalance);
+    const minimumRemaining = record
+      ? Math.max(0, roundMoney(recordedMinimumPayment - paidTowardStatement))
+      : 0;
+    const statementRemaining = record
+      ? creditCardStatementRemaining(recordedStatementBalance, paidTowardStatement)
+      : isCurrentMonth
+        ? cardCurrent(card)
+        : carriedForwardBalance;
     const purchases = sumMoney(
       monthActivities
         .filter((activity) => activity.activity_type === "purchase")
@@ -779,17 +771,14 @@ export function CreditCardsManager({
       const record = monthRecords.find(
         (item) => item.debt_id === card.id,
       );
-      if (selectedMonth === monthKey()) {
-        return {
-          minimumRemaining: automaticMinimumPayment(cardCurrent(card)),
-          statementRemaining: cardCurrent(card),
-        };
-      }
 
       if (!record) {
         return {
           minimumRemaining: 0,
-          statementRemaining: cardCurrent(card),
+          statementRemaining:
+            selectedMonth === monthKey()
+              ? cardCurrent(card)
+              : carriedForwardBase(card, selectedMonth),
         };
       }
 
@@ -820,15 +809,20 @@ export function CreditCardsManager({
           })
           .map(paymentBase),
       );
+      const statementBase = recordFieldBase(
+        record,
+        record.statement_balance,
+        record.statement_balance_eur,
+      );
+      const minimumBase = recordFieldBase(
+        record,
+        record.minimum_payment,
+        record.minimum_payment_eur,
+      );
 
       return {
-        minimumRemaining: Math.max(
-          0,
-          roundMoney(
-            recordFieldBase(record, record.minimum_payment, record.minimum_payment_eur) - paidBase,
-          ),
-        ),
-        statementRemaining: cardCurrent(card),
+        minimumRemaining: Math.max(0, roundMoney(minimumBase - paidBase)),
+        statementRemaining: creditCardStatementRemaining(statementBase, paidBase),
       };
     });
     const minimumRemaining = sumMoney(
@@ -845,7 +839,7 @@ export function CreditCardsManager({
       statementRemaining,
       interest,
     };
-  }, [activities, activityAmountBase, cards, carriedForwardBase, monthlyRecords, paymentBase, payments, recordFieldBase, selectedMonth]);
+  }, [activities, activityAmountBase, cards, carriedForwardBase, monthlyRecords, paymentBase, payments, recordFieldBase, selectedMonth, cardCurrent]);
 
   function resetCardForm() {
     setCardForm({ ...EMPTY_CARD, start_date: localDateKey() });
@@ -883,8 +877,6 @@ export function CreditCardsManager({
       record?.statement_balance ??
         carriedForwardNative(card, selectedMonth),
     );
-    const minimumBasis =
-      selectedMonth === monthKey() ? cardCurrent(card) : statementBalance;
 
     setStatementTarget(card);
     setStatementForm({
@@ -893,7 +885,7 @@ export function CreditCardsManager({
       payment_due_date:
         record?.payment_due_date ?? localDateKey(defaultDue),
       minimum_payment: String(
-        automaticMinimumPayment(minimumBasis),
+        automaticMinimumPayment(statementBalance),
       ),
       apr: String(card.annual_interest_rate ?? 0),
       interest_charged: String(
@@ -1061,9 +1053,7 @@ export function CreditCardsManager({
 
     try {
       const statementBalance = roundMoney(statementForm.statement_balance);
-      const minimumPayment = automaticMinimumPayment(
-        selectedMonth === monthKey() ? cardCurrent(card) : statementBalance,
-      );
+      const minimumPayment = automaticMinimumPayment(statementBalance);
       const interestCharged = roundMoney(statementForm.interest_charged || 0);
       const apr = finiteNumber(statementForm.apr || 0);
 
@@ -1107,9 +1097,6 @@ export function CreditCardsManager({
         });
         if (error) throw error;
       } else {
-        // A statement is an issuer snapshot only. Saving it must never rewrite
-        // current_balance. The existing debts trigger persists the matching
-        // credit_card_monthly_records snapshot after these statement fields change.
         const { data, error } = await supabase
           .from("debts")
           .update({
@@ -1792,8 +1779,14 @@ export function CreditCardsManager({
                   </div>
                   <div>
                     <span>Balance left to pay</span>
-                    <strong>{displayMoney(current)}</strong>
-                    <small>Mirrors Current balance — the live amount still owed</small>
+                    <strong>{displayMoney(metrics.statementRemaining)}</strong>
+                    <small>
+                      {metrics.record
+                        ? "Saved statement balance minus payments applied to this statement"
+                        : metrics.isCurrentMonth
+                          ? "No saved statement yet; showing the live balance"
+                          : "No saved statement; showing the reconstructed month opening balance"}
+                    </small>
                   </div>
                   <div>
                     <span>Minimum payment due</span>
@@ -1803,14 +1796,12 @@ export function CreditCardsManager({
                         : "Not recorded"}
                     </strong>
                     <small>
-                      {metrics.isCurrentMonth
-                        ? `Automatic 3% of Current balance · updates live`
-                        : metrics.record
-                          ? `Recorded minimum · ${displayMoney(minimumRemaining)} still to pay · ${paymentStatus(
-                              metrics.record,
-                              metrics.paidTowardStatement,
-                            )}`
-                          : "No historical minimum recorded"}
+                      {metrics.record
+                        ? `3% of saved Statement balance · ${displayMoney(minimumRemaining)} still to pay · ${paymentStatus(
+                            metrics.record,
+                            metrics.paidTowardStatement,
+                          )}`
+                        : "No statement minimum recorded"}
                     </small>
                   </div>
                   <div>
@@ -1992,9 +1983,7 @@ export function CreditCardsManager({
             </span>
             <h2>Update {statementTarget.name}</h2>
             <p>
-              {selectedMonth === monthKey()
-                ? "Enter the statement exactly as issued. It is kept as a monthly record and does not change Current balance. The live minimum payment is calculated as 3% of Current balance and updates whenever the live balance changes."
-                : "Enter the exact historical figures shown by the issuer. Historical minimum payment remains tied to that saved monthly record."}
+              Enter the statement exactly as issued. It is kept as a permanent monthly record and does not change Current balance. The minimum payment is fixed at 3% of that saved Statement balance for this statement period.
             </p>
             <div className={styles.modalGrid}>
               <label>
@@ -2010,11 +1999,7 @@ export function CreditCardsManager({
                       ...statementForm,
                       statement_balance: statementBalance,
                       minimum_payment: String(
-                        automaticMinimumPayment(
-                          selectedMonth === monthKey()
-                            ? cardCurrent(statementTarget)
-                            : statementBalance,
-                        ),
+                        automaticMinimumPayment(statementBalance),
                       ),
                     });
                   }}
@@ -2034,11 +2019,7 @@ export function CreditCardsManager({
                   readOnly
                   aria-readonly={true}
                 />
-                <small>
-                  {selectedMonth === monthKey()
-                    ? "Calculated automatically as 3% of Current balance and updated live."
-                    : "Saved with the historical monthly record."}
-                </small>
+                <small>Calculated automatically as 3% of the Statement balance and frozen with this monthly record.</small>
               </label>
               <label>
                 Statement date
@@ -2260,12 +2241,7 @@ export function CreditCardsManager({
               <span>Current balance</span>
               <strong>{money(paymentTarget.current_balance, paymentTarget.currency)}</strong>
               <span>Minimum still due</span>
-              <strong>
-                {money(
-                  monthlyMetrics(paymentTarget).minimumRemaining,
-                  paymentTarget.currency,
-                )}
-              </strong>
+              <strong>{displayMoney(monthlyMetrics(paymentTarget).minimumRemaining)}</strong>
             </div>
             <button className={styles.modalPrimary} disabled={busy === "save-payment"}>
               {busy === "save-payment" ? "Recording…" : "Record confirmed payment"}

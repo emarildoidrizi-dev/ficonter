@@ -23,6 +23,7 @@ import {
 import { installBusinessE2eeBoundary } from "@/lib/e2ee/businessClientBoundary";
 import { installBusinessInventoryRpcBoundary } from "@/lib/e2ee/businessInventoryRpcBoundary";
 import { installBusinessInventoryViewBoundary } from "@/lib/e2ee/businessInventoryViewBoundary";
+import { installBusinessSalesRpcBoundary } from "@/lib/e2ee/businessSalesRpcBoundary";
 import { installBusinessSupplierInvoiceBoundary } from "@/lib/e2ee/businessSupplierInvoiceBoundary";
 import { finalizePendingBusinessRecurringCosts } from "@/lib/e2ee/businessRecurringCostFinalizer";
 import type { VaultCiphertextEnvelopeV1 } from "@/lib/e2ee/vault";
@@ -156,6 +157,7 @@ export function BusinessVaultProvider({
       installBusinessE2eeBoundary(client, opened, businessId);
       installBusinessInventoryRpcBoundary(client, opened, businessId, baseCurrency);
       installBusinessInventoryViewBoundary(client, businessId);
+      installBusinessSalesRpcBoundary(client, opened, businessId, baseCurrency);
       installBusinessSupplierInvoiceBoundary(client, opened, businessId);
       setBusinessKey(opened);
       setStatus("unlocked");

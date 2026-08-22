@@ -9,6 +9,7 @@ import { decryptCreditCardPayload } from "@/lib/e2ee/creditCardPayload";
 import { decryptCreditCardActivityPayload } from "@/lib/e2ee/creditCardActivityPayload";
 import { decryptCreditCardMonthlyRecordPayload } from "@/lib/e2ee/creditCardMonthlyRecordPayload";
 import { decryptDebtPaymentPayload } from "@/lib/e2ee/debtPaymentPayload";
+import { migrateLegacyPlaintextCreditCardData } from "@/lib/e2ee/creditCardMigration";
 import { subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 
 export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
@@ -46,6 +47,8 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
     try {
       do {
         queuedRef.current = false;
+
+        await migrateLegacyPlaintextCreditCardData(supabase, vaultKey, userId);
 
         const cardsResult = await (supabase.from("debts") as any)
           .select("*")

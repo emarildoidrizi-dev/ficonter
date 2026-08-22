@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BusinessReports } from "@/components/BusinessReports";
+import { EncryptedBusinessReportsWorkspace } from "@/components/EncryptedBusinessReportsWorkspace";
 import { getBusinessContext } from "@/lib/business/server";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +21,10 @@ export default async function BusinessReportsPage() {
 
   const { startDate, endDate } = currentMonthRange();
   return (
-    <BusinessReports
-      key={business.id}
+    <EncryptedBusinessReportsWorkspace
       business={business}
-      initialStartDate={startDate}
-      initialEndDate={endDate}
-      initialReport={null}
-      initialError=""
+      startDate={startDate}
+      endDate={endDate}
     />
   );
 }

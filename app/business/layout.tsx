@@ -78,7 +78,6 @@ export default async function BusinessLayout({
 
   const subscriptionAccess = await getCurrentSubscriptionAccess();
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  // Platform Owner and Super Admin are the only roles allowed to use wallpapers.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
 
@@ -89,9 +88,7 @@ export default async function BusinessLayout({
   });
 
   if (showBetaGate) {
-    return (
-      <BetaDomainAccessGate />
-    );
+    return <BetaDomainAccessGate />;
   }
 
   if (!hasSubscriptionFeature(subscriptionPlanCode, "business_workspace")) {
@@ -99,11 +96,12 @@ export default async function BusinessLayout({
   }
 
   const preferences = readInterfacePreferences(user.user_metadata);
-
   const workspaceCurrency = business?.base_currency ?? "EUR";
   const canManageBusiness =
     membership?.role === "owner" ||
     membership?.role === "admin";
+  const canWriteBusiness =
+    canManageBusiness || membership?.role === "member";
 
   return (
     <CurrencyDisplayProvider
@@ -111,74 +109,70 @@ export default async function BusinessLayout({
       baseCurrency={workspaceCurrency}
       reportingCurrency={workspaceCurrency}
     >
-    <div className="app-shell">
-      <InterfacePreferencesBootstrap
-        {...preferences}
-        wallpaperAccessEnabled={canManageWallpapers}
-      />
-      <TimeAwareWallpaperBootstrap
-        enabled={canManageWallpapers}
-      />
-      <AuthenticatedLanguageBootstrap language={preferences.language} />
-      <BaseCurrencyBootstrap
-        workspace="business"
-        currency={workspaceCurrency}
-      />
-      <LivingThemeBackdrop />
-      <RealtimeRefreshBridge />
-      <RuntimeStabilityBridge />
-      <UsageHeartbeat workspace="business" />
-      <NavigationSpeedBoost
-        workspace="business"
-        cacheKey={business?.id ?? "none"}
-      />
-      <CommandPalette />
-      {isPlatformOwner ? <OwnerMusicPlayer /> : null}
-      <FiconterNativeAppChrome
-        workspace="business"
-        subscriptionPlanCode={subscriptionPlanCode}
-        isAdmin={Boolean(admin)}
-        displayName={String(
-          user.user_metadata?.display_name ??
-            user.user_metadata?.full_name ??
-            user.user_metadata?.name ??
-            "",
-        )}
-        email={user.email ?? ""}
-        avatarPath={String(user.user_metadata?.avatar_path ?? "")}
-        businessName={business?.name ?? "Business workspace"}
-        activeBusinessId={business?.id ?? null}
-        businessProfiles={businesses
-          .filter((item) => item.status !== "archived")
-          .map((item) => ({ id: item.id, name: item.name }))}
-      />
-      <BusinessSidebar
-        businesses={businesses}
-        business={business}
-        canManage={canManageBusiness}
-        isPlatformAdmin={Boolean(admin)}
-        user={{
-          displayName: String(
+      <div className="app-shell">
+        <InterfacePreferencesBootstrap
+          {...preferences}
+          wallpaperAccessEnabled={canManageWallpapers}
+        />
+        <TimeAwareWallpaperBootstrap enabled={canManageWallpapers} />
+        <AuthenticatedLanguageBootstrap language={preferences.language} />
+        <BaseCurrencyBootstrap workspace="business" currency={workspaceCurrency} />
+        <LivingThemeBackdrop />
+        <RealtimeRefreshBridge />
+        <RuntimeStabilityBridge />
+        <UsageHeartbeat workspace="business" />
+        <NavigationSpeedBoost
+          workspace="business"
+          cacheKey={business?.id ?? "none"}
+        />
+        <CommandPalette />
+        {isPlatformOwner ? <OwnerMusicPlayer /> : null}
+        <FiconterNativeAppChrome
+          workspace="business"
+          subscriptionPlanCode={subscriptionPlanCode}
+          isAdmin={Boolean(admin)}
+          displayName={String(
             user.user_metadata?.display_name ??
               user.user_metadata?.full_name ??
               user.user_metadata?.name ??
               "",
-          ),
-          email: user.email ?? "",
-        }}
-      />
-      <main className="app-main business-interface">
-        <VaultProvider>
-          <BusinessVaultProvider
-            userId={user.id}
-            businessId={business?.id ?? null}
-            canManage={canManageBusiness}
-          >
-            <VaultAccessPanel />
-            {children}
-          </BusinessVaultProvider>
-        </VaultProvider>
-      </main>
+          )}
+          email={user.email ?? ""}
+          avatarPath={String(user.user_metadata?.avatar_path ?? "")}
+          businessName={business?.name ?? "Business workspace"}
+          activeBusinessId={business?.id ?? null}
+          businessProfiles={businesses
+            .filter((item) => item.status !== "archived")
+            .map((item) => ({ id: item.id, name: item.name }))}
+        />
+        <BusinessSidebar
+          businesses={businesses}
+          business={business}
+          canManage={canManageBusiness}
+          isPlatformAdmin={Boolean(admin)}
+          user={{
+            displayName: String(
+              user.user_metadata?.display_name ??
+                user.user_metadata?.full_name ??
+                user.user_metadata?.name ??
+                "",
+            ),
+            email: user.email ?? "",
+          }}
+        />
+        <main className="app-main business-interface">
+          <VaultProvider>
+            <BusinessVaultProvider
+              userId={user.id}
+              businessId={business?.id ?? null}
+              canManage={canManageBusiness}
+              canWrite={canWriteBusiness}
+            >
+              <VaultAccessPanel />
+              {children}
+            </BusinessVaultProvider>
+          </VaultProvider>
+        </main>
       </div>
     </CurrencyDisplayProvider>
   );

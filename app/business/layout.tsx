@@ -14,6 +14,9 @@ import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
+import { VaultProvider } from "@/components/VaultProvider";
+import { VaultAccessPanel } from "@/components/VaultAccessPanel";
+import { BusinessVaultProvider } from "@/components/BusinessVaultProvider";
 import { getBusinessContext } from "@/lib/business/server";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
@@ -98,6 +101,9 @@ export default async function BusinessLayout({
   const preferences = readInterfacePreferences(user.user_metadata);
 
   const workspaceCurrency = business?.base_currency ?? "EUR";
+  const canManageBusiness =
+    membership?.role === "owner" ||
+    membership?.role === "admin";
 
   return (
     <CurrencyDisplayProvider
@@ -149,10 +155,7 @@ export default async function BusinessLayout({
       <BusinessSidebar
         businesses={businesses}
         business={business}
-        canManage={
-          membership?.role === "owner" ||
-          membership?.role === "admin"
-        }
+        canManage={canManageBusiness}
         isPlatformAdmin={Boolean(admin)}
         user={{
           displayName: String(
@@ -164,7 +167,18 @@ export default async function BusinessLayout({
           email: user.email ?? "",
         }}
       />
-      <main className="app-main business-interface">{children}</main>
+      <main className="app-main business-interface">
+        <VaultProvider>
+          <BusinessVaultProvider
+            userId={user.id}
+            businessId={business?.id ?? null}
+            canManage={canManageBusiness}
+          >
+            <VaultAccessPanel />
+            {children}
+          </BusinessVaultProvider>
+        </VaultProvider>
+      </main>
       </div>
     </CurrencyDisplayProvider>
   );

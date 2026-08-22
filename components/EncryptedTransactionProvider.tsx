@@ -160,7 +160,8 @@ export function EncryptedTransactionProvider({
     if (vaultStatus !== "unlocked") return;
 
     let active = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let transactionChannel: ReturnType<typeof supabase.channel> | null = null;
+    let automaticPaymentChannel: ReturnType<typeof supabase.channel> | null = null;
 
     async function subscribe() {
       const {
@@ -169,7 +170,7 @@ export function EncryptedTransactionProvider({
 
       if (!active || !user) return;
 
-      channel = supabase
+      transactionChannel = supabase
         .channel(`e2ee-transactions-${user.id}`)
         .on(
           "postgres_changes",
@@ -177,6 +178,22 @@ export function EncryptedTransactionProvider({
             event: "*",
             schema: "public",
             table: "transactions",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            void refresh();
+          },
+        )
+        .subscribe();
+
+      automaticPaymentChannel = supabase
+        .channel(`e2ee-automatic-payments-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "automatic_payment_runs",
             filter: `user_id=eq.${user.id}`,
           },
           () => {
@@ -207,7 +224,8 @@ export function EncryptedTransactionProvider({
       transactionEvents.forEach((eventName) =>
         window.removeEventListener(eventName, handleCreated),
       );
-      if (channel) void supabase.removeChannel(channel);
+      if (transactionChannel) void supabase.removeChannel(transactionChannel);
+      if (automaticPaymentChannel) void supabase.removeChannel(automaticPaymentChannel);
     };
   }, [refresh, supabase, vaultStatus]);
 

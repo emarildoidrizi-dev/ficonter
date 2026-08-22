@@ -21,6 +21,7 @@ import {
   type BusinessWrappedKeyEnvelopeV1,
 } from "@/lib/e2ee/businessVault";
 import { installBusinessE2eeBoundary } from "@/lib/e2ee/businessClientBoundary";
+import { installBusinessInventoryRpcBoundary } from "@/lib/e2ee/businessInventoryRpcBoundary";
 import { installBusinessSupplierInvoiceBoundary } from "@/lib/e2ee/businessSupplierInvoiceBoundary";
 import { finalizePendingBusinessRecurringCosts } from "@/lib/e2ee/businessRecurringCostFinalizer";
 import type { VaultCiphertextEnvelopeV1 } from "@/lib/e2ee/vault";
@@ -130,12 +131,14 @@ export async function initializeBusinessVaultForOwner(
 export function BusinessVaultProvider({
   userId,
   businessId,
+  baseCurrency,
   canManage,
   canWrite,
   children,
 }: {
   userId: string;
   businessId: string | null;
+  baseCurrency: string;
   canManage: boolean;
   canWrite: boolean;
   children: ReactNode;
@@ -150,6 +153,7 @@ export function BusinessVaultProvider({
     (opened: CryptoKey) => {
       if (!businessId) return;
       installBusinessE2eeBoundary(client, opened, businessId);
+      installBusinessInventoryRpcBoundary(client, opened, businessId, baseCurrency);
       installBusinessSupplierInvoiceBoundary(client, opened, businessId);
       setBusinessKey(opened);
       setStatus("unlocked");
@@ -161,7 +165,7 @@ export function BusinessVaultProvider({
         });
       }
     },
-    [businessId, canWrite, client],
+    [baseCurrency, businessId, canWrite, client],
   );
 
   const refresh = useCallback(async () => {

@@ -2,6 +2,7 @@ import type { CurrencySourceData } from "@/lib/finance/baseCurrencyReconciliatio
 import type { CashFlowIntelligenceInputs } from "@/lib/wealth/cashFlowIntelligence";
 
 type BoundaryState = {
+  userId: string;
   getInputs: () => CashFlowIntelligenceInputs;
   getSource: () => CurrencySourceData;
 };
@@ -62,18 +63,20 @@ function normalizedColumns(value: unknown) {
 
 export function installCashFlowIntelligenceE2eeBoundary(
   client: any,
+  userId: string,
   getInputs: () => CashFlowIntelligenceInputs,
   getSource: () => CurrencySourceData,
 ) {
   const rawClient = client as any;
   const existing = rawClient.__ficonterCashFlowBoundaryState as BoundaryState | undefined;
   if (existing) {
+    existing.userId = userId;
     existing.getInputs = getInputs;
     existing.getSource = getSource;
     return;
   }
 
-  const state: BoundaryState = { getInputs, getSource };
+  const state: BoundaryState = { userId, getInputs, getSource };
   rawClient.__ficonterCashFlowBoundaryState = state;
   const originalRpc = rawClient.rpc.bind(rawClient);
   const originalFrom = rawClient.from.bind(rawClient);
@@ -94,11 +97,7 @@ export function installCashFlowIntelligenceE2eeBoundary(
 
   rawClient.from = (relation: string) => {
     const builder = originalFrom(relation);
-    if (![
-      "debt_payments",
-      "bills",
-      "monthly_budget_plans",
-    ].includes(relation)) {
+    if (!["debt_payments", "bills", "monthly_budget_plans"].includes(relation)) {
       return builder;
     }
 
@@ -119,6 +118,7 @@ export function installCashFlowIntelligenceE2eeBoundary(
           ) {
             return localQuery(() =>
               source().debtPayments.map((row) => ({
+                user_id: state.userId,
                 debt_id: row.debt_id,
                 amount_eur: row.amount_eur,
                 paid_at: row.paid_at,
@@ -132,13 +132,13 @@ export function installCashFlowIntelligenceE2eeBoundary(
           ) {
             return localQuery(() =>
               source().bills.map((row) => ({
+                user_id: state.userId,
                 id: row.id,
                 status: row.status,
                 amount_eur: row.amount_eur,
                 due_date: row.due_date,
                 paid_at: row.paid_at,
                 transaction_id: row.transaction_id,
-                user_id: row.user_id,
               })),
             );
           }
@@ -149,7 +149,7 @@ export function installCashFlowIntelligenceE2eeBoundary(
           ) {
             return localQuery(() =>
               source().plans.map((row) => ({
-                user_id: row.user_id,
+                user_id: state.userId,
                 month: row.month,
                 start_balance: row.start_balance,
               })),

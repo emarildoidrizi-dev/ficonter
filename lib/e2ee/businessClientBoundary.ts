@@ -101,15 +101,6 @@ const TABLES: Record<string, TableConfig> = {
       "line_subtotal_base", "unit_cost_base", "cogs_base", "gross_profit_base",
     ],
   },
-  business_supplier_invoices: {
-    recordType: "supplier-invoice",
-    privateFields: [
-      "invoice_number", "description", "category_name", "cost_nature",
-      "amount", "currency", "amount_base", "exchange_rate_to_base",
-      "exchange_rate_date", "exchange_rate_source", "issue_date", "due_date",
-      "payment_method", "notes",
-    ],
-  },
   business_documents: {
     recordType: "document",
     privateFields: [

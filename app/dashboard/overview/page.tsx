@@ -9,14 +9,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const { supabase, user } = await getCurrentUser();
+  const { user } = await getCurrentUser();
 
   if (!user) redirect("/login");
-
-  const [healthResult, gpsResult] = await Promise.all([
-    supabase.rpc("get_financial_health_inputs"),
-    supabase.rpc("get_ai_insights_inputs"),
-  ]);
 
   const name =
     (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
@@ -28,12 +23,12 @@ export default async function DashboardPage() {
       name={name}
       initialTransactions={[]}
       initialBills={[]}
-      initialHealthInputs={normalizeFinancialHealthInputs(healthResult.data)}
+      initialHealthInputs={normalizeFinancialHealthInputs(null)}
       initialSetupAcknowledgements={readSetupAcknowledgements(user.user_metadata)}
-      initialGpsInputs={normalizeAiInsightsInputs(gpsResult.data)}
+      initialGpsInputs={normalizeAiInsightsInputs(null)}
       initialError=""
-      initialHealthError={healthResult.error?.message ?? ""}
-      initialGpsError={gpsResult.error?.message ?? ""}
+      initialHealthError=""
+      initialGpsError=""
     />
   );
 }

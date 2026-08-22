@@ -296,8 +296,8 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
             if (isStatementUpdate) {
               const statementBalance = round(record.statement_balance);
               const statementBalanceEur = round(record.statement_balance_eur);
-              const minimum = creditCardMinimumPayment(statementBalance);
-              const minimumEur = creditCardMinimumPayment(statementBalanceEur);
+              const minimum = finite(record.minimum_payment, creditCardMinimumPayment(current.current_balance));
+              const minimumEur = finite(record.minimum_payment_eur, creditCardMinimumPayment(current.current_balance_eur));
               const statementDate = String(record.statement_date ?? current.statement_date ?? "");
               const paymentDueDate = String(record.payment_due_date ?? current.payment_due_date ?? "");
               const updatedPayload: CreditCardPrivatePayloadV1 = {
@@ -407,6 +407,8 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
           current_balance: nextBalance,
           current_balance_eur: nextBalanceEur,
           exchange_rate_to_eur: rate,
+          minimum_payment: creditCardMinimumPayment(nextBalance),
+          minimum_payment_eur: creditCardMinimumPayment(nextBalanceEur),
           interest_charged: type === "interest" ? round(current.interest_charged + amount) : current.interest_charged,
           interest_charged_eur: type === "interest" ? round(current.interest_charged_eur + amountEur) : current.interest_charged_eur,
         };
@@ -456,10 +458,14 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
         const activity = await loadActivity(originalFrom, state, activityId);
         const card = await loadCard(originalFrom, state, String(activity.row.debt_id));
         if (activity.payload.activity_type === "statement_adjustment") return { data: null, error: new Error("Confirmed statement reconciliation cannot be reversed directly.") };
+        const restoredBalance = round(card.payload.current_balance - activity.payload.balance_effect);
+        const restoredBalanceEur = round(card.payload.current_balance_eur - activity.payload.balance_effect_eur);
         const restored: CreditCardPrivatePayloadV1 = {
           ...card.payload,
-          current_balance: round(card.payload.current_balance - activity.payload.balance_effect),
-          current_balance_eur: round(card.payload.current_balance_eur - activity.payload.balance_effect_eur),
+          current_balance: restoredBalance,
+          current_balance_eur: restoredBalanceEur,
+          minimum_payment: creditCardMinimumPayment(restoredBalance),
+          minimum_payment_eur: creditCardMinimumPayment(restoredBalanceEur),
           interest_charged: activity.payload.activity_type === "interest" ? Math.max(0, round(card.payload.interest_charged - activity.payload.amount)) : card.payload.interest_charged,
           interest_charged_eur: activity.payload.activity_type === "interest" ? Math.max(0, round(card.payload.interest_charged_eur - activity.payload.amount_eur)) : card.payload.interest_charged_eur,
         };
@@ -481,8 +487,8 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
         const dueDate = String(args?.p_payment_due_date ?? "");
         const statement = round(args?.p_statement_balance);
         const statementEur = round(args?.p_statement_balance_eur);
-        const minimum = creditCardMinimumPayment(statement);
-        const minimumEur = creditCardMinimumPayment(statementEur);
+        const minimum = finite(args?.p_minimum_payment, creditCardMinimumPayment(statement));
+        const minimumEur = finite(args?.p_minimum_payment_eur, creditCardMinimumPayment(statementEur));
         const interest = round(args?.p_interest_charged);
         const interestEur = round(args?.p_interest_charged_eur);
         const monthStart = `${statementDate.slice(0, 7)}-01`;
@@ -523,11 +529,15 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
         if (amount <= 0 || amount > card.payload.current_balance || amountEur <= 0 || rate <= 0) return { data: null, error: new Error("Enter a valid payment not greater than the current balance.") };
         const paidAt = String(args?.p_paid_at ?? new Date().toISOString());
         const rateDate = String(args?.p_exchange_rate_date ?? paidAt.slice(0, 10));
+        const nextBalance = Math.max(0, round(card.payload.current_balance - amount));
+        const nextBalanceEur = Math.max(0, round(card.payload.current_balance_eur - amountEur));
         const updated: CreditCardPrivatePayloadV1 = {
           ...card.payload,
-          current_balance: Math.max(0, round(card.payload.current_balance - amount)),
-          current_balance_eur: Math.max(0, round(card.payload.current_balance_eur - amountEur)),
+          current_balance: nextBalance,
+          current_balance_eur: nextBalanceEur,
           exchange_rate_to_eur: rate,
+          minimum_payment: creditCardMinimumPayment(nextBalance),
+          minimum_payment_eur: creditCardMinimumPayment(nextBalanceEur),
         };
         const paymentId = crypto.randomUUID();
         const transactionId = crypto.randomUUID();
@@ -569,10 +579,14 @@ export function installCreditCardE2eeBoundary(client: any, vaultKey: CryptoKey, 
       try { payment = await loadPayment(originalFrom, state, paymentId); } catch { return originalRpc(fn, args, options); }
       let card;
       try { card = await loadCard(originalFrom, state, String(payment.row.debt_id)); } catch { return originalRpc(fn, args, options); }
+      const restoredBalance = round(card.payload.current_balance + payment.payload.amount);
+      const restoredBalanceEur = round(card.payload.current_balance_eur + payment.payload.amount_eur);
       const restored: CreditCardPrivatePayloadV1 = {
         ...card.payload,
-        current_balance: round(card.payload.current_balance + payment.payload.amount),
-        current_balance_eur: round(card.payload.current_balance_eur + payment.payload.amount_eur),
+        current_balance: restoredBalance,
+        current_balance_eur: restoredBalanceEur,
+        minimum_payment: creditCardMinimumPayment(restoredBalance),
+        minimum_payment_eur: creditCardMinimumPayment(restoredBalanceEur),
       };
       const cipher = await encryptCreditCardPayload(state.vaultKey, state.userId, card.row.id, restored);
       const atomic = await originalRpc("reverse_credit_card_payment_e2ee_atomic", {

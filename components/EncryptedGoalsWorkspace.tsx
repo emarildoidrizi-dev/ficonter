@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { decryptGoalPayload } from "@/lib/e2ee/goalPayload";
 import { decryptGoalInvestmentPayload } from "@/lib/e2ee/goalInvestmentPayload";
 import { migrateLegacyPlaintextGoals } from "@/lib/e2ee/goalMigration";
+import { installGoalE2eeBoundary } from "@/lib/e2ee/goalClientBoundary";
 import { subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 
 export function EncryptedGoalsWorkspace({ userId }: { userId: string }) {
@@ -42,6 +43,7 @@ export function EncryptedGoalsWorkspace({ userId }: { userId: string }) {
       do {
         queuedRef.current = false;
         await migrateLegacyPlaintextGoals(supabase, vaultKey, userId);
+        installGoalE2eeBoundary(supabase, vaultKey, userId);
 
         const [goalsResult, investmentsResult] = await Promise.all([
           (supabase.from("goals") as any)

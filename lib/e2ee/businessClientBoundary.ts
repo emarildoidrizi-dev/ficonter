@@ -74,6 +74,13 @@ function replay(builder: any, calls: DeferredCall[]) {
   return current;
 }
 
+function recordIdFromCalls(calls: DeferredCall[]) {
+  const match = calls.find(
+    (call) => call.property === "eq" && call.args[0] === "id" && typeof call.args[1] === "string",
+  );
+  return match ? String(match.args[1]) : "";
+}
+
 function privatePayload(config: TableConfig, record: RecordValue) {
   const payload: Record<string, unknown> = {};
   for (const field of config.privateFields) payload[field] = record[field] ?? null;
@@ -189,7 +196,23 @@ export function installBusinessE2eeBoundary(
 
         if (property === "update" && typeof original === "function") {
           return (value: unknown, ...args: unknown[]) => deferredMutation(async (calls) => {
-            const row = await encryptRow(state, relation, value as RecordValue);
+            const id = String((value as RecordValue)?.id ?? recordIdFromCalls(calls));
+            if (!id) throw new Error("Encrypted business updates require a record id.");
+
+            const existingResult = await originalFrom(relation)
+              .select("*")
+              .eq("id", id)
+              .eq("business_id", state.businessId)
+              .maybeSingle();
+            if (existingResult.error) throw existingResult.error;
+            if (!existingResult.data) throw new Error("The business record could not be found.");
+            const opened = await openRow(state, relation, existingResult.data);
+            const row = await encryptRow(state, relation, {
+              ...opened,
+              ...(value as RecordValue),
+              id,
+            });
+
             let mutation = original.call(target, row, ...args);
             mutation = replay(mutation, calls);
             return openResult(state, relation, await mutation);

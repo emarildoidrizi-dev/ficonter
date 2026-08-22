@@ -7,6 +7,7 @@ import { useEncryptedBills } from "@/components/EncryptedBillProvider";
 import { useVault } from "@/components/VaultProvider";
 import { decryptDebtPayload } from "@/lib/e2ee/debtPayload";
 import { decryptDebtPaymentPayload } from "@/lib/e2ee/debtPaymentPayload";
+import { decryptGoalPayload } from "@/lib/e2ee/goalPayload";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 import {
   isFinancialDataScope,
@@ -76,8 +77,9 @@ export function useBaseCurrencySourceData(userId: string) {
 
         const debtsTable = supabase.from("debts") as any;
         const debtPaymentsTable = supabase.from("debt_payments") as any;
+        const goalsTable = supabase.from("goals") as any;
 
-        const [debtsResult, debtPaymentsResult, goals, plans, items] =
+        const [debtsResult, debtPaymentsResult, goalsResult, plans, items] =
           await Promise.all([
             debtsTable
               .select(
@@ -89,9 +91,8 @@ export function useBaseCurrencySourceData(userId: string) {
                 "id,debt_id,user_id,amount,currency,amount_eur,paid_at,encrypted_payload,encryption_version",
               )
               .eq("user_id", userId),
-            supabase
-              .from("goals")
-              .select("id,target_amount,current_amount,status")
+            goalsTable
+              .select("id,user_id,target_amount,current_amount,status,encrypted_payload,encryption_version")
               .eq("user_id", userId),
             supabase
               .from("monthly_budget_plans")
@@ -105,6 +106,7 @@ export function useBaseCurrencySourceData(userId: string) {
 
         let debtRows = (debtsResult.data ?? []) as any[];
         let paymentRows = (debtPaymentsResult.data ?? []) as any[];
+        let goalRows = (goalsResult.data ?? []) as any[];
 
         if (vaultStatus === "unlocked" && vaultKey) {
           debtRows = await Promise.all(
@@ -138,6 +140,20 @@ export function useBaseCurrencySourceData(userId: string) {
               };
             }),
           );
+
+          goalRows = await Promise.all(
+            goalRows.map(async (row: any) => {
+              if (row.encryption_version !== 1 || !row.encrypted_payload) {
+                return row;
+              }
+
+              const decrypted = await decryptGoalPayload(vaultKey, userId, row);
+              return {
+                ...row,
+                ...decrypted,
+              };
+            }),
+          );
         }
 
         if (mountedRef.current) {
@@ -148,7 +164,7 @@ export function useBaseCurrencySourceData(userId: string) {
             debts: debtRows as CurrencySourceData["debts"],
             debtPayments:
               paymentRows as CurrencySourceData["debtPayments"],
-            goals: (goals.data ?? []) as CurrencySourceData["goals"],
+            goals: goalRows as CurrencySourceData["goals"],
             plans: (plans.data ?? []) as CurrencySourceData["plans"],
             items: (items.data ?? []) as CurrencySourceData["items"],
           });

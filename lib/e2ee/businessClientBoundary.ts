@@ -221,6 +221,40 @@ function wrapReadBuilder(builder: any, state: BoundaryState, table: string): any
   });
 }
 
+async function propagateCostCategoryName(
+  originalFrom: any,
+  state: BoundaryState,
+  categoryId: string,
+  nextName: string,
+) {
+  const targets = [
+    { table: "business_transactions", foreignKey: "cost_category_id", field: "category" },
+    { table: "business_recurring_costs", foreignKey: "category_id", field: "category_name" },
+  ] as const;
+
+  for (const target of targets) {
+    const rowsResult = await originalFrom(target.table)
+      .select("*")
+      .eq("business_id", state.businessId)
+      .eq(target.foreignKey, categoryId);
+    if (rowsResult.error) throw rowsResult.error;
+
+    for (const rawRow of rowsResult.data ?? []) {
+      const opened = await openRow(state, target.table, rawRow);
+      const encrypted = await encryptRow(state, target.table, {
+        ...opened,
+        [target.field]: nextName,
+        id: rawRow.id,
+      });
+      const updateResult = await originalFrom(target.table)
+        .update(encrypted)
+        .eq("id", rawRow.id)
+        .eq("business_id", state.businessId);
+      if (updateResult.error) throw updateResult.error;
+    }
+  }
+}
+
 export function installBusinessE2eeBoundary(
   client: any,
   businessKey: CryptoKey,
@@ -275,15 +309,27 @@ export function installBusinessE2eeBoundary(
             if (existingResult.error) throw existingResult.error;
             if (!existingResult.data) throw new Error("The business record could not be found.");
             const opened = await openRow(state, relation, existingResult.data);
-            const row = await encryptRow(state, relation, {
+            const nextOpened = {
               ...opened,
               ...(value as RecordValue),
               id,
-            });
+            };
+            const row = await encryptRow(state, relation, nextOpened);
 
             let mutation = original.call(target, row, ...args);
             mutation = replay(mutation, calls);
-            return openResult(state, relation, await mutation);
+            const mutationResult = await mutation;
+            if (mutationResult?.error) return mutationResult;
+
+            if (
+              relation === "business_cost_categories" &&
+              typeof nextOpened.name === "string" &&
+              nextOpened.name !== opened.name
+            ) {
+              await propagateCostCategoryName(originalFrom, state, id, nextOpened.name);
+            }
+
+            return openResult(state, relation, mutationResult);
           });
         }
 

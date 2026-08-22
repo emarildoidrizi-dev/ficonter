@@ -14,6 +14,7 @@ import {
   type EncryptedDebtPaymentRow,
 } from "@/lib/e2ee/debtPaymentPayload";
 import { migrateLegacyPlaintextDebtData } from "@/lib/e2ee/debtMigration";
+import { installDebtE2eeBoundary } from "@/lib/e2ee/debtClientBoundary";
 import { subscribeFiconterDataChanges } from "@/lib/ficonterRealtime";
 
 type DebtOperationalRow = EncryptedDebtRow & {
@@ -52,6 +53,11 @@ export function EncryptedDebtWorkspace({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const refreshRunningRef = useRef(false);
   const refreshQueuedRef = useRef(false);
+
+  useEffect(() => {
+    if (vaultStatus !== "unlocked" || !vaultKey) return;
+    installDebtE2eeBoundary(supabase, vaultKey, userId);
+  }, [supabase, userId, vaultKey, vaultStatus]);
 
   const refresh = useCallback(async () => {
     if (vaultStatus !== "unlocked" || !vaultKey) {

@@ -20,6 +20,8 @@ import {
   wrapBusinessVaultKey,
   type BusinessWrappedKeyEnvelopeV1,
 } from "@/lib/e2ee/businessVault";
+import { installBusinessE2eeBoundary } from "@/lib/e2ee/businessClientBoundary";
+import { finalizePendingBusinessRecurringCosts } from "@/lib/e2ee/businessRecurringCostFinalizer";
 import type { VaultCiphertextEnvelopeV1 } from "@/lib/e2ee/vault";
 
 type BusinessVaultStatus =
@@ -128,11 +130,13 @@ export function BusinessVaultProvider({
   userId,
   businessId,
   canManage,
+  canWrite,
   children,
 }: {
   userId: string;
   businessId: string | null;
   canManage: boolean;
+  canWrite: boolean;
   children: ReactNode;
 }) {
   const client = useMemo(() => createClient(), []);
@@ -140,6 +144,23 @@ export function BusinessVaultProvider({
   const [status, setStatus] = useState<BusinessVaultStatus>(businessId ? "loading" : "idle");
   const [businessKey, setBusinessKey] = useState<CryptoKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const activateBusinessKey = useCallback(
+    (opened: CryptoKey) => {
+      if (!businessId) return;
+      installBusinessE2eeBoundary(client, opened, businessId);
+      setBusinessKey(opened);
+      setStatus("unlocked");
+      if (canWrite) {
+        void finalizePendingBusinessRecurringCosts(client, opened, businessId).catch((caught) => {
+          console.warn("Pending encrypted business recurring costs could not all be finalized", {
+            message: caught instanceof Error ? caught.message : "Unknown error",
+          });
+        });
+      }
+    },
+    [businessId, canWrite, client],
+  );
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -177,8 +198,7 @@ export function BusinessVaultProvider({
           userId,
           businessId,
         );
-        setBusinessKey(initialized);
-        setStatus("unlocked");
+        activateBusinessKey(initialized);
         return;
       }
 
@@ -191,14 +211,13 @@ export function BusinessVaultProvider({
         privateKey,
         memberKey.wrapped_business_key as BusinessWrappedKeyEnvelopeV1,
       );
-      setBusinessKey(opened);
-      setStatus("unlocked");
+      activateBusinessKey(opened);
     } catch (caught) {
       setBusinessKey(null);
       setError(caught instanceof Error ? caught.message : "Business vault could not be opened.");
       setStatus("error");
     }
-  }, [businessId, canManage, client, personalStatus, personalVaultKey, userId]);
+  }, [activateBusinessKey, businessId, canManage, client, personalStatus, personalVaultKey, userId]);
 
   useEffect(() => {
     void refresh();

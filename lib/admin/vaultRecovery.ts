@@ -35,14 +35,14 @@ export async function listRecoveryCustomers(): Promise<RecoveryCustomer[]> {
 }
 
 export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
-  const service = createServiceClient();
+  const service = createServiceClient() as any;
   const { data: requests, error } = await service
     .from("vault_recovery_requests")
     .select("id,reference,user_id,customer_email,status,created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
 
-  const requestIds = (requests ?? []).map((request) => request.id);
+  const requestIds = (requests ?? []).map((request: any) => request.id);
   const documentsByRequest = new Map<string, VaultRecoveryDocument[]>();
 
   if (requestIds.length) {
@@ -59,7 +59,7 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
     }
   }
 
-  return (requests ?? []).map((request) => ({
+  return (requests ?? []).map((request: any) => ({
     id: request.id,
     reference: request.reference,
     userId: request.user_id,
@@ -71,7 +71,7 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
 }
 
 export async function createVaultRecoveryCase(input: { userId: string; customerEmail: string; createdBy: string }) {
-  const service = createServiceClient();
+  const service = createServiceClient() as any;
   const { data, error } = await service
     .from("vault_recovery_requests")
     .insert({ user_id: input.userId, customer_email: input.customerEmail, created_by: input.createdBy })
@@ -82,7 +82,7 @@ export async function createVaultRecoveryCase(input: { userId: string; customerE
 }
 
 export async function generateVaultRecoveryConsentDocument(input: { recoveryRequestId: string; generatedBy: string }) {
-  const service = createServiceClient();
+  const service = createServiceClient() as any;
   const { data: request, error: requestError } = await service
     .from("vault_recovery_requests")
     .select("id,status")
@@ -106,7 +106,7 @@ export async function generateVaultRecoveryConsentDocument(input: { recoveryRequ
 }
 
 export async function getVaultRecoveryConsentDocument(recoveryRequestId: string) {
-  const service = createServiceClient();
+  const service = createServiceClient() as any;
   const [{ data: request, error: requestError }, { data: document, error: documentError }] = await Promise.all([
     service
       .from("vault_recovery_requests")

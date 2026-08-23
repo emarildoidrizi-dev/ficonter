@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Archive, Ban, CheckCircle2, FileText, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck, UserCheck, XCircle } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Archive, Ban, CheckCircle2, FileCheck2, FileText, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck, Upload, UserCheck, XCircle } from "lucide-react";
 import type { RecoveryCustomer, VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 import { FICONTER_COUNTRIES } from "@/lib/countries";
 
@@ -20,6 +20,8 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingCaseId, setUploadingCaseId] = useState<string | null>(null);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [draft, setDraft] = useState({ customerEmail: "", customerName: "", countryRegion: "", internalNotes: "" });
 
   const selectedCustomer = useMemo(() => customers.find((customer) => customer.id === customerId) ?? null, [customerId, customers]);
@@ -78,6 +80,20 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
     } catch (err) { setError(err instanceof Error ? err.message : "Could not generate consent document."); setBusy(false); }
   }
 
+  async function uploadSignedConsent(caseId: string, file: File) {
+    if (busy || uploadingCaseId) return;
+    setBusy(true); setUploadingCaseId(caseId); setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`/api/admin/vault-recovery/${caseId}/signed-consent`, { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not upload signed consent.");
+      await refresh();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not upload signed consent."); setBusy(false); }
+    finally { setUploadingCaseId(null); }
+  }
+
   function beginEdit(item: VaultRecoveryCase) {
     setEditingId(item.id);
     setDraft({ customerEmail: item.customerEmail, customerName: item.customerName, countryRegion: item.countryRegion, internalNotes: item.internalNotes });
@@ -91,7 +107,23 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
       return <button type="button" onClick={() => void generateDocument(item.id)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Generate consent document</button>;
     }
     if (item.status === "consent_pending") {
-      return <button type="button" onClick={() => void patchCase(item.id, { action: "mark_consent_signed" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><CheckCircle2 size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Mark consent signed</button>;
+      const latest = item.documents[0];
+      const signedUploaded = Boolean(latest?.signedFileName);
+      return <>
+        <input
+          ref={(element) => { fileInputs.current[item.id] = element; }}
+          type="file"
+          accept="application/pdf,image/jpeg,image/png"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) void uploadSignedConsent(item.id, file);
+          }}
+        />
+        <button type="button" onClick={() => fileInputs.current[item.id]?.click()} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><Upload size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{uploadingCaseId === item.id ? "Uploading…" : signedUploaded ? "Replace signed consent" : "Upload signed consent"}</button>
+        <button type="button" onClick={() => void patchCase(item.id, { action: "mark_consent_signed" })} disabled={busy || !signedUploaded} title={!signedUploaded ? "Upload the signed consent document first." : undefined} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700, opacity: signedUploaded ? 1 : .55 }}><CheckCircle2 size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Mark consent signed</button>
+      </>;
     }
     if (item.status === "consent_signed") {
       return <button type="button" onClick={() => void patchCase(item.id, { action: "approve" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><ShieldCheck size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Approve recovery</button>;
@@ -106,16 +138,18 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
     const latest = item.documents[0];
     const editing = editingId === item.id;
     const terminal = ["completed", "rejected", "cancelled"].includes(item.status);
+    const signedUploaded = Boolean(latest?.signedFileName);
     const countryOptions = draft.countryRegion && !FICONTER_COUNTRIES.includes(draft.countryRegion as (typeof FICONTER_COUNTRIES)[number])
       ? [draft.countryRegion, ...FICONTER_COUNTRIES]
       : FICONTER_COUNTRIES;
 
     return <article key={item.id} style={{ border: "1px solid rgba(120,120,120,.2)", borderRadius: 14, padding: 16, display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 18 }}>
-        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · {item.countryRegion || "Country not set"} · Opened {fmt(item.createdAt)} · Status: {statusLabel(item.status)}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}</div>
+        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · {item.countryRegion || "Country not set"} · Opened {fmt(item.createdAt)} · Status: {statusLabel(item.status)}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}{signedUploaded ? <div style={{ marginTop: 6, fontSize: 13 }}><FileCheck2 size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Signed consent: {latest?.signedFileName}{latest?.signedUploadedAt ? ` · uploaded ${fmt(latest.signedUploadedAt)}` : ""}</div> : null}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {!archived && !terminal && <button type="button" onClick={() => beginEdit(item)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Pencil size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Edit</button>}
           {latest ? <a href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer" style={{ padding: "9px 12px", border: "1px solid currentColor", borderRadius: 9, textDecoration: "none" }}>Open document</a> : null}
+          {signedUploaded ? <a href={`/api/admin/vault-recovery/${item.id}/signed-consent`} target="_blank" rel="noreferrer" style={{ padding: "9px 12px", border: "1px solid currentColor", borderRadius: 9, textDecoration: "none" }}>Open signed copy</a> : null}
           {!archived ? renderWorkflowActions(item) : null}
           {!archived && !terminal && item.status !== "approved" ? <button type="button" onClick={() => void patchCase(item.id, { action: "reject" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><XCircle size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Reject</button> : null}
           {!archived && !terminal ? <button type="button" onClick={() => void patchCase(item.id, { action: "cancel" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Ban size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Cancel</button> : null}

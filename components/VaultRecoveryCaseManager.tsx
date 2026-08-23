@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Archive, FileText, LoaderCircle, Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
 import type { RecoveryCustomer, VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
+import { FICONTER_COUNTRIES } from "@/lib/countries";
 
 function fmt(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
@@ -15,7 +16,7 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ customerName: "", countryRegion: "", internalNotes: "" });
+  const [draft, setDraft] = useState({ customerEmail: "", customerName: "", countryRegion: "", internalNotes: "" });
 
   const selectedCustomer = useMemo(() => customers.find((customer) => customer.id === customerId) ?? null, [customerId, customers]);
   const activeCases = cases.filter((item) => !item.archivedAt);
@@ -75,18 +76,28 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
 
   function beginEdit(item: VaultRecoveryCase) {
     setEditingId(item.id);
-    setDraft({ customerName: item.customerName, countryRegion: item.countryRegion, internalNotes: item.internalNotes });
+    setDraft({ customerEmail: item.customerEmail, customerName: item.customerName, countryRegion: item.countryRegion, internalNotes: item.internalNotes });
   }
 
   function renderCase(item: VaultRecoveryCase, archived = false) {
     const latest = item.documents[0];
     const editing = editingId === item.id;
+    const countryOptions = draft.countryRegion && !FICONTER_COUNTRIES.includes(draft.countryRegion as (typeof FICONTER_COUNTRIES)[number])
+      ? [draft.countryRegion, ...FICONTER_COUNTRIES]
+      : FICONTER_COUNTRIES;
+
     return <article key={item.id} style={{ border: "1px solid rgba(120,120,120,.2)", borderRadius: 14, padding: 16, display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 18 }}>
-        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · Opened {fmt(item.createdAt)} · Status: {item.status.replaceAll("_", " ")}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}</div>
+        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · {item.countryRegion || "Country not set"} · Opened {fmt(item.createdAt)} · Status: {item.status.replaceAll("_", " ")}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{!archived && <button type="button" onClick={() => beginEdit(item)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Pencil size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Edit</button>}{latest ? <a href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer" style={{ padding: "9px 12px", border: "1px solid currentColor", borderRadius: 9, textDecoration: "none" }}>Open document</a> : null}{!archived && <button type="button" onClick={() => void generateDocument(item.id)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}>{latest ? "Generate new document" : "Generate consent document"}</button>}{archived ? <button type="button" onClick={() => void patchCase(item.id, { action: "restore" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><RotateCcw size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Restore</button> : <button type="button" onClick={() => void patchCase(item.id, { action: "archive" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Archive size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Archive</button>}</div>
       </div>
-      {editing ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 10, borderTop: "1px solid rgba(120,120,120,.15)" }}><input placeholder="Customer full name" value={draft.customerName} onChange={(e) => setDraft({ ...draft, customerName: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}/><input placeholder="Country / region" value={draft.countryRegion} onChange={(e) => setDraft({ ...draft, countryRegion: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}/><textarea placeholder="Internal notes" value={draft.internalNotes} onChange={(e) => setDraft({ ...draft, internalNotes: e.target.value })} style={{ gridColumn: "1 / -1", minHeight: 90, borderRadius: 8, padding: 10 }}/><div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}><button type="button" onClick={() => void patchCase(item.id, { action: "edit", ...draft })} disabled={busy} style={{ padding: "9px 14px", borderRadius: 9, fontWeight: 700 }}>Save changes</button><button type="button" onClick={() => setEditingId(null)} disabled={busy} style={{ padding: "9px 14px", borderRadius: 9 }}>Cancel</button></div></div> : null}
+      {editing ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 10, borderTop: "1px solid rgba(120,120,120,.15)" }}>
+        <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Recovery contact email</strong><input type="email" placeholder="customer@example.com" value={draft.customerEmail} onChange={(e) => setDraft({ ...draft, customerEmail: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}/></label>
+        <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Customer full name</strong><input placeholder="Customer full name" value={draft.customerName} onChange={(e) => setDraft({ ...draft, customerName: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}/></label>
+        <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Country / region</strong><select value={draft.countryRegion} onChange={(e) => setDraft({ ...draft, countryRegion: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}><option value="">Select country / region</option>{countryOptions.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
+        <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Internal notes</strong><textarea placeholder="Internal notes" value={draft.internalNotes} onChange={(e) => setDraft({ ...draft, internalNotes: e.target.value })} style={{ minHeight: 90, borderRadius: 8, padding: 10 }}/></label>
+        <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}><button type="button" onClick={() => void patchCase(item.id, { action: "edit", ...draft })} disabled={busy} style={{ padding: "9px 14px", borderRadius: 9, fontWeight: 700 }}>Save changes</button><button type="button" onClick={() => setEditingId(null)} disabled={busy} style={{ padding: "9px 14px", borderRadius: 9 }}>Cancel</button></div>
+      </div> : null}
     </article>;
   }
 

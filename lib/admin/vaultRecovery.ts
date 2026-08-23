@@ -28,6 +28,18 @@ export type RecoveryCustomer = {
   email: string;
 };
 
+const ALLOWED_RECOVERY_TRANSITIONS: Record<string, readonly string[]> = {
+  opened: ["verification_pending", "rejected", "cancelled"],
+  verification_pending: ["consent_pending", "rejected", "cancelled"],
+  consent_pending: ["consent_signed", "rejected", "cancelled"],
+  consent_signed: ["approved", "rejected", "cancelled"],
+  approved: ["cancelled"],
+  recovery_issued: ["completed", "cancelled"],
+  completed: [],
+  rejected: [],
+  cancelled: [],
+};
+
 export async function listRecoveryCustomers(): Promise<RecoveryCustomer[]> {
   const service = createServiceClient();
   const { data, error } = await service.auth.admin.listUsers({ page: 1, perPage: 100 });
@@ -137,14 +149,56 @@ export async function setVaultRecoveryCaseArchived(input: { recoveryRequestId: s
   return data;
 }
 
+export async function setVaultRecoveryCaseStatus(input: {
+  recoveryRequestId: string;
+  actorId: string;
+  status: "verification_pending" | "consent_signed" | "approved" | "rejected" | "cancelled";
+}) {
+  const service = createServiceClient() as any;
+  const { data: current, error: currentError } = await service
+    .from("vault_recovery_requests")
+    .select("id,status,archived_at")
+    .eq("id", input.recoveryRequestId)
+    .single();
+  if (currentError) throw currentError;
+  if (current.archived_at) throw new Error("Restore the case before changing its workflow status.");
+
+  const allowed = ALLOWED_RECOVERY_TRANSITIONS[current.status] ?? [];
+  if (!allowed.includes(input.status)) {
+    throw new Error(`Cannot move recovery case from ${current.status} to ${input.status}.`);
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await service
+    .from("vault_recovery_requests")
+    .update({ status: input.status, updated_by: input.actorId, updated_at: now })
+    .eq("id", input.recoveryRequestId)
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  await service.from("vault_recovery_case_audit").insert({
+    recovery_request_id: data.id,
+    action: `status_${input.status}`,
+    actor_id: input.actorId,
+    details: { from: current.status, to: input.status },
+  });
+
+  return data;
+}
+
 export async function generateVaultRecoveryConsentDocument(input: { recoveryRequestId: string; generatedBy: string }) {
   const service = createServiceClient() as any;
   const { data: request, error: requestError } = await service
     .from("vault_recovery_requests")
-    .select("id,status")
+    .select("id,status,archived_at")
     .eq("id", input.recoveryRequestId)
     .single();
   if (requestError) throw requestError;
+  if (request.archived_at) throw new Error("Restore the case before generating a consent document.");
+  if (!["verification_pending", "consent_pending"].includes(request.status)) {
+    throw new Error("Identity verification must be started before generating the consent document.");
+  }
 
   const { data: document, error } = await service
     .from("vault_recovery_documents")
@@ -157,6 +211,13 @@ export async function generateVaultRecoveryConsentDocument(input: { recoveryRequ
     .from("vault_recovery_requests")
     .update({ status: "consent_pending", updated_at: new Date().toISOString() })
     .eq("id", request.id);
+
+  await service.from("vault_recovery_case_audit").insert({
+    recovery_request_id: request.id,
+    action: "consent_document_generated",
+    actor_id: input.generatedBy,
+    details: { document_id: document.document_id },
+  });
 
   return document;
 }

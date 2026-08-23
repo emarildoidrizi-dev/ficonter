@@ -88,6 +88,7 @@ export function Sidebar({ isAdmin = false, subscriptionPlanCode, user }: {
     return [...navigationGroups, { label: "Administration", links: [
       ["/dashboard/admin", ShieldCheck, "Admin"],
       ["/dashboard/admin/support", MessageSquareText, "Support inbox"],
+      ["/dashboard/admin/support/vault-recovery", LockKeyhole, "Vault Recovery"],
     ] }];
   }, [isAdmin]);
 

@@ -12,6 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
     const body = await request.json() as {
       action?: "edit" | "archive" | "restore";
+      customerEmail?: string;
       customerName?: string;
       countryRegion?: string;
       internalNotes?: string;
@@ -26,6 +27,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await updateVaultRecoveryCase({
         recoveryRequestId: id,
         actorId: user.id,
+        customerEmail: body.customerEmail,
         customerName: body.customerName,
         countryRegion: body.countryRegion,
         internalNotes: body.internalNotes,
@@ -36,6 +38,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Invalid recovery case action." }, { status: 400 });
   } catch (error) {
     console.error("Vault recovery case update failed", error);
-    return NextResponse.json({ error: "The recovery case could not be updated." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "The recovery case could not be updated." }, { status: 500 });
   }
 }

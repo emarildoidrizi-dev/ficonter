@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Archive, FileText, LoaderCircle, Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
+import { Archive, Ban, CheckCircle2, FileText, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck, UserCheck, XCircle } from "lucide-react";
 import type { RecoveryCustomer, VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 import { FICONTER_COUNTRIES } from "@/lib/countries";
 
 function fmt(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
+}
+
+function statusLabel(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { initialCustomers: RecoveryCustomer[]; initialCases: VaultRecoveryCase[] }) {
@@ -79,17 +83,44 @@ export function VaultRecoveryCaseManager({ initialCustomers, initialCases }: { i
     setDraft({ customerEmail: item.customerEmail, customerName: item.customerName, countryRegion: item.countryRegion, internalNotes: item.internalNotes });
   }
 
+  function renderWorkflowActions(item: VaultRecoveryCase) {
+    if (item.status === "opened") {
+      return <button type="button" onClick={() => void patchCase(item.id, { action: "start_verification" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><UserCheck size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Start verification</button>;
+    }
+    if (item.status === "verification_pending") {
+      return <button type="button" onClick={() => void generateDocument(item.id)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Generate consent document</button>;
+    }
+    if (item.status === "consent_pending") {
+      return <button type="button" onClick={() => void patchCase(item.id, { action: "mark_consent_signed" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><CheckCircle2 size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Mark consent signed</button>;
+    }
+    if (item.status === "consent_signed") {
+      return <button type="button" onClick={() => void patchCase(item.id, { action: "approve" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}><ShieldCheck size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Approve recovery</button>;
+    }
+    if (item.status === "approved") {
+      return <button type="button" disabled title="Available after the assisted-recovery cryptographic service is implemented." style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700, opacity: .55, cursor: "not-allowed" }}><KeyRound size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Generate recovery access</button>;
+    }
+    return null;
+  }
+
   function renderCase(item: VaultRecoveryCase, archived = false) {
     const latest = item.documents[0];
     const editing = editingId === item.id;
+    const terminal = ["completed", "rejected", "cancelled"].includes(item.status);
     const countryOptions = draft.countryRegion && !FICONTER_COUNTRIES.includes(draft.countryRegion as (typeof FICONTER_COUNTRIES)[number])
       ? [draft.countryRegion, ...FICONTER_COUNTRIES]
       : FICONTER_COUNTRIES;
 
     return <article key={item.id} style={{ border: "1px solid rgba(120,120,120,.2)", borderRadius: 14, padding: 16, display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 18 }}>
-        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · {item.countryRegion || "Country not set"} · Opened {fmt(item.createdAt)} · Status: {item.status.replaceAll("_", " ")}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{!archived && <button type="button" onClick={() => beginEdit(item)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Pencil size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Edit</button>}{latest ? <a href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer" style={{ padding: "9px 12px", border: "1px solid currentColor", borderRadius: 9, textDecoration: "none" }}>Open document</a> : null}{!archived && <button type="button" onClick={() => void generateDocument(item.id)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9, fontWeight: 700 }}>{latest ? "Generate new document" : "Generate consent document"}</button>}{archived ? <button type="button" onClick={() => void patchCase(item.id, { action: "restore" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><RotateCcw size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Restore</button> : <button type="button" onClick={() => void patchCase(item.id, { action: "archive" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Archive size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Archive</button>}</div>
+        <div><strong style={{ fontSize: 17 }}>{item.reference}</strong><div style={{ marginTop: 5 }}>{item.customerName || "Unnamed customer"} · {item.customerEmail}</div><small style={{ opacity: .68 }}>Account ID: {item.userId} · {item.countryRegion || "Country not set"} · Opened {fmt(item.createdAt)} · Status: {statusLabel(item.status)}</small>{latest ? <div style={{ marginTop: 8, fontSize: 13 }}><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>{latest.documentId} · generated {fmt(latest.generatedAt)}</div> : null}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {!archived && !terminal && <button type="button" onClick={() => beginEdit(item)} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Pencil size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Edit</button>}
+          {latest ? <a href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer" style={{ padding: "9px 12px", border: "1px solid currentColor", borderRadius: 9, textDecoration: "none" }}>Open document</a> : null}
+          {!archived ? renderWorkflowActions(item) : null}
+          {!archived && !terminal && item.status !== "approved" ? <button type="button" onClick={() => void patchCase(item.id, { action: "reject" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><XCircle size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Reject</button> : null}
+          {!archived && !terminal ? <button type="button" onClick={() => void patchCase(item.id, { action: "cancel" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Ban size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Cancel</button> : null}
+          {archived ? <button type="button" onClick={() => void patchCase(item.id, { action: "restore" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><RotateCcw size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Restore</button> : <button type="button" onClick={() => void patchCase(item.id, { action: "archive" })} disabled={busy} style={{ padding: "9px 12px", borderRadius: 9 }}><Archive size={14} style={{ verticalAlign: "-2px", marginRight: 5 }}/>Archive</button>}
+        </div>
       </div>
       {editing ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 10, borderTop: "1px solid rgba(120,120,120,.15)" }}>
         <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Recovery contact email</strong><input type="email" placeholder="customer@example.com" value={draft.customerEmail} onChange={(e) => setDraft({ ...draft, customerEmail: e.target.value })} style={{ minHeight: 40, borderRadius: 8, padding: "0 10px" }}/></label>

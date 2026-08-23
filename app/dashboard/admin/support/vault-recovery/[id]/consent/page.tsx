@@ -7,9 +7,18 @@ import { getVaultRecoveryConsentDocument } from "@/lib/admin/vaultRecovery";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const RECOVERY_DOCUMENT_TIME_ZONE = "Europe/Berlin";
+
 function formatGenerated(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: RECOVERY_DOCUMENT_TIME_ZONE,
+    timeZoneName: "short",
   }).format(new Date(value));
 }
 

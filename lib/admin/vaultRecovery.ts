@@ -21,6 +21,8 @@ export type VaultRecoveryDocument = {
   documentId: string;
   generatedAt: string;
   status: string;
+  signedFileName: string | null;
+  signedUploadedAt: string | null;
 };
 
 export type RecoveryCustomer = {
@@ -64,13 +66,20 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
   if (requestIds.length) {
     const { data: documents, error: documentError } = await service
       .from("vault_recovery_documents")
-      .select("id,document_id,recovery_request_id,generated_at,status")
+      .select("id,document_id,recovery_request_id,generated_at,status,signed_file_name,signed_uploaded_at")
       .in("recovery_request_id", requestIds)
       .order("generated_at", { ascending: false });
     if (documentError) throw documentError;
     for (const document of documents ?? []) {
       const list = documentsByRequest.get(document.recovery_request_id) ?? [];
-      list.push({ id: document.id, documentId: document.document_id, generatedAt: document.generated_at, status: document.status });
+      list.push({
+        id: document.id,
+        documentId: document.document_id,
+        generatedAt: document.generated_at,
+        status: document.status,
+        signedFileName: document.signed_file_name ?? null,
+        signedUploadedAt: document.signed_uploaded_at ?? null,
+      });
       documentsByRequest.set(document.recovery_request_id, list);
     }
   }
@@ -168,6 +177,20 @@ export async function setVaultRecoveryCaseStatus(input: {
     throw new Error(`Cannot move recovery case from ${current.status} to ${input.status}.`);
   }
 
+  if (input.status === "consent_signed") {
+    const { data: latestDocument, error: documentError } = await service
+      .from("vault_recovery_documents")
+      .select("id,signed_storage_path")
+      .eq("recovery_request_id", input.recoveryRequestId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (documentError) throw documentError;
+    if (!latestDocument?.signed_storage_path) {
+      throw new Error("Upload the signed customer consent document before marking consent as signed.");
+    }
+  }
+
   const now = new Date().toISOString();
   const { data, error } = await service
     .from("vault_recovery_requests")
@@ -220,6 +243,94 @@ export async function generateVaultRecoveryConsentDocument(input: { recoveryRequ
   });
 
   return document;
+}
+
+export async function uploadSignedVaultRecoveryConsent(input: {
+  recoveryRequestId: string;
+  uploadedBy: string;
+  fileName: string;
+  mimeType: string;
+  bytes: Uint8Array;
+}) {
+  const service = createServiceClient() as any;
+  const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
+  if (!allowedMimeTypes.has(input.mimeType)) throw new Error("Only PDF, JPG, and PNG files are allowed.");
+  if (!input.bytes.byteLength || input.bytes.byteLength > 10 * 1024 * 1024) throw new Error("Signed consent file must be 10 MB or smaller.");
+
+  const { data: request, error: requestError } = await service
+    .from("vault_recovery_requests")
+    .select("id,status,archived_at")
+    .eq("id", input.recoveryRequestId)
+    .single();
+  if (requestError) throw requestError;
+  if (request.archived_at) throw new Error("Restore the case before uploading signed consent.");
+  if (request.status !== "consent_pending") throw new Error("Signed consent can only be uploaded while consent is pending.");
+
+  const { data: document, error: documentError } = await service
+    .from("vault_recovery_documents")
+    .select("id,document_id,signed_storage_path")
+    .eq("recovery_request_id", input.recoveryRequestId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (documentError) throw documentError;
+  if (!document) throw new Error("Generate the consent document before uploading the signed copy.");
+
+  const extension = input.mimeType === "application/pdf" ? "pdf" : input.mimeType === "image/png" ? "png" : "jpg";
+  const storagePath = `${input.recoveryRequestId}/${document.id}/signed-consent-${Date.now()}.${extension}`;
+  const { error: uploadError } = await service.storage
+    .from("vault-recovery-consents")
+    .upload(storagePath, input.bytes, { contentType: input.mimeType, upsert: false });
+  if (uploadError) throw uploadError;
+
+  if (document.signed_storage_path) {
+    await service.storage.from("vault-recovery-consents").remove([document.signed_storage_path]);
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await service
+    .from("vault_recovery_documents")
+    .update({
+      status: "signed_uploaded",
+      signed_storage_path: storagePath,
+      signed_file_name: input.fileName,
+      signed_mime_type: input.mimeType,
+      signed_file_size: input.bytes.byteLength,
+      signed_uploaded_by: input.uploadedBy,
+      signed_uploaded_at: now,
+      signed_at: now,
+    })
+    .eq("id", document.id);
+  if (updateError) throw updateError;
+
+  await service.from("vault_recovery_case_audit").insert({
+    recovery_request_id: input.recoveryRequestId,
+    action: "signed_consent_uploaded",
+    actor_id: input.uploadedBy,
+    details: { document_id: document.document_id, file_name: input.fileName },
+  });
+
+  return { documentId: document.document_id };
+}
+
+export async function createSignedVaultRecoveryConsentUrl(recoveryRequestId: string) {
+  const service = createServiceClient() as any;
+  const { data: document, error } = await service
+    .from("vault_recovery_documents")
+    .select("signed_storage_path")
+    .eq("recovery_request_id", recoveryRequestId)
+    .not("signed_storage_path", "is", null)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!document?.signed_storage_path) throw new Error("No signed consent document has been uploaded for this case.");
+
+  const { data, error: signedUrlError } = await service.storage
+    .from("vault-recovery-consents")
+    .createSignedUrl(document.signed_storage_path, 60);
+  if (signedUrlError) throw signedUrlError;
+  return data.signedUrl;
 }
 
 export async function getVaultRecoveryConsentDocument(recoveryRequestId: string) {

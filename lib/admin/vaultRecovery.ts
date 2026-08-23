@@ -7,8 +7,12 @@ export type VaultRecoveryCase = {
   reference: string;
   userId: string;
   customerEmail: string;
+  customerName: string;
+  countryRegion: string;
+  internalNotes: string;
   status: string;
   createdAt: string;
+  archivedAt: string | null;
   documents: VaultRecoveryDocument[];
 };
 
@@ -38,7 +42,7 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
   const service = createServiceClient() as any;
   const { data: requests, error } = await service
     .from("vault_recovery_requests")
-    .select("id,reference,user_id,customer_email,status,created_at")
+    .select("id,reference,user_id,customer_email,customer_name,country_region,internal_notes,status,created_at,archived_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
 
@@ -64,8 +68,12 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
     reference: request.reference,
     userId: request.user_id,
     customerEmail: request.customer_email,
+    customerName: request.customer_name ?? "",
+    countryRegion: request.country_region ?? "",
+    internalNotes: request.internal_notes ?? "",
     status: request.status,
     createdAt: request.created_at,
+    archivedAt: request.archived_at ?? null,
     documents: documentsByRequest.get(request.id) ?? [],
   }));
 }
@@ -78,6 +86,42 @@ export async function createVaultRecoveryCase(input: { userId: string; customerE
     .select("id,reference,user_id,customer_email,status,created_at")
     .single();
   if (error) throw error;
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: "created", actor_id: input.createdBy });
+  return data;
+}
+
+export async function updateVaultRecoveryCase(input: {
+  recoveryRequestId: string;
+  actorId: string;
+  customerName?: string;
+  countryRegion?: string;
+  internalNotes?: string;
+}) {
+  const service = createServiceClient() as any;
+  const patch = {
+    customer_name: input.customerName?.trim() || null,
+    country_region: input.countryRegion?.trim() || null,
+    internal_notes: input.internalNotes?.trim() || null,
+    updated_by: input.actorId,
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await service.from("vault_recovery_requests").update(patch).eq("id", input.recoveryRequestId).select("id").single();
+  if (error) throw error;
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: "updated", actor_id: input.actorId, details: { fields: ["customer_name", "country_region", "internal_notes"] } });
+  return data;
+}
+
+export async function setVaultRecoveryCaseArchived(input: { recoveryRequestId: string; actorId: string; archived: boolean }) {
+  const service = createServiceClient() as any;
+  const now = new Date().toISOString();
+  const { data, error } = await service
+    .from("vault_recovery_requests")
+    .update({ archived_at: input.archived ? now : null, archived_by: input.archived ? input.actorId : null, updated_by: input.actorId, updated_at: now })
+    .eq("id", input.recoveryRequestId)
+    .select("id")
+    .single();
+  if (error) throw error;
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: input.archived ? "archived" : "restored", actor_id: input.actorId });
   return data;
 }
 
@@ -110,7 +154,7 @@ export async function getVaultRecoveryConsentDocument(recoveryRequestId: string)
   const [{ data: request, error: requestError }, { data: document, error: documentError }] = await Promise.all([
     service
       .from("vault_recovery_requests")
-      .select("id,reference,user_id,customer_email,status,created_at")
+      .select("id,reference,user_id,customer_email,customer_name,country_region,status,created_at")
       .eq("id", recoveryRequestId)
       .single(),
     service

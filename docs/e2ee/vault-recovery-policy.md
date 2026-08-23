@@ -7,7 +7,7 @@ Scope: Customers whose subscription includes FICONTER Vault. Platform Owner / Su
 ## 1. Core security model
 
 - Customer financial data remains encrypted client-side before storage.
-- The readable financial Vault key must never be displayed to FICONTER staff or stored as plaintext in Supabase.
+- The readable financial Vault key must never be displayed to FICONTER personnel or stored as plaintext within FICONTER systems.
 - FICONTER Vault is the paid security layer added on top of the encrypted financial-data architecture.
 - Recovery credentials are key-management credentials. They are not customer financial data and must never be logged or stored in plaintext.
 - Customer Service, Admin, Super Admin, and Owner must never receive a screen that displays a customer's decrypted financial records as part of recovery.
@@ -75,7 +75,7 @@ Customer Service MUST NOT:
 - See the customer's existing recovery code.
 - See the new recovery code.
 - See the readable Vault key.
-- Copy, export, inspect, or browse decrypted customer financial records as part of recovery.
+- Copy, export, inspect, transfer, or browse decrypted customer financial records as part of recovery.
 - Manually create a reusable customer recovery secret in an admin screen.
 
 ## 7. Emergency recovery link
@@ -101,9 +101,13 @@ After approval:
 
 The recovery consent must state that FICONTER is authorized only to perform the technical recovery required to restore access to the encrypted Vault.
 
-The recovery procedure must not grant staff permission to inspect, copy, export, sell, disclose, or otherwise use the customer's financial records for unrelated purposes.
+The recovery procedure must not grant staff permission to inspect, copy, export, transfer, sell, distribute, disclose, or otherwise use the customer's financial records for unrelated purposes.
 
-FICONTER's customer-facing privacy language must remain accurate regarding infrastructure/service providers and legal obligations. It must not make an absolute statement that no third-party processor ever handles encrypted service data if that is not operationally true.
+FICONTER will not sell, rent, trade, monetize, distribute, or disclose customer financial data to any third party for advertising, marketing, profiling, data-brokerage, or unrelated commercial purposes.
+
+Any disclosure required by applicable law must be limited to what is legally required and handled under FICONTER's Privacy Policy.
+
+Customer-facing recovery documents must refer only to FICONTER. Names of implementation, infrastructure, hosting, code-management, database, authentication, communications, analytics, monitoring, or other connected service providers must not appear in those documents.
 
 ## 10. Notifications
 

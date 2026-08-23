@@ -93,12 +93,19 @@ export async function createVaultRecoveryCase(input: { userId: string; customerE
 export async function updateVaultRecoveryCase(input: {
   recoveryRequestId: string;
   actorId: string;
+  customerEmail?: string;
   customerName?: string;
   countryRegion?: string;
   internalNotes?: string;
 }) {
   const service = createServiceClient() as any;
+  const customerEmail = input.customerEmail?.trim().toLowerCase() ?? "";
+  if (!customerEmail || !customerEmail.includes("@")) {
+    throw new Error("A valid recovery contact email is required.");
+  }
+
   const patch = {
+    customer_email: customerEmail,
     customer_name: input.customerName?.trim() || null,
     country_region: input.countryRegion?.trim() || null,
     internal_notes: input.internalNotes?.trim() || null,
@@ -107,7 +114,12 @@ export async function updateVaultRecoveryCase(input: {
   };
   const { data, error } = await service.from("vault_recovery_requests").update(patch).eq("id", input.recoveryRequestId).select("id").single();
   if (error) throw error;
-  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: "updated", actor_id: input.actorId, details: { fields: ["customer_name", "country_region", "internal_notes"] } });
+  await service.from("vault_recovery_case_audit").insert({
+    recovery_request_id: data.id,
+    action: "updated",
+    actor_id: input.actorId,
+    details: { fields: ["customer_email", "customer_name", "country_region", "internal_notes"] },
+  });
   return data;
 }
 

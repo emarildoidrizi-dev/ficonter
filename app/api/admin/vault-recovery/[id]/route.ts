@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
-import { setVaultRecoveryCaseArchived, updateVaultRecoveryCase } from "@/lib/admin/vaultRecovery";
+import { setVaultRecoveryCaseArchived, setVaultRecoveryCaseStatus, updateVaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = await request.json() as {
-      action?: "edit" | "archive" | "restore";
+      action?: "edit" | "archive" | "restore" | "start_verification" | "mark_consent_signed" | "approve" | "reject" | "cancel";
       customerEmail?: string;
       customerName?: string;
       countryRegion?: string;
@@ -31,6 +31,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         customerName: body.customerName,
         countryRegion: body.countryRegion,
         internalNotes: body.internalNotes,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    const statusByAction = {
+      start_verification: "verification_pending",
+      mark_consent_signed: "consent_signed",
+      approve: "approved",
+      reject: "rejected",
+      cancel: "cancelled",
+    } as const;
+
+    if (body.action && body.action in statusByAction) {
+      await setVaultRecoveryCaseStatus({
+        recoveryRequestId: id,
+        actorId: user.id,
+        status: statusByAction[body.action as keyof typeof statusByAction],
       });
       return NextResponse.json({ ok: true });
     }

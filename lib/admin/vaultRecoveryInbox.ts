@@ -122,3 +122,79 @@ export async function getCustomerRecoveryConsent(input: {
 
   return { request, document };
 }
+
+export async function submitCustomerRecoveryConsent(input: {
+  recoveryRequestId: string;
+  userId: string;
+  signature: string;
+}) {
+  const signature = input.signature.trim();
+  if (signature.length < 2 || signature.length > 500) {
+    throw new Error("Add your electronic signature before submitting the document.");
+  }
+
+  const service = createServiceClient() as any;
+  const { data: request, error: requestError } = await service
+    .from("vault_recovery_requests")
+    .select("id,reference,user_id,status,archived_at")
+    .eq("id", input.recoveryRequestId)
+    .eq("user_id", input.userId)
+    .single();
+  if (requestError) throw new Error("Recovery request not found.");
+  if (request.archived_at) throw new Error("This recovery request is no longer active.");
+  if (request.status !== "consent_pending") throw new Error("This recovery request is not awaiting consent.");
+
+  const { data: document, error: documentError } = await service
+    .from("vault_recovery_documents")
+    .select("id,document_id,sent_to_customer_at,customer_signed_at")
+    .eq("recovery_request_id", input.recoveryRequestId)
+    .not("sent_to_customer_at", "is", null)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (documentError) throw new Error("No consent document has been sent to this account.");
+  if (document.customer_signed_at) throw new Error("This consent document has already been signed.");
+
+  const signedAt = new Date().toISOString();
+  const { error: documentUpdateError } = await service
+    .from("vault_recovery_documents")
+    .update({
+      status: "signed",
+      customer_signed_at: signedAt,
+      customer_signed_by: input.userId,
+      customer_signature: signature,
+      customer_signature_method: "authenticated_electronic_signature",
+      signed_at: signedAt,
+    })
+    .eq("id", document.id);
+  if (documentUpdateError) throw documentUpdateError;
+
+  const { error: requestUpdateError } = await service
+    .from("vault_recovery_requests")
+    .update({ status: "consent_signed", updated_by: input.userId, updated_at: signedAt })
+    .eq("id", input.recoveryRequestId);
+  if (requestUpdateError) throw requestUpdateError;
+
+  await service.from("vault_recovery_case_audit").insert({
+    recovery_request_id: input.recoveryRequestId,
+    action: "customer_electronic_consent_signed",
+    actor_id: input.userId,
+    details: {
+      document_id: document.document_id,
+      sent_at: document.sent_to_customer_at,
+      signed_at: signedAt,
+      signature_method: "authenticated_electronic_signature",
+    },
+  });
+
+  await service.from("user_notifications").insert({
+    user_id: input.userId,
+    kind: "system",
+    title: "Vault recovery consent submitted",
+    body: `Your signed consent for ${request.reference} was received by FICONTER.`,
+    href: `/dashboard/inbox/vault-recovery/${input.recoveryRequestId}`,
+    metadata: { recovery_request_id: input.recoveryRequestId, document_id: document.document_id },
+  });
+
+  return { signedAt, documentId: document.document_id };
+}

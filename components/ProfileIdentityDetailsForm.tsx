@@ -65,6 +65,15 @@ function detailRows(
   ] as const;
 }
 
+function syncHiddenIdentityInput(selector: string, value: string) {
+  const input = document.querySelector<HTMLInputElement>(selector);
+  if (!input) return;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 export function ProfileIdentityDetailsForm({
   userId,
   initialFullName,
@@ -90,6 +99,7 @@ export function ProfileIdentityDetailsForm({
   useEffect(() => {
     let host: HTMLDivElement | null = null;
     let hiddenNameGrid: HTMLElement | null = null;
+    let buttonObserver: MutationObserver | null = null;
 
     const placeCard = () => {
       const fullNameInput = document.querySelector<HTMLInputElement>('input[autocomplete="name"]');
@@ -106,6 +116,21 @@ export function ProfileIdentityDetailsForm({
         hiddenNameGrid = sharedGrid;
         hiddenNameGrid.style.display = "none";
       }
+
+      const keepPhotoButtonLabel = () => {
+        const submitButton = profileForm.querySelector<HTMLButtonElement>('button:not([type="button"])');
+        if (!submitButton) return;
+        const text = submitButton.textContent?.trim() ?? "";
+        if (text === "Save profile") {
+          submitButton.textContent = "Save photo";
+          submitButton.setAttribute("aria-label", "Save profile photo");
+          submitButton.dataset.photoOnlySave = "true";
+        }
+      };
+
+      keepPhotoButtonLabel();
+      buttonObserver = new MutationObserver(keepPhotoButtonLabel);
+      buttonObserver.observe(profileForm, { childList: true, subtree: true, characterData: true });
 
       host = document.createElement("div");
       host.dataset.ficonterIdentityDetails = "true";
@@ -124,6 +149,7 @@ export function ProfileIdentityDetailsForm({
     }
 
     return () => {
+      buttonObserver?.disconnect();
       if (hiddenNameGrid) hiddenNameGrid.style.display = "";
       host?.remove();
     };
@@ -204,6 +230,9 @@ export function ProfileIdentityDetailsForm({
       setSavedValues(normalized);
       setDraftValues(normalized);
       setFeedback({ type: "success", text: "Personal details saved." });
+
+      syncHiddenIdentityInput('input[autocomplete="name"]', normalizedNames.fullName);
+      syncHiddenIdentityInput('input[autocomplete="nickname"]', normalizedNames.displayName);
 
       window.dispatchEvent(
         new CustomEvent("ficonter:profile-updated", {

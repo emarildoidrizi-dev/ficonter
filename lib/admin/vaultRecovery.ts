@@ -28,6 +28,7 @@ export type VaultRecoveryDocument = {
 export type RecoveryCustomer = {
   id: string;
   email: string;
+  name: string;
 };
 
 const ALLOWED_RECOVERY_TRANSITIONS: Record<string, readonly string[]> = {
@@ -42,14 +43,50 @@ const ALLOWED_RECOVERY_TRANSITIONS: Record<string, readonly string[]> = {
   cancelled: [],
 };
 
+function recoveryCustomerName(user: { user_metadata?: Record<string, unknown> | null }) {
+  const metadata = user.user_metadata ?? {};
+  return String(metadata.display_name ?? metadata.full_name ?? metadata.name ?? "").trim();
+}
+
 export async function listRecoveryCustomers(): Promise<RecoveryCustomer[]> {
   const service = createServiceClient();
-  const { data, error } = await service.auth.admin.listUsers({ page: 1, perPage: 100 });
-  if (error) throw error;
-  return data.users
-    .filter((user) => Boolean(user.email))
-    .map((user) => ({ id: user.id, email: user.email ?? "" }))
-    .sort((a, b) => a.email.localeCompare(b.email));
+  const customers: RecoveryCustomer[] = [];
+  let page = 1;
+
+  while (page <= 1000) {
+    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+
+    customers.push(
+      ...data.users
+        .filter((user) => Boolean(user.email))
+        .map((user) => ({
+          id: user.id,
+          email: user.email ?? "",
+          name: recoveryCustomerName(user),
+        })),
+    );
+
+    if (!data.nextPage) break;
+    page = data.nextPage;
+  }
+
+  return customers.sort((a, b) => {
+    const aKey = a.name || a.email;
+    const bKey = b.name || b.email;
+    return aKey.localeCompare(bKey, undefined, { sensitivity: "base" });
+  });
+}
+
+export async function getRecoveryCustomer(userId: string): Promise<RecoveryCustomer> {
+  const service = createServiceClient();
+  const { data, error } = await service.auth.admin.getUserById(userId);
+  if (error || !data.user?.email) throw new Error("Customer account could not be found.");
+  return {
+    id: data.user.id,
+    email: data.user.email,
+    name: recoveryCustomerName(data.user),
+  };
 }
 
 export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
@@ -99,12 +136,17 @@ export async function listVaultRecoveryCases(): Promise<VaultRecoveryCase[]> {
   }));
 }
 
-export async function createVaultRecoveryCase(input: { userId: string; customerEmail: string; createdBy: string }) {
+export async function createVaultRecoveryCase(input: { userId: string; customerEmail: string; customerName?: string; createdBy: string }) {
   const service = createServiceClient() as any;
   const { data, error } = await service
     .from("vault_recovery_requests")
-    .insert({ user_id: input.userId, customer_email: input.customerEmail, created_by: input.createdBy })
-    .select("id,reference,user_id,customer_email,status,created_at")
+    .insert({
+      user_id: input.userId,
+      customer_email: input.customerEmail,
+      customer_name: input.customerName?.trim() || null,
+      created_by: input.createdBy,
+    })
+    .select("id,reference,user_id,customer_email,customer_name,status,created_at")
     .single();
   if (error) throw error;
   await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: "created", actor_id: input.createdBy });

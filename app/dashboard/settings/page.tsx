@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
+import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -24,6 +25,16 @@ type SubscriptionSnapshot = {
   current_period_end?: string | null;
   cancel_at_period_end?: boolean | null;
   provider?: string | null;
+};
+
+type ProfileSnapshot = {
+  base_currency?: string | null;
+  birth_date?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  postal_code?: string | null;
 };
 
 function hasPaidCancellationGrace(
@@ -91,11 +102,12 @@ export default async function SettingsPage({
       .maybeSingle(),
     supabase
       .from("profiles")
-      .select("base_currency")
+      .select("base_currency,birth_date,country,city,address_line1,address_line2,postal_code")
       .eq("id", user.id)
       .maybeSingle(),
   ]);
 
+  const profileSnapshot = (profile as ProfileSnapshot | null) ?? null;
   const subscriptionSnapshot =
     (subscription as SubscriptionSnapshot | null) ?? null;
 
@@ -155,17 +167,33 @@ export default async function SettingsPage({
       ) : null}
 
       <div className="ficonter-settings-workspace-shell">
-      <SettingsWorkspace
-        userId={user.id}
-        email={user.email ?? ""}
-        metadata={user.user_metadata ?? {}}
-        initialBaseCurrency={profile?.base_currency ?? "EUR"}
-        initialSection={section}
-        subscription={isSubscriptionExempt ? null : displaySubscription}
-        requiredFeature={requiredFeature}
-        isSubscriptionExempt={isSubscriptionExempt}
-        canManageWallpapers={canManageWallpapers}
-      />
+        <SettingsWorkspace
+          userId={user.id}
+          email={user.email ?? ""}
+          metadata={user.user_metadata ?? {}}
+          initialBaseCurrency={profileSnapshot?.base_currency ?? "EUR"}
+          initialSection={section}
+          subscription={isSubscriptionExempt ? null : displaySubscription}
+          requiredFeature={requiredFeature}
+          isSubscriptionExempt={isSubscriptionExempt}
+          canManageWallpapers={canManageWallpapers}
+        />
+
+        {section === "profile" ? (
+          <div style={{ marginTop: 16 }}>
+            <ProfileIdentityDetailsForm
+              userId={user.id}
+              initialValues={{
+                birthDate: profileSnapshot?.birth_date ?? "",
+                country: profileSnapshot?.country ?? "",
+                city: profileSnapshot?.city ?? "",
+                addressLine1: profileSnapshot?.address_line1 ?? "",
+                addressLine2: profileSnapshot?.address_line2 ?? "",
+                postalCode: profileSnapshot?.postal_code ?? "",
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   );

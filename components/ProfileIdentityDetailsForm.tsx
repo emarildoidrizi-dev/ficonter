@@ -17,6 +17,8 @@ type ProfileIdentityDetails = {
 
 type Props = {
   userId: string;
+  initialFullName: string;
+  initialDisplayName: string;
   initialValues: ProfileIdentityDetails;
 };
 
@@ -42,8 +44,14 @@ function hasAnyDetails(values: ProfileIdentityDetails) {
   return Object.values(values).some((value) => value.trim().length > 0);
 }
 
-function detailRows(values: ProfileIdentityDetails) {
+function detailRows(
+  fullName: string,
+  displayName: string,
+  values: ProfileIdentityDetails,
+) {
   return [
+    ["Full name", fullName],
+    ["Display name", displayName],
     ["Birthdate", values.birthDate],
     ["Country / region", values.country],
     ["City", values.city],
@@ -53,14 +61,37 @@ function detailRows(values: ProfileIdentityDetails) {
   ] as const;
 }
 
-export function ProfileIdentityDetailsForm({ userId, initialValues }: Props) {
+export function ProfileIdentityDetailsForm({
+  userId,
+  initialFullName,
+  initialDisplayName,
+  initialValues,
+}: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [savedValues, setSavedValues] = useState(initialValues);
   const [draftValues, setDraftValues] = useState(initialValues);
+  const [identityNames, setIdentityNames] = useState({
+    fullName: initialFullName,
+    displayName: initialDisplayName,
+  });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    const onProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ fullName?: string; displayName?: string }>).detail;
+      if (!detail) return;
+      setIdentityNames((current) => ({
+        fullName: typeof detail.fullName === "string" ? detail.fullName.trim() : current.fullName,
+        displayName: typeof detail.displayName === "string" ? detail.displayName.trim() : current.displayName,
+      }));
+    };
+
+    window.addEventListener("ficonter:profile-updated", onProfileUpdated as EventListener);
+    return () => window.removeEventListener("ficonter:profile-updated", onProfileUpdated as EventListener);
+  }, []);
 
   useEffect(() => {
     let host: HTMLDivElement | null = null;
@@ -200,20 +231,14 @@ export function ProfileIdentityDetailsForm({ userId, initialValues }: Props) {
         </button>
       </div>
 
-      {hasAnyDetails(savedValues) ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0 28px" }}>
-          {detailRows(savedValues).map(([label, value]) => (
-            <div key={label} style={{ padding: "12px 0", borderBottom: "1px solid rgba(120,120,120,.14)" }}>
-              <div style={{ fontSize: 11, fontWeight: 750, opacity: .58, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
-              <div style={{ marginTop: 5, fontSize: 14, fontWeight: 600 }}>{value || "Not provided"}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ padding: "8px 0", fontSize: 14, opacity: .68 }}>
-          No personal identity or address details have been added yet.
-        </div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0 28px" }}>
+        {detailRows(identityNames.fullName, identityNames.displayName, savedValues).map(([label, value]) => (
+          <div key={label} style={{ padding: "12px 0", borderBottom: "1px solid rgba(120,120,120,.14)" }}>
+            <div style={{ fontSize: 11, fontWeight: 750, opacity: .58, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
+            <div style={{ marginTop: 5, fontSize: 14, fontWeight: 600 }}>{value || "Not provided"}</div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 

@@ -45,7 +45,10 @@ const ALLOWED_RECOVERY_TRANSITIONS: Record<string, readonly string[]> = {
 
 function recoveryCustomerName(user: { user_metadata?: Record<string, unknown> | null }) {
   const metadata = user.user_metadata ?? {};
-  return String(metadata.display_name ?? metadata.full_name ?? metadata.name ?? "").trim();
+  // Recovery consent is a formal authorization document. Only the account's
+  // actual full-name field may populate "Customer full name". Never substitute
+  // a display name/nickname into a legal-consent field.
+  return String(metadata.full_name ?? metadata.name ?? "").trim();
 }
 
 export async function listRecoveryCustomers(): Promise<RecoveryCustomer[]> {

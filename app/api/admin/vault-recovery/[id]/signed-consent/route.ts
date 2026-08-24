@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
-import { createSignedVaultRecoveryConsentUrl, uploadSignedVaultRecoveryConsent } from "@/lib/admin/vaultRecovery";
+import {
+  createSignedVaultRecoveryConsentUrl,
+  setVaultRecoveryCaseStatus,
+  uploadSignedVaultRecoveryConsent,
+} from "@/lib/admin/vaultRecovery";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +27,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       bytes,
     });
 
-    return NextResponse.json({ ok: true, documentId: result.documentId });
+    await setVaultRecoveryCaseStatus({
+      recoveryRequestId: id,
+      actorId: user.id,
+      status: "consent_signed",
+    });
+
+    return NextResponse.json({ ok: true, documentId: result.documentId, status: "consent_signed" });
   } catch (error) {
     console.error("Vault recovery signed consent upload failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "The signed consent document could not be uploaded." }, { status: 500 });

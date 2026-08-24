@@ -55,8 +55,12 @@ export function ProfileIdentityDetailsForm({ userId, initialValues }: Props) {
     setFeedback(null);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
+      // Staging already has these columns. The generated Supabase Database type
+      // is intentionally not being regenerated mid-migration, so keep this
+      // narrow bridge local to the new profile fields until the final schema
+      // type regeneration before production.
+      const profileTable = (supabase as any).from("profiles");
+      const { error } = await profileTable
         .update({
           birth_date: values.birthDate || null,
           country: values.country.trim() || null,

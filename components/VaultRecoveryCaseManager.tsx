@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import {
   Archive,
   Ban,
-  CheckCircle2,
   FileCheck2,
   FileText,
   KeyRound,
@@ -12,6 +11,7 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  Send,
   ShieldCheck,
   Trash2,
   Upload,
@@ -50,6 +50,12 @@ function fmt(value: string) {
 function statusLabel(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+type DeliveryDocument = VaultRecoveryCase["documents"][number] & {
+  sentToCustomerAt?: string | null;
+  customerSignedAt?: string | null;
+  customerSignatureMethod?: string | null;
+};
 
 export function VaultRecoveryCaseManager({
   initialCustomers,
@@ -179,6 +185,21 @@ export function VaultRecoveryCaseManager({
     }
   }
 
+  async function sendDocument(caseId: string) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/vault-recovery/${caseId}/send-consent`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not send the consent document.");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the consent document.");
+      setBusy(false);
+    }
+  }
+
   async function uploadSignedConsent(caseId: string, file: File) {
     if (busy || uploadingCaseId) return;
     setBusy(true);
@@ -200,28 +221,33 @@ export function VaultRecoveryCaseManager({
   }
 
   function primaryAction(item: VaultRecoveryCase) {
-    const latest = item.documents[0];
-    const signedUploaded = Boolean(latest?.signedFileName);
+    const latest = item.documents[0] as DeliveryDocument | undefined;
     if (item.status === "opened") return <button style={primaryButtonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "start_verification" })}><UserCheck size={15}/>Start verification</button>;
     if (item.status === "verification_pending") return <button style={primaryButtonStyle} disabled={busy} onClick={() => void generateDocument(item.id)}><FileText size={15}/>Generate consent document</button>;
-    if (item.status === "consent_pending") return <>
-      <input ref={(el) => { fileInputs.current[item.id] = el; }} type="file" accept="application/pdf,image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadSignedConsent(item.id, file); }} />
-      <button style={primaryButtonStyle} disabled={busy} onClick={() => fileInputs.current[item.id]?.click()}><Upload size={15}/>{uploadingCaseId === item.id ? "Uploading…" : signedUploaded ? "Replace signed consent" : "Upload signed consent"}</button>
-      <button style={{ ...buttonStyle, opacity: signedUploaded ? 1 : .5 }} disabled={busy || !signedUploaded} onClick={() => void patchCase(item.id, { action: "mark_consent_signed" })}><CheckCircle2 size={15}/>Mark consent signed</button>
-    </>;
+    if (item.status === "consent_pending") {
+      if (!latest?.sentToCustomerAt) {
+        return <button style={primaryButtonStyle} disabled={busy || !latest} onClick={() => void sendDocument(item.id)}><Send size={15}/>Send document for signature</button>;
+      }
+      return <>
+        <button style={{ ...primaryButtonStyle, opacity: .58, cursor: "default" }} disabled><FileText size={15}/>Document sent · awaiting signature</button>
+        <input ref={(el) => { fileInputs.current[item.id] = el; }} type="file" accept="application/pdf,image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadSignedConsent(item.id, file); }} />
+        <button style={buttonStyle} disabled={busy} onClick={() => fileInputs.current[item.id]?.click()}><Upload size={15}/>{uploadingCaseId === item.id ? "Uploading…" : "Manual signed-copy fallback"}</button>
+      </>;
+    }
     if (item.status === "consent_signed") return <button style={primaryButtonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "approve" })}><ShieldCheck size={15}/>Approve recovery</button>;
     if (item.status === "approved") return <button style={{ ...primaryButtonStyle, opacity: .5, cursor: "not-allowed" }} disabled><KeyRound size={15}/>Generate recovery access</button>;
     return null;
   }
 
   function renderCase(item: VaultRecoveryCase, archived = false) {
-    const latest = item.documents[0];
+    const latest = item.documents[0] as DeliveryDocument | undefined;
     const terminal = ["completed", "rejected", "cancelled"].includes(item.status);
     const signedUploaded = Boolean(latest?.signedFileName);
+    const electronicallySigned = Boolean(latest?.customerSignedAt);
     return <article key={item.id} style={cardStyle}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
         <div>
-          <div style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap" }}><strong>{item.reference}</strong><span style={{ border: "1px solid rgba(120,120,120,.22)", borderRadius: 999, padding: "5px 9px", fontSize: 12 }}>{statusLabel(item.status)}</span></div>
+          <div style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap" }}><strong>{item.reference}</strong><span style={{ border: "1px solid rgba(120,120,120,.22)", borderRadius: 999, padding: "5px 9px", fontSize: 12 }}>{latest?.customerSignedAt ? "Document Signed" : latest?.sentToCustomerAt ? "Document Sent" : statusLabel(item.status)}</span></div>
           <div style={{ marginTop: 7, fontWeight: 650 }}>{item.customerName || "Name not provided"}</div>
           <div style={{ marginTop: 2, opacity: .72 }}>{item.customerEmail}</div>
         </div>
@@ -232,8 +258,17 @@ export function VaultRecoveryCaseManager({
         <div><strong>Opened</strong><div style={{ opacity: .75 }}>{fmt(item.createdAt)}</div></div>
       </div>
       {latest ? <div style={{ marginTop: 15, padding: 12, borderRadius: 10, background: "rgba(120,120,120,.07)", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div><div><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 6 }}/>{latest.documentId}</div><small style={{ opacity: .65 }}>Generated {fmt(latest.generatedAt)}</small>{signedUploaded ? <div style={{ marginTop: 5, fontSize: 13 }}><FileCheck2 size={14} style={{ verticalAlign: "-2px", marginRight: 6 }}/>{latest.signedFileName}</div> : null}</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer">Open document</a>{signedUploaded ? <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/api/admin/vault-recovery/${item.id}/signed-consent`} target="_blank" rel="noreferrer">Open signed copy</a> : null}</div>
+        <div>
+          <div><FileText size={14} style={{ verticalAlign: "-2px", marginRight: 6 }}/>{latest.documentId}</div>
+          <small style={{ display: "block", opacity: .65 }}>Generated {fmt(latest.generatedAt)}</small>
+          {latest.sentToCustomerAt ? <small style={{ display: "block", marginTop: 3, opacity: .72 }}>Sent to customer {fmt(latest.sentToCustomerAt)}</small> : null}
+          {latest.customerSignedAt ? <small style={{ display: "block", marginTop: 3, fontWeight: 700 }}>Signed & submitted {fmt(latest.customerSignedAt)}</small> : null}
+          {signedUploaded && !electronicallySigned ? <div style={{ marginTop: 5, fontSize: 13 }}><FileCheck2 size={14} style={{ verticalAlign: "-2px", marginRight: 6 }}/>{latest.signedFileName}</div> : null}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer">Open document</a>
+          {electronicallySigned ? <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/signed`} target="_blank" rel="noreferrer">View signed document</a> : signedUploaded ? <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/api/admin/vault-recovery/${item.id}/signed-consent`} target="_blank" rel="noreferrer">Open signed copy</a> : null}
+        </div>
       </div> : null}
       {!archived ? <div style={{ marginTop: 15, paddingTop: 14, borderTop: "1px solid rgba(120,120,120,.14)" }}><div style={{ fontSize: 11, fontWeight: 750, opacity: .58, marginBottom: 8 }}>NEXT STEP</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{primaryAction(item)}</div></div> : null}
       <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
@@ -246,7 +281,7 @@ export function VaultRecoveryCaseManager({
   }
 
   return <section style={{ padding: "28px clamp(16px,3vw,32px) 48px", maxWidth: 1180, margin: "0 auto" }}>
-    <header style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 22 }}><div><span style={{ fontSize: 11, letterSpacing: ".12em", fontWeight: 750, opacity: .64 }}>PRIVATE ADMINISTRATION</span><h1 style={{ margin: "6px 0", fontSize: 32 }}>Vault recovery</h1><p style={{ margin: 0, opacity: .7 }}>Find a customer, generate their consent document, and manage the recovery case.</p></div><div style={{ alignSelf: "flex-start", display: "flex", gap: 7, alignItems: "center", border: "1px solid rgba(31,90,76,.2)", borderRadius: 999, padding: "8px 12px", fontSize: 13 }}><ShieldCheck size={15}/>Admin protected</div></header>
+    <header style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 22 }}><div><span style={{ fontSize: 11, letterSpacing: ".12em", fontWeight: 750, opacity: .64 }}>PRIVATE ADMINISTRATION</span><h1 style={{ margin: "6px 0", fontSize: 32 }}>Vault recovery</h1><p style={{ margin: 0, opacity: .7 }}>Find a customer, generate consent, send it to their FICONTER Inbox, and manage the signed recovery record.</p></div><div style={{ alignSelf: "flex-start", display: "flex", gap: 7, alignItems: "center", border: "1px solid rgba(31,90,76,.2)", borderRadius: 999, padding: "8px 12px", fontSize: 13 }}><ShieldCheck size={15}/>Admin protected</div></header>
 
     <div style={{ ...cardStyle, marginBottom: 24 }}>
       <div style={{ fontWeight: 750, marginBottom: 6 }}>Find customer</div>

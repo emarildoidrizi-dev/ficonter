@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { VaultRecoveryCaseManager } from "@/components/VaultRecoveryCaseManager";
+import { VaultRecoveryRecords } from "@/components/VaultRecoveryRecords";
 import { requireAdmin } from "@/lib/admin/access";
 import { listRecoveryDirectoryCustomers } from "@/lib/admin/recoveryDirectory";
 import { listVaultRecoveryCases } from "@/lib/admin/vaultRecovery";
@@ -18,5 +19,11 @@ export default async function VaultRecoveryAdminPage() {
     listVaultRecoveryCases(),
   ]);
   const cases = await attachRecoveryDeliveryState(rawCases as any[]);
-  return <VaultRecoveryCaseManager initialCustomers={customers} initialCases={cases as any} />;
+
+  return (
+    <>
+      <VaultRecoveryCaseManager initialCustomers={customers} initialCases={cases as any} />
+      <VaultRecoveryRecords cases={cases as any} />
+    </>
+  );
 }

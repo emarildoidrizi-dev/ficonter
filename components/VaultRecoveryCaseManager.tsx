@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   Ban,
@@ -18,6 +18,7 @@ import {
   UserCheck,
   XCircle,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { RecoveryDirectoryCustomer } from "@/lib/admin/recoveryDirectory";
 import type { VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 
@@ -64,6 +65,7 @@ export function VaultRecoveryCaseManager({
   initialCustomers: RecoveryDirectoryCustomer[];
   initialCases: VaultRecoveryCase[];
 }) {
+  const supabase = useMemo(() => createClient(), []);
   const [customers, setCustomers] = useState(initialCustomers);
   const [cases, setCases] = useState(initialCases);
   const [query, setQuery] = useState("");
@@ -97,15 +99,43 @@ export function VaultRecoveryCaseManager({
       .slice(0, 15);
   }, [cases, customers, query]);
 
+  async function loadLatest() {
+    const response = await fetch("/api/admin/vault-recovery", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? "Could not refresh recovery cases.");
+    setCustomers(data.customers ?? []);
+    setCases(data.cases ?? []);
+  }
+
+  useEffect(() => {
+    let active = true;
+    const reload = () => {
+      if (!active) return;
+      void loadLatest().catch(() => undefined);
+    };
+
+    const channel = supabase
+      .channel("admin-vault-recovery-consent")
+      .on("postgres_changes", { event: "*", schema: "public", table: "vault_recovery_documents" }, reload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vault_recovery_requests" }, reload)
+      .subscribe();
+
+    const fallback = window.setInterval(reload, 10000);
+    window.addEventListener("focus", reload);
+
+    return () => {
+      active = false;
+      window.clearInterval(fallback);
+      window.removeEventListener("focus", reload);
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
   async function refresh() {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/api/admin/vault-recovery", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not refresh recovery cases.");
-      setCustomers(data.customers ?? []);
-      setCases(data.cases ?? []);
+      await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not refresh recovery cases.");
     } finally {
@@ -125,12 +155,13 @@ export function VaultRecoveryCaseManager({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not generate recovery document.");
-      await refresh();
+      await loadLatest();
       setQuery("");
       setSelectedCustomerId("");
       window.open(data.documentUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate recovery document.");
+    } finally {
       setBusy(false);
     }
   }
@@ -147,9 +178,10 @@ export function VaultRecoveryCaseManager({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not update recovery case.");
-      await refresh();
+      await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update recovery case.");
+    } finally {
       setBusy(false);
     }
   }
@@ -162,9 +194,10 @@ export function VaultRecoveryCaseManager({
       const response = await fetch(`/api/admin/vault-recovery/${item.id}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not delete recovery case.");
-      await refresh();
+      await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete recovery case.");
+    } finally {
       setBusy(false);
     }
   }
@@ -177,10 +210,11 @@ export function VaultRecoveryCaseManager({
       const response = await fetch(`/api/admin/vault-recovery/${caseId}/document`, { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not generate consent document.");
-      await refresh();
+      await loadLatest();
       window.open(data.documentUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate consent document.");
+    } finally {
       setBusy(false);
     }
   }
@@ -193,9 +227,10 @@ export function VaultRecoveryCaseManager({
       const response = await fetch(`/api/admin/vault-recovery/${caseId}/send-consent`, { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not send the consent document.");
-      await refresh();
+      await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send the consent document.");
+    } finally {
       setBusy(false);
     }
   }
@@ -211,11 +246,11 @@ export function VaultRecoveryCaseManager({
       const response = await fetch(`/api/admin/vault-recovery/${caseId}/signed-consent`, { method: "POST", body: formData });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not upload signed consent.");
-      await refresh();
+      await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not upload signed consent.");
-      setBusy(false);
     } finally {
+      setBusy(false);
       setUploadingCaseId(null);
     }
   }

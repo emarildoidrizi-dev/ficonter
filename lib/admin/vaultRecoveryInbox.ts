@@ -94,3 +94,31 @@ export async function listCustomerRecoveryConsents(userId: string) {
 
   return result;
 }
+
+export async function getCustomerRecoveryConsent(input: {
+  recoveryRequestId: string;
+  userId: string;
+}) {
+  const service = createServiceClient() as any;
+
+  const { data: request, error: requestError } = await service
+    .from("vault_recovery_requests")
+    .select("id,reference,user_id,customer_email,customer_name,customer_birth_date,country_region,customer_city,customer_address_line1,customer_address_line2,customer_postal_code,created_at,status,archived_at")
+    .eq("id", input.recoveryRequestId)
+    .eq("user_id", input.userId)
+    .single();
+  if (requestError) throw new Error("Recovery request not found.");
+  if (request.archived_at) throw new Error("This recovery request is no longer active.");
+
+  const { data: document, error: documentError } = await service
+    .from("vault_recovery_documents")
+    .select("id,document_id,generated_at,sent_to_customer_at,customer_signed_at,customer_signature,customer_signature_method")
+    .eq("recovery_request_id", input.recoveryRequestId)
+    .not("sent_to_customer_at", "is", null)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (documentError) throw new Error("No consent document has been sent to this account.");
+
+  return { request, document };
+}

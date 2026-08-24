@@ -104,12 +104,14 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
 
         <section>
           <h2>3. Consent and authorization</h2>
-          <div className="consent-list">
-            <label><span className="box" /> <span>I authorize FICONTER to process this specific assisted-recovery request.</span></label>
-            <label><span className="box" /> <span>I confirm that my normal recovery methods have failed or are no longer available to me.</span></label>
-            <label><span className="box" /> <span>I understand that any previous recovery credential may be invalidated and replaced after successful recovery.</span></label>
-            <label><span className="box" /> <span>I confirm that I have read and understood the Security & Data Protection Commitment below.</span></label>
-          </div>
+          <p className="consent-intro">By signing this document, I expressly confirm and agree to all of the following conditions:</p>
+          <ol className="consent-list">
+            <li>I authorize FICONTER to process this specific assisted-recovery request.</li>
+            <li>I confirm that my normal recovery methods have failed or are no longer available to me.</li>
+            <li>I understand that any previous recovery credential may be invalidated and replaced after successful recovery.</li>
+            <li>I confirm that I have read and understood the Security & Data Protection Commitment below.</li>
+          </ol>
+          <p className="consent-note">These conditions are required for FICONTER Assisted Recovery. If I do not provide this authorization and signature, FICONTER cannot proceed with the assisted-recovery process.</p>
         </section>
 
         <section>
@@ -120,7 +122,7 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
 
         <section>
           <h2>5. Customer signature</h2>
-          <p>By signing below, I confirm that the information provided in this form is correct and that I give the authorization described above voluntarily and specifically for this recovery request.</p>
+          <p>By signing below, I confirm that the information provided in this form is correct and that I accept all declarations, conditions, and authorizations stated in this document voluntarily and specifically for this recovery request.</p>
           <div className="signature-grid">
             <div><div style={fieldLabel}>Customer full name</div><div className="signature-line" /></div>
             <div><div style={fieldLabel}>Date</div><div className="signature-line" /></div>
@@ -149,9 +151,10 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
         section p { margin:0 0 9px; }
         .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; margin-top:10px; }
         .full-row { grid-column:1 / -1; }
-        .consent-list { display:grid; gap:10px; margin-top:10px; }
-        .consent-list label { display:grid; grid-template-columns:16px 1fr; gap:8px; align-items:start; }
-        .box { width:12px; height:12px; border:1px solid #333; display:inline-block; margin-top:3px; box-sizing:border-box; }
+        .consent-intro { margin-bottom:8px; }
+        .consent-list { margin:0; padding-left:22px; display:grid; gap:7px; }
+        .consent-list li { padding-left:3px; }
+        .consent-note { margin-top:11px; font-size:12px; font-weight:600; }
         .signature-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 28px; margin-top:18px; }
         .signature-line { height:32px; border-bottom:1px solid #555; }
         .signature-tall { height:46px; }

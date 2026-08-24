@@ -135,6 +135,10 @@ export default async function SettingsPage({
       }
     : verifiedSubscriptionSnapshot;
 
+  const metadata = user.user_metadata ?? {};
+  const fullName = String(metadata.full_name ?? metadata.name ?? "").trim();
+  const displayName = String(metadata.display_name ?? metadata.full_name ?? metadata.name ?? "").trim();
+
   return (
     <section
       className={`ficonter-settings-page${
@@ -163,7 +167,7 @@ export default async function SettingsPage({
         <SettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}
-          metadata={user.user_metadata ?? {}}
+          metadata={metadata}
           initialBaseCurrency={profileSnapshot?.base_currency ?? "EUR"}
           initialSection={section}
           subscription={isSubscriptionExempt ? null : displaySubscription}
@@ -174,6 +178,8 @@ export default async function SettingsPage({
 
         <ProfileIdentityDetailsForm
           userId={user.id}
+          initialFullName={fullName}
+          initialDisplayName={displayName}
           initialValues={{
             birthDate: profileSnapshot?.birth_date ?? "",
             country: profileSnapshot?.country ?? "",

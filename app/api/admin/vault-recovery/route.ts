@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
 import {
+  getRecoveryDirectoryCustomer,
+  listRecoveryDirectoryCustomers,
+  snapshotRecoveryIdentity,
+} from "@/lib/admin/recoveryDirectory";
+import {
   createVaultRecoveryCase,
   generateVaultRecoveryConsentDocument,
-  getRecoveryCustomer,
-  listRecoveryCustomers,
   listVaultRecoveryCases,
   setVaultRecoveryCaseStatus,
 } from "@/lib/admin/vaultRecovery";
@@ -15,7 +18,7 @@ export async function GET() {
   const { user, admin } = await requireAdmin();
   if (!user || !admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const [customers, cases] = await Promise.all([listRecoveryCustomers(), listVaultRecoveryCases()]);
+    const [customers, cases] = await Promise.all([listRecoveryDirectoryCustomers(), listVaultRecoveryCases()]);
     return NextResponse.json({ customers, cases });
   } catch (error) {
     console.error("Vault recovery admin list failed", error);
@@ -31,12 +34,18 @@ export async function POST(request: Request) {
     const body = await request.json() as { userId?: string };
     if (!body.userId) return NextResponse.json({ error: "Choose a customer first." }, { status: 400 });
 
-    const customer = await getRecoveryCustomer(body.userId);
+    const customer = await getRecoveryDirectoryCustomer(body.userId);
     const created = await createVaultRecoveryCase({
       userId: customer.id,
       customerEmail: customer.email,
-      customerName: customer.name,
+      customerName: customer.fullName,
       createdBy: user.id,
+    });
+
+    await snapshotRecoveryIdentity({
+      recoveryRequestId: created.id,
+      actorId: user.id,
+      customer,
     });
 
     await setVaultRecoveryCaseStatus({

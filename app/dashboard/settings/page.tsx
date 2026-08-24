@@ -113,8 +113,6 @@ export default async function SettingsPage({
 
   const verifiedAccess = await getCurrentSubscriptionAccess();
 
-  // A legacy Beta row without a code-verified entitlement is presented as Free,
-  // matching the server-side entitlement engine and the Beta-domain gate.
   const verifiedSubscriptionSnapshot =
     !isSubscriptionExempt &&
     subscriptionSnapshot?.plan_code === "beta" &&
@@ -130,11 +128,6 @@ export default async function SettingsPage({
         }
       : subscriptionSnapshot;
 
-  /*
-   * The database correctly stores a PayPal cancellation as "canceled".
-   * If the customer has already paid through a future date, Settings should
-   * still present that paid plan as active until the date actually arrives.
-   */
   const displaySubscription = hasPaidCancellationGrace(verifiedSubscriptionSnapshot)
     ? {
         ...verifiedSubscriptionSnapshot,
@@ -179,21 +172,17 @@ export default async function SettingsPage({
           canManageWallpapers={canManageWallpapers}
         />
 
-        {section === "profile" ? (
-          <div style={{ marginTop: 16 }}>
-            <ProfileIdentityDetailsForm
-              userId={user.id}
-              initialValues={{
-                birthDate: profileSnapshot?.birth_date ?? "",
-                country: profileSnapshot?.country ?? "",
-                city: profileSnapshot?.city ?? "",
-                addressLine1: profileSnapshot?.address_line1 ?? "",
-                addressLine2: profileSnapshot?.address_line2 ?? "",
-                postalCode: profileSnapshot?.postal_code ?? "",
-              }}
-            />
-          </div>
-        ) : null}
+        <ProfileIdentityDetailsForm
+          userId={user.id}
+          initialValues={{
+            birthDate: profileSnapshot?.birth_date ?? "",
+            country: profileSnapshot?.country ?? "",
+            city: profileSnapshot?.city ?? "",
+            addressLine1: profileSnapshot?.address_line1 ?? "",
+            addressLine2: profileSnapshot?.address_line2 ?? "",
+            postalCode: profileSnapshot?.postal_code ?? "",
+          }}
+        />
       </div>
     </section>
   );

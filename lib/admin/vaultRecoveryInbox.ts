@@ -2,9 +2,9 @@ import "server-only";
 
 import { createServiceClient } from "@/lib/supabase/admin";
 
-export async function attachRecoveryDeliveryState<T extends { id: string; documents: Array<{ id: string }> }>(cases: T[]) {
+export async function attachRecoveryDeliveryState(cases: any[]) {
   const service = createServiceClient() as any;
-  const documentIds = cases.flatMap((item) => item.documents.map((document) => document.id));
+  const documentIds = cases.flatMap((item: any) => (item.documents ?? []).map((document: any) => document.id));
   if (!documentIds.length) return cases;
 
   const { data, error } = await service
@@ -13,10 +13,10 @@ export async function attachRecoveryDeliveryState<T extends { id: string; docume
     .in("id", documentIds);
   if (error) throw error;
 
-  const stateByDocument = new Map((data ?? []).map((item: any) => [item.id, item]));
-  return cases.map((item) => ({
+  const stateByDocument = new Map<string, any>((data ?? []).map((item: any) => [item.id, item]));
+  return cases.map((item: any) => ({
     ...item,
-    documents: item.documents.map((document) => {
+    documents: (item.documents ?? []).map((document: any) => {
       const state = stateByDocument.get(document.id);
       return {
         ...document,

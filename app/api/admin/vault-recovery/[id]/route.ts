@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
-import { setVaultRecoveryCaseArchived, setVaultRecoveryCaseStatus, updateVaultRecoveryCase } from "@/lib/admin/vaultRecovery";
+import { deleteVaultRecoveryCase, setVaultRecoveryCaseArchived, setVaultRecoveryCaseStatus, updateVaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 
 export const dynamic = "force-dynamic";
 
@@ -56,5 +56,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   } catch (error) {
     console.error("Vault recovery case update failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "The recovery case could not be updated." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { user, admin } = await requireAdmin();
+  if (!user || !admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    await deleteVaultRecoveryCase({ recoveryRequestId: id });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Vault recovery case deletion failed", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "The recovery case could not be deleted." }, { status: 500 });
   }
 }

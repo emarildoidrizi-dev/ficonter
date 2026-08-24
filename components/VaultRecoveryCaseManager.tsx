@@ -9,10 +9,9 @@ import {
   FileText,
   KeyRound,
   LoaderCircle,
-  Pencil,
-  Plus,
   RefreshCw,
   RotateCcw,
+  Search,
   ShieldCheck,
   Trash2,
   Upload,
@@ -20,7 +19,6 @@ import {
   XCircle,
 } from "lucide-react";
 import type { RecoveryCustomer, VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
-import { FICONTER_COUNTRIES } from "@/lib/countries";
 
 const cardStyle: React.CSSProperties = {
   border: "1px solid rgba(120,120,120,.18)",
@@ -31,8 +29,8 @@ const cardStyle: React.CSSProperties = {
 };
 
 const buttonStyle: React.CSSProperties = {
-  minHeight: 38,
-  padding: "0 13px",
+  minHeight: 40,
+  padding: "0 14px",
   borderRadius: 10,
   border: "1px solid rgba(120,120,120,.24)",
   display: "inline-flex",
@@ -84,23 +82,29 @@ export function VaultRecoveryCaseManager({
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [cases, setCases] = useState(initialCases);
-  const [customerId, setCustomerId] = useState(initialCustomers[0]?.id ?? "");
+  const [query, setQuery] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingCaseId, setUploadingCaseId] = useState<string | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [draft, setDraft] = useState({
-    customerEmail: "",
-    customerName: "",
-    countryRegion: "",
-    internalNotes: "",
-  });
 
   const selectedCustomer = useMemo(
-    () => customers.find((customer) => customer.id === customerId) ?? null,
-    [customerId, customers],
+    () => customers.find((customer) => customer.id === selectedCustomerId) ?? null,
+    [customers, selectedCustomerId],
   );
+
+  const searchResults = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    if (!term) return [];
+    return customers
+      .filter((customer) =>
+        customer.email.toLocaleLowerCase().includes(term) ||
+        customer.name.toLocaleLowerCase().includes(term),
+      )
+      .slice(0, 12);
+  }, [customers, query]);
+
   const activeCases = cases.filter((item) => !item.archivedAt);
   const archivedCases = cases.filter((item) => Boolean(item.archivedAt));
 
@@ -113,7 +117,6 @@ export function VaultRecoveryCaseManager({
       if (!response.ok) throw new Error(data.error ?? "Could not refresh recovery cases.");
       setCustomers(data.customers ?? []);
       setCases(data.cases ?? []);
-      if (!customerId && data.customers?.[0]) setCustomerId(data.customers[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not refresh recovery cases.");
     } finally {
@@ -121,7 +124,7 @@ export function VaultRecoveryCaseManager({
     }
   }
 
-  async function createCase() {
+  async function generateForCustomer() {
     if (!selectedCustomer || busy) return;
     setBusy(true);
     setError("");
@@ -129,13 +132,16 @@ export function VaultRecoveryCaseManager({
       const response = await fetch("/api/admin/vault-recovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedCustomer.id, customerEmail: selectedCustomer.email }),
+        body: JSON.stringify({ userId: selectedCustomer.id }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not create recovery case.");
+      if (!response.ok) throw new Error(data.error ?? "Could not generate recovery document.");
       await refresh();
+      setQuery("");
+      setSelectedCustomerId("");
+      window.open(data.documentUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create recovery case.");
+      setError(err instanceof Error ? err.message : "Could not generate recovery document.");
       setBusy(false);
     }
   }
@@ -152,7 +158,6 @@ export function VaultRecoveryCaseManager({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not update recovery case.");
-      setEditingId(null);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update recovery case.");
@@ -219,16 +224,6 @@ export function VaultRecoveryCaseManager({
     }
   }
 
-  function beginEdit(item: VaultRecoveryCase) {
-    setEditingId(item.id);
-    setDraft({
-      customerEmail: item.customerEmail,
-      customerName: item.customerName,
-      countryRegion: item.countryRegion,
-      internalNotes: item.internalNotes,
-    });
-  }
-
   function primaryAction(item: VaultRecoveryCase) {
     const latest = item.documents[0];
     const signedUploaded = Boolean(latest?.signedFileName);
@@ -278,12 +273,8 @@ export function VaultRecoveryCaseManager({
 
   function renderCase(item: VaultRecoveryCase, archived = false) {
     const latest = item.documents[0];
-    const editing = editingId === item.id;
     const terminal = ["completed", "rejected", "cancelled"].includes(item.status);
     const signedUploaded = Boolean(latest?.signedFileName);
-    const countryOptions = draft.countryRegion && !FICONTER_COUNTRIES.includes(draft.countryRegion as (typeof FICONTER_COUNTRIES)[number])
-      ? [draft.countryRegion, ...FICONTER_COUNTRIES]
-      : FICONTER_COUNTRIES;
 
     return (
       <article key={item.id} style={cardStyle}>
@@ -293,10 +284,9 @@ export function VaultRecoveryCaseManager({
               <strong style={{ fontSize: 18 }}>{item.reference}</strong>
               <StatusPill value={item.status}/>
             </div>
-            <div style={{ marginTop: 8, fontSize: 16, fontWeight: 650 }}>{item.customerName || "Unnamed customer"}</div>
+            <div style={{ marginTop: 8, fontSize: 16, fontWeight: 650 }}>{item.customerName || "Name not provided"}</div>
             <div style={{ marginTop: 3, opacity: .76 }}>{item.customerEmail}</div>
           </div>
-          {!archived && !terminal ? <button style={buttonStyle} disabled={busy} onClick={() => beginEdit(item)}><Pencil size={14}/>Edit details</button> : null}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10, marginTop: 18 }}>
@@ -328,16 +318,6 @@ export function VaultRecoveryCaseManager({
           </div>
         ) : null}
 
-        {editing ? (
-          <div style={{ marginTop: 18, padding: 16, border: "1px solid rgba(120,120,120,.15)", borderRadius: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-            <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Recovery contact email</strong><input type="email" value={draft.customerEmail} onChange={(e) => setDraft({ ...draft, customerEmail: e.target.value })} style={{ minHeight: 42, borderRadius: 9, padding: "0 10px" }}/></label>
-            <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Customer full name</strong><input value={draft.customerName} onChange={(e) => setDraft({ ...draft, customerName: e.target.value })} style={{ minHeight: 42, borderRadius: 9, padding: "0 10px" }}/></label>
-            <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Country / region</strong><select value={draft.countryRegion} onChange={(e) => setDraft({ ...draft, countryRegion: e.target.value })} style={{ minHeight: 42, borderRadius: 9, padding: "0 10px" }}><option value="">Select country / region</option>{countryOptions.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
-            <label style={{ display: "grid", gap: 6 }}><strong style={{ fontSize: 13 }}>Internal notes</strong><textarea value={draft.internalNotes} onChange={(e) => setDraft({ ...draft, internalNotes: e.target.value })} style={{ minHeight: 86, borderRadius: 9, padding: 10 }}/></label>
-            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap" }}><button style={primaryButtonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "edit", ...draft })}>Save changes</button><button style={buttonStyle} disabled={busy} onClick={() => setEditingId(null)}>Cancel</button></div>
-          </div>
-        ) : null}
-
         <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {!archived && !terminal && item.status !== "approved" ? <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "reject" })}><XCircle size={14}/>Reject</button> : null}
           {!archived && !terminal ? <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "cancel" })}><Ban size={14}/>Cancel</button> : null}
@@ -354,19 +334,66 @@ export function VaultRecoveryCaseManager({
         <div>
           <span style={{ fontSize: 11, letterSpacing: ".12em", fontWeight: 750, opacity: .64 }}>PRIVATE ADMINISTRATION</span>
           <h1 style={{ fontSize: "clamp(28px,4vw,36px)", margin: "6px 0 8px" }}>Vault recovery</h1>
-          <p style={{ margin: 0, opacity: .7, maxWidth: 680 }}>Manage customer recovery requests in a clear sequence: verify, obtain consent, approve, and recover.</p>
+          <p style={{ margin: 0, opacity: .7, maxWidth: 680 }}>Find a customer by name or email and generate the official recovery consent document.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid rgba(31,90,76,.2)", borderRadius: 999, padding: "8px 12px", fontSize: 13 }}><ShieldCheck size={16}/>Admin protected</div>
       </header>
 
-      <div style={{ ...cardStyle, marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 10 }}>Create a recovery case</div>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 10 }}>
-          <select value={customerId} onChange={(event) => setCustomerId(event.target.value)} style={{ minHeight: 44, borderRadius: 10, padding: "0 12px", minWidth: 0 }}>
-            {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.email}</option>)}
-          </select>
-          <button type="button" disabled={!selectedCustomer || busy} onClick={() => void createCase()} style={primaryButtonStyle}>{busy ? <LoaderCircle size={16}/> : <Plus size={16}/>}Create case</button>
+      <div style={{ ...cardStyle, marginBottom: 24, padding: 18 }}>
+        <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 10 }}>Find customer</div>
+        <div style={{ position: "relative" }}>
+          <Search size={18} style={{ position: "absolute", left: 13, top: 13, opacity: .55, pointerEvents: "none" }}/>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelectedCustomerId("");
+            }}
+            placeholder="Search by customer name or email address"
+            autoComplete="off"
+            style={{ width: "100%", minHeight: 46, borderRadius: 11, padding: "0 14px 0 42px", boxSizing: "border-box" }}
+          />
+
+          {query.trim() ? (
+            <div style={{ marginTop: 8, border: "1px solid rgba(120,120,120,.18)", borderRadius: 12, overflow: "hidden", maxHeight: 330, overflowY: "auto" }}>
+              {searchResults.map((customer) => {
+                const selected = selectedCustomerId === customer.id;
+                return (
+                  <button
+                    type="button"
+                    key={customer.id}
+                    onClick={() => setSelectedCustomerId(customer.id)}
+                    style={{
+                      width: "100%",
+                      border: 0,
+                      borderBottom: "1px solid rgba(120,120,120,.12)",
+                      padding: "12px 14px",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      background: selected ? "rgba(120,120,120,.12)" : "transparent",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>{customer.name || "Name not provided"}</div>
+                    <div style={{ marginTop: 3, fontSize: 13, opacity: .72 }}>{customer.email}</div>
+                  </button>
+                );
+              })}
+              {!searchResults.length ? <div style={{ padding: 16, opacity: .65 }}>No customer found with that name or email.</div> : null}
+            </div>
+          ) : null}
         </div>
+
+        {selectedCustomer ? (
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", padding: 14, borderRadius: 12, background: "rgba(120,120,120,.07)" }}>
+            <div>
+              <div style={{ fontWeight: 750 }}>{selectedCustomer.name || "Name not provided"}</div>
+              <div style={{ marginTop: 3, fontSize: 13, opacity: .72 }}>{selectedCustomer.email}</div>
+            </div>
+            <button type="button" disabled={busy} onClick={() => void generateForCustomer()} style={primaryButtonStyle}>
+              {busy ? <LoaderCircle size={16}/> : <FileText size={16}/>}Generate document
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {error ? <div role="alert" style={{ padding: 13, borderRadius: 11, marginBottom: 18, background: "rgba(180,50,50,.08)", border: "1px solid rgba(180,50,50,.2)" }}>{error}</div> : null}

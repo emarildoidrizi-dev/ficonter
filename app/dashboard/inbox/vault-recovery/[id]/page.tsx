@@ -2,6 +2,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCustomerRecoveryConsent } from "@/lib/admin/vaultRecoveryInbox";
+import { VaultRecoveryConsentSignature } from "@/components/VaultRecoveryConsentSignature";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,7 +41,7 @@ export default async function CustomerVaultRecoveryConsentPage({
   ].filter(Boolean).join(", ");
 
   return (
-    <main style={{ width: "min(900px,calc(100% - 28px))", margin: "28px auto 56px" }}>
+    <main style={{ width: "min(900px,calc(100% - 28px))", margin: "28px auto 56px", display: "grid", gap: 18 }}>
       <article style={{ border: "1px solid rgba(120,120,120,.18)", borderRadius: 20, padding: "clamp(20px,4vw,34px)", background: "rgba(255,255,255,.5)", color: "inherit" }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", paddingBottom: 16, borderBottom: "1px solid rgba(120,120,120,.28)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
@@ -105,16 +106,16 @@ export default async function CustomerVaultRecoveryConsentPage({
           <p>FICONTER is designed to protect customer financial information through strong encryption and strict access controls. Assisted Recovery is intended only to restore customer access to the Vault.</p>
           <p>FICONTER will not sell, rent, trade, monetize, distribute, or disclose customer financial data to third parties for advertising, marketing, profiling, data-brokerage, or unrelated commercial purposes. Any disclosure required by applicable law will be limited to what the law requires.</p>
         </section>
-
-        <section style={{ marginTop: 24, padding: 16, borderRadius: 14, border: "1px solid rgba(120,120,120,.18)", background: "rgba(120,120,120,.05)" }}>
-          <strong>{document.customer_signed_at ? "Document signed" : "Signature step not yet completed"}</strong>
-          <p style={{ margin: "6px 0 0", fontSize: 13, opacity: .7 }}>
-            {document.customer_signed_at
-              ? `FICONTER recorded the signed document on ${formatDateTime(document.customer_signed_at)}.`
-              : "The electronic signature control will appear here once the next recovery infrastructure step is deployed."}
-          </p>
-        </section>
       </article>
+
+      <section style={{ border: "1px solid rgba(120,120,120,.18)", borderRadius: 18, padding: 20, background: "rgba(255,255,255,.38)" }}>
+        <VaultRecoveryConsentSignature
+          recoveryRequestId={request.id}
+          fullName={request.customer_name ?? ""}
+          alreadySigned={Boolean(document.customer_signed_at)}
+          signedAt={document.customer_signed_at ?? null}
+        />
+      </section>
     </main>
   );
 }

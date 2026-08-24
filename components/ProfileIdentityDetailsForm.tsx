@@ -40,8 +40,12 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 650,
 };
 
-function hasAnyDetails(values: ProfileIdentityDetails) {
-  return Object.values(values).some((value) => value.trim().length > 0);
+function hasAnyDetails(fullName: string, displayName: string, values: ProfileIdentityDetails) {
+  return Boolean(
+    fullName.trim() ||
+      displayName.trim() ||
+      Object.values(values).some((value) => value.trim().length > 0),
+  );
 }
 
 function detailRows(
@@ -74,33 +78,34 @@ export function ProfileIdentityDetailsForm({
     fullName: initialFullName,
     displayName: initialDisplayName,
   });
+  const [draftNames, setDraftNames] = useState({
+    fullName: initialFullName,
+    displayName: initialDisplayName,
+  });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    const onProfileUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ fullName?: string; displayName?: string }>).detail;
-      if (!detail) return;
-      setIdentityNames((current) => ({
-        fullName: typeof detail.fullName === "string" ? detail.fullName.trim() : current.fullName,
-        displayName: typeof detail.displayName === "string" ? detail.displayName.trim() : current.displayName,
-      }));
-    };
-
-    window.addEventListener("ficonter:profile-updated", onProfileUpdated as EventListener);
-    return () => window.removeEventListener("ficonter:profile-updated", onProfileUpdated as EventListener);
-  }, []);
-
-  useEffect(() => {
     let host: HTMLDivElement | null = null;
+    let hiddenNameGrid: HTMLElement | null = null;
 
     const placeCard = () => {
       const fullNameInput = document.querySelector<HTMLInputElement>('input[autocomplete="name"]');
       const profileForm = fullNameInput?.closest("form");
       const profileStack = profileForm?.parentElement;
-      if (!profileForm || !profileStack) return false;
+      if (!fullNameInput || !profileForm || !profileStack) return false;
+
+      const displayNameInput = profileForm.querySelector<HTMLInputElement>('input[autocomplete="nickname"]');
+      const fullNameLabel = fullNameInput.closest("label");
+      const displayNameLabel = displayNameInput?.closest("label");
+      const sharedGrid = fullNameLabel?.parentElement;
+
+      if (sharedGrid && displayNameLabel && sharedGrid.contains(displayNameLabel)) {
+        hiddenNameGrid = sharedGrid;
+        hiddenNameGrid.style.display = "none";
+      }
 
       host = document.createElement("div");
       host.dataset.ficonterIdentityDetails = "true";
@@ -119,6 +124,7 @@ export function ProfileIdentityDetailsForm({
     }
 
     return () => {
+      if (hiddenNameGrid) hiddenNameGrid.style.display = "";
       host?.remove();
     };
   }, []);
@@ -134,6 +140,7 @@ export function ProfileIdentityDetailsForm({
 
   function openEditor() {
     setDraftValues(savedValues);
+    setDraftNames(identityNames);
     setFeedback(null);
     setModalOpen(true);
   }
@@ -150,9 +157,28 @@ export function ProfileIdentityDetailsForm({
     setFeedback(null);
 
     try {
+      const normalizedNames = {
+        fullName: draftNames.fullName.trim(),
+        displayName: draftNames.displayName.trim(),
+      };
+
+      const { data: authData, error: authReadError } = await supabase.auth.getUser();
+      if (authReadError) throw authReadError;
+      const currentMetadata = authData.user?.user_metadata ?? {};
+
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          full_name: normalizedNames.fullName,
+          display_name: normalizedNames.displayName,
+        },
+      });
+      if (authUpdateError) throw authUpdateError;
+
       const profiles = supabase.from("profiles") as any;
       const { error } = await profiles
         .update({
+          full_name: normalizedNames.fullName || null,
           birth_date: draftValues.birthDate || null,
           country: draftValues.country.trim() || null,
           city: draftValues.city.trim() || null,
@@ -173,9 +199,20 @@ export function ProfileIdentityDetailsForm({
         postalCode: draftValues.postalCode.trim(),
       };
 
+      setIdentityNames(normalizedNames);
+      setDraftNames(normalizedNames);
       setSavedValues(normalized);
       setDraftValues(normalized);
       setFeedback({ type: "success", text: "Personal details saved." });
+
+      window.dispatchEvent(
+        new CustomEvent("ficonter:profile-updated", {
+          detail: {
+            fullName: normalizedNames.fullName,
+            displayName: normalizedNames.displayName,
+          },
+        }),
+      );
       window.dispatchEvent(new CustomEvent("ficonter:profile-details-updated", { detail: normalized }));
       setModalOpen(false);
     } catch (error) {
@@ -187,6 +224,8 @@ export function ProfileIdentityDetailsForm({
       setSaving(false);
     }
   }
+
+  const detailsExist = hasAnyDetails(identityNames.fullName, identityNames.displayName, savedValues);
 
   const detailsCard = (
     <section
@@ -226,19 +265,25 @@ export function ProfileIdentityDetailsForm({
             color: "inherit",
           }}
         >
-          {hasAnyDetails(savedValues) ? <Pencil size={15} /> : <Plus size={15} />}
-          {hasAnyDetails(savedValues) ? "Edit details" : "Add details"}
+          {detailsExist ? <Pencil size={15} /> : <Plus size={15} />}
+          {detailsExist ? "Edit details" : "Add details"}
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0 28px" }}>
-        {detailRows(identityNames.fullName, identityNames.displayName, savedValues).map(([label, value]) => (
-          <div key={label} style={{ padding: "12px 0", borderBottom: "1px solid rgba(120,120,120,.14)" }}>
-            <div style={{ fontSize: 11, fontWeight: 750, opacity: .58, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
-            <div style={{ marginTop: 5, fontSize: 14, fontWeight: 600 }}>{value || "Not provided"}</div>
-          </div>
-        ))}
-      </div>
+      {detailsExist ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0 28px" }}>
+          {detailRows(identityNames.fullName, identityNames.displayName, savedValues).map(([label, value]) => (
+            <div key={label} style={{ padding: "12px 0", borderBottom: "1px solid rgba(120,120,120,.14)" }}>
+              <div style={{ fontSize: 11, fontWeight: 750, opacity: .58, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
+              <div style={{ marginTop: 5, fontSize: 14, fontWeight: 600 }}>{value || "Not provided"}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ padding: "8px 0", fontSize: 14, opacity: .68 }}>
+          No personal identity or address details have been added yet.
+        </div>
+      )}
     </section>
   );
 
@@ -266,7 +311,7 @@ export function ProfileIdentityDetailsForm({
             aria-label="Edit personal identity and address"
             onSubmit={save}
             style={{
-              width: "min(820px, 100%)",
+              width: "min(900px, 100%)",
               maxHeight: "calc(100vh - 36px)",
               overflowY: "auto",
               borderRadius: 22,
@@ -296,6 +341,32 @@ export function ProfileIdentityDetailsForm({
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
+              <label style={labelStyle}>
+                <span>Full name</span>
+                <input
+                  value={draftNames.fullName}
+                  onChange={(event) => {
+                    setDraftNames((current) => ({ ...current, fullName: event.target.value }));
+                    setFeedback(null);
+                  }}
+                  autoComplete="name"
+                  maxLength={120}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                <span>Display name</span>
+                <input
+                  value={draftNames.displayName}
+                  onChange={(event) => {
+                    setDraftNames((current) => ({ ...current, displayName: event.target.value }));
+                    setFeedback(null);
+                  }}
+                  autoComplete="nickname"
+                  maxLength={80}
+                  style={inputStyle}
+                />
+              </label>
               <label style={labelStyle}><span>Birthdate</span><input type="date" value={draftValues.birthDate} onChange={(event) => update("birthDate", event.target.value)} autoComplete="bday" style={inputStyle} /></label>
               <label style={labelStyle}><span>Country / region</span><select value={draftValues.country} onChange={(event) => update("country", event.target.value)} autoComplete="country-name" style={inputStyle}><option value="">Select country / region</option>{FICONTER_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
               <label style={labelStyle}><span>City</span><input value={draftValues.city} onChange={(event) => update("city", event.target.value)} autoComplete="address-level2" maxLength={120} style={inputStyle} /></label>

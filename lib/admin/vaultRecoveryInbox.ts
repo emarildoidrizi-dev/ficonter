@@ -2,6 +2,32 @@ import "server-only";
 
 import { createServiceClient } from "@/lib/supabase/admin";
 
+export async function attachRecoveryDeliveryState<T extends { id: string; documents: Array<{ id: string }> }>(cases: T[]) {
+  const service = createServiceClient() as any;
+  const documentIds = cases.flatMap((item) => item.documents.map((document) => document.id));
+  if (!documentIds.length) return cases;
+
+  const { data, error } = await service
+    .from("vault_recovery_documents")
+    .select("id,sent_to_customer_at,customer_signed_at,customer_signature_method")
+    .in("id", documentIds);
+  if (error) throw error;
+
+  const stateByDocument = new Map((data ?? []).map((item: any) => [item.id, item]));
+  return cases.map((item) => ({
+    ...item,
+    documents: item.documents.map((document) => {
+      const state = stateByDocument.get(document.id);
+      return {
+        ...document,
+        sentToCustomerAt: state?.sent_to_customer_at ?? null,
+        customerSignedAt: state?.customer_signed_at ?? null,
+        customerSignatureMethod: state?.customer_signature_method ?? null,
+      };
+    }),
+  }));
+}
+
 export async function sendRecoveryConsentToCustomer(input: {
   recoveryRequestId: string;
   actorId: string;

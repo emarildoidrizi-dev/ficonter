@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { FileCheck2, ShieldCheck } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
 
 type DeliveryDocument = VaultRecoveryCase["documents"][number] & {
@@ -39,7 +43,37 @@ const button: React.CSSProperties = {
   fontSize: 13,
 };
 
-export function VaultRecoveryRecords({ cases }: { cases: VaultRecoveryCase[] }) {
+export function VaultRecoveryRecords({ cases: initialCases }: { cases: VaultRecoveryCase[] }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [cases, setCases] = useState(initialCases);
+
+  useEffect(() => {
+    let active = true;
+
+    async function reload() {
+      const response = await fetch("/api/admin/vault-recovery", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json().catch(() => ({}));
+      if (active) setCases(data.cases ?? []);
+    }
+
+    const channel = supabase
+      .channel("admin-vault-recovery-records")
+      .on("postgres_changes", { event: "*", schema: "public", table: "vault_recovery_documents" }, () => void reload())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vault_recovery_requests" }, () => void reload())
+      .subscribe();
+
+    const fallback = window.setInterval(() => void reload(), 10000);
+    window.addEventListener("focus", reload);
+
+    return () => {
+      active = false;
+      window.clearInterval(fallback);
+      window.removeEventListener("focus", reload);
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
   const records = cases.filter((item) => {
     const latest = item.documents[0] as DeliveryDocument | undefined;
     return Boolean(latest?.customerSignedAt);

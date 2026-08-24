@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { PrintRecoveryConsentButton } from "@/components/PrintRecoveryConsentButton";
 import { requireAdmin } from "@/lib/admin/access";
-import { getVaultRecoveryConsentDocument } from "@/lib/admin/vaultRecovery";
+import { getRecoveryConsentView } from "@/lib/admin/recoveryDirectory";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,6 +20,11 @@ function formatGenerated(value: string) {
     timeZone: RECOVERY_DOCUMENT_TIME_ZONE,
     timeZoneName: "short",
   }).format(new Date(value));
+}
+
+function formatBirthDate(value: string | null) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
 const fieldLabel: React.CSSProperties = {
@@ -45,21 +50,24 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
   if (!admin) redirect("/dashboard");
 
   const { id } = await params;
-  const { request, document } = await getVaultRecoveryConsentDocument(id).catch(() => ({ request: null, document: null }));
+  const { request, document } = await getRecoveryConsentView(id).catch(() => ({ request: null, document: null }));
   if (!request || !document) notFound();
+
+  const address = [
+    request.customer_address_line1,
+    request.customer_address_line2,
+    [request.customer_postal_code, request.customer_city].filter(Boolean).join(" "),
+    request.country_region,
+  ].filter(Boolean).join(", ");
 
   return (
     <main className="consent-shell">
       <div className="no-print print-action"><PrintRecoveryConsentButton /></div>
-
       <article className="consent-document">
         <header className="letterhead">
           <div className="brand-line">
             <Image src="/ficonter-mark.svg" alt="FICONTER emblem" width={42} height={42} />
-            <div>
-              <div className="brand-name">FICONTER</div>
-              <div className="confidential">CONFIDENTIAL CUSTOMER AUTHORIZATION</div>
-            </div>
+            <div><div className="brand-name">FICONTER</div><div className="confidential">CONFIDENTIAL CUSTOMER AUTHORIZATION</div></div>
           </div>
           <div className="doc-ref">
             <div><strong>Document ID:</strong> {document.document_id}</div>
@@ -78,10 +86,13 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
           <div className="field-grid">
             <div><div style={fieldLabel}>Customer full name</div><div style={fieldValue}>{request.customer_name || ""}</div></div>
             <div><div style={fieldLabel}>Registered FICONTER email</div><div style={fieldValue}>{request.customer_email}</div></div>
+            <div><div style={fieldLabel}>Date of birth</div><div style={fieldValue}>{formatBirthDate(request.customer_birth_date)}</div></div>
             <div><div style={fieldLabel}>FICONTER account / user ID</div><div style={fieldValue}>{request.user_id}</div></div>
             <div><div style={fieldLabel}>Recovery request ID</div><div style={fieldValue}>{request.reference}</div></div>
-            <div><div style={fieldLabel}>Country / region</div><div style={fieldValue}>{request.country_region || ""}</div></div>
             <div><div style={fieldLabel}>Date request opened</div><div style={fieldValue}>{formatGenerated(request.created_at)}</div></div>
+            <div><div style={fieldLabel}>Country / region</div><div style={fieldValue}>{request.country_region || ""}</div></div>
+            <div><div style={fieldLabel}>City</div><div style={fieldValue}>{request.customer_city || ""}</div></div>
+            <div className="full-row"><div style={fieldLabel}>Residential address</div><div style={fieldValue}>{address}</div></div>
           </div>
         </section>
 
@@ -118,169 +129,35 @@ export default async function RecoveryConsentPage({ params }: { params: Promise<
           </div>
         </section>
 
-        <footer>
-          <div>FICONTER Vault Assisted Recovery</div>
-          <div>{document.document_id} · {request.reference}</div>
-        </footer>
+        <footer><div>FICONTER Vault Assisted Recovery</div><div>{document.document_id} · {request.reference}</div></footer>
       </article>
 
       <style>{`
-        .consent-shell {
-          width: 100%;
-          max-width: 860px;
-          margin: 24px auto 56px;
-          padding: 0 20px;
-          box-sizing: border-box;
-        }
-        .print-action {
-          display: flex;
-          justify-content: flex-end;
-          margin-bottom: 12px;
-        }
-        .consent-document {
-          width: 100%;
-          box-sizing: border-box;
-          background: #fff;
-          color: #1f1f1f;
-          padding: 34px 38px;
-          border: 1px solid #d8d8d8;
-          box-shadow: 0 8px 28px rgba(0,0,0,.06);
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: 13px;
-          line-height: 1.55;
-        }
-        .letterhead {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 20px;
-          padding-bottom: 14px;
-          border-bottom: 1px solid #222;
-        }
-        .brand-line {
-          display: flex;
-          align-items: center;
-          gap: 11px;
-        }
-        .brand-name {
-          font-size: 18px;
-          font-weight: 800;
-          letter-spacing: .04em;
-        }
-        .confidential {
-          margin-top: 2px;
-          font-size: 9px;
-          letter-spacing: .12em;
-          color: #666;
-        }
-        .doc-ref {
-          text-align: right;
-          font-size: 10.5px;
-          line-height: 1.55;
-          color: #4a4a4a;
-        }
-        .title-block {
-          padding: 24px 0 10px;
-        }
-        .title-block h1 {
-          margin: 0;
-          font-size: 20px;
-          line-height: 1.25;
-          font-weight: 700;
-          color: #111;
-        }
-        .title-block p {
-          margin: 6px 0 0;
-          color: #555;
-          font-size: 12.5px;
-        }
-        section {
-          margin-top: 22px;
-        }
-        section h2 {
-          margin: 0 0 9px;
-          font-size: 14px;
-          line-height: 1.3;
-          color: #111;
-          font-weight: 700;
-        }
-        section p {
-          margin: 0 0 9px;
-        }
-        .field-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 14px 24px;
-          margin-top: 10px;
-        }
-        .consent-list {
-          display: grid;
-          gap: 10px;
-          margin-top: 10px;
-        }
-        .consent-list label {
-          display: grid;
-          grid-template-columns: 16px 1fr;
-          gap: 8px;
-          align-items: start;
-        }
-        .box {
-          width: 12px;
-          height: 12px;
-          border: 1px solid #333;
-          display: inline-block;
-          margin-top: 3px;
-          box-sizing: border-box;
-        }
-        .signature-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 18px 28px;
-          margin-top: 18px;
-        }
-        .signature-line {
-          height: 32px;
-          border-bottom: 1px solid #555;
-        }
-        .signature-tall {
-          height: 46px;
-        }
-        footer {
-          display: flex;
-          justify-content: space-between;
-          gap: 16px;
-          margin-top: 34px;
-          padding-top: 10px;
-          border-top: 1px solid #bbb;
-          font-size: 9.5px;
-          color: #666;
-        }
-        @media (max-width: 700px) {
-          .consent-shell { padding: 0 10px; }
-          .consent-document { padding: 24px 20px; }
-          .letterhead { flex-direction: column; }
-          .doc-ref { text-align: left; }
-          .field-grid, .signature-grid { grid-template-columns: 1fr; }
-        }
-        @media print {
-          @page { size: A4; margin: 12mm 14mm; }
-          body { background: #fff !important; }
-          .no-print { display: none !important; }
-          .consent-shell {
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .consent-document {
-            border: 0 !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            font-size: 11.5px !important;
-          }
-          .title-block { padding-top: 16px !important; }
-          section { break-inside: avoid; margin-top: 16px !important; }
-          footer { margin-top: 24px !important; }
-        }
+        .consent-shell { width:100%; max-width:860px; margin:24px auto 56px; padding:0 20px; box-sizing:border-box; }
+        .print-action { display:flex; justify-content:flex-end; margin-bottom:12px; }
+        .consent-document { width:100%; box-sizing:border-box; background:#fff; color:#1f1f1f; padding:34px 38px; border:1px solid #d8d8d8; box-shadow:0 8px 28px rgba(0,0,0,.06); font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.55; }
+        .letterhead { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:14px; border-bottom:1px solid #222; }
+        .brand-line { display:flex; align-items:center; gap:11px; }
+        .brand-name { font-size:18px; font-weight:800; letter-spacing:.04em; }
+        .confidential { margin-top:2px; font-size:9px; letter-spacing:.12em; color:#666; }
+        .doc-ref { text-align:right; font-size:10.5px; line-height:1.55; color:#4a4a4a; }
+        .title-block { padding:24px 0 10px; }
+        .title-block h1 { margin:0; font-size:20px; line-height:1.25; font-weight:700; color:#111; }
+        .title-block p { margin:6px 0 0; color:#555; font-size:12.5px; }
+        section { margin-top:22px; }
+        section h2 { margin:0 0 9px; font-size:14px; line-height:1.3; color:#111; font-weight:700; }
+        section p { margin:0 0 9px; }
+        .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; margin-top:10px; }
+        .full-row { grid-column:1 / -1; }
+        .consent-list { display:grid; gap:10px; margin-top:10px; }
+        .consent-list label { display:grid; grid-template-columns:16px 1fr; gap:8px; align-items:start; }
+        .box { width:12px; height:12px; border:1px solid #333; display:inline-block; margin-top:3px; box-sizing:border-box; }
+        .signature-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 28px; margin-top:18px; }
+        .signature-line { height:32px; border-bottom:1px solid #555; }
+        .signature-tall { height:46px; }
+        footer { display:flex; justify-content:space-between; gap:16px; margin-top:34px; padding-top:10px; border-top:1px solid #bbb; font-size:9.5px; color:#666; }
+        @media (max-width:700px) { .consent-shell{padding:0 10px}.consent-document{padding:24px 20px}.letterhead{flex-direction:column}.doc-ref{text-align:left}.field-grid,.signature-grid{grid-template-columns:1fr}.full-row{grid-column:auto} }
+        @media print { @page{size:A4;margin:12mm 14mm} body{background:#fff!important}.no-print{display:none!important}.consent-shell{max-width:none!important;margin:0!important;padding:0!important}.consent-document{border:0!important;box-shadow:none!important;padding:0!important;font-size:11.5px!important}.title-block{padding-top:16px!important}section{break-inside:avoid;margin-top:16px!important}footer{margin-top:24px!important} }
       `}</style>
     </main>
   );

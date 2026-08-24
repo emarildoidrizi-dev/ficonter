@@ -121,9 +121,7 @@ export async function updateVaultRecoveryCase(input: {
 }) {
   const service = createServiceClient() as any;
   const customerEmail = input.customerEmail?.trim().toLowerCase() ?? "";
-  if (!customerEmail || !customerEmail.includes("@")) {
-    throw new Error("A valid recovery contact email is required.");
-  }
+  if (!customerEmail || !customerEmail.includes("@")) throw new Error("A valid recovery contact email is required.");
 
   const patch = {
     customer_email: customerEmail,
@@ -135,12 +133,7 @@ export async function updateVaultRecoveryCase(input: {
   };
   const { data, error } = await service.from("vault_recovery_requests").update(patch).eq("id", input.recoveryRequestId).select("id").single();
   if (error) throw error;
-  await service.from("vault_recovery_case_audit").insert({
-    recovery_request_id: data.id,
-    action: "updated",
-    actor_id: input.actorId,
-    details: { fields: ["customer_email", "customer_name", "country_region", "internal_notes"] },
-  });
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: "updated", actor_id: input.actorId, details: { fields: ["customer_email", "customer_name", "country_region", "internal_notes"] } });
   return data;
 }
 
@@ -158,6 +151,36 @@ export async function setVaultRecoveryCaseArchived(input: { recoveryRequestId: s
   return data;
 }
 
+export async function deleteVaultRecoveryCase(input: { recoveryRequestId: string }) {
+  const service = createServiceClient() as any;
+  const { data: request, error: requestError } = await service
+    .from("vault_recovery_requests")
+    .select("id,status,archived_at")
+    .eq("id", input.recoveryRequestId)
+    .single();
+  if (requestError) throw requestError;
+  if (!request.archived_at) throw new Error("Archive the case before deleting it permanently.");
+  if (["approved", "recovery_issued", "completed"].includes(request.status)) {
+    throw new Error("Approved or completed recovery records cannot be permanently deleted.");
+  }
+
+  const { data: documents, error: documentError } = await service
+    .from("vault_recovery_documents")
+    .select("signed_storage_path")
+    .eq("recovery_request_id", input.recoveryRequestId)
+    .not("signed_storage_path", "is", null);
+  if (documentError) throw documentError;
+
+  const paths = (documents ?? []).map((document: any) => document.signed_storage_path).filter(Boolean);
+  if (paths.length) {
+    const { error: removeError } = await service.storage.from("vault-recovery-consents").remove(paths);
+    if (removeError) throw removeError;
+  }
+
+  const { error } = await service.from("vault_recovery_requests").delete().eq("id", input.recoveryRequestId);
+  if (error) throw error;
+}
+
 export async function setVaultRecoveryCaseStatus(input: {
   recoveryRequestId: string;
   actorId: string;
@@ -173,9 +196,7 @@ export async function setVaultRecoveryCaseStatus(input: {
   if (current.archived_at) throw new Error("Restore the case before changing its workflow status.");
 
   const allowed = ALLOWED_RECOVERY_TRANSITIONS[current.status] ?? [];
-  if (!allowed.includes(input.status)) {
-    throw new Error(`Cannot move recovery case from ${current.status} to ${input.status}.`);
-  }
+  if (!allowed.includes(input.status)) throw new Error(`Cannot move recovery case from ${current.status} to ${input.status}.`);
 
   if (input.status === "consent_signed") {
     const { data: latestDocument, error: documentError } = await service
@@ -186,9 +207,7 @@ export async function setVaultRecoveryCaseStatus(input: {
       .limit(1)
       .maybeSingle();
     if (documentError) throw documentError;
-    if (!latestDocument?.signed_storage_path) {
-      throw new Error("Upload the signed customer consent document before marking consent as signed.");
-    }
+    if (!latestDocument?.signed_storage_path) throw new Error("Upload the signed customer consent document before marking consent as signed.");
   }
 
   const now = new Date().toISOString();
@@ -200,13 +219,7 @@ export async function setVaultRecoveryCaseStatus(input: {
     .single();
   if (error) throw error;
 
-  await service.from("vault_recovery_case_audit").insert({
-    recovery_request_id: data.id,
-    action: `status_${input.status}`,
-    actor_id: input.actorId,
-    details: { from: current.status, to: input.status },
-  });
-
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: data.id, action: `status_${input.status}`, actor_id: input.actorId, details: { from: current.status, to: input.status } });
   return data;
 }
 
@@ -219,9 +232,7 @@ export async function generateVaultRecoveryConsentDocument(input: { recoveryRequ
     .single();
   if (requestError) throw requestError;
   if (request.archived_at) throw new Error("Restore the case before generating a consent document.");
-  if (!["verification_pending", "consent_pending"].includes(request.status)) {
-    throw new Error("Identity verification must be started before generating the consent document.");
-  }
+  if (!["verification_pending", "consent_pending"].includes(request.status)) throw new Error("Identity verification must be started before generating the consent document.");
 
   const { data: document, error } = await service
     .from("vault_recovery_documents")
@@ -230,18 +241,8 @@ export async function generateVaultRecoveryConsentDocument(input: { recoveryRequ
     .single();
   if (error) throw error;
 
-  await service
-    .from("vault_recovery_requests")
-    .update({ status: "consent_pending", updated_at: new Date().toISOString() })
-    .eq("id", request.id);
-
-  await service.from("vault_recovery_case_audit").insert({
-    recovery_request_id: request.id,
-    action: "consent_document_generated",
-    actor_id: input.generatedBy,
-    details: { document_id: document.document_id },
-  });
-
+  await service.from("vault_recovery_requests").update({ status: "consent_pending", updated_at: new Date().toISOString() }).eq("id", request.id);
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: request.id, action: "consent_document_generated", actor_id: input.generatedBy, details: { document_id: document.document_id } });
   return document;
 }
 
@@ -278,20 +279,16 @@ export async function uploadSignedVaultRecoveryConsent(input: {
 
   const extension = input.mimeType === "application/pdf" ? "pdf" : input.mimeType === "image/png" ? "png" : "jpg";
   const storagePath = `${input.recoveryRequestId}/${document.id}/signed-consent-${Date.now()}.${extension}`;
-  const { error: uploadError } = await service.storage
-    .from("vault-recovery-consents")
-    .upload(storagePath, input.bytes, { contentType: input.mimeType, upsert: false });
+  const { error: uploadError } = await service.storage.from("vault-recovery-consents").upload(storagePath, input.bytes, { contentType: input.mimeType, upsert: false });
   if (uploadError) throw uploadError;
 
-  if (document.signed_storage_path) {
-    await service.storage.from("vault-recovery-consents").remove([document.signed_storage_path]);
-  }
+  if (document.signed_storage_path) await service.storage.from("vault-recovery-consents").remove([document.signed_storage_path]);
 
   const now = new Date().toISOString();
   const { error: updateError } = await service
     .from("vault_recovery_documents")
     .update({
-      status: "signed_uploaded",
+      status: "signed",
       signed_storage_path: storagePath,
       signed_file_name: input.fileName,
       signed_mime_type: input.mimeType,
@@ -301,15 +298,12 @@ export async function uploadSignedVaultRecoveryConsent(input: {
       signed_at: now,
     })
     .eq("id", document.id);
-  if (updateError) throw updateError;
+  if (updateError) {
+    await service.storage.from("vault-recovery-consents").remove([storagePath]);
+    throw updateError;
+  }
 
-  await service.from("vault_recovery_case_audit").insert({
-    recovery_request_id: input.recoveryRequestId,
-    action: "signed_consent_uploaded",
-    actor_id: input.uploadedBy,
-    details: { document_id: document.document_id, file_name: input.fileName },
-  });
-
+  await service.from("vault_recovery_case_audit").insert({ recovery_request_id: input.recoveryRequestId, action: "signed_consent_uploaded", actor_id: input.uploadedBy, details: { document_id: document.document_id, file_name: input.fileName } });
   return { documentId: document.document_id };
 }
 
@@ -326,9 +320,7 @@ export async function createSignedVaultRecoveryConsentUrl(recoveryRequestId: str
   if (error) throw error;
   if (!document?.signed_storage_path) throw new Error("No signed consent document has been uploaded for this case.");
 
-  const { data, error: signedUrlError } = await service.storage
-    .from("vault-recovery-consents")
-    .createSignedUrl(document.signed_storage_path, 60);
+  const { data, error: signedUrlError } = await service.storage.from("vault-recovery-consents").createSignedUrl(document.signed_storage_path, 60);
   if (signedUrlError) throw signedUrlError;
   return data.signedUrl;
 }
@@ -336,18 +328,8 @@ export async function createSignedVaultRecoveryConsentUrl(recoveryRequestId: str
 export async function getVaultRecoveryConsentDocument(recoveryRequestId: string) {
   const service = createServiceClient() as any;
   const [{ data: request, error: requestError }, { data: document, error: documentError }] = await Promise.all([
-    service
-      .from("vault_recovery_requests")
-      .select("id,reference,user_id,customer_email,customer_name,country_region,status,created_at")
-      .eq("id", recoveryRequestId)
-      .single(),
-    service
-      .from("vault_recovery_documents")
-      .select("id,document_id,recovery_request_id,generated_at,status")
-      .eq("recovery_request_id", recoveryRequestId)
-      .order("generated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    service.from("vault_recovery_requests").select("id,reference,user_id,customer_email,customer_name,country_region,status,created_at").eq("id", recoveryRequestId).single(),
+    service.from("vault_recovery_documents").select("id,document_id,recovery_request_id,generated_at,status").eq("recovery_request_id", recoveryRequestId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (requestError) throw requestError;
   if (documentError) throw documentError;

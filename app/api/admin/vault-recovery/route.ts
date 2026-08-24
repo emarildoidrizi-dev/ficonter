@@ -11,6 +11,7 @@ import {
   listVaultRecoveryCases,
   setVaultRecoveryCaseStatus,
 } from "@/lib/admin/vaultRecovery";
+import { attachRecoveryDeliveryState } from "@/lib/admin/vaultRecoveryInbox";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,11 @@ export async function GET() {
   const { user, admin } = await requireAdmin();
   if (!user || !admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const [customers, cases] = await Promise.all([listRecoveryDirectoryCustomers(), listVaultRecoveryCases()]);
+    const [customers, rawCases] = await Promise.all([
+      listRecoveryDirectoryCustomers(),
+      listVaultRecoveryCases(),
+    ]);
+    const cases = await attachRecoveryDeliveryState(rawCases as any[]);
     return NextResponse.json({ customers, cases });
   } catch (error) {
     console.error("Vault recovery admin list failed", error);

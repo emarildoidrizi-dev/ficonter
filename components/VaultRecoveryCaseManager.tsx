@@ -301,8 +301,13 @@ export function VaultRecoveryCaseManager({
           {signedUploaded && !electronicallySigned ? <div style={{ marginTop: 5, fontSize: 13 }}><FileCheck2 size={14} style={{ verticalAlign: "-2px", marginRight: 6 }}/>{latest.signedFileName}</div> : null}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer">Open document</a>
-          {electronicallySigned ? <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/signed`} target="_blank" rel="noreferrer">View signed document</a> : signedUploaded ? <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/api/admin/vault-recovery/${item.id}/signed-consent`} target="_blank" rel="noreferrer">Open signed copy</a> : null}
+          {electronicallySigned ? (
+            <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/signed`} target="_blank" rel="noreferrer">View signed consent</a>
+          ) : signedUploaded ? (
+            <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/api/admin/vault-recovery/${item.id}/signed-consent`} target="_blank" rel="noreferrer">Open signed copy</a>
+          ) : (
+            <a style={{ ...buttonStyle, textDecoration: "none" }} href={`/dashboard/admin/support/vault-recovery/${item.id}/consent`} target="_blank" rel="noreferrer">Open consent document</a>
+          )}
         </div>
       </div> : null}
       {!archived ? <div style={{ marginTop: 15, paddingTop: 14, borderTop: "1px solid rgba(120,120,120,.14)" }}><div style={{ fontSize: 11, fontWeight: 750, opacity: .58, marginBottom: 8 }}>NEXT STEP</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{primaryAction(item)}</div></div> : null}

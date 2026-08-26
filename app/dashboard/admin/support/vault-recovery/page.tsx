@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/access";
 import { listRecoveryDirectoryCustomers } from "@/lib/admin/recoveryDirectory";
 import { listVaultRecoveryCases } from "@/lib/admin/vaultRecovery";
 import { attachRecoveryDeliveryState } from "@/lib/admin/vaultRecoveryInbox";
+import { attachRecoveryAccessState } from "@/lib/admin/vaultRecoveryAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,7 +18,8 @@ export default async function VaultRecoveryAdminPage() {
     listRecoveryDirectoryCustomers(),
     listVaultRecoveryCases(),
   ]);
-  const cases = await attachRecoveryDeliveryState(rawCases as any[]);
+  const deliveryCases = await attachRecoveryDeliveryState(rawCases as any[]);
+  const cases = await attachRecoveryAccessState(deliveryCases as any[]);
 
   return <VaultRecoveryCaseManager initialCustomers={customers} initialCases={cases as any} />;
 }

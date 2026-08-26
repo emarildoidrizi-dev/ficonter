@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
 import { deleteVaultRecoveryCase, setVaultRecoveryCaseArchived, setVaultRecoveryCaseStatus, updateVaultRecoveryCase } from "@/lib/admin/vaultRecovery";
+import { revokeActiveVaultRecoveryAccess } from "@/lib/admin/vaultRecoveryAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     };
 
     if (body.action === "archive" || body.action === "restore") {
+      if (body.action === "archive") {
+        await revokeActiveVaultRecoveryAccess({ recoveryRequestId: id, actorId: user.id });
+      }
       await setVaultRecoveryCaseArchived({ recoveryRequestId: id, actorId: user.id, archived: body.action === "archive" });
       return NextResponse.json({ ok: true });
     }
@@ -33,6 +37,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         internalNotes: body.internalNotes,
       });
       return NextResponse.json({ ok: true });
+    }
+
+    if (body.action === "cancel") {
+      await revokeActiveVaultRecoveryAccess({ recoveryRequestId: id, actorId: user.id });
     }
 
     const statusByAction = {

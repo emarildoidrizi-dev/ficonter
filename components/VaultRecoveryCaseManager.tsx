@@ -21,6 +21,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { RecoveryDirectoryCustomer } from "@/lib/admin/recoveryDirectory";
 import type { VaultRecoveryCase } from "@/lib/admin/vaultRecovery";
+import { VaultRecoveryDeleteDialog } from "./VaultRecoveryDeleteDialog";
 
 const cardStyle: React.CSSProperties = {
   border: "1px solid rgba(120,120,120,.18)",
@@ -73,6 +74,7 @@ export function VaultRecoveryCaseManager({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [uploadingCaseId, setUploadingCaseId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<VaultRecoveryCase | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId) ?? null;
@@ -187,13 +189,14 @@ export function VaultRecoveryCaseManager({
   }
 
   async function deleteCase(item: VaultRecoveryCase) {
-    if (busy || !window.confirm(`Permanently delete ${item.reference}? This cannot be undone.`)) return;
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
       const response = await fetch(`/api/admin/vault-recovery/${item.id}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not delete recovery case.");
+      setPendingDelete(null);
       await loadLatest();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete recovery case.");
@@ -315,7 +318,7 @@ export function VaultRecoveryCaseManager({
         {!archived && !terminal && item.status !== "approved" ? <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "reject" })}><XCircle size={14}/>Reject</button> : null}
         {!archived && !terminal ? <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "cancel" })}><Ban size={14}/>Cancel</button> : null}
         {archived ? <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "restore" })}><RotateCcw size={14}/>Restore</button> : <button style={buttonStyle} disabled={busy} onClick={() => void patchCase(item.id, { action: "archive" })}><Archive size={14}/>Archive</button>}
-        {archived ? <button style={{ ...buttonStyle, borderColor: "rgba(180,50,50,.45)" }} disabled={busy} onClick={() => void deleteCase(item)}><Trash2 size={14}/>Delete permanently</button> : null}
+        {archived ? <button style={{ ...buttonStyle, borderColor: "rgba(180,50,50,.45)" }} disabled={busy} onClick={() => setPendingDelete(item)}><Trash2 size={14}/>Delete permanently</button> : null}
       </div>
     </article>;
   }
@@ -348,5 +351,14 @@ export function VaultRecoveryCaseManager({
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 11 }}><h2 style={{ margin: 0, fontSize: 20 }}>Active cases ({activeCases.length})</h2><button style={buttonStyle} disabled={busy} onClick={() => void refresh()}><RefreshCw size={14}/>Refresh</button></div>
     <div style={{ display: "grid", gap: 13 }}>{activeCases.map((item) => renderCase(item))}{!activeCases.length ? <div style={{ ...cardStyle, textAlign: "center", opacity: .62 }}>No active recovery cases.</div> : null}</div>
     <details style={{ marginTop: 26 }}><summary style={{ cursor: "pointer", fontWeight: 750 }}>Archived cases ({archivedCases.length})</summary><div style={{ display: "grid", gap: 13, marginTop: 12 }}>{archivedCases.map((item) => renderCase(item, true))}</div></details>
+
+    <VaultRecoveryDeleteDialog
+      open={Boolean(pendingDelete)}
+      reference={pendingDelete?.reference ?? ""}
+      customerName={pendingDelete?.customerName ?? ""}
+      busy={busy}
+      onCancel={() => { if (!busy) setPendingDelete(null); }}
+      onConfirm={() => { if (pendingDelete) void deleteCase(pendingDelete); }}
+    />
   </section>;
 }

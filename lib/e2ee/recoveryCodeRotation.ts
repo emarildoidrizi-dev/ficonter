@@ -6,8 +6,15 @@
 // - Readable Vault-key bytes exist only transiently in the customer's browser.
 // - The readable Vault key is never sent to FICONTER or Supabase.
 // - The old recovery code becomes unable to unwrap the newly persisted envelope.
+// - When configured, an emergency recovery envelope is created from the SAME raw key
+//   using only the managed recovery service's public key.
 
 import type { WrappedVaultKeyEnvelopeV1 } from "@/lib/e2ee/vault";
+import {
+  createEmergencyRecoveryEnvelope,
+  type EmergencyRecoveryEnvelopeV1,
+  type EmergencyRecoveryPublicKeyV1,
+} from "@/lib/e2ee/emergencyRecoveryEnvelope";
 
 const RECOVERY_PREFIX = "FICONTER-RECOVERY-1.";
 const textEncoder = new TextEncoder();
@@ -16,6 +23,7 @@ type RotatedRecoveryMaterial = {
   vaultKey: CryptoKey;
   recoveryCode: string;
   wrappedVaultKey: WrappedVaultKeyEnvelopeV1;
+  emergencyRecoveryEnvelope: EmergencyRecoveryEnvelopeV1 | null;
 };
 
 function requireWebCrypto(): Crypto {
@@ -129,10 +137,12 @@ export async function rotateRecoveryCodeForSameVaultKey({
   userId,
   currentRecoveryCode,
   envelope,
+  emergencyRecoveryPublicKey,
 }: {
   userId: string;
   currentRecoveryCode: string;
   envelope: WrappedVaultKeyEnvelopeV1;
+  emergencyRecoveryPublicKey?: EmergencyRecoveryPublicKeyV1 | null;
 }): Promise<RotatedRecoveryMaterial> {
   if (!userId) throw new Error("User ID is required.");
   assertEnvelope(envelope);
@@ -192,6 +202,14 @@ export async function rotateRecoveryCodeForSameVaultKey({
       toArrayBuffer(rawVaultKey),
     );
 
+    const emergencyRecoveryEnvelope = emergencyRecoveryPublicKey
+      ? await createEmergencyRecoveryEnvelope({
+          userId,
+          rawVaultKey,
+          publicKey: emergencyRecoveryPublicKey,
+        })
+      : null;
+
     const vaultKey = await importVaultKey(rawVaultKey);
 
     return {
@@ -205,6 +223,7 @@ export async function rotateRecoveryCodeForSameVaultKey({
         iv: bytesToBase64Url(replacementIv),
         ct: bytesToBase64Url(new Uint8Array(wrapped)),
       },
+      emergencyRecoveryEnvelope,
     };
   } finally {
     currentSecret.fill(0);

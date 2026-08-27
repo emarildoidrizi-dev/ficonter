@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCustomerVaultRecoveryAccess } from "@/lib/vaultRecovery/customerAccess";
-import { VaultRecoveryCustomerAccess } from "@/components/VaultRecoveryCustomerAccess";
+import { VaultRecoveryCustomerAccessV2 } from "@/components/VaultRecoveryCustomerAccessV2";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,7 +44,7 @@ export default async function CustomerVaultRecoveryPage({
         </section>
 
         <section style={{ borderTop: "1px solid rgba(120,120,120,.16)", paddingTop: 20 }}>
-          <VaultRecoveryCustomerAccess recoveryRequestId={recovery.requestId} initialAccess={recovery.access} />
+          <VaultRecoveryCustomerAccessV2 recoveryRequestId={recovery.requestId} initialAccess={recovery.access} />
         </section>
 
         <section style={{ padding: 16, borderRadius: 14, background: "rgba(120,120,120,.06)", fontSize: 13, lineHeight: 1.65 }}>

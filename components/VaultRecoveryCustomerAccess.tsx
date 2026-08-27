@@ -6,6 +6,7 @@ import type { CustomerRecoveryAccessState } from "@/lib/vaultRecovery/customerAc
 import { createClient } from "@/lib/supabase/client";
 import { rotateRecoveryCodeForSameVaultKey } from "@/lib/e2ee/recoveryCodeRotation";
 import type { WrappedVaultKeyEnvelopeV1 } from "@/lib/e2ee/vault";
+import type { EmergencyRecoveryPublicKeyV1 } from "@/lib/e2ee/emergencyRecoveryEnvelope";
 import { setActiveVaultKey } from "@/lib/e2ee/sessionKey";
 import { rememberVaultKeyForBrowserSession } from "@/lib/e2ee/browserVaultSession";
 
@@ -105,30 +106,58 @@ export function VaultRecoveryCustomerAccess({
         throw new Error("Financial Vault could not be found.");
       }
 
+      const accessResponse = await fetch(`/api/vault-recovery/${recoveryRequestId}/access`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const accessData = await accessResponse.json();
+      if (!accessResponse.ok) {
+        throw new Error(accessData.error ?? "Recovery Access could not be verified.");
+      }
+
+      const recoveryPublicKey = accessData.recoveryPublicKey as EmergencyRecoveryPublicKeyV1 | null;
+      if (!recoveryPublicKey) {
+        throw new Error("Assisted Recovery protection is not configured yet. No Vault changes were made.");
+      }
+
+      const expectedRecoveryVersion = Math.max(1, Number(vaultRecord.recovery_version ?? 1));
       const rotated = await rotateRecoveryCodeForSameVaultKey({
         userId: user.id,
         currentRecoveryCode: currentRecoveryCode.trim(),
         envelope: vaultRecord.wrapped_vault_key as WrappedVaultKeyEnvelopeV1,
+        emergencyRecoveryPublicKey: recoveryPublicKey,
       });
 
-      const nextRecoveryVersion = Math.max(1, Number(vaultRecord.recovery_version ?? 1)) + 1;
-      const { error: updateError } = await supabase
-        .from("user_financial_vaults")
-        .update({
-          wrapped_vault_key: rotated.wrappedVaultKey,
-          recovery_version: nextRecoveryVersion,
-          vault_status: "active",
-          last_unlocked_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
+      if (!rotated.emergencyRecoveryEnvelope) {
+        throw new Error("Emergency recovery protection could not be created.");
+      }
 
-      if (updateError) throw updateError;
+      const completionResponse = await fetch(
+        `/api/vault-recovery/${recoveryRequestId}/complete-bootstrap`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expectedRecoveryVersion,
+            wrappedVaultKey: rotated.wrappedVaultKey,
+            emergencyEnvelope: rotated.emergencyRecoveryEnvelope,
+          }),
+        },
+      );
+      const completionData = await completionResponse.json();
+      if (!completionResponse.ok) {
+        throw new Error(completionData.error ?? "Vault recovery bootstrap could not be completed.");
+      }
 
       setActiveVaultKey(rotated.vaultKey);
       await rememberVaultKeyForBrowserSession(user.id, rotated.vaultKey);
       setCurrentRecoveryCode("");
       setReplacementRecoveryCode(rotated.recoveryCode);
+      setAccess((previous) => previous ? {
+        ...previous,
+        status: "completed",
+        effectiveStatus: "completed",
+      } : previous);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recovery credential could not be rotated.");
     } finally {
@@ -169,10 +198,10 @@ export function VaultRecoveryCustomerAccess({
         <div style={{ border: "1px solid rgba(41,120,88,.28)", borderRadius: 14, padding: 16, display: "grid", gap: 14 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <CheckCircle2 size={20} />
-            <div><strong>Recovery Access claimed</strong><div style={{ marginTop: 4, fontSize: 13, opacity: .72 }}>For this staging migration test, enter the current recovery code once. Your browser will recover the same Vault key, generate a brand-new recovery code, and replace the old wrapped-key envelope. The readable Vault key never leaves this device.</div>{access.claimedAt ? <div style={{ marginTop: 6, fontSize: 12, opacity: .58 }}>Claimed {fmt(access.claimedAt)}</div> : null}</div>
+            <div><strong>Recovery Access claimed</strong><div style={{ marginTop: 4, fontSize: 13, opacity: .72 }}>For this staging bootstrap, enter the current recovery code once. Your browser will recover the same Vault key, generate a replacement recovery code, and create an emergency recovery envelope using only FICONTER's managed recovery public key. The readable Vault key never leaves this device.</div>{access.claimedAt ? <div style={{ marginTop: 6, fontSize: 12, opacity: .58 }}>Claimed {fmt(access.claimedAt)}</div> : null}</div>
           </div>
           <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="current-vault-recovery-code" style={{ fontSize: 12, fontWeight: 800 }}>Current recovery code — staging bootstrap only</label>
+            <label htmlFor="current-vault-recovery-code" style={{ fontSize: 12, fontWeight: 800 }}>Current recovery code — one-time bootstrap</label>
             <input
               id="current-vault-recovery-code"
               type="password"
@@ -192,7 +221,7 @@ export function VaultRecoveryCustomerAccess({
               onClick={() => void rotateRecoveryCredential()}
             >
               {busy ? <LoaderCircle size={17} /> : <KeyRound size={17} />}
-              {busy ? "Rotating…" : "Generate replacement recovery code"}
+              {busy ? "Protecting Vault…" : "Generate replacement recovery code"}
             </button>
           </div>
         </div>
@@ -200,9 +229,9 @@ export function VaultRecoveryCustomerAccess({
 
       {replacementRecoveryCode ? (
         <div style={{ border: "1px solid rgba(41,120,88,.34)", borderRadius: 14, padding: 18, display: "grid", gap: 12 }}>
-          <div><strong>New recovery code generated</strong><div style={{ marginTop: 5, fontSize: 13, opacity: .72 }}>Save this code now. The previous recovery code can no longer unlock the newly wrapped Vault key. This code is shown only in this browser state.</div></div>
+          <div><strong>Vault recovery protection activated</strong><div style={{ marginTop: 5, fontSize: 13, opacity: .72 }}>Save this new recovery code now. The previous recovery code can no longer unlock the active wrapped Vault key. The same underlying Vault key was preserved, and an encrypted emergency recovery envelope was stored for future Assisted Recovery.</div></div>
           <code style={{ padding: 14, borderRadius: 10, background: "rgba(41,120,88,.08)", overflowWrap: "anywhere", userSelect: "all" }}>{replacementRecoveryCode}</code>
-          <div style={{ fontSize: 12, opacity: .65 }}>Important: this staging step proves same-key credential rotation. True Assisted Recovery after the old code is completely lost still requires the emergency recovery envelope that we are adding next.</div>
+          <div style={{ fontSize: 12, opacity: .65 }}>FICONTER staff cannot read the Vault key from the stored envelope. Future lost-code recovery must pass the approved Recovery Access flow and the managed KMS/HSM recovery boundary.</div>
         </div>
       ) : null}
 
@@ -214,7 +243,11 @@ export function VaultRecoveryCustomerAccess({
         <div style={{ border: "1px solid rgba(170,60,60,.28)", borderRadius: 14, padding: 16 }}><strong>Recovery Access {status}</strong><div style={{ marginTop: 4, fontSize: 13, opacity: .7 }}>This authorization cannot be used. Contact FICONTER Support if recovery still needs to continue.</div></div>
       ) : null}
 
-      <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 12, opacity: .62 }}><ShieldCheck size={16} style={{ flex: "0 0 auto" }} /><span>Recovery authorization and Vault decryption are separate security steps. The same Vault encryption key is preserved when the recovery credential is rotated.</span></div>
+      {status === "completed" && !replacementRecoveryCode ? (
+        <div style={{ border: "1px solid rgba(41,120,88,.28)", borderRadius: 14, padding: 16 }}><strong>Recovery Access completed</strong><div style={{ marginTop: 4, fontSize: 13, opacity: .7 }}>This one-time authorization has already been consumed and cannot be reused.</div></div>
+      ) : null}
+
+      <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 12, opacity: .62 }}><ShieldCheck size={16} style={{ flex: "0 0 auto" }} /><span>Recovery authorization and Vault decryption remain separate security steps. Assisted Recovery preserves the existing Vault encryption key instead of creating an empty Vault.</span></div>
       {error ? <div role="alert" style={{ padding: 12, borderRadius: 10, background: "rgba(180,50,50,.08)" }}>{error}</div> : null}
     </div>
   );

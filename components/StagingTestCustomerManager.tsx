@@ -53,6 +53,27 @@ export function StagingTestCustomerManager() {
     }
   }
 
+  async function resetPassword() {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/test-customer", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json().catch(() => ({}))) as StatusPayload;
+      if (!response.ok) throw new Error(data.error || "Could not reset the test password.");
+      setState({ ...data, exists: true });
+      setMessage("Test password reset. Use the new one-time password shown above.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not reset the test password.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteCustomer() {
     if (busy) return;
     setBusy(true);
@@ -99,7 +120,7 @@ export function StagingTestCustomerManager() {
         </div>
         <h1 style={{ margin: "8px 0 6px" }}>Recovery test customer</h1>
         <p style={{ margin: 0, opacity: .72, lineHeight: 1.6 }}>
-          Creates one disposable, email-confirmed customer account for the E2EE assisted-recovery test. This utility is blocked outside the staging Supabase project and requires Owner or Super Admin access.
+          Creates one disposable, email-confirmed customer account for the E2E assisted-recovery test. This utility is blocked outside the staging Supabase project and requires Owner or Super Admin access.
         </p>
       </div>
 
@@ -123,14 +144,19 @@ export function StagingTestCustomerManager() {
               {busy ? "Creating…" : "Create test customer"}
             </button>
           ) : (
-            <button
-              type="button"
-              style={{ ...button, borderColor: "rgba(180,50,50,.45)" }}
-              disabled={busy}
-              onClick={() => void deleteCustomer()}
-            >
-              {busy ? "Deleting…" : "Delete test customer"}
-            </button>
+            <>
+              <button type="button" style={button} disabled={busy} onClick={() => void resetPassword()}>
+                {busy ? "Resetting…" : "Reset test password"}
+              </button>
+              <button
+                type="button"
+                style={{ ...button, borderColor: "rgba(180,50,50,.45)" }}
+                disabled={busy}
+                onClick={() => void deleteCustomer()}
+              >
+                {busy ? "Deleting…" : "Delete test customer"}
+              </button>
+            </>
           )}
           <button type="button" style={button} disabled={busy} onClick={() => void refresh()}>
             Refresh

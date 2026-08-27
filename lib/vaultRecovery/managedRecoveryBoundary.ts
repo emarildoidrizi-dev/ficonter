@@ -57,7 +57,8 @@ export async function rewrapVaultKeyForCustomer(input: RewrapInput): Promise<Cus
         },
         source: {
           envelope: input.emergencyEnvelope,
-          label: `ficonter:assisted-recovery:${input.userId}:v1`,
+          payloadFormat: "FICONTER-VRK-1",
+          userBinding: "SHA-256-FICONTER-USER-ID",
         },
         destination: {
           alg: input.customerAlgorithm,

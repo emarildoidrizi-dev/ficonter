@@ -7,7 +7,15 @@
 // - The private recovery key must live behind a managed KMS/HSM boundary.
 // - Supabase stores only the ciphertext envelope and metadata.
 // - This module intentionally contains no private-key decryption path.
+//
+// Payload V1 before RSA-OAEP encryption:
+//   byte 0      = version 0x01
+//   bytes 1-32  = SHA-256(FICONTER user id)
+//   bytes 33-64 = raw 256-bit Vault key
+// This provides customer-context binding without relying on an OAEP label,
+// because many managed KMS products do not support custom RSA-OAEP labels.
 
+const RECOVERY_PAYLOAD_VERSION = 1;
 const textEncoder = new TextEncoder();
 
 export type EmergencyRecoveryPublicKeyV1 = {
@@ -45,8 +53,18 @@ function bytesToBase64Url(bytes: Uint8Array): string {
     .replace(/=+$/g, "");
 }
 
-function recoveryLabel(userId: string): Uint8Array {
-  return textEncoder.encode(`ficonter:assisted-recovery:${userId}:v1`);
+async function createRecoveryPayload(userId: string, rawVaultKey: Uint8Array): Promise<Uint8Array> {
+  const userHashBuffer = await requireWebCrypto().subtle.digest(
+    "SHA-256",
+    toArrayBuffer(textEncoder.encode(userId)),
+  );
+  const userHash = new Uint8Array(userHashBuffer);
+  const payload = new Uint8Array(65);
+  payload[0] = RECOVERY_PAYLOAD_VERSION;
+  payload.set(userHash, 1);
+  payload.set(rawVaultKey, 33);
+  userHash.fill(0);
+  return payload;
 }
 
 function assertPublicKey(input: EmergencyRecoveryPublicKeyV1) {
@@ -77,31 +95,33 @@ export async function createEmergencyRecoveryEnvelope({
 
   assertPublicKey(publicKey);
   const cryptoApi = requireWebCrypto();
+  const payload = await createRecoveryPayload(userId, rawVaultKey);
 
-  const wrappingKey = await cryptoApi.subtle.importKey(
-    "jwk",
-    publicKey.jwk,
-    {
-      name: "RSA-OAEP",
-      hash: "SHA-256",
-    },
-    false,
-    ["encrypt"],
-  );
+  try {
+    const wrappingKey = await cryptoApi.subtle.importKey(
+      "jwk",
+      publicKey.jwk,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256",
+      },
+      false,
+      ["encrypt"],
+    );
 
-  const ciphertext = await cryptoApi.subtle.encrypt(
-    {
-      name: "RSA-OAEP",
-      label: toArrayBuffer(recoveryLabel(userId)),
-    },
-    wrappingKey,
-    toArrayBuffer(rawVaultKey),
-  );
+    const ciphertext = await cryptoApi.subtle.encrypt(
+      { name: "RSA-OAEP" },
+      wrappingKey,
+      toArrayBuffer(payload),
+    );
 
-  return {
-    v: 1,
-    alg: "RSA-OAEP-256",
-    kid: publicKey.kid,
-    ct: bytesToBase64Url(new Uint8Array(ciphertext)),
-  };
+    return {
+      v: 1,
+      alg: "RSA-OAEP-256",
+      kid: publicKey.kid,
+      ct: bytesToBase64Url(new Uint8Array(ciphertext)),
+    };
+  } finally {
+    payload.fill(0);
+  }
 }

@@ -49,6 +49,10 @@ async function findTestUserId() {
   return null;
 }
 
+function generateTestPassword() {
+  return `Ficonter-Test-${randomBytes(12).toString("base64url")}`;
+}
+
 export async function GET() {
   try {
     assertStagingOnly();
@@ -81,7 +85,7 @@ export async function POST() {
     if (existingUserId) {
       return NextResponse.json(
         {
-          error: "The staging recovery test customer already exists. Delete it before creating another one.",
+          error: "The staging recovery test customer already exists. Use Reset test password instead.",
           userId: existingUserId,
           email: TEST_EMAIL,
         },
@@ -90,7 +94,7 @@ export async function POST() {
     }
 
     const service = createServiceClient();
-    const password = `Ficonter-Test-${randomBytes(12).toString("base64url")}`;
+    const password = generateTestPassword();
     const { data, error } = await service.auth.admin.createUser({
       email: TEST_EMAIL,
       password,
@@ -126,6 +130,49 @@ export async function POST() {
     console.error("Staging test customer creation failed", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not create the staging test customer." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function PATCH() {
+  try {
+    assertStagingOnly();
+    const authority = await requireRecoveryAuthority();
+    if ("error" in authority) return authority.error;
+
+    const userId = await findTestUserId();
+    if (!userId) {
+      return NextResponse.json(
+        { error: "The staging recovery test customer does not exist yet." },
+        { status: 404 },
+      );
+    }
+
+    const service = createServiceClient();
+    const password = generateTestPassword();
+    const { data, error } = await service.auth.admin.updateUserById(userId, {
+      password,
+      email_confirm: true,
+    });
+    if (error) throw error;
+    if (!data.user) throw new Error("Supabase did not return the updated test user.");
+
+    await service.from("admin_users").delete().eq("user_id", userId);
+
+    return NextResponse.json({
+      ok: true,
+      userId,
+      email: TEST_EMAIL,
+      password,
+      name: TEST_NAME,
+      disposable: true,
+      reset: true,
+    });
+  } catch (error) {
+    console.error("Staging test customer password reset failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not reset the staging test customer password." },
       { status: 400 },
     );
   }

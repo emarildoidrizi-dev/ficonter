@@ -4,6 +4,7 @@ import {
   claimCustomerVaultRecoveryAccess,
   getCustomerVaultRecoveryAccess,
 } from "@/lib/vaultRecovery/customerAccess";
+import { getEmergencyRecoveryPublicKey } from "@/lib/vaultRecovery/recoveryPublicKey";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,11 @@ export async function GET(
       userId: user.id,
     });
     if (!recovery) return NextResponse.json({ error: "Recovery request not found." }, { status: 404 });
-    return NextResponse.json({ recovery });
+
+    return NextResponse.json({
+      recovery,
+      recoveryPublicKey: getEmergencyRecoveryPublicKey(),
+    });
   } catch (error) {
     console.error("Customer Recovery Access read failed", error);
     return NextResponse.json(
@@ -52,7 +57,11 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ ok: true, access });
+    return NextResponse.json({
+      ok: true,
+      access,
+      recoveryPublicKey: getEmergencyRecoveryPublicKey(),
+    });
   } catch (error) {
     console.error("Customer Recovery Access claim failed", error);
     return NextResponse.json(

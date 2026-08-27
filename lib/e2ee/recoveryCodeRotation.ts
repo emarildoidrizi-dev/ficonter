@@ -26,6 +26,12 @@ type RotatedRecoveryMaterial = {
   emergencyRecoveryEnvelope: EmergencyRecoveryEnvelopeV1 | null;
 };
 
+export type ReplacementRecoveryMaterial = {
+  vaultKey: CryptoKey;
+  recoveryCode: string;
+  wrappedVaultKey: WrappedVaultKeyEnvelopeV1;
+};
+
 function requireWebCrypto(): Crypto {
   if (!globalThis.crypto?.subtle) {
     throw new Error("Web Crypto API is not available.");
@@ -123,6 +129,55 @@ async function importVaultKey(rawKey: Uint8Array): Promise<CryptoKey> {
   );
 }
 
+async function wrapRawVaultKeyWithNewRecoveryCode({
+  userId,
+  rawVaultKey,
+}: {
+  userId: string;
+  rawVaultKey: Uint8Array;
+}): Promise<ReplacementRecoveryMaterial> {
+  if (!userId) throw new Error("User ID is required.");
+  if (rawVaultKey.length !== 32) throw new Error("Recovered vault key is invalid.");
+
+  const cryptoApi = requireWebCrypto();
+  const replacement = createRecoveryCode();
+  const replacementSecret = replacement.secretBytes;
+  const replacementSalt = randomBytes(16);
+  const replacementIv = randomBytes(12);
+
+  try {
+    const replacementWrappingKey = await deriveRecoveryWrappingKey(
+      replacementSecret,
+      replacementSalt,
+    );
+
+    const wrapped = await cryptoApi.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv: toArrayBuffer(replacementIv),
+        additionalData: toArrayBuffer(vaultKeyWrapAdditionalData(userId)),
+      },
+      replacementWrappingKey,
+      toArrayBuffer(rawVaultKey),
+    );
+
+    return {
+      vaultKey: await importVaultKey(rawVaultKey),
+      recoveryCode: replacement.code,
+      wrappedVaultKey: {
+        v: 1,
+        alg: "A256GCM",
+        kdf: "HKDF-SHA256",
+        salt: bytesToBase64Url(replacementSalt),
+        iv: bytesToBase64Url(replacementIv),
+        ct: bytesToBase64Url(new Uint8Array(wrapped)),
+      },
+    };
+  } finally {
+    replacementSecret.fill(0);
+  }
+}
+
 function assertEnvelope(envelope: WrappedVaultKeyEnvelopeV1) {
   if (
     envelope.v !== 1 ||
@@ -131,6 +186,16 @@ function assertEnvelope(envelope: WrappedVaultKeyEnvelopeV1) {
   ) {
     throw new Error("Unsupported FICONTER vault format.");
   }
+}
+
+export async function createReplacementRecoveryForRawVaultKey({
+  userId,
+  rawVaultKey,
+}: {
+  userId: string;
+  rawVaultKey: Uint8Array;
+}): Promise<ReplacementRecoveryMaterial> {
+  return wrapRawVaultKeyWithNewRecoveryCode({ userId, rawVaultKey });
 }
 
 export async function rotateRecoveryCodeForSameVaultKey({
@@ -154,7 +219,6 @@ export async function rotateRecoveryCodeForSameVaultKey({
   const currentCiphertext = base64UrlToBytes(envelope.ct);
 
   let rawVaultKey: Uint8Array | null = null;
-  let replacementSecret: Uint8Array | null = null;
 
   try {
     const currentWrappingKey = await deriveRecoveryWrappingKey(
@@ -182,25 +246,10 @@ export async function rotateRecoveryCodeForSameVaultKey({
       throw new Error("Recovered vault key is invalid.");
     }
 
-    const replacement = createRecoveryCode();
-    replacementSecret = replacement.secretBytes;
-    const replacementSalt = randomBytes(16);
-    const replacementIv = randomBytes(12);
-
-    const replacementWrappingKey = await deriveRecoveryWrappingKey(
-      replacementSecret,
-      replacementSalt,
-    );
-
-    const wrapped = await cryptoApi.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv: toArrayBuffer(replacementIv),
-        additionalData: toArrayBuffer(vaultKeyWrapAdditionalData(userId)),
-      },
-      replacementWrappingKey,
-      toArrayBuffer(rawVaultKey),
-    );
+    const replacement = await wrapRawVaultKeyWithNewRecoveryCode({
+      userId,
+      rawVaultKey,
+    });
 
     const emergencyRecoveryEnvelope = emergencyRecoveryPublicKey
       ? await createEmergencyRecoveryEnvelope({
@@ -210,24 +259,12 @@ export async function rotateRecoveryCodeForSameVaultKey({
         })
       : null;
 
-    const vaultKey = await importVaultKey(rawVaultKey);
-
     return {
-      vaultKey,
-      recoveryCode: replacement.code,
-      wrappedVaultKey: {
-        v: 1,
-        alg: "A256GCM",
-        kdf: "HKDF-SHA256",
-        salt: bytesToBase64Url(replacementSalt),
-        iv: bytesToBase64Url(replacementIv),
-        ct: bytesToBase64Url(new Uint8Array(wrapped)),
-      },
+      ...replacement,
       emergencyRecoveryEnvelope,
     };
   } finally {
     currentSecret.fill(0);
     rawVaultKey?.fill(0);
-    replacementSecret?.fill(0);
   }
 }

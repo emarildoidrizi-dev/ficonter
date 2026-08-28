@@ -31,8 +31,6 @@ export type CurrencySourceTransaction = BaseCurrencyTransaction & {
   description?: string | null;
   occurred_at?: string | null;
   exchange_rate_to_eur?: number | string | null;
-  exchange_rate_date?: string | null;
-  exchange_rate_source?: string | null;
 };
 
 export type CurrencySourceBill = BaseCurrencyBill & {

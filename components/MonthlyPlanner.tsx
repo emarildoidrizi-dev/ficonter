@@ -3,7 +3,6 @@
 import { ChevronLeft, ChevronRight, LockKeyhole, Trash2 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import {
   isFinancialDataScope,
   notifyFiconterDataChange,
@@ -62,8 +61,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   const { baseCurrency, latestRate } = useCurrencyDisplay();
   const supabase=useMemo(()=>createClient(),[]);
   const [month,setMonth]=useState(monthKey());
-  const { transactions: encryptedTransactions } = useEncryptedTransactions();
-  const transactions = encryptedTransactions as Tx[];
+  const [transactions,setTransactions]=useState(initialTransactions);
   const [bills,setBills]=useState(initialBills);
   const [plans,setPlans]=useState(initialPlans);
   const [items,setItems]=useState(initialItems);
@@ -105,15 +103,17 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     const request=(async()=>{
       do{
         refreshQueuedRef.current=false;
-        const [billResult,planResult,itemResult,goalResult]=await Promise.all([
+        const [transactionResult,billResult,planResult,itemResult,goalResult]=await Promise.all([
+          supabase.from("transactions").select("id,user_id,description,amount,currency,amount_eur,type,category,transaction_date,occurred_at,exchange_rate_source").eq("user_id",userId).order("occurred_at",{ascending:false}),
           supabase.from("bills").select("id,user_id,name,category,amount,currency,amount_eur,due_date,status,paid_at,transaction_id").eq("user_id",userId),
           supabase.from("monthly_budget_plans").select("id,user_id,month,start_balance,spending_budget,created_at,updated_at").eq("user_id",userId).order("month",{ascending:false}),
           supabase.from("monthly_budget_items").select("id,user_id,month,section,label,planned_amount,position,created_at,updated_at").eq("user_id",userId).order("position",{ascending:true}),
           supabase.from("goals").select("id,user_id,name,target_amount,current_amount,target_date,status,created_at,updated_at").eq("user_id",userId).order("created_at",{ascending:true}),
         ]);
-        const error=billResult.error??planResult.error??itemResult.error??goalResult.error;
+        const error=transactionResult.error??billResult.error??planResult.error??itemResult.error??goalResult.error;
         if(error)setNotice(error.message);
         else{
+          setTransactions((transactionResult.data??[]) as Tx[]);
           setBills((billResult.data??[]) as Bill[]);
           setPlans((planResult.data??[]) as Plan[]);
           setItems((itemResult.data??[]) as Item[]);
@@ -155,6 +155,7 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
   },[schedulePlannerRefresh]);
   useEffect(()=>{
     const channel=supabase.channel(`planner-${userId}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},p=>setTransactions(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Tx,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
       .on("postgres_changes",{event:"*",schema:"public",table:"bills",filter:`user_id=eq.${userId}`},p=>setBills(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Bill,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
       .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_plans",filter:`user_id=eq.${userId}`},p=>setPlans(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Plan,...c.filter(x=>x.id!==realtimeRowId(p.new))]))
       .on("postgres_changes",{event:"*",schema:"public",table:"monthly_budget_items",filter:`user_id=eq.${userId}`},p=>setItems(c=>p.eventType==="DELETE"?c.filter(x=>x.id!==realtimeRowId(p.old)):[p.new as Item,...c.filter(x=>x.id!==realtimeRowId(p.new))]))

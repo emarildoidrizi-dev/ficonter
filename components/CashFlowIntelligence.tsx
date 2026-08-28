@@ -115,6 +115,7 @@ export function CashFlowIntelligence({
     const [
       inputResponse,
       paymentResponse,
+      transactionResponse,
       billResponse,
     ] = await Promise.all([
       supabase.rpc("get_cash_flow_intelligence_inputs_v2"),
@@ -122,6 +123,13 @@ export function CashFlowIntelligence({
         .from("debt_payments")
         .select("debt_id, amount_eur, paid_at")
         .gte("paid_at", currentMonthStartIso()),
+      supabase
+        .from("transactions")
+        .select(
+          "id,type,description,category,amount_eur,transaction_date,occurred_at",
+        )
+        .eq("user_id", userId)
+        .order("transaction_date", { ascending: true }),
       supabase
         .from("bills")
         .select("id,status,amount_eur,due_date,paid_at,transaction_id")
@@ -133,7 +141,7 @@ export function CashFlowIntelligence({
     );
     const synchronizedInputs = reconcileCashFlowMonthlyInputs(
       normalizedInputs,
-      currencySource.transactions,
+      transactionResponse.data,
       billResponse.data,
     );
     const activeMonth =
@@ -151,6 +159,7 @@ export function CashFlowIntelligence({
     const refreshError =
       inputResponse.error ??
       paymentResponse.error ??
+      transactionResponse.error ??
       billResponse.error ??
       planResponse.error;
 
@@ -164,7 +173,7 @@ export function CashFlowIntelligence({
     }
 
     setRefreshing(false);
-  }, [currencySource.transactions, supabase, userId]);
+  }, [supabase, userId]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) {

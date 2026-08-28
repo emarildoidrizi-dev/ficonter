@@ -21,8 +21,6 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
-import { encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import {
@@ -340,12 +338,19 @@ export function SavingsIntelligence({
     async (savingId: string) => {
       setActionError("");
       setActionLoading(true);
-      const data = currencySource.transactions.find(
-        (transaction) => transaction.id === savingId,
-      ) as EditableSavingTransaction | undefined;
+      const { data, error: transactionError } = await supabase
+        .from("transactions")
+        .select(
+          "id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,category,transaction_date,occurred_at,type",
+        )
+        .eq("id", savingId)
+        .single();
 
-      if (!data) {
-        setActionError("The saving could not be loaded from the unlocked vault.");
+      if (transactionError || !data) {
+        setActionError(
+          transactionError?.message ||
+            "The saving could not be loaded for editing.",
+        );
         setActionLoading(false);
         return;
       }
@@ -356,7 +361,7 @@ export function SavingsIntelligence({
         return;
       }
 
-      setEditTarget(data);
+      setEditTarget(data as EditableSavingTransaction);
       setEditDescription(data.description || "");
       setEditAmount(String(finiteNumber(data.amount)));
       setEditCurrency(data.currency || "EUR");
@@ -377,7 +382,7 @@ export function SavingsIntelligence({
       setEditRateError("");
       setActionLoading(false);
     },
-    [currencySource.transactions],
+    [supabase],
   );
 
   const requestDelete = useCallback((savingId: string, description: string) => {
@@ -447,45 +452,15 @@ export function SavingsIntelligence({
         occurred_at: occurred.toISOString(),
       };
 
-      const vaultKey = getActiveVaultKey();
-      if (!vaultKey) {
-        setActionError("Unlock your Financial Vault before editing a saving.");
-        setActionLoading(false);
-        return;
-      }
-
-      const encryptedPayload = await encryptTransactionPayload(
-        vaultKey,
-        userId,
-        update,
-      );
       const { error: updateError } = await supabase
         .from("transactions")
-        .update({
-          encrypted_payload: encryptedPayload,
-          encryption_version: 1,
-          description: null,
-          amount: null,
-          currency: null,
-          amount_eur: null,
-          exchange_rate_to_eur: null,
-          exchange_rate_date: null,
-          exchange_rate_source: null,
-          type: null,
-          category: null,
-          transaction_date: null,
-          occurred_at: null,
-        })
-        .eq("id", editTarget.id)
-        .eq("user_id", userId);
+        .update(update)
+        .eq("id", editTarget.id);
 
       if (updateError) {
         setActionError(updateError.message);
       } else {
         setEditTarget(null);
-        window.dispatchEvent(new CustomEvent("ficonter:transaction-upserted", {
-          detail: { id: editTarget.id, encryption_version: 1 },
-        }));
         await refresh();
         notifyFiconterDataChange("all");
         announceNotice(
@@ -510,7 +485,6 @@ export function SavingsIntelligence({
       editTarget,
       refresh,
       supabase,
-      userId,
     ],
   );
 

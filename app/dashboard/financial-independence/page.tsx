@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { EncryptedFinancialIndependenceWorkspace } from "@/components/EncryptedFinancialIndependenceWorkspace";
+import { FinancialIndependence } from "@/components/FinancialIndependence";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
 import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
@@ -11,5 +11,5 @@ export default async function FinancialIndependencePage() {
   const { user } = await getCurrentUser();
   if (!user) redirect("/login");
 
-  return <EncryptedFinancialIndependenceWorkspace userId={user.id} />;
+  return <FinancialIndependence userId={user.id} />;
 }

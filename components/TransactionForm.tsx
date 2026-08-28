@@ -1,8 +1,6 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
-import { decryptTransactionPayload, encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Repeat2, Star, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "./LanguageProvider";
@@ -20,6 +18,7 @@ import {
   BASE_CURRENCY_CHANGED_EVENT,
   readBrowserBaseCurrency,
 } from "@/components/BaseCurrencyBootstrap";
+
 function localDateTimeValue(date = new Date()) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
@@ -357,12 +356,9 @@ export function TransactionForm({
       ) {
         throw new Error("Choose a monthly repeat day between 1 and 31.");
       }
-      const vaultKey = getActiveVaultKey();
-      if (!vaultKey) {
-        throw new Error("Unlock your Financial Vault before adding a transaction.");
-      }
 
-      const expectedPayload = {
+      const payload = {
+        user_id: user.id,
         description: finalDescription,
         amount: originalAmount,
         currency,
@@ -376,48 +372,15 @@ export function TransactionForm({
         occurred_at: localInstant.toISOString(),
       };
 
-      const encryptedPayload = await encryptTransactionPayload(
-        vaultKey,
-        user.id,
-        expectedPayload,
-      );
-      const payload = {
-        user_id: user.id,
-        encrypted_payload: encryptedPayload,
-        encryption_version: 1,
-      };
-
       const { data: savedTransaction, error: insertError } = await supabase
         .from("transactions")
         .insert(payload)
-        .select("id,user_id,encrypted_payload,encryption_version,created_at")
+        .select("*")
         .single();
 
       if (insertError) throw insertError;
-      if (!savedTransaction?.encrypted_payload || savedTransaction.encryption_version !== 1) {
-        throw new Error("Encrypted transaction payload was not saved correctly.");
-      }
-
-      const decryptedRoundTrip = await decryptTransactionPayload(
-        vaultKey,
-        user.id,
-        savedTransaction,
-      );
-      const roundTripPayload = {
-        description: decryptedRoundTrip.description,
-        amount: decryptedRoundTrip.amount,
-        currency: decryptedRoundTrip.currency,
-        amount_eur: decryptedRoundTrip.amount_eur,
-        exchange_rate_to_eur: decryptedRoundTrip.exchange_rate_to_eur,
-        exchange_rate_date: decryptedRoundTrip.exchange_rate_date,
-        exchange_rate_source: decryptedRoundTrip.exchange_rate_source,
-        type: decryptedRoundTrip.type,
-        category: decryptedRoundTrip.category,
-        transaction_date: decryptedRoundTrip.transaction_date,
-        occurred_at: decryptedRoundTrip.occurred_at,
-      };
-      if (JSON.stringify(roundTripPayload) !== JSON.stringify(expectedPayload)) {
-        throw new Error("Encrypted transaction round-trip verification failed.");
+      if (!savedTransaction) {
+        throw new Error("The saved transaction could not be returned.");
       }
 
       if (preset?.templateId && preset.periodKey) {
@@ -451,7 +414,7 @@ export function TransactionForm({
 
       window.dispatchEvent(
         new CustomEvent("ficonter:transaction-created", {
-          detail: { id: savedTransaction.id, encryption_version: 1 },
+          detail: savedTransaction,
         }),
       );
 
@@ -745,7 +708,7 @@ export function TransactionForm({
           <div className="field">
             <label>Custom category</label>
             <input
-              className="input effortless-custom-category"
+              className="input"
               value={customCategory}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setCustomCategory(event.target.value)

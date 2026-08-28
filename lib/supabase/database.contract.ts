@@ -72,18 +72,6 @@ type RefinedTable<
     UpdateOverride;
 };
 
-type AnyTable = {
-  Row: any;
-  Insert: any;
-  Update: any;
-  Relationships: any[];
-};
-
-type AnyFunction = {
-  Args: any;
-  Returns: any;
-};
-
 type SubscriptionTable = {
   Row: {
     id: string;
@@ -194,60 +182,48 @@ type BetaLoginSessionsTable = {
   Relationships: [];
 };
 
-/*
- * E2EE staging schema compatibility overlay.
- *
- * The generated database.types.ts in this branch predates the final staging
- * zero-knowledge migrations. These tables/functions are intentionally widened
- * here so the application contract follows the live staging schema immediately
- * without weakening unrelated Supabase types. Regenerating database.types.ts
- * from staging can later replace this bridge without changing runtime logic.
- */
-type E2eeTables = {
-  ai_insight_snapshots: AnyTable;
-  bills: AnyTable;
-  business_audit_log: AnyTable;
-  business_cost_budgets: AnyTable;
-  business_cost_categories: AnyTable;
-  business_cost_centres: AnyTable;
-  business_documents: AnyTable;
-  business_inventory_categories: AnyTable;
-  business_inventory_items: AnyTable;
-  business_inventory_locations: AnyTable;
-  business_inventory_movements: AnyTable;
-  business_recurring_costs: AnyTable;
-  business_sale_lines: AnyTable;
-  business_sales: AnyTable;
-  business_settings: AnyTable;
-  business_supplier_invoices: AnyTable;
-  business_suppliers: AnyTable;
-  business_transactions: AnyTable;
-  businesses: AnyTable;
-  business_vault_member_keys: AnyTable;
-  business_vaults: AnyTable;
-  credit_card_activities: AnyTable;
-  credit_card_monthly_records: AnyTable;
-  debt_payments: AnyTable;
-  debts: AnyTable;
-  document_upload_intents: AnyTable;
-  financial_documents: AnyTable;
-  financial_independence_settings: AnyTable;
-  goal_investments: AnyTable;
-  goals: AnyTable;
-  monthly_budget_items: AnyTable;
-  monthly_budget_plans: AnyTable;
-  transaction_templates: AnyTable;
-  transactions: AnyTable;
-  user_business_keypairs: AnyTable;
-  user_financial_vaults: AnyTable;
-};
-
 type ContractTables = {
+  business_audit_log: RefinedTable<
+    "business_audit_log",
+    { action: BusinessAuditAction },
+    { action: BusinessAuditAction },
+    { action?: BusinessAuditAction }
+  >;
+  bills: RefinedTable<
+    "bills",
+    { recurrence: BillRecurrence; status: BillStatus },
+    { recurrence?: BillRecurrence; status?: BillStatus },
+    { recurrence?: BillRecurrence; status?: BillStatus }
+  >;
+  monthly_budget_items: RefinedTable<
+    "monthly_budget_items",
+    { section: MonthlyBudgetSection },
+    { section: MonthlyBudgetSection },
+    { section?: MonthlyBudgetSection }
+  >;
+  debts: RefinedTable<
+    "debts",
+    { category: DebtCategory; status: DebtStatus },
+    { category: DebtCategory; status?: DebtStatus },
+    { category?: DebtCategory; status?: DebtStatus }
+  >;
+  credit_card_activities: RefinedTable<
+    "credit_card_activities",
+    { activity_type: CreditCardActivityType },
+    { activity_type: CreditCardActivityType },
+    { activity_type?: CreditCardActivityType }
+  >;
+  goals: RefinedTable<
+    "goals",
+    { status: GoalStatus },
+    { status?: GoalStatus },
+    { status?: GoalStatus }
+  >;
   beta_invite_codes: BetaInviteCodesTable;
   beta_signup_tokens: BetaSignupTokensTable;
   beta_user_entitlements: BetaUserEntitlementsTable;
   beta_login_sessions: BetaLoginSessionsTable;
-} & E2eeTables;
+};
 
 type ContractFunctions = {
   create_business_document: Omit<
@@ -324,38 +300,6 @@ type ContractFunctions = {
     Args: { p_user_id: string; p_actor_user_id: string; p_audit_details?: Json };
     Returns: string;
   };
-
-  close_business_sale_e2ee_atomic: AnyFunction;
-  create_business_document_e2ee: AnyFunction;
-  create_business_inventory_item_e2ee: AnyFunction;
-  create_business_inventory_item_e2ee_atomic: AnyFunction;
-  ensure_business_vault_record: AnyFunction;
-  finalize_business_recurring_cost_run_e2ee: AnyFunction;
-  post_monthly_transaction_template_e2ee_atomic: AnyFunction;
-  record_automatic_debt_payment_e2ee_atomic: AnyFunction;
-  record_business_inventory_movement_e2ee: AnyFunction;
-  record_business_inventory_movement_e2ee_atomic: AnyFunction;
-  record_business_sale_e2ee_atomic: AnyFunction;
-  record_business_supplier_invoice_payment_e2ee: AnyFunction;
-  record_credit_card_activity_e2ee_atomic: AnyFunction;
-  record_credit_card_payment_e2ee_atomic: AnyFunction;
-  record_debt_payment_e2ee_atomic: AnyFunction;
-  record_goal_investment_e2ee_atomic: AnyFunction;
-  reserve_document_upload_e2ee: AnyFunction;
-  restore_business_sale_e2ee_atomic: AnyFunction;
-  reverse_business_inventory_movement_e2ee: AnyFunction;
-  reverse_business_supplier_invoice_payment_e2ee: AnyFunction;
-  reverse_credit_card_activity_e2ee_atomic: AnyFunction;
-  reverse_credit_card_payment_e2ee_atomic: AnyFunction;
-  reverse_debt_payment_e2ee_atomic: AnyFunction;
-  reverse_goal_investment_e2ee_atomic: AnyFunction;
-  save_credit_card_monthly_record_e2ee_atomic: AnyFunction;
-  save_financial_independence_settings_e2ee_atomic: AnyFunction;
-  save_monthly_budget_plan_e2ee_atomic: AnyFunction;
-  update_business_administration_settings_e2ee: AnyFunction;
-  update_business_document_e2ee: AnyFunction;
-  update_business_sale_e2ee_atomic: AnyFunction;
-  update_business_workspace_e2ee: AnyFunction;
 };
 
 export type Database = Omit<GeneratedDatabase, "public"> & {

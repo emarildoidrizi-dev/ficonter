@@ -23,7 +23,6 @@ import {
 } from "@/lib/financialDocumentExtraction";
 import type { FinancialDocument } from "@/lib/documentVault";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
-import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import styles from "./FinancialDocumentExtractionModal.module.css";
 
 type Props = {
@@ -124,7 +123,6 @@ function confidenceLabel(confidence: FinancialDocumentExtraction["confidence"]) 
 
 export function FinancialDocumentExtractionModal({ document, onClose, onImported }: Props) {
   const router = useRouter();
-  const { transactions: existingTransactions } = useEncryptedTransactions();
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
@@ -181,27 +179,7 @@ export function FinancialDocumentExtractionModal({ document, onClose, onImported
 
   async function importTransactions() {
     if (!selectedTransactions.length) throw new Error("Select at least one transaction to import.");
-
-    const normalizedDescription = (value: string) =>
-      value.trim().toLowerCase().replace(/\s+/g, " ");
-    const uniqueRows = selectedTransactions.filter((row) => {
-      const amount = finiteMoney(row.amount);
-      if (amount === null) return true;
-      return !existingTransactions.some((existing) =>
-        existing.transaction_date === row.date &&
-        existing.type === row.type &&
-        existing.currency === row.currency.trim().toUpperCase() &&
-        Math.round(Number(existing.amount) * 100) === Math.round(amount * 100) &&
-        normalizedDescription(existing.description) ===
-          normalizedDescription(row.description),
-      );
-    });
-
-    if (!uniqueRows.length) {
-      throw new Error("All selected transactions are already in your encrypted transaction history.");
-    }
-
-    const convertedRows = await Promise.all(uniqueRows.map(async (row) => {
+    const convertedRows = await Promise.all(selectedTransactions.map(async (row) => {
       if (!row.date || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) throw new Error(`Review the date for “${row.description || "transaction"}”.`);
       if (!row.description.trim()) throw new Error("Every selected transaction needs a description.");
       const amount = finiteMoney(row.amount);

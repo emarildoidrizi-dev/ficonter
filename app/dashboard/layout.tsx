@@ -88,11 +88,9 @@ export default async function DashboardLayout({
   // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  // Vault is a paid customer capability. Beta testers retain full release access,
-  // while Free customers stay outside the visible lock/recovery-code workflow.
+  // Encryption is a platform security capability for every customer plan.
   // Customer Vault prompts must never block the administration workspace.
-  const showCustomerVaultAccess =
-    !admin && subscriptionPlanCode !== "free";
+  const showCustomerVaultAccess = !admin;
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,

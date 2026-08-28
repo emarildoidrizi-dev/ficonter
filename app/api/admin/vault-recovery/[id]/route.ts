@@ -5,6 +5,10 @@ import { revokeActiveVaultRecoveryAccess } from "@/lib/admin/vaultRecoveryAccess
 
 export const dynamic = "force-dynamic";
 
+function requireRecoveryAuthority(admin: { role: string } | null) {
+  return admin?.role === "super_admin";
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { user, admin } = await requireAdmin();
   if (!user || !admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,6 +22,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       countryRegion?: string;
       internalNotes?: string;
     };
+
+    if (body.action === "approve" && !requireRecoveryAuthority(admin)) {
+      return NextResponse.json(
+        { error: "Only the Owner or a Super Admin can approve Vault recovery." },
+        { status: 403 },
+      );
+    }
 
     if (body.action === "archive" || body.action === "restore") {
       if (body.action === "archive") {

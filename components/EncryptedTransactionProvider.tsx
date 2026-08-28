@@ -30,6 +30,9 @@ import {
 import {
   finalizePendingEncryptedDebtPayments,
 } from "@/lib/e2ee/pendingDebtPaymentFinalizer";
+import {
+  finalizePendingTemplateTransactions,
+} from "@/lib/e2ee/pendingTemplateTransactionFinalizer";
 
 type EncryptedTransactionContextValue = {
   transactions: DecryptedTransaction[];
@@ -107,6 +110,15 @@ export function EncryptedTransactionProvider({
             name: "pending encrypted debt payment finalization",
             run: () =>
               finalizePendingEncryptedDebtPayments(
+                supabase,
+                vaultKey,
+                user.id,
+              ),
+          },
+          {
+            name: "pending recurring template transaction finalization",
+            run: () =>
+              finalizePendingTemplateTransactions(
                 supabase,
                 vaultKey,
                 user.id,

@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
-import { TransactionLedger } from "@/components/TransactionLedger";
-import { MobileTransactionsLayout } from "@/components/MobileTransactionsLayout";
+import { EncryptedTransactionsWorkspace } from "@/components/EncryptedTransactionsWorkspace";
 import { canCurrentUserAccessSubscriptionFeature } from "@/lib/subscriptionAccess";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -19,14 +18,21 @@ function setupTransactionType(value: string | undefined) {
   return "expense";
 }
 
-export default async function TransactionsPage({ searchParams }: TransactionsPageProps) {
-  const { supabase, user } = await getCurrentUser();
+export default async function TransactionsPage({
+  searchParams,
+}: TransactionsPageProps) {
+  const { user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 
   const query = await searchParams;
-  const setupValue = Array.isArray(query?.setup) ? query.setup[0] : query?.setup;
-  const addValue = Array.isArray(query?.add) ? query.add[0] : query?.add;
+  const setupValue = Array.isArray(query?.setup)
+    ? query.setup[0]
+    : query?.setup;
+  const addValue = Array.isArray(query?.add)
+    ? query.add[0]
+    : query?.add;
+
   const directAdd = addValue === "1";
   const initialType = setupTransactionType(setupValue);
 
@@ -34,13 +40,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     canCurrentUserAccessSubscriptionFeature("multi_currency_transactions"),
     canCurrentUserAccessSubscriptionFeature("private_pdf_export"),
   ]);
-
-  const { data, error } = await supabase
-    .from("transactions")
-    .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
-    .eq("user_id", user.id)
-    .not("transaction_date", "is", null)
-    .order("occurred_at", { ascending: false });
 
   return (
     <>
@@ -50,37 +49,14 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           <p>Review activity or add a transaction without leaving this screen.</p>
         </div>
       </header>
-      <MobileTransactionsLayout
-        initialView={directAdd || setupValue ? "add" : "ledger"}
-        entry={
-          <div className="panel transaction-entry-panel transaction-effortless-panel">
-            <EffortlessEntryWorkspace
-              initialTransactions={data ?? []}
-              initialType={initialType}
-              allowMultiCurrency={allowMultiCurrency}
-              directAdd={directAdd}
-            />
-          </div>
-        }
-        ledger={
-          <div className="panel transaction-ledger-panel">
-            <div className="panel-head">
-              <div>
-                <h3>Transactions</h3>
-                <p className="muted transaction-intro">Search, filter and manage your financial activity.</p>
-              </div>
-            </div>
-            {error ? (
-              <div className="alert alert-error">{error.message}</div>
-            ) : (
-              <TransactionLedger
-                transactions={data ?? []}
-                allowMultiCurrency={allowMultiCurrency}
-                allowPdfExport={allowPdfExport}
-              />
-            )}
-          </div>
-        }
+
+      <EncryptedTransactionsWorkspace
+        userId={user.id}
+        initialType={initialType}
+        allowMultiCurrency={allowMultiCurrency}
+        allowPdfExport={allowPdfExport}
+        directAdd={directAdd}
+        setupRequested={Boolean(setupValue)}
       />
     </>
   );

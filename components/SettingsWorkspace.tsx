@@ -43,6 +43,8 @@ import {
   X,
 } from "lucide-react";
 import { createClient, saveTrustedDevicePreference } from "@/lib/supabase/client";
+import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
+import { useVault } from "@/components/VaultProvider";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import {
   createAccountPdf,
@@ -483,6 +485,8 @@ export function SettingsWorkspace({
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const { transactions: decryptedTransactions } = useEncryptedTransactions();
+  const { status: vaultStatus } = useVault();
   const [subscriptionPreviewInterval, setSubscriptionPreviewInterval] =
     useState<Exclude<BillingInterval, null>>("monthly");
   const [subscriptionCanceling, setSubscriptionCanceling] = useState(false);
@@ -1207,13 +1211,15 @@ export function SettingsWorkspace({
     setExporting("transactions");
     setMessage(null);
     try {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("transaction_date", { ascending: false });
-      if (error) throw error;
-      const rows = (data ?? []) as Record<string, unknown>[];
+      if (vaultStatus !== "unlocked") {
+        throw new Error("Unlock your Financial Vault before exporting transactions.");
+      }
+      const rows = [...decryptedTransactions]
+        .sort((a, b) =>
+          (b.occurred_at ?? b.transaction_date).localeCompare(
+            a.occurred_at ?? a.transaction_date,
+          ),
+        ) as unknown as Record<string, unknown>[];
       const columns = rows.length ? Object.keys(rows[0]) : ["No transactions"];
       const csv = [columns.map(csvCell).join(","), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\n");
       downloadFile(`ficonter-transactions-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
@@ -1226,6 +1232,10 @@ export function SettingsWorkspace({
   }
 
   async function loadAccountExport(): Promise<AccountExportPayload> {
+    if (vaultStatus !== "unlocked") {
+      throw new Error("Unlock your Financial Vault before exporting account data.");
+    }
+
     type ExportQueryResult = {
       data: unknown[] | null;
       error: { message: string } | null;
@@ -1243,10 +1253,10 @@ export function SettingsWorkspace({
     const results: Array<
       readonly [AccountExportTable, Record<string, unknown>[]]
     > = await Promise.all([
-      collectUserRows(
+      Promise.resolve([
         "transactions",
-        supabase.from("transactions").select("*").eq("user_id", userId),
-      ),
+        decryptedTransactions as unknown as Record<string, unknown>[],
+      ] as const),
       collectUserRows(
         "bills",
         supabase.from("bills").select("*").eq("user_id", userId),

@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";
 import { VaultInactivityGuard } from "@/components/VaultInactivityGuard";
+import { VaultLegacyMigrationBootstrap } from "@/components/VaultLegacyMigrationBootstrap";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
@@ -145,6 +146,7 @@ export default async function DashboardLayout({
         <main className="app-main">
           <VaultProvider>
             {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
+            <VaultLegacyMigrationBootstrap userId={user.id} />
             <EncryptedTransactionProvider>
               <EncryptedBillProvider>
                 {showCustomerVaultAccess ? <VaultAccessPanel /> : null}

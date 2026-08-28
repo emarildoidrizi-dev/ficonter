@@ -45,6 +45,12 @@ export async function POST(
     if (new Date(grant.expires_at).getTime() <= Date.now()) {
       return NextResponse.json({ error: "Recovery Access has expired." }, { status: 410 });
     }
+    if (grant.recovery_material_issued_at) {
+      return NextResponse.json(
+        { error: "Recovery material has already been issued for this Recovery Access. Generate a new Recovery Access to continue." },
+        { status: 409 },
+      );
+    }
     if (
       grant.customer_key_algorithm !== "RSA-OAEP-256" ||
       !grant.customer_ephemeral_public_key ||
@@ -78,6 +84,24 @@ export async function POST(
       );
     }
 
+    const issuedAt = new Date().toISOString();
+    const { data: marked, error: markError } = await service
+      .from("vault_recovery_access_grants")
+      .update({ recovery_material_issued_at: issuedAt, updated_at: issuedAt })
+      .eq("id", grant.id)
+      .eq("status", "claimed")
+      .is("recovery_material_issued_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (markError) throw markError;
+    if (!marked) {
+      return NextResponse.json(
+        { error: "Recovery material has already been issued for this Recovery Access. Generate a new Recovery Access to continue." },
+        { status: 409 },
+      );
+    }
+
     const emergencyEnvelope: EmergencyRecoveryEnvelopeV1 = {
       v: envelopeRow.envelope_version,
       alg: envelopeRow.algorithm,
@@ -85,40 +109,39 @@ export async function POST(
       ct: envelopeRow.ciphertext,
     } as EmergencyRecoveryEnvelopeV1;
 
-    const wrappedVaultKey = await rewrapVaultKeyForCustomer({
-      userId: user.id,
-      recoveryRequestId: id,
-      recoveryAccessId: grant.id,
-      emergencyEnvelope,
-      customerAlgorithm: "RSA-OAEP-256",
-      customerPublicJwk,
-    });
-
-    const issuedAt = new Date().toISOString();
-    if (!grant.recovery_material_issued_at) {
-      const { data: marked, error: markError } = await service
+    let wrappedVaultKey;
+    try {
+      wrappedVaultKey = await rewrapVaultKeyForCustomer({
+        userId: user.id,
+        recoveryRequestId: id,
+        recoveryAccessId: grant.id,
+        emergencyEnvelope,
+        customerAlgorithm: "RSA-OAEP-256",
+        customerPublicJwk,
+      });
+    } catch (error) {
+      await service
         .from("vault_recovery_access_grants")
-        .update({ recovery_material_issued_at: issuedAt, updated_at: issuedAt })
+        .update({
+          status: "failed",
+          failure_reason: "recovery_material_rewrap_failed",
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", grant.id)
-        .eq("status", "claimed")
-        .is("recovery_material_issued_at", null)
-        .select("id")
-        .maybeSingle();
-
-      if (markError) throw markError;
-      if (marked) {
-        await service.from("vault_recovery_case_audit").insert({
-          recovery_request_id: id,
-          action: "customer_recovery_material_issued",
-          actor_id: user.id,
-          details: {
-            grant_id: grant.id,
-            algorithm: "RSA-OAEP-256",
-            issued_at: issuedAt,
-          },
-        });
-      }
+        .eq("status", "claimed");
+      throw error;
     }
+
+    await service.from("vault_recovery_case_audit").insert({
+      recovery_request_id: id,
+      action: "customer_recovery_material_issued",
+      actor_id: user.id,
+      details: {
+        grant_id: grant.id,
+        algorithm: "RSA-OAEP-256",
+        issued_at: issuedAt,
+      },
+    });
 
     return NextResponse.json({
       ok: true,

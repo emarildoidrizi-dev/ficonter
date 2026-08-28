@@ -17,13 +17,7 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const [
-    transactionResult,
-    billResult,
-    budgetPlanResult,
-    healthResult,
-    gpsResult,
-  ] = await Promise.all([
+  const [transactionResult, billResult, budgetPlanResult] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -41,22 +35,26 @@ export default async function DashboardPage() {
       .select("month,spending_budget")
       .eq("user_id", user.id)
       .order("month", { ascending: false }),
-    supabase.rpc("get_financial_health_inputs"),
-    supabase.rpc("get_ai_insights_inputs"),
   ]);
 
   const transactions = transactionResult.data ?? [];
   const bills = billResult.data ?? [];
+
+  // The E2EE rollout intentionally restricts the legacy server-side aggregate
+  // RPCs. Keep production compatible without reopening those database
+  // permissions by deriving the temporary overview inputs from the already
+  // authorized rows loaded above.
   const healthInputs = reconcileFinancialHealthInputs(
-    normalizeFinancialHealthInputs(healthResult.data),
+    normalizeFinancialHealthInputs(null),
     transactions,
     bills,
   );
   const gpsInputs = reconcileAiInsightsInputs(
-    normalizeAiInsightsInputs(gpsResult.data),
+    normalizeAiInsightsInputs(null),
     transactions,
     bills,
   );
+
   const name =
     (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
     "there";
@@ -79,8 +77,8 @@ export default async function DashboardPage() {
         budgetPlanResult.error?.message ??
         ""
       }
-      initialHealthError={healthResult.error?.message ?? ""}
-      initialGpsError={gpsResult.error?.message ?? ""}
+      initialHealthError=""
+      initialGpsError=""
     />
   );
 }

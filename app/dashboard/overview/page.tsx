@@ -30,6 +30,7 @@ export default async function DashboardPage() {
         "id,user_id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,type,category,transaction_date,occurred_at,created_at",
       )
       .eq("user_id", user.id)
+      .not("transaction_date", "is", null)
       .order("occurred_at", { ascending: false }),
     supabase
       .from("bills")

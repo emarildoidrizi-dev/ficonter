@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";
+import { VaultRecoveryCodeRotator } from "@/components/VaultRecoveryCodeRotator";
 import { VaultInactivityGuard } from "@/components/VaultInactivityGuard";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
@@ -162,6 +163,7 @@ export default async function DashboardLayout({
           <EncryptedTransactionProvider>
             <EncryptedBillProvider>
               {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
+              {showCustomerVaultAccess ? <VaultRecoveryCodeRotator /> : null}
               {children}
             </EncryptedBillProvider>
           </EncryptedTransactionProvider>

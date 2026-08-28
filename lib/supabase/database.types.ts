@@ -2113,10 +2113,6 @@ export type Database = {
       goal_investments: {
         Row: {
           amount: number
-          original_amount: number | null
-          currency: string | null
-          exchange_rate_to_eur: number | null
-          exchange_rate_date: string | null
           created_at: string
           goal_id: string
           id: string
@@ -2127,10 +2123,6 @@ export type Database = {
         }
         Insert: {
           amount: number
-          original_amount?: number | null
-          currency?: string | null
-          exchange_rate_to_eur?: number | null
-          exchange_rate_date?: string | null
           created_at?: string
           goal_id: string
           id?: string
@@ -2141,10 +2133,6 @@ export type Database = {
         }
         Update: {
           amount?: number
-          original_amount?: number | null
-          currency?: string | null
-          exchange_rate_to_eur?: number | null
-          exchange_rate_date?: string | null
           created_at?: string
           goal_id?: string
           id?: string
@@ -2774,94 +2762,52 @@ export type Database = {
       }
       transactions: {
         Row: {
-          amount: number | null
-          amount_eur: number | null
-          category: string | null
+          amount: number
+          amount_eur: number
+          category: string
           created_at: string
-          currency: string | null
-          description: string | null
-          encrypted_payload: string | null
-          encryption_version: number | null
+          currency: string
+          description: string
           exchange_rate_date: string | null
           exchange_rate_source: string | null
-          exchange_rate_to_eur: number | null
+          exchange_rate_to_eur: number
           id: string
-          occurred_at: string | null
-          transaction_date: string | null
-          type: string | null
+          occurred_at: string
+          transaction_date: string
+          type: string
           user_id: string
         }
         Insert: {
-          amount?: number | null
-          amount_eur?: number | null
-          category?: string | null
+          amount: number
+          amount_eur: number
+          category: string
           created_at?: string
-          currency?: string | null
-          description?: string | null
-          encrypted_payload?: string | null
-          encryption_version?: number | null
+          currency?: string
+          description: string
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
-          exchange_rate_to_eur?: number | null
+          exchange_rate_to_eur: number
           id?: string
-          occurred_at?: string | null
-          transaction_date?: string | null
-          type?: string | null
+          occurred_at: string
+          transaction_date: string
+          type: string
           user_id: string
         }
         Update: {
-          amount?: number | null
-          amount_eur?: number | null
-          category?: string | null
+          amount?: number
+          amount_eur?: number
+          category?: string
           created_at?: string
-          currency?: string | null
-          description?: string | null
-          encrypted_payload?: string | null
-          encryption_version?: number | null
+          currency?: string
+          description?: string
           exchange_rate_date?: string | null
           exchange_rate_source?: string | null
-          exchange_rate_to_eur?: number | null
+          exchange_rate_to_eur?: number
           id?: string
-          occurred_at?: string | null
-          transaction_date?: string | null
-          type?: string | null
+          occurred_at?: string
+          transaction_date?: string
+          type?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      user_financial_vaults: {
-        Row: {
-          created_at: string
-          id: string
-          key_version: number
-          last_unlocked_at: string | null
-          recovery_version: number
-          updated_at: string
-          user_id: string
-          vault_status: string
-          wrapped_vault_key: Json
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key_version?: number
-          last_unlocked_at?: string | null
-          recovery_version?: number
-          updated_at?: string
-          user_id: string
-          vault_status?: string
-          wrapped_vault_key: Json
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key_version?: number
-          last_unlocked_at?: string | null
-          recovery_version?: number
-          updated_at?: string
-          user_id?: string
-          vault_status?: string
-          wrapped_vault_key?: Json
         }
         Relationships: []
       }

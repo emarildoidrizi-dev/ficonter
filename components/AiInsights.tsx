@@ -273,7 +273,7 @@ export function AiInsights({
     () => calculateAiInsightsContext(reconciledInputs),
     [reconciledInputs],
   );
-  const stale = Boolean(snapshot && snapshot.dataFingerprint !== context.fingerprint);
+  const stale = Boolean(snapshot && snapshot.dataFingerprint !== fingerprint);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -407,7 +407,7 @@ export function AiInsights({
       const response = await fetch("/api/wealth/ai-insights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: reconciledInputs }),
+        body: JSON.stringify({}),
         cache: "no-store",
       });
       const payload = (await response.json().catch(() => ({}))) as {

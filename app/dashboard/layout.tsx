@@ -1,9 +1,5 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
-import { VaultProvider } from "@/components/VaultProvider";
-import { VaultAccessPanel } from "@/components/VaultAccessPanel";
-import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
-import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
@@ -87,8 +83,6 @@ export default async function DashboardLayout({
   // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  // Customer Vault prompts must never block the administration workspace.
-  const showCustomerVaultAccess = !admin;
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -154,14 +148,7 @@ export default async function DashboardLayout({
         }}
       />
       <main className="app-main">
-        <VaultProvider>
-          <EncryptedTransactionProvider>
-            <EncryptedBillProvider>
-              {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
-              {children}
-            </EncryptedBillProvider>
-          </EncryptedTransactionProvider>
-        </VaultProvider>
+        {children}
       </main>
       </div>
     </CurrencyDisplayProvider>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { EncryptedEmergencyFundWorkspace } from "@/components/EncryptedEmergencyFundWorkspace";
+import { EmergencyFundIntelligence } from "@/components/EmergencyFundIntelligence";
+import { normalizeEmergencyFundInputs } from "@/lib/wealth/emergencyFund";
 
 import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 export const dynamic = "force-dynamic";
@@ -8,9 +9,19 @@ export const revalidate = 0;
 
 export default async function EmergencyFundPage() {
   await requireSubscriptionFeature("emergency_fund_intelligence");
-  const { user } = await getCurrentUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 
-  return <EncryptedEmergencyFundWorkspace userId={user.id} />;
+  const { data, error } = await supabase.rpc(
+    "get_emergency_fund_intelligence_inputs",
+  );
+
+  return (
+    <EmergencyFundIntelligence
+      userId={user.id}
+      initialInputs={normalizeEmergencyFundInputs(data)}
+      initialError={error?.message ?? ""}
+    />
+  );
 }

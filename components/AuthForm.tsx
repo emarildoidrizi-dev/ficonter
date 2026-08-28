@@ -72,7 +72,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
     setMessage(null);
 
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("username") ?? "").trim().toLowerCase();
+    const email = String(form.get("username") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("fullName") ?? "").trim();
     const confirmPassword = String(form.get("confirmPassword") ?? "");
@@ -110,6 +110,9 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
           throw new Error("Enter your full name.");
         }
 
+        // On the private Beta environment a normal signup cannot continue without
+        // manually entering a valid invitation code. Public/non-Beta registration
+        // still defaults to Free when this field is blank.
         if (betaIntent && !betaCode) {
           throw new Error(
             "Enter the Beta invitation code, or choose Continue with Free plan.",
@@ -189,6 +192,8 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
         });
         setLoading(false);
       } else {
+        // Each explicit login attempt on the Beta environment starts with no
+        // trusted Beta-login authorization. The POST below must recreate it.
         if (betaEntry) {
           await fetch("/api/beta/login-authorize", {
             method: "DELETE",
@@ -209,6 +214,8 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
             try {
               await authorizeCurrentBetaLogin(betaCode);
             } catch (betaError) {
+              // A failed Beta verification must not silently become Beta. The
+              // customer can explicitly choose the Free-plan button instead.
               await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
               throw betaError;
             }
@@ -298,11 +305,6 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
           autoComplete="username"
           required
         />
-        {mode === "register" ? (
-          <small className="muted">
-            One email address can belong to only one FICONTER account. If this email is already registered, use the existing account instead.
-          </small>
-        ) : null}
       </div>
 
       {mode === "register" && (

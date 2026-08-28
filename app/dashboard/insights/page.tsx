@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
-import { EncryptedAiInsightsWorkspace } from "@/components/EncryptedAiInsightsWorkspace";
+import { AiInsights } from "@/components/AiInsights";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import {
+  SMART_INSIGHTS_ENGINE_VERSION,
+  calculateAiInsightsContext,
+  normalizeAiInsightSnapshot,
+  normalizeAiInsightsInputs,
+} from "@/lib/wealth/aiInsights";
 
 import { requireSubscriptionFeature } from "@/lib/subscriptionRouteAccess";
 export const dynamic = "force-dynamic";
@@ -8,9 +14,32 @@ export const revalidate = 0;
 
 export default async function SmartInsightsPage() {
   await requireSubscriptionFeature("smart_insights");
-  const { user } = await getCurrentUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) redirect("/login");
 
-  return <EncryptedAiInsightsWorkspace userId={user.id} />;
+  const [{ data, error }, { data: snapshotRows }] = await Promise.all([
+    supabase.rpc("get_ai_insights_inputs"),
+    supabase
+      .from("ai_insight_snapshots")
+      .select("id, data_fingerprint, report, model, data_coverage, generated_at")
+      .eq("user_id", user.id)
+      .eq("model", SMART_INSIGHTS_ENGINE_VERSION)
+      .order("generated_at", { ascending: false })
+      .limit(1),
+  ]);
+
+  const inputs = normalizeAiInsightsInputs(data);
+  const context = calculateAiInsightsContext(inputs);
+  const snapshot = normalizeAiInsightSnapshot(snapshotRows?.[0]);
+
+  return (
+    <AiInsights
+      userId={user.id}
+      initialInputs={inputs}
+      initialSnapshot={snapshot}
+      initialFingerprint={context.fingerprint}
+      initialError={error?.message ?? ""}
+    />
+  );
 }

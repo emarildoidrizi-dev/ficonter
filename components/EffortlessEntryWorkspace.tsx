@@ -74,6 +74,10 @@ export function EffortlessEntryWorkspace({
   const [notice, setNotice] = useState("");
   const periodKey = useMemo(() => currentPeriodKey(), []);
 
+  useEffect(() => {
+    setTransactions(initialTransactions);
+  }, [initialTransactions]);
+
   const activateQuickAdd = useCallback(() => {
     quickAddRequestedRef.current = true;
     setActivePreset(null);
@@ -197,21 +201,9 @@ export function EffortlessEntryWorkspace({
     };
   }, [periodKey, supabase]);
 
-  useEffect(() => {
-    function handleCreated(event: Event) {
-      const created = (event as CustomEvent<TransactionForPreset>).detail;
-      if (!created?.id) return;
-      setTransactions((current) => [
-        created,
-        ...current.filter((transaction) => transaction.id !== created.id),
-      ]);
-    }
-
-    window.addEventListener("ficonter:transaction-created", handleCreated);
-    return () =>
-      window.removeEventListener("ficonter:transaction-created", handleCreated);
-  }, []);
-
+  // Transaction contents are synchronized from the encrypted provider through
+  // initialTransactions. The global event is deliberately not used as a data
+  // carrier because its detail contains operational metadata only.
 
   useEffect(() => {
     function handleQuickAdd() {
@@ -359,7 +351,7 @@ export function EffortlessEntryWorkspace({
 
       setPostedTemplateIds((current) => new Set(current).add(template.id));
       window.dispatchEvent(
-        new CustomEvent("ficonter:transaction-created", { detail: saved }),
+        new CustomEvent("ficonter:transaction-created", { detail: { id: saved.id } }),
       );
       notifyFiconterDataChange("all");
       setNotice(`${template.label} was added for this month.`);
@@ -395,7 +387,7 @@ export function EffortlessEntryWorkspace({
         if (saved?.id) {
           completed += 1;
           window.dispatchEvent(
-            new CustomEvent("ficonter:transaction-created", { detail: saved }),
+            new CustomEvent("ficonter:transaction-created", { detail: { id: saved.id } }),
           );
           setPostedTemplateIds((current) => new Set(current).add(template.id));
         }

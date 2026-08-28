@@ -121,31 +121,38 @@ export async function migrateLegacyPlaintextDebtPayments(
     if (row.user_id !== userId) continue;
     if (row.encryption_version === 1 && row.encrypted_payload) continue;
 
-    const payload: DebtPaymentPrivatePayloadV1 = {
-      amount: Number(row.amount),
-      currency: row.currency,
-      amount_eur: Number(row.amount_eur),
-      exchange_rate_to_eur: Number(row.exchange_rate_to_eur),
-      notes: row.notes,
-    };
+    try {
+      const payload: DebtPaymentPrivatePayloadV1 = {
+        amount: Number(row.amount),
+        currency: row.currency,
+        amount_eur: Number(row.amount_eur),
+        exchange_rate_to_eur: Number(row.exchange_rate_to_eur),
+        notes: row.notes,
+      };
 
-    const encryptedPayload = await encryptDebtPaymentPayload(
-      vaultKey,
-      userId,
-      row.id,
-      payload,
-    );
+      const encryptedPayload = await encryptDebtPaymentPayload(
+        vaultKey,
+        userId,
+        row.id,
+        payload,
+      );
 
-    const { error: updateError } = await paymentsTable
-      .update({
-        encrypted_payload: encryptedPayload,
-        encryption_version: 1,
-      })
-      .eq("id", row.id)
-      .eq("user_id", userId);
+      const { error: updateError } = await paymentsTable
+        .update({
+          encrypted_payload: encryptedPayload,
+          encryption_version: 1,
+        })
+        .eq("id", row.id)
+        .eq("user_id", userId);
 
-    if (updateError) throw updateError;
-    migrated += 1;
+      if (updateError) throw updateError;
+      migrated += 1;
+    } catch (paymentError) {
+      console.error("Legacy Debt payment E2EE migration failed", {
+        paymentId: row.id,
+        error: paymentError,
+      });
+    }
   }
 
   return migrated;

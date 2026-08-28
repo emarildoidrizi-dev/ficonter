@@ -23,9 +23,11 @@ export async function GET(
     });
     if (!recovery) return NextResponse.json({ error: "Recovery request not found." }, { status: 404 });
 
+    const recoveryPublicKey = await getEmergencyRecoveryPublicKey();
+
     return NextResponse.json({
       recovery,
-      recoveryPublicKey: getEmergencyRecoveryPublicKey(),
+      recoveryPublicKey,
     });
   } catch (error) {
     console.error("Customer Recovery Access read failed", error);
@@ -57,10 +59,12 @@ export async function POST(
       );
     }
 
+    const recoveryPublicKey = await getEmergencyRecoveryPublicKey();
+
     return NextResponse.json({
       ok: true,
       access,
-      recoveryPublicKey: getEmergencyRecoveryPublicKey(),
+      recoveryPublicKey,
     });
   } catch (error) {
     console.error("Customer Recovery Access claim failed", error);

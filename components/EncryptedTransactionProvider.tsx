@@ -20,8 +20,10 @@ import {
 } from "@/lib/e2ee/transactionPayload";
 import {
   finalizePendingServerTransactions,
-  migrateLegacyPlaintextTransactions,
 } from "@/lib/e2ee/transactionMigration";
+import {
+  migrateLegacyPlaintextTransactionsResilient,
+} from "@/lib/e2ee/resilientLegacyTransactionMigration";
 import {
   finalizePendingEncryptedBillTransactions,
 } from "@/lib/e2ee/pendingBillTransactionFinalizer";
@@ -82,26 +84,55 @@ export function EncryptedTransactionProvider({
           throw new Error("Please log in again.");
         }
 
-        await migrateLegacyPlaintextTransactions(
-          supabase,
-          vaultKey,
-          user.id,
-        );
-        await finalizePendingEncryptedBillTransactions(
-          supabase,
-          vaultKey,
-          user.id,
-        );
-        await finalizePendingEncryptedDebtPayments(
-          supabase,
-          vaultKey,
-          user.id,
-        );
-        await finalizePendingServerTransactions(
-          supabase,
-          vaultKey,
-          user.id,
-        );
+        const maintenanceSteps = [
+          {
+            name: "legacy transaction migration",
+            run: () =>
+              migrateLegacyPlaintextTransactionsResilient(
+                supabase,
+                vaultKey,
+                user.id,
+              ),
+          },
+          {
+            name: "pending encrypted bill transaction finalization",
+            run: () =>
+              finalizePendingEncryptedBillTransactions(
+                supabase,
+                vaultKey,
+                user.id,
+              ),
+          },
+          {
+            name: "pending encrypted debt payment finalization",
+            run: () =>
+              finalizePendingEncryptedDebtPayments(
+                supabase,
+                vaultKey,
+                user.id,
+              ),
+          },
+          {
+            name: "pending server transaction finalization",
+            run: () =>
+              finalizePendingServerTransactions(
+                supabase,
+                vaultKey,
+                user.id,
+              ),
+          },
+        ] as const;
+
+        for (const step of maintenanceSteps) {
+          try {
+            await step.run();
+          } catch (maintenanceError) {
+            console.warn(
+              `FICONTER E2EE ${step.name} encountered a recoverable error. Encrypted records will still be opened.`,
+              maintenanceError,
+            );
+          }
+        }
 
         const { data, error: queryError } = await supabase
           .from("transactions")
@@ -140,7 +171,6 @@ export function EncryptedTransactionProvider({
         setTransactions(decrypted);
       } while (refreshQueuedRef.current);
     } catch (caughtError) {
-      setTransactions([]);
       setError(
         caughtError instanceof Error
           ? caughtError.message

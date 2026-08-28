@@ -12,53 +12,31 @@ import { formatCurrency } from "@/lib/financialOptions";
 import { useBaseCurrencySourceData } from "@/components/useBaseCurrencySourceData";
 import { reconcileNetWorthGrowthToBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
 import { calculateWealthScore } from "@/lib/wealth/wealthScore";
-import {
-  normalizeNetWorthGrowthInputs,
-  type NetWorthGrowthInputs,
-} from "@/lib/wealth/netWorthGrowth";
+import { buildNetWorthGrowthInputsFromSource } from "@/lib/wealth/netWorthClientInputs";
 import { WealthScore } from "@/components/WealthScore";
 import { NetWorthGrowth } from "@/components/NetWorthGrowth";
 import styles from "./NetWorthLive.module.css";
 
-export function NetWorthLive({
-  userId,
-  initialGrowthInputs,
-  initialError = "",
-}: {
-  userId: string;
-  initialGrowthInputs: NetWorthGrowthInputs;
-  initialError?: string;
-}) {
+export function NetWorthLive({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const {
     source: currencySource,
     context: currencyContext,
     baseCurrency,
+    refresh: refreshSource,
+    loading: sourceLoading,
   } = useBaseCurrencySourceData(userId);
   const refreshTimerRef = useRef<number | null>(null);
-  const [inputs, setInputs] = useState(initialGrowthInputs);
-  const [error, setError] = useState(initialError);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    setInputs(initialGrowthInputs);
-    setError(initialError);
-  }, [initialGrowthInputs, initialError]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    const { data, error: refreshError } = await supabase.rpc(
-      "get_net_worth_growth_inputs",
-    );
-
-    if (refreshError) {
-      setError(refreshError.message);
-    } else {
-      setInputs(normalizeNetWorthGrowthInputs(data));
-      setError("");
+    try {
+      await refreshSource();
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
-  }, [supabase]);
+  }, [refreshSource]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -143,6 +121,10 @@ export function NetWorthLive({
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [refresh]);
 
+  const inputs = useMemo(
+    () => buildNetWorthGrowthInputsFromSource(currencySource),
+    [currencySource],
+  );
   const reconciledInputs = useMemo(
     () => reconcileNetWorthGrowthToBaseCurrency(inputs, currencySource, currencyContext),
     [currencyContext, currencySource, inputs],
@@ -156,6 +138,8 @@ export function NetWorthLive({
     (value: number) => formatCurrency(value, baseCurrency),
     [baseCurrency],
   );
+  const isRefreshing = refreshing || sourceLoading;
+  const error = "";
 
   return (
     <section className={styles.shell}>
@@ -171,10 +155,10 @@ export function NetWorthLive({
         <button
           type="button"
           className={styles.refreshButton}
-          disabled={refreshing}
+          disabled={isRefreshing}
           onClick={() => void refresh()}
         >
-          {refreshing ? "Refreshing…" : "Refresh"}
+          {isRefreshing ? "Refreshing…" : "Refresh"}
         </button>
       </header>
 

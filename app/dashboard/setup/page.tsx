@@ -1,18 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { FinancialSetupGuide } from "@/components/FinancialSetupGuide";
-import { normalizeFinancialHealthInputs } from "@/lib/wealth/financialHealth";
+import { EncryptedFinancialSetupWorkspace } from "@/components/EncryptedFinancialSetupWorkspace";
 import { readSetupAcknowledgements } from "@/lib/wealth/setupReadiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function FinancialSetupPage() {
-  const { supabase, user } = await getCurrentUser();
+  const { user } = await getCurrentUser();
 
   if (!user) redirect("/login");
-
-  const { data, error } = await supabase.rpc("get_financial_health_inputs");
 
   return (
     <section>
@@ -27,11 +24,9 @@ export default async function FinancialSetupPage() {
         </div>
       </div>
 
-      <FinancialSetupGuide
+      <EncryptedFinancialSetupWorkspace
         userId={user.id}
-        initialInputs={normalizeFinancialHealthInputs(data)}
         initialAcknowledgements={readSetupAcknowledgements(user.user_metadata)}
-        initialError={error?.message ?? ""}
       />
     </section>
   );

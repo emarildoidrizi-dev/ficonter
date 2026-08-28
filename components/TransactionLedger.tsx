@@ -15,8 +15,9 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveVaultKey } from "@/lib/e2ee/sessionKey";
+import { encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { getExchangeRate } from "@/lib/performance/exchangeRateCache";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
@@ -91,6 +92,9 @@ function signedEuroValue(item: Transaction) {
 export function TransactionLedger({ transactions: initialTransactions, allowMultiCurrency = true, allowPdfExport = true }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [transactions, setTransactions] = useState(initialTransactions);
+  useEffect(() => {
+    setTransactions(initialTransactions);
+  }, [initialTransactions]);
   const { baseCurrency } = useCurrencyDisplay();
   const { rateForDate } = useHistoricalReportingRates(
     transactions.map((transaction) => transaction.transaction_date),
@@ -168,14 +172,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    function handleCreated(event: Event) {
-      const created = (event as CustomEvent<Transaction>).detail;
-      if (!created?.id) return;
-
-      setTransactions((current) => {
-        const withoutDuplicate = current.filter((item) => item.id !== created.id);
-        return [created, ...withoutDuplicate];
-      });
+    function handleCreated() {
+      // The shared encrypted provider owns transaction contents. This event is
+      // only a refresh/UX signal; never trust event detail as financial data.
       // A newly created record must always be visible immediately, even if
       // the user previously had filters or an older sort order selected.
       setSearch("");
@@ -208,46 +207,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
     };
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    async function subscribeToLiveTransactions() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!mounted || !user) return;
-
-      channel = supabase
-        .channel(`transaction-ledger-${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "transactions",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-            setTransactions((current) => {
-              if (payload.eventType === "DELETE") {
-                const deletedId = (payload.old as { id?: string }).id;
-                return current.filter((item) => item.id !== deletedId);
-              }
-
-              const changed = payload.new as Transaction;
-              if (!changed?.id) return current;
-              return [changed, ...current.filter((item) => item.id !== changed.id)];
-            });
-          },
-        )
-        .subscribe();
-    }
-
-    void subscribeToLiveTransactions();
-    return () => {
-      mounted = false;
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, [supabase]);
 
   const categories = useMemo(
     () => [...new Set(transactions.map((item) => item.category))].sort(),
@@ -665,17 +625,58 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
       transaction_date: editOccurredAt.slice(0, 10),
       occurred_at: occurred.toISOString(),
     };
-    const { data, error: updateError } = await supabase
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (authError || !user) {
+      setError("Please log in again.");
+      setLoading(false);
+      return;
+    }
+
+    const vaultKey = getActiveVaultKey();
+    if (!vaultKey) {
+      setError("Unlock your Financial Vault before editing a transaction.");
+      setLoading(false);
+      return;
+    }
+
+    const encryptedPayload = await encryptTransactionPayload(
+      vaultKey,
+      user.id,
+      update,
+    );
+    const { error: updateError } = await supabase
       .from("transactions")
-      .update(update)
+      .update({
+        encrypted_payload: encryptedPayload,
+        encryption_version: 1,
+        description: null,
+        amount: null,
+        currency: null,
+        amount_eur: null,
+        exchange_rate_to_eur: null,
+        exchange_rate_date: null,
+        exchange_rate_source: null,
+        type: null,
+        category: null,
+        transaction_date: null,
+        occurred_at: null,
+      })
       .eq("id", editTarget.id)
-      .select("id,description,amount,currency,amount_eur,exchange_rate_to_eur,exchange_rate_date,exchange_rate_source,type,category,transaction_date,occurred_at,created_at")
-      .single();
+      .eq("user_id", user.id);
+
     if (updateError) setError(updateError.message);
-    else if (data) {
-      setTransactions((current) => current.map((item) => (item.id === data.id ? data : item)));
+    else {
+      setTransactions((current) =>
+        current.map((item) =>
+          item.id === editTarget.id ? { ...item, ...update } : item,
+        ),
+      );
       setEditTarget(null);
       notifyFiconterDataChange("all");
+      window.dispatchEvent(new CustomEvent("ficonter:transaction-upserted", {
+        detail: { id: editTarget.id, encryption_version: 1 },
+      }));
       setNotice("Transaction updated.");
       window.setTimeout(() => setNotice(""), 2600);
     }
@@ -693,7 +694,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         </label>
         <button className={styles.secondaryAction} type="button" onClick={clearFilters}><RotateCcw size={16} /> Reset</button>
         <button className={styles.exportButton} type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}><Download size={16} /> Export CSV</button>
-        <button className={styles.exportButton} type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(visible, "view"); }} disabled={!visible.length || exportingPdf} title={!allowPdfExport ? "Personal Pro required" : undefined}>{allowPdfExport ? <FileText size={16} /> : <LockKeyhole size={16} />} {allowPdfExport ? (exportingPdf ? "Preparing PDF…" : "Export PDF") : "PDF · Personal Pro"}</button>
+        <button className={styles.exportButton} type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(visible, "view"); }} disabled={!visible.length || exportingPdf} title={!allowPdfExport ? "Personal Pro required" : undefined}>{allowPdfExport ? <FileText size={16} /> : <LockKeyhole size={16} />} {allowPdfExport ? (exportingPdf ? "Preparing PDFâ€¦" : "Export PDF") : "PDF Â· Personal Pro"}</button>
       </div>
 
       <section className={styles.dateRangeCard} aria-label="Filter transactions by date range">
@@ -715,9 +716,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
           <option value="neutral">Transfers / adjustments</option>
         </select>
         <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">All categories</option>{categories.map((category) => <option key={category}>{category}</option>)}</select>
-        <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)}><option value="all">All currencies</option>{currencies.map((currency) => <option key={currency} value={currency}>{currencySymbol(currency)} {currency} — {currencyName(currency)}</option>)}</select>
+        <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)}><option value="all">All currencies</option>{currencies.map((currency) => <option key={currency} value={currency}>{currencySymbol(currency)} {currency} â€” {currencyName(currency)}</option>)}</select>
         <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}><option value="all">All months</option>{months.map((month) => <option key={month} value={month}>{new Date(`${month}-01T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</option>)}</select>
-        <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest amount</option><option value="lowest">Lowest amount</option><option value="description">Description A–Z</option></select>
+        <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest amount</option><option value="lowest">Lowest amount</option><option value="description">Description Aâ€“Z</option></select>
       </div>
 
       <div className={styles.summary}>
@@ -744,7 +745,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         {selectedTransactions.length > 0 && (
           <div className={styles.bulkActions}>
             <button type="button" onClick={() => exportCsv(selectedTransactions, "selected")}><Download size={15} /> Export selected CSV</button>
-            <button type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(selectedTransactions, "selected"); }} disabled={exportingPdf}>{allowPdfExport ? <FileText size={15} /> : <LockKeyhole size={15} />} {allowPdfExport ? "Export selected PDF" : "PDF · Personal Pro"}</button>
+            <button type="button" onClick={() => { if (!allowPdfExport) { window.location.assign("/dashboard/settings?section=subscription&required=private_pdf_export"); return; } void exportPdf(selectedTransactions, "selected"); }} disabled={exportingPdf}>{allowPdfExport ? <FileText size={15} /> : <LockKeyhole size={15} />} {allowPdfExport ? "Export selected PDF" : "PDF Â· Personal Pro"}</button>
             <button className={styles.bulkDeleteButton} type="button" onClick={() => setBulkDeleteOpen(true)}><Trash2 size={15} /> Delete selected</button>
             <button type="button" onClick={() => setSelectedIds(new Set())}>Clear selection</button>
           </div>
@@ -770,12 +771,12 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 />
               </label>
               <div className={direction === "inflow" ? styles.incomeMark : direction === "outflow" ? styles.expenseMark : styles.neutralMark} />
-              <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} · {typeLabel(transaction.type)} · {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
+              <div className={styles.details}><strong>{transaction.description}</strong><span>{transaction.category} Â· {typeLabel(transaction.type)} Â· {readableDateTime(transaction.occurred_at, transaction.transaction_date)}</span></div>
               <div className={styles.amountBlock}>
                 <strong className={direction === "inflow" ? styles.positive : direction === "outflow" ? styles.negative : ""}>{direction === "inflow" ? "+" : direction === "outflow" ? "-" : ""}{(() => {
                   const displayedAmount = displayedAmountFor(transaction);
                   return displayedAmount === null
-                    ? `— ${baseCurrency}`
+                    ? `â€” ${baseCurrency}`
                     : formatCurrency(displayedAmount, baseCurrency);
                 })()}</strong>
                 <span>
@@ -787,7 +788,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                       <>
                         Original: {formatCurrency(finiteNumber(transaction.amount), originalCurrency)}
                         {originalCurrency !== baseCurrency && conversionRate ? (
-                          <> · 1 {originalCurrency} = {conversionRate.toFixed(6)} {baseCurrency}</>
+                          <> Â· 1 {originalCurrency} = {conversionRate.toFixed(6)} {baseCurrency}</>
                         ) : null}
                       </>
                     );
@@ -825,7 +826,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
               <label>Description<input name="description" defaultValue={editTarget.description} required /></label>
               <div className={styles.formGrid}>
                 <label>Amount<input name="amount" type="number" min="0.01" step="0.01" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} required /></label>
-                <label>Currency<select name="currency" value={editCurrency} onChange={(event) => setEditCurrency(event.target.value)}>{editCurrencyOptions.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>)}</select></label>
+                <label>Currency<select name="currency" value={editCurrency} onChange={(event) => setEditCurrency(event.target.value)}>{editCurrencyOptions.map((code) => <option key={code} value={code}>{currencySymbol(code)} {code} â€” {currencyName(code)}</option>)}</select></label>
               </div>
               <label>Transaction type<select name="type" defaultValue={editTarget.type}>{Object.entries(groupedTypes).map(([group, options]) => <optgroup key={group} label={group}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
               <div className={styles.formGrid}>
@@ -833,9 +834,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
                 <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
-              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : editCurrency === baseCurrency ? `Base currency equivalent: ${formatCurrency(finiteNumber(editAmount), baseCurrency)} · no conversion required` : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} · displayed in ${baseCurrency}`}</div>
+              <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rateâ€¦" : editRateError ? editRateError : editCurrency === baseCurrency ? `Base currency equivalent: ${formatCurrency(finiteNumber(editAmount), baseCurrency)} Â· no conversion required` : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} Â· displayed in ${baseCurrency}`}</div>
               {error && <div className={styles.error}>{error}</div>}
-              <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</button></div>
+              <div className={styles.modalActions}><button type="button" onClick={() => setEditTarget(null)} disabled={loading}>Cancel</button><button className={styles.primaryButton} type="submit" disabled={loading}>{loading ? "Savingâ€¦" : "Save changes"}</button></div>
             </form>
           </div>
         </div>
@@ -845,9 +846,9 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
         <div className={styles.backdrop} onMouseDown={() => !loading && setDeleteTarget(null)}>
           <div className={`${styles.modal} ${styles.smallModal}`} onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true">
             <button className={styles.close} type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
-            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>“{deleteTarget.description}” will be permanently removed. A linked Bill will also be removed. If this is a debt-payment transaction, the payment will be reversed and the outstanding debt balance restored.</p>
+            <small>PERMANENT ACTION</small><h3>Delete transaction?</h3><p>â€œ{deleteTarget.description}â€ will be permanently removed. A linked Bill will also be removed. If this is a debt-payment transaction, the payment will be reversed and the outstanding debt balance restored.</p>
             {error && <div className={styles.error}>{error}</div>}
-            <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deleting…" : "Delete transaction"}</button></div>
+            <div className={styles.modalActions}><button type="button" onClick={() => setDeleteTarget(null)} disabled={loading}>Cancel</button><button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={deleteTransaction} disabled={loading}>{loading ? "Deletingâ€¦" : "Delete transaction"}</button></div>
           </div>
         </div>
       )}
@@ -862,7 +863,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
             {error && <div className={styles.error}>{error}</div>}
             <div className={styles.modalActions}>
               <button type="button" onClick={() => setBulkDeleteOpen(false)} disabled={loading}>Cancel</button>
-              <button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={() => void deleteSelectedTransactions()} disabled={loading || !selectedTransactions.length}>{loading ? "Deleting…" : "Delete selected"}</button>
+              <button className={styles.dangerButton} type="button" data-enter-confirm="true" onClick={() => void deleteSelectedTransactions()} disabled={loading || !selectedTransactions.length}>{loading ? "Deletingâ€¦" : "Delete selected"}</button>
             </div>
           </div>
         </div>

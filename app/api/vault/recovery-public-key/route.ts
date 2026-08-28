@@ -9,7 +9,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const recoveryPublicKey = getEmergencyRecoveryPublicKey();
+    const recoveryPublicKey = await getEmergencyRecoveryPublicKey();
     if (!recoveryPublicKey) {
       return NextResponse.json(
         { error: "Assisted Recovery protection is not configured." },

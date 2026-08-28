@@ -1,26 +1,43 @@
 import "server-only";
 
+import { createServiceClient } from "@/lib/supabase/admin";
 import type { EmergencyRecoveryPublicKeyV1 } from "@/lib/e2ee/emergencyRecoveryEnvelope";
 
-export function getEmergencyRecoveryPublicKey(): EmergencyRecoveryPublicKeyV1 | null {
-  const kid = process.env.FICONTER_RECOVERY_KMS_KEY_ID?.trim();
-  const rawJwk = process.env.FICONTER_RECOVERY_KMS_PUBLIC_JWK?.trim();
+type RecoveryKeyRegistryRow = {
+  kid: string;
+  algorithm: string;
+  public_jwk: JsonWebKey;
+};
 
-  if (!kid || !rawJwk) return null;
+export async function getEmergencyRecoveryPublicKey(): Promise<EmergencyRecoveryPublicKeyV1 | null> {
+  const service = createServiceClient() as any;
+  const { data, error } = await service
+    .from("ficonter_recovery_key_registry")
+    .select("kid,algorithm,public_jwk")
+    .eq("active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  let jwk: JsonWebKey;
-  try {
-    jwk = JSON.parse(rawJwk) as JsonWebKey;
-  } catch {
-    throw new Error("FICONTER recovery public-key configuration is invalid.");
-  }
+  if (error) throw error;
+  if (!data) return null;
 
-  if (jwk.kty !== "RSA" || !jwk.n || !jwk.e || jwk.d) {
+  const row = data as RecoveryKeyRegistryRow;
+  const jwk = row.public_jwk;
+
+  if (
+    row.algorithm !== "RSA-OAEP-256" ||
+    !jwk ||
+    jwk.kty !== "RSA" ||
+    !jwk.n ||
+    !jwk.e ||
+    jwk.d
+  ) {
     throw new Error("FICONTER recovery public-key configuration is invalid.");
   }
 
   return {
-    kid,
+    kid: row.kid,
     alg: "RSA-OAEP-256",
     jwk,
   };

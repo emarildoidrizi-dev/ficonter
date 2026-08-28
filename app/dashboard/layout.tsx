@@ -88,9 +88,10 @@ export default async function DashboardLayout({
   // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  // Encryption is a platform security capability for every customer plan.
-  // Customer Vault prompts must never block the administration workspace.
-  const showCustomerVaultAccess = !admin;
+  // Financial Vault protection applies to every authenticated personal workspace,
+  // including Owner/Admin accounts using their own personal finances.
+  // The Vault panel controls personal-data decryption and does not block admin routes.
+  const showCustomerVaultAccess = true;
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";
-import { VaultRecoveryCodeRotator } from "@/components/VaultRecoveryCodeRotator";
 import { VaultInactivityGuard } from "@/components/VaultInactivityGuard";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
@@ -86,12 +85,8 @@ export default async function DashboardLayout({
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  // Financial Vault protection applies to every authenticated personal workspace,
-  // including Owner/Admin accounts using their own personal finances.
-  // The Vault panel controls personal-data decryption and does not block admin routes.
   const showCustomerVaultAccess = true;
 
   const interfacePreferences = readInterfacePreferences(
@@ -106,69 +101,58 @@ export default async function DashboardLayout({
       baseCurrency={baseCurrency}
       reportingCurrency="EUR"
     >
-    <div className="app-shell">
-      <InterfacePreferencesBootstrap
-        {...interfacePreferences}
-        wallpaperAccessEnabled={canManageWallpapers}
-      />
-      <TimeAwareWallpaperBootstrap
-        enabled={canManageWallpapers}
-      />
-      <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
-      <BaseCurrencyBootstrap
-        workspace="personal"
-        currency={baseCurrency}
-      />
-      <LivingThemeBackdrop />
-      <RealtimeRefreshBridge />
-      <RuntimeStabilityBridge />
-      <NavigationSpeedBoost
-        workspace="personal"
-        cacheKey={user.id}
-      />
-      <CommandPalette />
-      {isPlatformOwner ? <OwnerMusicPlayer /> : null}
-      <FiconterNativeAppChrome
-        workspace="personal"
-        subscriptionPlanCode={subscriptionPlanCode}
-        isAdmin={Boolean(admin)}
-        displayName={String(
-          user.user_metadata?.display_name ??
-            user.user_metadata?.full_name ??
-            user.user_metadata?.name ??
-            "",
-        )}
-        email={user.email ?? ""}
-        avatarPath={String(user.user_metadata?.avatar_path ?? "")}
-      />
-      <Sidebar
-        isAdmin={Boolean(admin)}
-        subscriptionPlanCode={subscriptionPlanCode}
-        user={{
-          displayName: String(
+      <div className="app-shell">
+        <InterfacePreferencesBootstrap
+          {...interfacePreferences}
+          wallpaperAccessEnabled={canManageWallpapers}
+        />
+        <TimeAwareWallpaperBootstrap enabled={canManageWallpapers} />
+        <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
+        <BaseCurrencyBootstrap workspace="personal" currency={baseCurrency} />
+        <LivingThemeBackdrop />
+        <RealtimeRefreshBridge />
+        <RuntimeStabilityBridge />
+        <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />
+        <CommandPalette />
+        {isPlatformOwner ? <OwnerMusicPlayer /> : null}
+        <FiconterNativeAppChrome
+          workspace="personal"
+          subscriptionPlanCode={subscriptionPlanCode}
+          isAdmin={Boolean(admin)}
+          displayName={String(
             user.user_metadata?.display_name ??
               user.user_metadata?.full_name ??
               user.user_metadata?.name ??
               "",
-          ),
-          email: user.email ?? "",
-          avatarPath: String(
-            user.user_metadata?.avatar_path ?? "",
-          ),
-        }}
-      />
-      <main className="app-main">
-        <VaultProvider>
-          {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
-          <EncryptedTransactionProvider>
-            <EncryptedBillProvider>
-              {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
-              {showCustomerVaultAccess ? <VaultRecoveryCodeRotator /> : null}
-              {children}
-            </EncryptedBillProvider>
-          </EncryptedTransactionProvider>
-        </VaultProvider>
-      </main>
+          )}
+          email={user.email ?? ""}
+          avatarPath={String(user.user_metadata?.avatar_path ?? "")}
+        />
+        <Sidebar
+          isAdmin={Boolean(admin)}
+          subscriptionPlanCode={subscriptionPlanCode}
+          user={{
+            displayName: String(
+              user.user_metadata?.display_name ??
+                user.user_metadata?.full_name ??
+                user.user_metadata?.name ??
+                "",
+            ),
+            email: user.email ?? "",
+            avatarPath: String(user.user_metadata?.avatar_path ?? ""),
+          }}
+        />
+        <main className="app-main">
+          <VaultProvider>
+            {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
+            <EncryptedTransactionProvider>
+              <EncryptedBillProvider>
+                {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
+                {children}
+              </EncryptedBillProvider>
+            </EncryptedTransactionProvider>
+          </VaultProvider>
+        </main>
       </div>
     </CurrencyDisplayProvider>
   );

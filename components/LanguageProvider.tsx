@@ -168,9 +168,19 @@ function createDocumentTranslator(
     const rendered = renderTranslatedText(entry.source, getLanguage());
     entry.rendered = rendered;
 
-    if (element.getAttribute("label") !== rendered) {
-      applying = true;
-      element.setAttribute("label", rendered);
+    applying = true;
+    try {
+      if (element.tagName === "OPTGROUP") {
+        if (element.getAttribute("label") !== rendered) {
+          element.setAttribute("label", rendered);
+        }
+      } else if (element.textContent !== rendered) {
+        // Native selects display OPTION textContent in their closed control and
+        // popup menu. Keep the canonical value unchanged so filtering, saving,
+        // encryption and financial calculations continue to use stable IDs.
+        element.textContent = rendered;
+      }
+    } finally {
       applying = false;
     }
   }

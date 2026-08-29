@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
-import { VaultAccessPanel } from "@/components/VaultAccessPanel";
+import { VaultNavigationMount } from "@/components/VaultNavigationMount";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
@@ -87,8 +87,6 @@ export default async function DashboardLayout({
   // Owner and Super Admin are the only roles allowed to use wallpaper controls.
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  // Customer Vault prompts must never block the administration workspace.
-  const showCustomerVaultAccess = !admin;
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -137,32 +135,32 @@ export default async function DashboardLayout({
         email={user.email ?? ""}
         avatarPath={String(user.user_metadata?.avatar_path ?? "")}
       />
-      <Sidebar
-        isAdmin={Boolean(admin)}
-        subscriptionPlanCode={subscriptionPlanCode}
-        user={{
-          displayName: String(
-            user.user_metadata?.display_name ??
-              user.user_metadata?.full_name ??
-              user.user_metadata?.name ??
-              "",
-          ),
-          email: user.email ?? "",
-          avatarPath: String(
-            user.user_metadata?.avatar_path ?? "",
-          ),
-        }}
-      />
-      <main className="app-main">
-        <VaultProvider>
+      <VaultProvider>
+        {!admin ? <VaultNavigationMount /> : null}
+        <Sidebar
+          isAdmin={Boolean(admin)}
+          subscriptionPlanCode={subscriptionPlanCode}
+          user={{
+            displayName: String(
+              user.user_metadata?.display_name ??
+                user.user_metadata?.full_name ??
+                user.user_metadata?.name ??
+                "",
+            ),
+            email: user.email ?? "",
+            avatarPath: String(
+              user.user_metadata?.avatar_path ?? "",
+            ),
+          }}
+        />
+        <main className="app-main">
           <EncryptedTransactionProvider>
             <EncryptedBillProvider>
-              {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
               {children}
             </EncryptedBillProvider>
           </EncryptedTransactionProvider>
-        </VaultProvider>
-      </main>
+        </main>
+      </VaultProvider>
       </div>
     </CurrencyDisplayProvider>
   );

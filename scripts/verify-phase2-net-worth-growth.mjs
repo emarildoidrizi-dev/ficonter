@@ -1,17 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const checks = [];
 const expect = (condition, message) => checks.push({ condition, message });
-
 const engine = read("lib/wealth/netWorthGrowth.ts");
 const component = read("components/NetWorthGrowth.tsx");
 const live = read("components/NetWorthLive.tsx");
+const source = read("components/useBaseCurrencySourceData.ts");
 const page = read("app/dashboard/net-worth/page.tsx");
 const sql = read("supabase/phase2_net_worth_growth.sql");
-
 expect(engine.includes("normalizeWealthScoreInputs"), "Growth engine reuses Wealth Score inputs");
 expect(engine.includes("calculateNetWorthGrowth"), "Shared Net Worth Growth engine exists");
 expect(engine.includes('version: "1.1"'), "Growth result is versioned");
@@ -33,14 +31,15 @@ expect(component.includes("Directional 12-month outlook"), "Forecast panel is pr
 expect(component.includes("Outlook unavailable"), "Insufficient history state is visible");
 expect(component.includes("current net-worth balance is never"), "UI explains baseline protection");
 expect(!component.includes(".from(\"transactions\")"), "Growth UI does not query transactions directly");
-expect(live.includes("calculateWealthScore(inputs.wealthScore)") || live.includes("calculateWealthScore(reconciledInputs.wealthScore)"), "Existing Wealth Score reuses the combined input source");
-expect(live.includes("<NetWorthGrowth inputs={inputs}") || live.includes("<NetWorthGrowth inputs={reconciledInputs}"), "Growth module is integrated into Net Worth");
+expect(live.includes("calculateWealthScore(reconciledInputs.wealthScore)"), "Existing Wealth Score reuses the combined input source");
+expect(live.includes("<NetWorthGrowth inputs={reconciledInputs}"), "Growth module is integrated into Net Worth");
 expect(live.includes('table: "transactions"'), "Net Worth listens to Transactions realtime");
 expect(live.includes('table: "debts"'), "Net Worth listens to Debt realtime");
 expect(live.includes('table: "debt_payments"'), "Net Worth listens to Debt Payment realtime");
 expect(live.includes('table: "goals"'), "Existing Wealth Score goal realtime remains active");
-expect(live.includes("get_net_worth_growth_inputs"), "One combined RPC powers refreshes");
-expect(page.includes('rpc("get_net_worth_growth_inputs")'), "Server page loads the combined aggregate RPC");
+expect(live.includes("useBaseCurrencySourceData(userId)") && live.includes("buildNetWorthGrowthInputsFromSource(currencySource)"), "One shared encrypted financial source powers Net Worth refreshes");
+expect(page.includes("NetWorthLive") && page.includes("userId={user.id}"), "Server page enters authenticated Net Worth live workspace");
+expect(source.includes("useEncryptedTransactions") && source.includes("useEncryptedBills"), "Net Worth shared source uses encrypted Transactions and Bills providers");
 expect(!page.includes('.from("transactions")'), "Server page has no parallel transaction query");
 expect(!page.includes('.from("debts")'), "Server page has no parallel debt query");
 expect(sql.includes("public.get_wealth_score_inputs()"), "Growth SQL reuses the Wealth Score aggregate");
@@ -50,14 +49,4 @@ expect(sql.includes("grant execute") && sql.includes("authenticated"), "Only aut
 expect(!sql.includes("service_role"), "Growth SQL does not use service-role access");
 expect(sql.includes("debt_payments"), "Recorded debt repayments power historical liability reconstruction");
 expect(sql.includes("netWorthChange"), "SQL provides monthly net-worth changes");
-
-const failures = checks.filter((check) => !check.condition);
-for (const check of checks) {
-  console.log(`${check.condition ? "PASS" : "FAIL"} ${check.message}`);
-}
-
-if (failures.length) {
-  process.exitCode = 1;
-} else {
-  console.log(`\n${checks.length} Phase 2 Net Worth Growth checks passed.`);
-}
+const failures = checks.filter((check) => !check.condition); for (const check of checks) console.log(`${check.condition ? "PASS" : "FAIL"} ${check.message}`); if (failures.length) process.exitCode = 1; else console.log(`\n${checks.length} Phase 2 Net Worth Growth checks passed.`);

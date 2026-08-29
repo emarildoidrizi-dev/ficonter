@@ -1,34 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
-
 const root = process.cwd();
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 const checks = [];
-
-function check(name, condition) {
-  checks.push({ name, ok: Boolean(condition) });
-}
-
+function check(name, condition) { checks.push({ name, ok: Boolean(condition) }); }
 const enginePath = "lib/wealth/emergencyFund.ts";
 const componentPath = "components/EmergencyFundIntelligence.tsx";
+const encryptedPath = "components/EncryptedEmergencyFundWorkspace.tsx";
 const cssPath = "components/EmergencyFundIntelligence.module.css";
 const pagePath = "app/dashboard/emergency-fund/page.tsx";
 const sqlPath = "supabase/phase2_emergency_fund.sql";
 const sidebarPath = "components/Sidebar.tsx";
 const packagePath = "package.json";
-
-for (const file of [enginePath, componentPath, cssPath, pagePath, sqlPath]) {
-  check(`exists: ${file}`, exists(file));
-}
-
-const engine = read(enginePath);
-const component = read(componentPath);
-const page = read(pagePath);
-const sql = read(sqlPath);
-const sidebar = read(sidebarPath);
-const packageJson = JSON.parse(read(packagePath));
-
+for (const file of [enginePath, componentPath, encryptedPath, cssPath, pagePath, sqlPath]) check(`exists: ${file}`, exists(file));
+const engine = read(enginePath), component = read(componentPath), encrypted = read(encryptedPath), page = read(pagePath), sql = read(sqlPath), sidebar = read(sidebarPath), packageJson = JSON.parse(read(packagePath));
 check("engine exports normalizer", engine.includes("normalizeEmergencyFundInputs"));
 check("engine exports calculator", engine.includes("calculateEmergencyFund"));
 check("engine reuses Financial Health calculator", engine.includes("calculateFinancialHealth"));
@@ -39,7 +25,9 @@ check("engine provides estimated completion", engine.includes("estimatedCompleti
 check("engine provides milestones", engine.includes("EmergencyFundMilestone"));
 check("engine provides transparent next action", engine.includes("nextBestAction"));
 check("server page requires authenticated user", page.includes('redirect("/login")'));
-check("server page calls aggregate RPC", page.includes('"get_emergency_fund_intelligence_inputs"'));
+check("server page enters encrypted Emergency Fund workspace", page.includes("EncryptedEmergencyFundWorkspace") && page.includes("userId={user.id}"));
+check("encrypted workspace builds inputs from shared financial source", encrypted.includes("useBaseCurrencySourceData(userId)") && encrypted.includes("buildEmergencyFundClientInputs(source)"));
+check("encrypted workspace installs Emergency Fund E2EE boundary", encrypted.includes("installEmergencyFundIntelligenceE2eeBoundary"));
 check("component subscribes to transactions", component.includes('table: "transactions"'));
 check("component subscribes to bills", component.includes('table: "bills"'));
 check("component discloses no duplicate balance", component.includes("No second\n            balance or duplicate savings calculation is created"));
@@ -56,15 +44,4 @@ check("SQL grants authenticated execution", sql.includes("grant execute on funct
 check("no service-role client added", !component.includes("SUPABASE_SERVICE_ROLE_KEY") && !engine.includes("SUPABASE_SERVICE_ROLE_KEY"));
 check("verification script is wired", packageJson.scripts?.["verify:phase2-emergency-fund"] === "node scripts/verify-phase2-emergency-fund.mjs");
 check("verify all includes emergency fund", packageJson.scripts?.["verify:all"]?.includes("verify:phase2-emergency-fund"));
-
-const failures = checks.filter((item) => !item.ok);
-for (const item of checks) {
-  console.log(`${item.ok ? "✓" : "✗"} ${item.name}`);
-}
-
-if (failures.length) {
-  console.error(`\n${failures.length} Emergency Fund verification check(s) failed.`);
-  process.exit(1);
-}
-
-console.log(`\n${checks.length} Emergency Fund architecture checks passed.`);
+const failures = checks.filter((item) => !item.ok); for (const item of checks) console.log(`${item.ok ? "✓" : "✗"} ${item.name}`); if (failures.length) { console.error(`\n${failures.length} Emergency Fund verification check(s) failed.`); process.exit(1); } console.log(`\n${checks.length} Emergency Fund architecture checks passed.`);

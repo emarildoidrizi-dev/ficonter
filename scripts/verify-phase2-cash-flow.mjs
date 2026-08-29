@@ -5,13 +5,12 @@ const root = process.cwd();
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 const checks = [];
-
-function check(name, condition) {
-  checks.push({ name, ok: Boolean(condition) });
-}
+function check(name, condition) { checks.push({ name, ok: Boolean(condition) }); }
 
 const enginePath = "lib/wealth/cashFlowIntelligence.ts";
 const componentPath = "components/CashFlowIntelligence.tsx";
+const encryptedPath = "components/EncryptedCashFlowWorkspace.tsx";
+const sourcePath = "components/useBaseCurrencySourceData.ts";
 const cssPath = "components/CashFlowIntelligence.module.css";
 const pagePath = "app/dashboard/cash-flow/page.tsx";
 const sqlPath = "supabase/phase2_cash_flow_intelligence.sql";
@@ -20,12 +19,11 @@ const packagePath = "package.json";
 const commitmentWindowPath = "lib/finance/commitmentWindow.ts";
 const migrationPath = "supabase/cash_flow_one_month_commitments_v2.sql";
 
-for (const file of [enginePath, componentPath, cssPath, pagePath, sqlPath, commitmentWindowPath, migrationPath]) {
-  check(`exists: ${file}`, exists(file));
-}
-
+for (const file of [enginePath, componentPath, encryptedPath, sourcePath, cssPath, pagePath, sqlPath, commitmentWindowPath, migrationPath]) check(`exists: ${file}`, exists(file));
 const engine = read(enginePath);
 const component = read(componentPath);
+const encrypted = read(encryptedPath);
+const source = read(sourcePath);
 const page = read(pagePath);
 const sql = read(sqlPath);
 const sidebar = read(sidebarPath);
@@ -42,7 +40,10 @@ check("engine provides category pressure", engine.includes("CashFlowCategory"));
 check("engine provides known commitments", engine.includes("CashFlowCommitment"));
 check("engine provides insight priorities", engine.includes("nextBestAction"));
 check("server page requires authenticated user", page.includes('redirect("/login")'));
-check("server page calls versioned one-month RPC", page.includes('get_cash_flow_intelligence_inputs_v2'));
+check("server page enters the encrypted Cash Flow workspace", page.includes("EncryptedCashFlowWorkspace") && page.includes("userId={user.id}"));
+check("encrypted workspace builds Cash Flow inputs from shared source", encrypted.includes("useBaseCurrencySourceData(userId)") && encrypted.includes("buildCashFlowClientInputs(source)"));
+check("encrypted workspace installs the Cash Flow E2EE boundary", encrypted.includes("installCashFlowIntelligenceE2eeBoundary"));
+check("shared source uses encrypted transactions and bills", source.includes("useEncryptedTransactions") && source.includes("useEncryptedBills"));
 check("component subscribes to transactions", component.includes('table: "transactions"'));
 check("component subscribes to bills", component.includes('table: "bills"'));
 check("component subscribes to debts", component.includes('table: "debts"'));
@@ -56,7 +57,7 @@ check("Bills summary uses the shared one-month window", bills.includes("oneCalen
 check("shared date helper clamps month-end dates", commitmentWindow.includes("Math.min(date.getDate(), finalTargetDay)"));
 check("v1 SQL remains available for rollback", sql.includes("get_cash_flow_intelligence_inputs()") && sql.includes("current_date + 30"));
 check("v2 migration uses inclusive calendar-month boundary", migration.includes("get_cash_flow_intelligence_inputs_v2()") && migration.includes("due_date <= (current_date + interval '1 month')::date"));
-check("client refresh uses versioned one-month RPC", component.includes("get_cash_flow_intelligence_inputs_v2"));
+check("legacy component refresh adapter remains available", component.includes("get_cash_flow_intelligence_inputs_v2"));
 check("sidebar exposes Cash flow route", sidebar.includes('["/dashboard/cash-flow", Activity, "Cash flow"]'));
 check("SQL is security invoker", sql.includes("security invoker"));
 check("SQL scopes every source by authenticated user", (sql.match(/user_id = v_user_id/g) ?? []).length >= 5);
@@ -67,13 +68,6 @@ check("no service-role client added", !component.includes("SUPABASE_SERVICE_ROLE
 check("verification script is wired", packageJson.scripts?.["verify:phase2-cash-flow"] === "node scripts/verify-phase2-cash-flow.mjs");
 
 const failures = checks.filter((item) => !item.ok);
-for (const item of checks) {
-  console.log(`${item.ok ? "✓" : "✗"} ${item.name}`);
-}
-
-if (failures.length) {
-  console.error(`\n${failures.length} Cash Flow Intelligence verification check(s) failed.`);
-  process.exit(1);
-}
-
+for (const item of checks) console.log(`${item.ok ? "✓" : "✗"} ${item.name}`);
+if (failures.length) { console.error(`\n${failures.length} Cash Flow Intelligence verification check(s) failed.`); process.exit(1); }
 console.log(`\n${checks.length} Cash Flow Intelligence architecture checks passed.`);

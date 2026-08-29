@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
-import { VaultAccessPanel } from "@/components/VaultAccessPanel";
+import { VaultNavigationMount } from "@/components/VaultNavigationMount";
 import { VaultInactivityGuard } from "@/components/VaultInactivityGuard";
 import { VaultLegacyMigrationBootstrap } from "@/components/VaultLegacyMigrationBootstrap";
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
@@ -129,32 +129,32 @@ export default async function DashboardLayout({
           email={user.email ?? ""}
           avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         />
-        <Sidebar
-          isAdmin={Boolean(admin)}
-          subscriptionPlanCode={subscriptionPlanCode}
-          user={{
-            displayName: String(
-              user.user_metadata?.display_name ??
-                user.user_metadata?.full_name ??
-                user.user_metadata?.name ??
-                "",
-            ),
-            email: user.email ?? "",
-            avatarPath: String(user.user_metadata?.avatar_path ?? ""),
-          }}
-        />
-        <main className="app-main">
-          <VaultProvider>
-            {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
-            <VaultLegacyMigrationBootstrap userId={user.id} />
+        <VaultProvider>
+          {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
+          <VaultLegacyMigrationBootstrap userId={user.id} />
+          {!admin ? <VaultNavigationMount /> : null}
+          <Sidebar
+            isAdmin={Boolean(admin)}
+            subscriptionPlanCode={subscriptionPlanCode}
+            user={{
+              displayName: String(
+                user.user_metadata?.display_name ??
+                  user.user_metadata?.full_name ??
+                  user.user_metadata?.name ??
+                  "",
+              ),
+              email: user.email ?? "",
+              avatarPath: String(user.user_metadata?.avatar_path ?? ""),
+            }}
+          />
+          <main className="app-main">
             <EncryptedTransactionProvider>
               <EncryptedBillProvider>
-                {showCustomerVaultAccess ? <VaultAccessPanel /> : null}
                 {children}
               </EncryptedBillProvider>
             </EncryptedTransactionProvider>
-          </VaultProvider>
-        </main>
+          </main>
+        </VaultProvider>
       </div>
     </CurrencyDisplayProvider>
   );

@@ -54,6 +54,12 @@ source = source.replace(
   `const NON_LOCALIZABLE_VISIBLE = new Set([\n  "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "EUR", "SKU", "COGS", "APR", "you@example.com",\n  // Security/technical literals whose exact characters must never be translated.\n  "FICONTER-RECOVERY-1.…",\n  // Internal E2EE maintenance step identifiers: used only in developer console warnings, never rendered to customers.\n  "legacy transaction migration",\n  "pending encrypted bill transaction finalization",\n  "pending encrypted debt payment finalization",\n  "pending recurring template transaction finalization",\n  "pending server transaction finalization",\n]);`,
 );
 
+const previewMarker = "uncovered.slice(0, 50)";
+if (!source.includes(previewMarker)) {
+  throw new Error("Localization verifier structure changed: diagnostic preview limit not found.");
+}
+source = source.replace(previewMarker, "uncovered.slice(0, 500)");
+
 writeFileSync(generatedPath, source, "utf8");
 try {
   const result = spawnSync(process.execPath, [generatedPath], {

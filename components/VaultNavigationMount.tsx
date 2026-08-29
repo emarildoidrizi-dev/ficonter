@@ -5,14 +5,19 @@ import { createPortal } from "react-dom";
 import { VaultHeaderControl } from "@/components/VaultHeaderControl";
 import styles from "./VaultHeaderControl.module.css";
 
-export function VaultNavigationMount() {
+type VaultWorkspace = "personal" | "business";
+
+export function VaultNavigationMount({ workspace = "personal" }: { workspace?: VaultWorkspace }) {
   const [desktopHost, setDesktopHost] = useState<HTMLElement | null>(null);
   const [mobileHost, setMobileHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    const navigation = document.querySelector<HTMLElement>('nav[aria-label="Personal finance navigation"]');
-    const settingsLink = navigation?.querySelector<HTMLElement>('a[href="/dashboard/settings"]');
-    const header = document.querySelector<HTMLElement>("header");
+    const navigationLabel = workspace === "business" ? "Business navigation" : "Personal finance navigation";
+    const navigation = document.querySelector<HTMLElement>(`nav[aria-label="${navigationLabel}"]`);
+    const settingsLink = workspace === "personal"
+      ? navigation?.querySelector<HTMLElement>('a[href="/dashboard/settings"]')
+      : null;
+    const header = navigation?.closest<HTMLElement>("header") ?? document.querySelector<HTMLElement>("header");
     const headerActions = header?.querySelector<HTMLElement>('[class*="headerActions"]');
     const accountDock = headerActions?.querySelector<HTMLElement>('[class*="accountDock"]');
 
@@ -38,7 +43,7 @@ export function VaultNavigationMount() {
       setDesktopHost(null);
       setMobileHost(null);
     };
-  }, []);
+  }, [workspace]);
 
   return (
     <>

@@ -70,6 +70,23 @@ const toLocalDateTimeInput = (value: string | null, fallbackDate: string) => {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 };
 
+function currentLocalDateTimeValue(date = new Date()) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
+}
+
+function dateTimePickerValue(previousValue: string, nextValue: string) {
+  const current = currentLocalDateTimeValue();
+  const today = current.slice(0, 10);
+  const previousDate = previousValue.slice(0, 10);
+  const nextDate = nextValue.slice(0, 10);
+
+  // Native datetime pickers keep the old time when their Today action changes
+  // only the calendar date. When that happens, use the real local time now.
+  if (nextDate === today && previousDate !== today) return current;
+  return nextValue;
+}
+
 const csvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
 const directionOf = (type: string): FlowDirection => TYPE_BY_VALUE[type]?.direction ?? (type === "income" ? "inflow" : "outflow");
 const typeLabel = (type: string) => TYPE_BY_VALUE[type]?.label ?? type.replaceAll("_", " ");
@@ -790,7 +807,7 @@ export function TransactionLedger({ transactions: initialTransactions, allowMult
               <label>Transaction type<select name="type" defaultValue={editTarget.type}>{Object.entries(groupedTypes).map(([group, options]) => <optgroup key={group} label={group}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
               <div className={styles.formGrid}>
                 <label>Category<select value={editCategory} onChange={(event) => setEditCategory(event.target.value)}>{CATEGORY_GROUPS.map((group) => <optgroup key={group.group} label={group.group}>{group.items.map((item) => <option key={item} value={item}>{item}</option>)}</optgroup>)}</select></label>
-                <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} required /></label>
+                <label>Exact date and time<input name="occurred_at" type="datetime-local" value={editOccurredAt} onChange={(event) => setEditOccurredAt((current) => dateTimePickerValue(current, event.target.value))} required /></label>
               </div>
               {editCategory === "Other / custom" && <label>Custom category<input value={customEditCategory} onChange={(event) => setCustomEditCategory(event.target.value)} required /></label>}
               <div className={styles.fxPreview}>{editRateLoading ? "Retrieving reference rate…" : editRateError ? editRateError : editCurrency === baseCurrency ? `Base currency equivalent: ${formatCurrency(finiteNumber(editAmount), baseCurrency)} no conversion required` : `Base currency equivalent: ${formatReportingCurrency(convertToReportingCurrency(editAmount, editRate.rate))} displayed in ${baseCurrency}`}</div>

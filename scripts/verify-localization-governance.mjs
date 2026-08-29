@@ -15,7 +15,7 @@ if (!source.includes(globalRowsBlock)) {
 }
 source = source.replace(
   globalRowsBlock,
-  `${globalRowsBlock}\nconst governanceRows = findCatalogRows(\n  "lib/i18n/governanceUiCatalog.ts",\n  "GOVERNANCE_UI_TRANSLATIONS",\n);\nconst governanceRowsBatch2 = findCatalogRows(\n  "lib/i18n/governanceUiCatalogBatch2.ts",\n  "GOVERNANCE_UI_TRANSLATIONS_BATCH_2",\n);`,
+  `${globalRowsBlock}\nconst governanceRows = findCatalogRows(\n  "lib/i18n/governanceUiCatalog.ts",\n  "GOVERNANCE_UI_TRANSLATIONS",\n);\nconst governanceRowsBatch2 = findCatalogRows(\n  "lib/i18n/governanceUiCatalogBatch2.ts",\n  "GOVERNANCE_UI_TRANSLATIONS_BATCH_2",\n);\nconst governanceRowsBatch3 = findCatalogRows(\n  "lib/i18n/governanceUiCatalogBatch3.ts",\n  "GOVERNANCE_UI_TRANSLATIONS_BATCH_3",\n);`,
 );
 
 const catalogLoop = "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows])";
@@ -24,7 +24,7 @@ if (!source.includes(catalogLoop)) {
 }
 source = source.replace(
   catalogLoop,
-  "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows, governanceRows, governanceRowsBatch2])",
+  "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows, governanceRows, governanceRowsBatch2, governanceRowsBatch3])",
 );
 
 const coveredTail = `  ...wealthRows.keys(),\n]);`;
@@ -33,7 +33,7 @@ if (!source.includes(coveredTail)) {
 }
 source = source.replace(
   coveredTail,
-  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n  ...governanceRowsBatch2.keys(),\n]);`,
+  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n  ...governanceRowsBatch2.keys(),\n  ...governanceRowsBatch3.keys(),\n]);`,
 );
 
 const globalCountAssert = "assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);";
@@ -42,7 +42,16 @@ if (!source.includes(globalCountAssert)) {
 }
 source = source.replace(
   globalCountAssert,
-  `${globalCountAssert}\nassert(governanceRows.size >= 1, "Governance UI translation catalog is empty.");\nassert(governanceRowsBatch2.size >= 1, "Governance UI translation catalog batch 2 is empty.");`,
+  `${globalCountAssert}\nassert(governanceRows.size >= 1, "Governance UI translation catalog is empty.");\nassert(governanceRowsBatch2.size >= 1, "Governance UI translation catalog batch 2 is empty.");\nassert(governanceRowsBatch3.size >= 1, "Governance UI translation catalog batch 3 is empty.");`,
+);
+
+const nonLocalizableMarker = `const NON_LOCALIZABLE_VISIBLE = new Set([\n  "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "EUR", "SKU", "COGS", "APR", "you@example.com",\n]);`;
+if (!source.includes(nonLocalizableMarker)) {
+  throw new Error("Localization verifier structure changed: non-localizable set not found.");
+}
+source = source.replace(
+  nonLocalizableMarker,
+  `const NON_LOCALIZABLE_VISIBLE = new Set([\n  "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "EUR", "SKU", "COGS", "APR", "you@example.com",\n  // Internal E2EE maintenance step identifiers: used only in developer console warnings, never rendered to customers.\n  "legacy transaction migration",\n  "pending encrypted bill transaction finalization",\n  "pending encrypted debt payment finalization",\n  "pending recurring template transaction finalization",\n  "pending server transaction finalization",\n]);`,
 );
 
 writeFileSync(generatedPath, source, "utf8");

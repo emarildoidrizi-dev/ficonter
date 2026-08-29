@@ -59,6 +59,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
   const [payments, setPayments] = useState<any[]>([]);
   const [monthlyRecords, setMonthlyRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState("");
   const runningRef = useRef(false);
   const queuedRef = useRef(false);
@@ -72,6 +73,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
       setPayments([]);
       setMonthlyRecords([]);
       setLoading(false);
+      setHasLoaded(false);
       setError("");
       loadedRef.current = false;
       migrationCheckedRef.current = false;
@@ -178,6 +180,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
         setPayments(openedPayments);
         setMonthlyRecords(withPostedInterest(openedMonthly, openedActivities));
         loadedRef.current = true;
+        setHasLoaded(true);
       } while (queuedRef.current);
     } catch (caughtError) {
       // Preserve already-open data during a background refresh failure. Only
@@ -187,6 +190,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
         setActivities([]);
         setPayments([]);
         setMonthlyRecords([]);
+        setHasLoaded(false);
       }
       setError(caughtError instanceof Error ? caughtError.message : "Credit Card data could not be opened.");
     } finally {
@@ -221,7 +225,7 @@ export function EncryptedCreditCardsWorkspace({ userId }: { userId: string }) {
     return <div className="panel"><div className="alert">Unlock your Financial Vault to open Credit Cards.</div></div>;
   }
 
-  if (loading && !loadedRef.current) {
+  if (loading && !hasLoaded) {
     return <div className="panel"><div className="muted">Opening Credit Card data…</div></div>;
   }
 

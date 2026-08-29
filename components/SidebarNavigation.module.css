@@ -15,6 +15,7 @@
 .headerActions>:global([class*="NotificationCenter_root"]) button { min-width:54px;min-height:54px;border-color:var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 88%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08);color:var(--text-primary) }
 .navigation { min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid var(--border-subtle);border-radius:17px;background:color-mix(in srgb,var(--surface-card) 95%,transparent);box-shadow:0 14px 34px rgba(42,75,67,.08) }
 .overviewLink,.settingsLink,.navGroup summary { min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;color:var(--text-primary);font-size:13px;font-weight:800;cursor:pointer;list-style:none;transition:.16s ease }
+.settingsLink{display:none!important}
 .navGroup summary::-webkit-details-marker { display:none }
 .overviewLink:hover,.settingsLink:hover,.navGroup summary:hover,.navGroup[open] summary,.activeLink,.groupActive { color:var(--text-primary);border-color:color-mix(in srgb,var(--sage) 12%,transparent);background:color-mix(in srgb,var(--sage-soft) 72%,transparent) }
 .navGroup { position:relative }

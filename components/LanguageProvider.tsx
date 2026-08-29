@@ -24,6 +24,7 @@ import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
 import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
 import { translateGovernancePhrase } from "@/lib/i18n/governanceUiCatalog";
 import { translateGovernancePhraseBatch2 } from "@/lib/i18n/governanceUiCatalogBatch2";
+import { translateGovernancePhraseBatch3 } from "@/lib/i18n/governanceUiCatalogBatch3";
 
 type LanguageContextValue = {
   language: FiconterLanguage;
@@ -76,6 +77,7 @@ function renderTranslatedText(
   const translated = runtimeTranslation === normalized
     ? translateGovernancePhrase(language, normalized)
       ?? translateGovernancePhraseBatch2(language, normalized)
+      ?? translateGovernancePhraseBatch3(language, normalized)
       ?? normalized
     : runtimeTranslation;
 

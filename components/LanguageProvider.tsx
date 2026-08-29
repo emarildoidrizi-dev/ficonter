@@ -50,6 +50,11 @@ const TRANSLATABLE_ATTRIBUTES = [
   "alt",
 ] as const;
 
+const OBSERVED_TRANSLATABLE_ATTRIBUTES = [
+  ...TRANSLATABLE_ATTRIBUTES,
+  "label",
+] as const;
+
 const SKIP_TAGS = new Set([
   "SCRIPT",
   "STYLE",
@@ -139,6 +144,37 @@ function createDocumentTranslator(
     }
   }
 
+  function processNativeSelectLabel(
+    element: Element,
+    state: AttributeTranslationState,
+  ) {
+    if (element.tagName !== "OPTION" && element.tagName !== "OPTGROUP") {
+      return;
+    }
+
+    const stateKey = "__native-select-label";
+    const currentSource = element.tagName === "OPTGROUP"
+      ? element.getAttribute("label") ?? ""
+      : element.textContent ?? "";
+    let entry = state[stateKey];
+
+    if (!entry) {
+      entry = { source: currentSource, rendered: currentSource };
+      state[stateKey] = entry;
+    } else if (!applying && currentSource !== entry.rendered) {
+      entry.source = currentSource;
+    }
+
+    const rendered = renderTranslatedText(entry.source, getLanguage());
+    entry.rendered = rendered;
+
+    if (element.getAttribute("label") !== rendered) {
+      applying = true;
+      element.setAttribute("label", rendered);
+      applying = false;
+    }
+  }
+
   function processElement(element: Element) {
     if (shouldSkipElement(element)) return;
 
@@ -170,6 +206,7 @@ function createDocumentTranslator(
       }
     }
 
+    processNativeSelectLabel(element, state);
     attributeState.set(element, state);
   }
 
@@ -230,7 +267,7 @@ function createDocumentTranslator(
           childList: true,
           characterData: true,
           attributes: true,
-          attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
+          attributeFilter: [...OBSERVED_TRANSLATABLE_ATTRIBUTES],
         });
       }
     },

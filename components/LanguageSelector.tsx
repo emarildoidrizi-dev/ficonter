@@ -132,7 +132,7 @@ export function LanguageSelector({
 
       {showDetails ? (
         <div className={styles.details}>
-          <p>{t("englishFallback")}</p>
+          <p>{t("languageDescription")}</p>
           <p>{t("rtlNotice")}</p>
         </div>
       ) : null}

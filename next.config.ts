@@ -47,11 +47,26 @@ const securityHeaders = [
   },
 ];
 
+const apiNoStoreHeaders = [
+  {
+    key: "Cache-Control",
+    value: "private, no-store, max-age=0",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   async headers() {
     return [
+      {
+        source: "/api/:path*",
+        headers: apiNoStoreHeaders,
+      },
       {
         source: "/(.*)",
         headers: securityHeaders,

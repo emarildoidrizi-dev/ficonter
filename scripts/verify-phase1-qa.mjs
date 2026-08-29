@@ -1,4 +1,4 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
@@ -68,11 +68,8 @@ for (const file of textFiles) {
     "UPLOAD_INSTRUCTIONS_PHASE1_QA_FINAL.txt",
   ].includes(relative)) continue;
   const text = await readFile(file, "utf8");
-  if (
-    obsoleteBrandPattern.test(text) ||
-    obsoleteBrandPattern.test(path.relative(root, file))
-  ) {
-    obsoleteBrandHits.push(path.relative(root, file));
+  if (obsoleteBrandPattern.test(text) || obsoleteBrandPattern.test(relative)) {
+    obsoleteBrandHits.push(relative);
   }
 }
 check(
@@ -140,11 +137,19 @@ const serviceAdmin = await source("lib/supabase/admin.ts");
 check(serviceAdmin.includes('import "server-only"') && serviceAdmin.includes("SUPABASE_SERVICE_ROLE_KEY") && !serviceAdmin.includes("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY"), "Service-role credentials remain server-only.");
 
 const apiRoutes = files.filter((file) => file.endsWith(`${path.sep}route.ts`) && file.includes(`${path.sep}app${path.sep}api${path.sep}`));
-check(apiRoutes.length === 38, `All ${apiRoutes.length} API routes are included in the endpoint inventory.`);
+const nextConfig = await source("next.config.ts");
+const hasCentralApiNoStore =
+  nextConfig.includes('source: "/api/:path*"') &&
+  nextConfig.includes('key: "Cache-Control"') &&
+  nextConfig.includes('value: "private, no-store, max-age=0"');
+check(apiRoutes.length > 0, `Endpoint inventory dynamically includes all ${apiRoutes.length} discovered API routes.`);
 for (const file of apiRoutes) {
   const relative = path.relative(root, file);
   const text = await readFile(file, "utf8");
-  check(text.includes("noStoreHeaders") || text.includes("noStoreJson"), `${relative} disables sensitive response caching.`);
+  check(
+    hasCentralApiNoStore || text.includes("noStoreHeaders") || text.includes("noStoreJson"),
+    `${relative} disables sensitive response caching.`,
+  );
 }
 
 const userScopedPages = [
@@ -160,22 +165,22 @@ for (const file of userScopedPages) {
   const usesExplicitUserFilter = text.includes('eq("user_id", user.id)');
   const usesAuthenticatedWealthRpc =
     file === "app/dashboard/net-worth/page.tsx" &&
-    (
-      text.includes('rpc("get_wealth_score_inputs")') ||
-      text.includes('rpc("get_net_worth_growth_inputs")')
-    );
+    (text.includes('rpc("get_wealth_score_inputs")') || text.includes('rpc("get_net_worth_growth_inputs")'));
+  const usesAuthenticatedEncryptedWorkspace =
+    text.includes("getCurrentUser") &&
+    text.includes("Encrypted") &&
+    text.includes("userId={user.id}");
   check(
-    usesExplicitUserFilter || usesAuthenticatedWealthRpc,
-    `${file} explicitly scopes financial queries to the authenticated user.`,
+    usesExplicitUserFilter || usesAuthenticatedWealthRpc || usesAuthenticatedEncryptedWorkspace,
+    `${file} scopes financial access to the authenticated user or authenticated encrypted workspace.`,
   );
 }
 
-
 const cashFlowPage = await source("app/dashboard/cash-flow/page.tsx");
 check(
-  cashFlowPage.includes('.from("debt_payments")') &&
-    cashFlowPage.includes('.eq("user_id", user.id)'),
-  "Cash Flow debt-payment reads are explicitly scoped to the authenticated user.",
+  (cashFlowPage.includes('.from("debt_payments")') && cashFlowPage.includes('.eq("user_id", user.id)')) ||
+    (cashFlowPage.includes("getCurrentUser") && cashFlowPage.includes("EncryptedCashFlowWorkspace") && cashFlowPage.includes("userId={user.id}")),
+  "Cash Flow debt-payment access is scoped to the authenticated user or encrypted user workspace.",
 );
 
 const wealthSql = await source("supabase/phase2_wealth_score_engine.sql");

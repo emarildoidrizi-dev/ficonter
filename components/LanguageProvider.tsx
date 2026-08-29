@@ -22,6 +22,7 @@ import {
 } from "@/lib/i18n/config";
 import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
 import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
+import { translateGovernancePhrase } from "@/lib/i18n/governanceUiCatalog";
 
 type LanguageContextValue = {
   language: FiconterLanguage;
@@ -70,7 +71,10 @@ function renderTranslatedText(
   const leading = source.match(/^\s*/)?.[0] ?? "";
   const trailing = source.match(/\s*$/)?.[0] ?? "";
   const normalized = normalizeSource(source);
-  const translated = translateRuntimePhrase(language, normalized);
+  const runtimeTranslation = translateRuntimePhrase(language, normalized);
+  const translated = runtimeTranslation === normalized
+    ? translateGovernancePhrase(language, normalized) ?? normalized
+    : runtimeTranslation;
 
   return translated === normalized
     ? source
@@ -262,8 +266,6 @@ export function LanguageProvider({
     languageRef.current = language;
     persistBrowserLanguage(language);
 
-    // Let the selected control paint first, then translate the document on the
-    // next frame. This removes the feeling that the language button is waiting.
     const frame = window.requestAnimationFrame(() => {
       translatorRef.current?.refresh();
     });
@@ -278,10 +280,6 @@ export function LanguageProvider({
 
     translatorRef.current = translator;
     translator.start();
-
-    // initialLanguage is the committed source of truth. Browser storage is
-    // updated only after an explicit Save action and is never allowed to
-    // override the committed server/cookie value on mount.
 
     return () => {
       translator.stop();
@@ -339,9 +337,6 @@ export function LanguageProvider({
         if (error) throw error;
       }
 
-      // The interface changes only after the explicit Save action has
-      // successfully committed the preference (or there is no signed-in
-      // account to persist).
       applyCommittedLanguage();
     },
     [supabase],

@@ -1,4 +1,5 @@
 import type { FiconterLanguage } from "./config";
+import { getLanguageOption } from "./config";
 
 type CategoryTranslations = Partial<Record<FiconterLanguage, string>>;
 
@@ -280,10 +281,67 @@ const FINANCIAL_CATEGORY_TRANSLATIONS: Record<string, CategoryTranslations> = {
   "Other": { it: "Altro" },
 };
 
+const ENGLISH_MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+] as const;
+
+const ENGLISH_MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
+function translateMonthLiteral(
+  language: FiconterLanguage,
+  source: string,
+): string | null {
+  if (language === "en") return null;
+  const locale = getLanguageOption(language).locale;
+
+  const shortIndex = ENGLISH_MONTHS_SHORT.indexOf(
+    source as (typeof ENGLISH_MONTHS_SHORT)[number],
+  );
+  if (shortIndex >= 0) {
+    return new Intl.DateTimeFormat(locale, { month: "short" }).format(
+      new Date(2026, shortIndex, 1),
+    );
+  }
+
+  const longIndex = ENGLISH_MONTHS_LONG.indexOf(
+    source as (typeof ENGLISH_MONTHS_LONG)[number],
+  );
+  if (longIndex >= 0) {
+    return new Intl.DateTimeFormat(locale, { month: "long" }).format(
+      new Date(2026, longIndex, 1),
+    );
+  }
+
+  const monthYear = source.match(
+    /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/,
+  );
+  if (monthYear) {
+    const monthIndex = ENGLISH_MONTHS_LONG.indexOf(
+      monthYear[1] as (typeof ENGLISH_MONTHS_LONG)[number],
+    );
+    const year = Number(monthYear[2]);
+    if (monthIndex >= 0 && Number.isFinite(year)) {
+      return new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+      }).format(new Date(year, monthIndex, 1));
+    }
+  }
+
+  return null;
+}
+
 export function translateFinancialCategory(
   language: FiconterLanguage,
   source: string,
 ): string | null {
   if (language === "en") return source;
-  return FINANCIAL_CATEGORY_TRANSLATIONS[source]?.[language] ?? null;
+  return (
+    FINANCIAL_CATEGORY_TRANSLATIONS[source]?.[language] ??
+    translateMonthLiteral(language, source)
+  );
 }

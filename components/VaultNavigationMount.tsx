@@ -7,70 +7,74 @@ import styles from "./VaultHeaderControl.module.css";
 
 type VaultWorkspace = "personal" | "business";
 
-export function VaultNavigationMount({ workspace = "personal" }: { workspace?: VaultWorkspace }) {
+const DESKTOP_HOST_ATTR = "data-ficonter-vault-desktop-host";
+const MOBILE_HOST_ATTR = "data-ficonter-vault-mobile-host";
+
+export function VaultNavigationMount({ workspace: _workspace = "personal" }: { workspace?: VaultWorkspace }) {
   const [desktopHost, setDesktopHost] = useState<HTMLElement | null>(null);
   const [mobileHost, setMobileHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    let desktop: HTMLSpanElement | null = null;
-    let mobile: HTMLSpanElement | null = null;
     let observer: MutationObserver | null = null;
     let frame = 0;
 
-    function cleanupHosts() {
-      desktop?.remove();
-      mobile?.remove();
-      desktop = null;
-      mobile = null;
-      setDesktopHost(null);
-      setMobileHost(null);
+    function findActiveNavigation() {
+      return (
+        document.querySelector<HTMLElement>('nav[aria-label="Business navigation"]') ??
+        document.querySelector<HTMLElement>('nav[aria-label="Personal finance navigation"]')
+      );
     }
 
-    function mountHosts() {
-      const navigationLabel = workspace === "business" ? "Business navigation" : "Personal finance navigation";
-      const navigation = document.querySelector<HTMLElement>(`nav[aria-label="${navigationLabel}"]`);
-      if (!navigation) return false;
+    function ensureHosts() {
+      const navigation = findActiveNavigation();
+      if (!navigation) {
+        setDesktopHost(null);
+        setMobileHost(null);
+        return;
+      }
 
-      const settingsLink = workspace === "personal"
+      const isPersonal = navigation.getAttribute("aria-label") === "Personal finance navigation";
+      const settingsLink = isPersonal
         ? navigation.querySelector<HTMLElement>('a[href="/dashboard/settings"]')
         : null;
       const header = navigation.closest<HTMLElement>("header") ?? document.querySelector<HTMLElement>("header");
       const headerActions = header?.querySelector<HTMLElement>('[class*="headerActions"]');
       const accountDock = headerActions?.querySelector<HTMLElement>('[class*="accountDock"]');
 
-      if (!desktop || !desktop.isConnected) {
-        desktop?.remove();
+      let desktop = navigation.querySelector<HTMLElement>(`[${DESKTOP_HOST_ATTR}]`);
+      if (!desktop) {
         desktop = document.createElement("span");
         desktop.className = styles.desktopHost;
+        desktop.setAttribute(DESKTOP_HOST_ATTR, "true");
         if (settingsLink) navigation.insertBefore(desktop, settingsLink);
         else navigation.appendChild(desktop);
-        setDesktopHost(desktop);
+      }
+      setDesktopHost((current) => (current === desktop ? current : desktop));
+
+      if (!headerActions) {
+        setMobileHost(null);
+        return;
       }
 
-      if (headerActions && (!mobile || !mobile.isConnected)) {
-        mobile?.remove();
+      let mobile = headerActions.querySelector<HTMLElement>(`[${MOBILE_HOST_ATTR}]`);
+      if (!mobile) {
         mobile = document.createElement("span");
         mobile.className = styles.mobileHost;
+        mobile.setAttribute(MOBILE_HOST_ATTR, "true");
         if (accountDock) headerActions.insertBefore(mobile, accountDock);
         else headerActions.appendChild(mobile);
-        setMobileHost(mobile);
       }
-
-      return true;
+      setMobileHost((current) => (current === mobile ? current : mobile));
     }
 
     function scheduleMount() {
       window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        mountHosts();
-      });
+      frame = window.requestAnimationFrame(ensureHosts);
     }
 
-    mountHosts();
+    ensureHosts();
 
-    observer = new MutationObserver(() => {
-      scheduleMount();
-    });
+    observer = new MutationObserver(scheduleMount);
     observer.observe(document.body, { childList: true, subtree: true });
 
     const handleNavigation = () => scheduleMount();
@@ -84,14 +88,15 @@ export function VaultNavigationMount({ workspace = "personal" }: { workspace?: V
       window.removeEventListener("popstate", handleNavigation);
       window.removeEventListener("pageshow", handleNavigation);
       window.removeEventListener("focus", handleNavigation);
-      cleanupHosts();
+      setDesktopHost(null);
+      setMobileHost(null);
     };
-  }, [workspace]);
+  }, []);
 
   return (
     <>
-      {desktopHost ? createPortal(<VaultHeaderControl />, desktopHost) : null}
-      {mobileHost ? createPortal(<VaultHeaderControl />, mobileHost) : null}
+      {desktopHost?.isConnected ? createPortal(<VaultHeaderControl />, desktopHost) : null}
+      {mobileHost?.isConnected ? createPortal(<VaultHeaderControl />, mobileHost) : null}
     </>
   );
 }

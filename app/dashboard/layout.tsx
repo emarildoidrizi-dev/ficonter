@@ -132,7 +132,7 @@ export default async function DashboardLayout({
         <VaultProvider>
           {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
           <VaultLegacyMigrationBootstrap userId={user.id} />
-          {!admin ? <VaultNavigationMount /> : null}
+          <VaultNavigationMount />
           <Sidebar
             isAdmin={Boolean(admin)}
             subscriptionPlanCode={subscriptionPlanCode}

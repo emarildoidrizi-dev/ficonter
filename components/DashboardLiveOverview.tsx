@@ -33,6 +33,7 @@ type Transaction = {
   amount_eur: number | string | null;
   exchange_rate_to_eur?: number | string | null;
   exchange_rate_date?: string | null;
+  exchange_rate_source?: string | null;
   type: string;
   category: string;
   transaction_date: string;
@@ -233,6 +234,8 @@ export function DashboardLiveOverview({
       if (transaction.transaction_date > today) return;
       const key = transaction.transaction_date.slice(0, 7);
       if (!Object.prototype.hasOwnProperty.call(totals, key) || linkedTransactionIds.has(transaction.id)) return;
+      const source = (transaction.exchange_rate_source ?? "").trim().toLowerCase();
+      if (source === "automatic bill schedule" || source === "bill conversion") return;
       if (!isMonthlyBudgetExpenseTransaction(transaction)) return;
       const amount = transactionAmount(transaction);
       if (amount !== null) totals[key] += amount;

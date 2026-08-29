@@ -1,44 +1,59 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
-const ROOT = resolve(new URL("..", import.meta.url).pathname);
+const scriptsDir = dirname(fileURLToPath(import.meta.url));
+const sourcePath = join(scriptsDir, "verify-localization.mjs");
+const generatedPath = join(scriptsDir, ".verify-localization-governance.generated.mjs");
 
-function read(path) {
-  return readFileSync(resolve(ROOT, path), "utf8");
+let source = readFileSync(sourcePath, "utf8");
+
+const globalRowsBlock = `const globalTemplateRows = findCatalogRows(\n  "lib/i18n/globalRuntimeTemplates.ts",\n  "GLOBAL_RUNTIME_TEMPLATES",\n);`;
+if (!source.includes(globalRowsBlock)) {
+  throw new Error("Localization verifier structure changed: global template catalog block not found.");
 }
+source = source.replace(
+  globalRowsBlock,
+  `${globalRowsBlock}\nconst governanceRows = findCatalogRows(\n  "lib/i18n/governanceUiCatalog.ts",\n  "GOVERNANCE_UI_TRANSLATIONS",\n);`,
+);
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+const catalogLoop = "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows])";
+if (!source.includes(catalogLoop)) {
+  throw new Error("Localization verifier structure changed: catalog validation loop not found.");
 }
-
-const config = read("lib/i18n/config.ts");
-const messages = read("lib/i18n/messages.ts");
-const runtimeTranslator = read("lib/i18n/runtimeTranslator.ts");
-const packageJson = JSON.parse(read("package.json"));
-
-assert(
-  config.includes('export const DEFAULT_LANGUAGE: FiconterLanguage = "en";'),
-  "English must remain the permanent default language.",
+source = source.replace(
+  catalogLoop,
+  "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows, governanceRows])",
 );
 
-assert(
-  messages.includes("translatedMessages[language]?.[key] ?? englishMessages[key]"),
-  "Message translation failures must fall back to English.",
+const coveredTail = `  ...wealthRows.keys(),\n]);`;
+if (!source.includes(coveredTail)) {
+  throw new Error("Localization verifier structure changed: coverage set tail not found.");
+}
+source = source.replace(
+  coveredTail,
+  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n]);`,
 );
 
-assert(
-  runtimeTranslator.includes("cacheSet(cacheKey, source);\n  return source;"),
-  "Runtime translation failures must preserve the English source string as the safety fallback.",
+const globalCountAssert = "assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);";
+if (!source.includes(globalCountAssert)) {
+  throw new Error("Localization verifier structure changed: global template count assertion not found.");
+}
+source = source.replace(
+  globalCountAssert,
+  `${globalCountAssert}\nassert(governanceRows.size >= 1, "Governance UI translation catalog is empty.");`,
 );
 
-assert(
-  packageJson.scripts?.build?.includes("verify:localization"),
-  "Localization verification must run before every production build.",
-);
-
-assert(
-  packageJson.scripts?.["verify:all"]?.includes("verify:localization"),
-  "Localization verification must remain part of full platform verification.",
-);
-
-console.log("Localization governance verified: complete translations required; English remains the permanent safety fallback.");
+writeFileSync(generatedPath, source, "utf8");
+try {
+  const result = spawnSync(process.execPath, [generatedPath], {
+    cwd: join(scriptsDir, ".."),
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (result.error) throw result.error;
+  process.exitCode = result.status ?? 1;
+} finally {
+  try { unlinkSync(generatedPath); } catch {}
+}

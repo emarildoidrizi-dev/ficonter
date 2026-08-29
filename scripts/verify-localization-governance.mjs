@@ -33,7 +33,16 @@ if (!source.includes(coveredTail)) {
 }
 source = source.replace(
   coveredTail,
-  `  ...wealthRows.keys(),\n  ...governanceTemplateRows.keys(),\n  ...governanceRows.keys(),\n  ...governanceRowsBatch2.keys(),\n  ...governanceRowsBatch3.keys(),\n  ...governanceRowsBatch4.keys(),\n  ...governanceRowsBatch5.keys(),\n  ...governanceRowsBatch6.keys(),\n  ...governanceRowsBatch7.keys(),\n  ...governanceRowsBatch8.keys(),\n  // Internal transaction-description classifier used for Wealth calculations, not rendered UI.\n  "goal investment",\n]);`,
+  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n  ...governanceRowsBatch2.keys(),\n  ...governanceRowsBatch3.keys(),\n  ...governanceRowsBatch4.keys(),\n  ...governanceRowsBatch5.keys(),\n  ...governanceRowsBatch6.keys(),\n  ...governanceRowsBatch7.keys(),\n  ...governanceRowsBatch8.keys(),\n  // Internal transaction-description classifier used for Wealth calculations, not rendered UI.\n  "goal investment",\n]);`,
+);
+
+const runtimeCoverageBlock = `const runtimeTemplateCoverage = new Set([\n  ...wealthTemplateRows.keys(),\n  ...globalTemplateRows.keys(),\n]);`;
+if (!source.includes(runtimeCoverageBlock)) {
+  throw new Error("Localization verifier structure changed: runtime template coverage block not found.");
+}
+source = source.replace(
+  runtimeCoverageBlock,
+  `const runtimeTemplateCoverage = new Set([\n  ...wealthTemplateRows.keys(),\n  ...globalTemplateRows.keys(),\n  ...governanceTemplateRows.keys(),\n]);`,
 );
 
 const globalCountAssert = "assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);";

@@ -10,7 +10,7 @@ import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
-import { VaultAccessPanel } from "@/components/VaultAccessPanel";
+import { VaultNavigationMount } from "@/components/VaultNavigationMount";
 import { VaultProvider } from "@/components/VaultProvider";
 import { BusinessVaultProvider } from "@/components/BusinessVaultProvider";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
@@ -83,23 +83,24 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             .filter((item) => item.status !== "archived")
             .map((item) => ({ id: item.id, name: item.name }))}
         />
-        <BusinessSidebar
-          businesses={businesses}
-          business={business}
-          canManage={canManageBusiness}
-          isPlatformAdmin={Boolean(admin)}
-          user={{
-            displayName: String(
-              user.user_metadata?.display_name ??
-                user.user_metadata?.full_name ??
-                user.user_metadata?.name ??
-                "",
-            ),
-            email: user.email ?? "",
-          }}
-        />
-        <main className="app-main business-interface">
-          <VaultProvider>
+        <VaultProvider>
+          <VaultNavigationMount workspace="business" />
+          <BusinessSidebar
+            businesses={businesses}
+            business={business}
+            canManage={canManageBusiness}
+            isPlatformAdmin={Boolean(admin)}
+            user={{
+              displayName: String(
+                user.user_metadata?.display_name ??
+                  user.user_metadata?.full_name ??
+                  user.user_metadata?.name ??
+                  "",
+              ),
+              email: user.email ?? "",
+            }}
+          />
+          <main className="app-main business-interface">
             <BusinessVaultProvider
               userId={user.id}
               businessId={business?.id ?? null}
@@ -107,11 +108,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               canManage={canManageBusiness}
               canWrite={canWriteBusiness}
             >
-              <VaultAccessPanel />
               {children}
             </BusinessVaultProvider>
-          </VaultProvider>
-        </main>
+          </main>
+        </VaultProvider>
       </div>
     </CurrencyDisplayProvider>
   );

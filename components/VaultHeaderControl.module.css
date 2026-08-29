@@ -31,3 +31,13 @@
 .unlockedCard{margin-top:18px;padding:15px;border:1px solid var(--border-subtle);border-radius:15px;background:var(--surface-subtle)}
 .unlockedTitle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:850}.unlockedText{margin:6px 0 0;color:var(--text-secondary);font-size:12px;line-height:1.5}
 @media(max-width:900px){.desktopHost{display:none}.mobileHost{display:inline-flex}.trigger{width:46px;min-width:46px;min-height:46px;padding:0;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 92%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08)}.trigger span:not(.statusDot):not(.statusDotUnlocked){display:none}.statusDot{position:absolute;right:6px;bottom:6px;width:6px;height:6px}.dialog{padding:18px;border-radius:19px}}
+
+/* Permanent workspace placement: rendered directly by the active layout, never via DOM portals. */
+.persistentDesktopHost{position:absolute;z-index:116;top:98px;right:clamp(28px,3vw,48px);display:inline-flex;align-items:center;pointer-events:auto}
+.persistentMobileHost{display:none}
+@media(max-width:900px){
+  .persistentDesktopHost{display:none}
+  .persistentMobileHost{position:fixed;z-index:1860;top:calc(env(safe-area-inset-top) + 14px);right:128px;display:inline-flex;align-items:center;pointer-events:auto}
+}
+@media(max-width:560px){.persistentMobileHost{right:112px}}
+@media(max-width:390px){.persistentMobileHost{right:102px}}

@@ -1,49 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { VaultHeaderControl } from "@/components/VaultHeaderControl";
 import styles from "./VaultHeaderControl.module.css";
 
-export function VaultNavigationMount() {
-  const [desktopHost, setDesktopHost] = useState<HTMLElement | null>(null);
-  const [mobileHost, setMobileHost] = useState<HTMLElement | null>(null);
+type VaultWorkspace = "personal" | "business";
 
-  useEffect(() => {
-    const navigation = document.querySelector<HTMLElement>('nav[aria-label="Personal finance navigation"]');
-    const settingsLink = navigation?.querySelector<HTMLElement>('a[href="/dashboard/settings"]');
-    const header = document.querySelector<HTMLElement>("header");
-    const headerActions = header?.querySelector<HTMLElement>('[class*="headerActions"]');
-    const accountDock = headerActions?.querySelector<HTMLElement>('[class*="accountDock"]');
-
-    const desktop = document.createElement("span");
-    desktop.className = styles.desktopHost;
-    if (navigation) {
-      if (settingsLink) navigation.insertBefore(desktop, settingsLink);
-      else navigation.appendChild(desktop);
-      setDesktopHost(desktop);
-    }
-
-    const mobile = document.createElement("span");
-    mobile.className = styles.mobileHost;
-    if (headerActions) {
-      if (accountDock) headerActions.insertBefore(mobile, accountDock);
-      else headerActions.appendChild(mobile);
-      setMobileHost(mobile);
-    }
-
-    return () => {
-      desktop.remove();
-      mobile.remove();
-      setDesktopHost(null);
-      setMobileHost(null);
-    };
-  }, []);
-
+/**
+ * Permanent Vault placement for both Personal and Business workspaces.
+ *
+ * This intentionally does not use portals, MutationObserver, DOM queries, or
+ * route timing. The control is rendered directly by each workspace layout, so
+ * it is present as soon as that layout renders and cannot disappear when
+ * Next.js swaps workspace shells client-side.
+ */
+export function VaultNavigationMount({ workspace: _workspace = "personal" }: { workspace?: VaultWorkspace }) {
   return (
     <>
-      {desktopHost ? createPortal(<VaultHeaderControl />, desktopHost) : null}
-      {mobileHost ? createPortal(<VaultHeaderControl />, mobileHost) : null}
+      <span className={styles.persistentDesktopHost} data-ficonter-vault-slot="desktop">
+        <VaultHeaderControl />
+      </span>
+      <span className={styles.persistentMobileHost} data-ficonter-vault-slot="mobile">
+        <VaultHeaderControl />
+      </span>
     </>
   );
 }

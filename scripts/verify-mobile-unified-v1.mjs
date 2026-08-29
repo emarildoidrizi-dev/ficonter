@@ -11,7 +11,8 @@ const expect = (condition, message) => {
 const layout = read("app/layout.tsx");
 const css = read("app/mobile-unified-v1.css");
 const chrome = read("components/FiconterNativeAppChrome.tsx");
-const transactions = read("app/dashboard/transactions/page.tsx");
+const transactionsPage = read("app/dashboard/transactions/page.tsx");
+const encryptedTransactions = read("components/EncryptedTransactionsWorkspace.tsx");
 
 expect(layout.includes('import "./mobile-unified-v1.css";'), "Unified mobile stylesheet is not loaded.");
 expect(layout.indexOf("mobile-unified-v1.css") > layout.indexOf("mobile-shell-v2.css"), "Unified stylesheet must load last.");
@@ -26,7 +27,10 @@ expect(chrome.includes('label: "Transactions"'), "Transactions bottom-nav label 
 expect(chrome.includes('label: "Planner"'), "Planner bottom-nav label is missing.");
 expect(chrome.includes('href: "/dashboard/settings?section=profile"'), "Profile must open Account preferences directly from More.");
 expect(chrome.includes('avatarPath?: string'), "Header avatar support is missing.");
-expect(transactions.includes("MobileTransactionsLayout"), "Transactions split view is missing.");
+expect(
+  transactionsPage.includes("EncryptedTransactionsWorkspace") && encryptedTransactions.includes("MobileTransactionsLayout"),
+  "Transactions split view must remain reachable through the encrypted workspace.",
+);
 expect(exists("components/MobileTransactionsLayout.tsx"), "Transactions split component is missing.");
 expect(exists("app/dashboard/profile/page.tsx") && read("app/dashboard/profile/page.tsx").includes("permanentRedirect"), "Legacy Profile route must remain only as a compatibility redirect.");
 expect(!read("components/FiconterNativeAppChrome.tsx").includes("profileOnly"), "Obsolete profileOnly prop must not return.");

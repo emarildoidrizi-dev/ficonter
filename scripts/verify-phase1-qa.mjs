@@ -63,21 +63,11 @@ const obsoleteBrandPattern = new RegExp(obsoleteBrand, "i");
 const obsoleteBrandHits = [];
 for (const file of textFiles) {
   const relative = path.relative(root, file);
-  if ([
-    "FILES_TO_DELETE_AFTER_UPLOAD.txt",
-    "UPLOAD_INSTRUCTIONS_PHASE1_QA_FINAL.txt",
-  ].includes(relative)) continue;
+  if (["FILES_TO_DELETE_AFTER_UPLOAD.txt", "UPLOAD_INSTRUCTIONS_PHASE1_QA_FINAL.txt"].includes(relative)) continue;
   const text = await readFile(file, "utf8");
-  if (obsoleteBrandPattern.test(text) || obsoleteBrandPattern.test(relative)) {
-    obsoleteBrandHits.push(relative);
-  }
+  if (obsoleteBrandPattern.test(text) || obsoleteBrandPattern.test(relative)) obsoleteBrandHits.push(relative);
 }
-check(
-  obsoleteBrandHits.length === 0,
-  obsoleteBrandHits.length
-    ? `Obsolete brand remains in: ${obsoleteBrandHits.join(", ")}`
-    : "No obsolete predecessor branding remains in source or filenames.",
-);
+check(obsoleteBrandHits.length === 0, obsoleteBrandHits.length ? `Obsolete brand remains in: ${obsoleteBrandHits.join(", ")}` : "No obsolete predecessor branding remains in source or filenames.");
 
 const sql = await source("supabase/phase1_qa_finalization.sql");
 for (const name of [
@@ -118,13 +108,7 @@ const recovery = await source("components/AccountRecoveryForm.tsx");
 const callback = await source("app/auth/callback/route.ts");
 check(registration.includes("/auth/callback?next=/dashboard"), "Registration confirmation returns users to the dashboard.");
 const recoveryConfirm = await source("app/auth/recovery/confirm/route.ts");
-check(
-  recovery.includes('new URL("/auth/recovery"') &&
-    !recovery.includes('recoveryUrl.searchParams.set("next"') &&
-    recoveryConfirm.includes("verifyOtp") &&
-    recoveryConfirm.includes('type: "recovery"'),
-  "Password recovery verifies the one-time recovery token before password update.",
-);
+check(recovery.includes('new URL("/auth/recovery"') && !recovery.includes('recoveryUrl.searchParams.set("next"') && recoveryConfirm.includes("verifyOtp") && recoveryConfirm.includes('type: "recovery"'), "Password recovery verifies the one-time recovery token before password update.");
 check(callback.includes("exchangeCodeForSession"), "Auth callback securely exchanges PKCE codes.");
 
 const settings = await source("components/SettingsWorkspace.tsx");
@@ -138,18 +122,12 @@ check(serviceAdmin.includes('import "server-only"') && serviceAdmin.includes("SU
 
 const apiRoutes = files.filter((file) => file.endsWith(`${path.sep}route.ts`) && file.includes(`${path.sep}app${path.sep}api${path.sep}`));
 const nextConfig = await source("next.config.ts");
-const hasCentralApiNoStore =
-  nextConfig.includes('source: "/api/:path*"') &&
-  nextConfig.includes('key: "Cache-Control"') &&
-  nextConfig.includes('value: "private, no-store, max-age=0"');
+const hasCentralApiNoStore = nextConfig.includes('source: "/api/:path*"') && nextConfig.includes('key: "Cache-Control"') && nextConfig.includes('value: "private, no-store, max-age=0"');
 check(apiRoutes.length > 0, `Endpoint inventory dynamically includes all ${apiRoutes.length} discovered API routes.`);
 for (const file of apiRoutes) {
   const relative = path.relative(root, file);
   const text = await readFile(file, "utf8");
-  check(
-    hasCentralApiNoStore || text.includes("noStoreHeaders") || text.includes("noStoreJson"),
-    `${relative} disables sensitive response caching.`,
-  );
+  check(hasCentralApiNoStore || text.includes("noStoreHeaders") || text.includes("noStoreJson"), `${relative} disables sensitive response caching.`);
 }
 
 const userScopedPages = [
@@ -163,37 +141,17 @@ const userScopedPages = [
 for (const file of userScopedPages) {
   const text = await source(file);
   const usesExplicitUserFilter = text.includes('eq("user_id", user.id)');
-  const usesAuthenticatedWealthRpc =
-    file === "app/dashboard/net-worth/page.tsx" &&
-    (text.includes('rpc("get_wealth_score_inputs")') || text.includes('rpc("get_net_worth_growth_inputs")'));
-  const usesAuthenticatedEncryptedWorkspace =
-    text.includes("getCurrentUser") &&
-    text.includes("Encrypted") &&
-    text.includes("userId={user.id}");
-  check(
-    usesExplicitUserFilter || usesAuthenticatedWealthRpc || usesAuthenticatedEncryptedWorkspace,
-    `${file} scopes financial access to the authenticated user or authenticated encrypted workspace.`,
-  );
+  const usesAuthenticatedWealthRpc = file === "app/dashboard/net-worth/page.tsx" && (text.includes('rpc("get_wealth_score_inputs")') || text.includes('rpc("get_net_worth_growth_inputs")'));
+  const passesAuthenticatedUserId = text.includes("getCurrentUser") && text.includes("userId={user.id}");
+  check(usesExplicitUserFilter || usesAuthenticatedWealthRpc || passesAuthenticatedUserId, `${file} scopes financial access to the authenticated user or passes the authenticated user into its current workspace boundary.`);
 }
 
 const cashFlowPage = await source("app/dashboard/cash-flow/page.tsx");
-check(
-  (cashFlowPage.includes('.from("debt_payments")') && cashFlowPage.includes('.eq("user_id", user.id)')) ||
-    (cashFlowPage.includes("getCurrentUser") && cashFlowPage.includes("EncryptedCashFlowWorkspace") && cashFlowPage.includes("userId={user.id}")),
-  "Cash Flow debt-payment access is scoped to the authenticated user or encrypted user workspace.",
-);
+check((cashFlowPage.includes('.from("debt_payments")') && cashFlowPage.includes('.eq("user_id", user.id)')) || (cashFlowPage.includes("getCurrentUser") && cashFlowPage.includes("EncryptedCashFlowWorkspace") && cashFlowPage.includes("userId={user.id}")), "Cash Flow debt-payment access is scoped to the authenticated user or encrypted user workspace.");
 
 const wealthSql = await source("supabase/phase2_wealth_score_engine.sql");
 const growthSql = await source("supabase/phase2_net_worth_growth.sql");
-check(
-  wealthSql.includes("auth.uid()") &&
-    wealthSql.includes("security invoker") &&
-    wealthSql.includes("public.get_financial_health_inputs()") &&
-    growthSql.includes("auth.uid()") &&
-    growthSql.includes("security invoker") &&
-    growthSql.includes("public.get_wealth_score_inputs()"),
-  "The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health and Wealth Score sources of truth.",
-);
+check(wealthSql.includes("auth.uid()") && wealthSql.includes("security invoker") && wealthSql.includes("public.get_financial_health_inputs()") && growthSql.includes("auth.uid()") && growthSql.includes("security invoker") && growthSql.includes("public.get_wealth_score_inputs()"), "The Net Worth aggregate RPC is authenticated, caller-scoped, and reuses the Financial Health and Wealth Score sources of truth.");
 
 console.log(`Phase 1 QA verification: ${passes.length} checks passed.`);
 for (const message of passes) console.log(`  PASS  ${message}`);

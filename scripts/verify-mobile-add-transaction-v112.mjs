@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const chrome = read('components/FiconterNativeAppChrome.tsx');
 const personalPage = read('app/dashboard/transactions/page.tsx');
+const encryptedPersonal = read('components/EncryptedTransactionsWorkspace.tsx');
 const entry = read('components/EffortlessEntryWorkspace.tsx');
 const businessPage = read('app/business/transactions/page.tsx');
 const businessLedger = read('components/BusinessTransactionLedger.tsx');
@@ -16,11 +17,11 @@ const checks = [
   ['same page query is updated with replace rather than refresh', chrome.includes('router.replace(addHref, { scroll: false })')],
   ['cross-page plus navigation goes to add route', chrome.includes('router.push(addHref, { scroll: false })')],
   ['personal route reads add query', personalPage.includes('const directAdd = addValue === "1";')],
-  ['personal route opens add view directly', personalPage.includes('initialView={directAdd || setupValue ? "add" : "ledger"}')],
+  ['personal encrypted workspace opens add view directly', encryptedPersonal.includes('initialView={directAdd || setupRequested ? "add" : "ledger"}')],
   ['personal entry receives directAdd', personalPage.includes('directAdd={directAdd}')],
   ['direct add forces simple transaction entry', entry.includes('directAdd ? "simple" : "guided"')],
   ['direct add focuses amount field', entry.includes('amountInput?.focus({ preventScroll: true })')],
-  ['business route reads add query', businessPage.includes('const directAdd = addValue === "1";')],
+  ['business route reads add query', businessPage.includes('const addValue = Array.isArray(query?.add)') && businessPage.includes('initialAdd={addValue === "1"}')],
   ['business ledger opens form from plus route', businessLedger.includes('useState(initialAdd)')],
 ];
 

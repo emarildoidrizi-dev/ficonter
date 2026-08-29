@@ -11,6 +11,7 @@ const expect = (source, fragment, message) => {
 const planner = read("components/MonthlyPlanner.tsx");
 const overview = read("components/DashboardLiveOverview.tsx");
 const overviewPage = read("app/dashboard/overview/page.tsx");
+const encryptedOverview = read("components/EncryptedDashboardOverview.tsx");
 const migration = read("supabase/migrations/20260813170000_monthly_spending_budget.sql");
 
 expect(planner, "spending_budget", "Monthly Planner must load and save a dedicated spending budget.");
@@ -20,7 +21,9 @@ expect(planner, "monthlyBudgetExpenses", "Monthly Planner budget must use Expens
 expect(planner, "expenseTransactions.filter(isMonthlyBudgetExpenseTransaction)", "Monthly Planner must exclude non-budget financial movements.");
 expect(planner, "budgetUsedPercent", "Monthly Planner must calculate real budget usage.");
 expect(planner, "notifyFiconterDataChange(\"planner\")", "Saving a budget must notify live financial surfaces.");
-expect(overviewPage, '.select("month,spending_budget")', "Overview must load the dedicated budget source.");
+if (!overviewPage.includes("EncryptedDashboardOverview") || !encryptedOverview.includes("useBaseCurrencySourceData") || !encryptedOverview.includes("source.plans")) {
+  throw new Error("Overview must load the dedicated budget source through the encrypted financial source layer.");
+}
 expect(overview, "initialBudgetPlans.find", "Overview must select the current month's dedicated budget.");
 expect(overview, "monthlyBudgetExpenseTotals", "Overview budget must use expense-only totals.");
 expect(overview, "spendingAmount / spendingBudget", "Overview must calculate usage from real expense spending and budget values.");

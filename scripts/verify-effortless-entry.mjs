@@ -11,13 +11,17 @@ function check(name, condition) {
 
 const form = read("components/TransactionForm.tsx");
 const workspace = read("components/EffortlessEntryWorkspace.tsx");
+const encryptedWorkspace = read("components/EncryptedTransactionsWorkspace.tsx");
 const styles = read("components/EffortlessEntryWorkspace.module.css");
 const helper = read("lib/effortlessEntry.ts");
 const page = read("app/dashboard/transactions/page.tsx");
 const sql = read("supabase/effortless_entry_v1.sql");
 const globals = read("app/globals.css");
 
-check("Transactions page uses EffortlessEntryWorkspace", page.includes("EffortlessEntryWorkspace"));
+check(
+  "Transactions page reaches EffortlessEntryWorkspace through the encrypted transaction workspace",
+  page.includes("EncryptedTransactionsWorkspace") && encryptedWorkspace.includes("EffortlessEntryWorkspace"),
+);
 check("Entry modes are defined", helper.includes('"simple" | "guided" | "detailed"'));
 check("Mode choices describe different effort", helper.includes("About 10 seconds") && helper.includes("About 30 seconds") && helper.includes("Maximum control"));
 check("Mode choices describe different structures", helper.includes("One screen · 3 choices") && helper.includes("3 steps · optional details") && helper.includes("Full form · all fields"));

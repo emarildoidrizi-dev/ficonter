@@ -15,6 +15,7 @@ function check(condition, message) {
 }
 
 const page = read("app/dashboard/credit-cards/page.tsx");
+const encryptedWorkspace = read("components/EncryptedCreditCardsWorkspace.tsx");
 const manager = read("components/CreditCardsManager.tsx");
 const sidebar = read("components/Sidebar.tsx");
 const debt = read("components/DebtManager.tsx");
@@ -24,8 +25,19 @@ const migration = read("supabase/credit_card_management_v1.sql");
 const exportSource = read("lib/accountExport.ts");
 const settings = read("components/SettingsWorkspace.tsx");
 
-check(page.includes('from("credit_card_activities")'), "Credit Cards page loads card activity.");
-check(page.includes('.ilike("category", "credit card")'), "Credit Cards page reads existing credit-card debt rows.");
+check(
+  page.includes("EncryptedCreditCardsWorkspace") &&
+    encryptedWorkspace.includes('from("credit_card_activities")') &&
+    encryptedWorkspace.includes('.eq("user_id", userId)'),
+  "Credit Cards encrypted workspace loads user-scoped card activity.",
+);
+check(
+  page.includes("EncryptedCreditCardsWorkspace") &&
+    encryptedWorkspace.includes('from("debts")') &&
+    encryptedWorkspace.includes('.eq("debt_kind", "credit_card")') &&
+    encryptedWorkspace.includes('.eq("user_id", userId)'),
+  "Credit Cards encrypted workspace reads existing user-scoped credit-card debt rows.",
+);
 check(manager.includes('"record_credit_card_payment"'), "Confirmed card payments use an atomic RPC.");
 check(manager.includes('"record_credit_card_activity"'), "Card balance activity uses an atomic RPC.");
 check(manager.includes('.from("debts")') && manager.includes("statement_balance: statementBalance") && !manager.includes('supabase.rpc("update_credit_card_statement"'), "Monthly statements save issuer snapshots without rewriting the live balance.");
@@ -54,103 +66,31 @@ check(settings.includes('"credit_card_activities"'), "JSON/PDF account archive l
 const minimumMigration = read("supabase/credit_card_minimum_payment_3_percent.sql");
 const monthlyHistoryMigration = read("supabase/credit_card_monthly_history_v1.sql");
 
-check(
-  manager.includes("AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03"),
-  "Minimum payment is calculated automatically at 3%."
-);
-check(
-  manager.includes("<span>Minimum payment due</span>"),
-  "Credit-card cards use the clear Minimum payment due label."
-);
-check(
-  !manager.includes("<span>Minimum remaining</span>"),
-  "The confusing Minimum remaining label has been removed."
-);
-check(
-  manager.includes("selectedMonth === monthKey() ? cardCurrent(card) : statementBalance"),
-  "Current-month minimum payment derives from Current balance while historical records stay historical."
-);
-check(
-  manager.includes("readOnly") &&
-    manager.includes("Minimum payment due — automatic 3%"),
-  "The statement form displays a protected automatic 3% amount."
-);
-check(
-  minimumMigration.includes("new.statement_balance * 0.03"),
-  "Supabase enforces the 3% minimum-payment rule."
-);
-check(
-  minimumMigration.includes("credit_card_minimum_payment_3_percent"),
-  "The 3% database trigger is included."
-);
-
+check(manager.includes("AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03"), "Minimum payment is calculated automatically at 3%.");
+check(manager.includes("<span>Minimum payment due</span>"), "Credit-card cards use the clear Minimum payment due label.");
+check(!manager.includes("<span>Minimum remaining</span>"), "The confusing Minimum remaining label has been removed.");
+check(manager.includes("selectedMonth === monthKey() ? cardCurrent(card) : statementBalance"), "Current-month minimum payment derives from Current balance while historical records stay historical.");
+check(manager.includes("readOnly") && manager.includes("Minimum payment due — automatic 3%"), "The statement form displays a protected automatic 3% amount.");
+check(minimumMigration.includes("new.statement_balance * 0.03"), "Supabase enforces the 3% minimum-payment rule.");
+check(minimumMigration.includes("credit_card_minimum_payment_3_percent"), "The 3% database trigger is included.");
 
 check(
-  page.includes('from("credit_card_monthly_records")'),
-  "Credit Cards page loads permanent monthly statement records."
+  encryptedWorkspace.includes('from("credit_card_monthly_records")') &&
+    encryptedWorkspace.includes('.eq("user_id", userId)') &&
+    encryptedWorkspace.includes("decryptCreditCardMonthlyRecordPayload"),
+  "Credit Cards encrypted workspace loads and decrypts permanent monthly statement records.",
 );
-check(
-  manager.includes('type="month"') &&
-    manager.includes("selectedMonth"),
-  "Credit Cards includes a Monthly Planner-style month selector."
-);
-check(
-  manager.includes("Paid this month") &&
-    manager.includes("Balance left to pay") &&
-    manager.includes("Interest charged"),
-  "Selected-month payment, remaining balance and interest metrics are visible."
-);
-check(
-  manager.includes("inMonth(payment.paid_at, selectedMonth)") &&
-    manager.includes("inMonth(activity.occurred_at, selectedMonth)"),
-  "Payments and card activity are filtered into their original month."
-);
-check(
-  manager.includes("paymentsTowardStatement") &&
-    manager.includes("nextMonthlyRecord"),
-  "Minimum-payment status is limited to the correct statement cycle."
-);
-check(
-  monthlyHistoryMigration.includes(
-    "create table if not exists public.credit_card_monthly_records"
-  ),
-  "Supabase stores one permanent record per card and month."
-);
-check(
-  monthlyHistoryMigration.includes(
-    "unique (debt_id, month_start)"
-  ),
-  "Monthly statement records cannot be duplicated."
-);
-check(
-  monthlyHistoryMigration.includes(
-    "sync_credit_card_monthly_record"
-  ),
-  "Confirmed statements automatically create or update monthly history."
-);
-check(
-  exportSource.includes('| "credit_card_monthly_records"') &&
-    settings.includes('"credit_card_monthly_records"'),
-  "Account export includes credit-card monthly history."
-);
-
-
-
-check(
-  manager.includes('"save_credit_card_monthly_record"') &&
-    manager.includes("historicalStatement"),
-  "Older statement months can be backfilled without changing the live balance."
-);
-check(
-  monthlyHistoryMigration.includes(
-    "create or replace function public.save_credit_card_monthly_record"
-  ),
-  "Supabase provides an owner-scoped historical statement RPC."
-);
-check(
-  monthlyHistoryMigration.includes("p_statement_date >= v_debt.statement_date"),
-  "Historical statement RPC cannot overwrite the current or a future balance."
-);
+check(manager.includes('type="month"') && manager.includes("selectedMonth"), "Credit Cards includes a Monthly Planner-style month selector.");
+check(manager.includes("Paid this month") && manager.includes("Balance left to pay") && manager.includes("Interest charged"), "Selected-month payment, remaining balance and interest metrics are visible.");
+check(manager.includes("inMonth(payment.paid_at, selectedMonth)") && manager.includes("inMonth(activity.occurred_at, selectedMonth)"), "Payments and card activity are filtered into their original month.");
+check(manager.includes("paymentsTowardStatement") && manager.includes("nextMonthlyRecord"), "Minimum-payment status is limited to the correct statement cycle.");
+check(monthlyHistoryMigration.includes("create table if not exists public.credit_card_monthly_records"), "Supabase stores one permanent record per card and month.");
+check(monthlyHistoryMigration.includes("unique (debt_id, month_start)"), "Monthly statement records cannot be duplicated.");
+check(monthlyHistoryMigration.includes("sync_credit_card_monthly_record"), "Confirmed statements automatically create or update monthly history.");
+check(exportSource.includes('| "credit_card_monthly_records"') && settings.includes('"credit_card_monthly_records"'), "Account export includes credit-card monthly history.");
+check(manager.includes('"save_credit_card_monthly_record"') && manager.includes("historicalStatement"), "Older statement months can be backfilled without changing the live balance.");
+check(monthlyHistoryMigration.includes("create or replace function public.save_credit_card_monthly_record"), "Supabase provides an owner-scoped historical statement RPC.");
+check(monthlyHistoryMigration.includes("p_statement_date >= v_debt.statement_date"), "Historical statement RPC cannot overwrite the current or a future balance.");
 
 if (failures) {
   console.error(`\n${failures} Credit Cards verification check(s) failed.`);

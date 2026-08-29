@@ -88,6 +88,36 @@ const MONTH_TOKEN_TO_INDEX: Record<string, number> = {
   december: 11,
 };
 
+const ALBANIAN_MONTHS_SHORT = [
+  "Jan",
+  "Shk",
+  "Mar",
+  "Pri",
+  "Maj",
+  "Qer",
+  "Kor",
+  "Gus",
+  "Sht",
+  "Tet",
+  "Nën",
+  "Dhj",
+] as const;
+
+const ALBANIAN_MONTHS_LONG = [
+  "janar",
+  "shkurt",
+  "mars",
+  "prill",
+  "maj",
+  "qershor",
+  "korrik",
+  "gusht",
+  "shtator",
+  "tetor",
+  "nëntor",
+  "dhjetor",
+] as const;
+
 function localizeMonthToken(
   value: string,
   language: FiconterLanguage,
@@ -95,9 +125,17 @@ function localizeMonthToken(
   const monthIndex = MONTH_TOKEN_TO_INDEX[value.toLowerCase()];
   if (monthIndex === undefined) return null;
 
-  const locale = getLanguageOption(language).locale;
   const monthStyle: "short" | "long" = value.length <= 4 ? "short" : "long";
 
+  // Use explicit Albanian labels instead of relying on browser ICU support.
+  // Some browsers/environments fall back to English for sq-AL month names.
+  if (language === "sq") {
+    return monthStyle === "short"
+      ? ALBANIAN_MONTHS_SHORT[monthIndex]
+      : ALBANIAN_MONTHS_LONG[monthIndex];
+  }
+
+  const locale = getLanguageOption(language).locale;
   return new Intl.DateTimeFormat(locale, { month: monthStyle }).format(
     new Date(2026, monthIndex, 1),
   );

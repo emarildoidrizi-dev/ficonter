@@ -215,6 +215,7 @@ type E2eeTables = {
   business_inventory_items: AnyTable;
   business_inventory_locations: AnyTable;
   business_inventory_movements: AnyTable;
+  business_recurring_cost_runs: AnyTable;
   business_recurring_costs: AnyTable;
   business_sale_lines: AnyTable;
   business_sales: AnyTable;
@@ -232,6 +233,7 @@ type E2eeTables = {
   document_upload_intents: AnyTable;
   financial_documents: AnyTable;
   financial_independence_settings: AnyTable;
+  ficonter_recovery_key_registry: AnyTable;
   goal_investments: AnyTable;
   goals: AnyTable;
   monthly_budget_items: AnyTable;
@@ -240,6 +242,11 @@ type E2eeTables = {
   transactions: AnyTable;
   user_business_keypairs: AnyTable;
   user_financial_vaults: AnyTable;
+  vault_emergency_recovery_envelopes: AnyTable;
+  vault_recovery_access_grants: AnyTable;
+  vault_recovery_case_audit: AnyTable;
+  vault_recovery_documents: AnyTable;
+  vault_recovery_requests: AnyTable;
 };
 
 type ContractTables = {
@@ -364,6 +371,7 @@ type ContractFunctions = {
   customer_complete_vault_assisted_recovery: AnyFunction;
   customer_complete_vault_recovery_bootstrap: AnyFunction;
   customer_create_financial_vault_with_recovery: AnyFunction;
+  customer_rotate_financial_vault_recovery: AnyFunction;
   customer_submit_vault_recovery_consent: AnyFunction;
   ficonter_get_active_recovery_private_key: AnyFunction;
 };

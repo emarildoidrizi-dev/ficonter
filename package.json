@@ -28,7 +28,7 @@
     "verify:appearance": "node scripts/verify-interface-themes.mjs && node scripts/verify-theme-contrast-and-budget-use.mjs && node scripts/verify-scene-wallpapers.mjs && node scripts/verify-sidebar-atmosphere-removal.mjs && node scripts/verify-fixed-sidebar.mjs && node scripts/verify-fixed-redesign-layout.mjs",
     "verify:release-candidate": "node scripts/verify-release-candidate.mjs",
     "verify:financial-consistency": "node scripts/verify-financial-consistency.mjs",
-    "verify:localization": "node scripts/verify-localization.mjs",
+    "verify:localization": "node scripts/verify-localization-governance.mjs && node scripts/verify-localization.mjs",
     "verify:monthly-budget": "node scripts/verify-monthly-spending-budget.mjs",
     "verify:credit-cards": "node scripts/verify-credit-card-management.mjs",
     "verify:database-contract": "node scripts/verify-database-contract.mjs",

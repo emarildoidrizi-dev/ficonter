@@ -61,6 +61,48 @@ function normalizeSource(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+const MONTH_TOKEN_TO_INDEX: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
+function localizeMonthToken(
+  value: string,
+  language: FiconterLanguage,
+): string | null {
+  const monthIndex = MONTH_TOKEN_TO_INDEX[value.toLowerCase()];
+  if (monthIndex === undefined) return null;
+
+  const locale = getLanguageOption(language).locale;
+  const monthStyle: "short" | "long" = value.length <= 4 ? "short" : "long";
+
+  return new Intl.DateTimeFormat(locale, { month: monthStyle }).format(
+    new Date(2026, monthIndex, 1),
+  );
+}
+
 function renderTranslatedText(
   source: string,
   language: FiconterLanguage,
@@ -70,6 +112,12 @@ function renderTranslatedText(
   const leading = source.match(/^\s*/)?.[0] ?? "";
   const trailing = source.match(/\s*$/)?.[0] ?? "";
   const normalized = normalizeSource(source);
+  const localizedMonth = localizeMonthToken(normalized, language);
+
+  if (localizedMonth !== null) {
+    return `${leading}${localizedMonth}${trailing}`;
+  }
+
   const translated = translateRuntimePhrase(language, normalized);
 
   return translated === normalized

@@ -63,11 +63,15 @@ const provider = fs.readFileSync(
   "utf8",
 );
 
+// The provider executes maintenance through an ordered run() queue rather than
+// direct `await finalize...` statements. Validate the actual function references
+// and their order so the test remains architecture-aware without depending on
+// incidental call syntax.
 const billFinalizerIndex = provider.indexOf(
-  "await finalizePendingEncryptedBillTransactions(",
+  "finalizePendingEncryptedBillTransactions(",
 );
 const legacyFinalizerIndex = provider.indexOf(
-  "await finalizePendingServerTransactions(",
+  "finalizePendingServerTransactions(",
 );
 
 if (billFinalizerIndex < 0 || legacyFinalizerIndex < 0) {

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   BusinessSidebar,
 } from "@/components/BusinessSidebar";
+import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
@@ -24,6 +25,14 @@ import {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+function readAccountLanguage(metadata: unknown): string | undefined {
+  if (!metadata || typeof metadata !== "object") return undefined;
+  const preferences = (metadata as Record<string, unknown>).ficonter_preferences;
+  if (!preferences || typeof preferences !== "object") return undefined;
+  const language = (preferences as Record<string, unknown>).language;
+  return typeof language === "string" ? language : undefined;
+}
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const { user, businesses, business, membership } = await getBusinessContext();
@@ -48,6 +57,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         membership?.role === "member"),
   );
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const accountLanguage = readAccountLanguage(user.user_metadata);
 
   return (
     <CurrencyDisplayProvider
@@ -55,6 +65,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
       baseCurrency={business?.base_currency ?? "EUR"}
     >
       <div className="app-shell business-shell">
+        <AuthenticatedLanguageBootstrap language={accountLanguage} />
         <LivingThemeBackdrop />
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />

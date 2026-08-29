@@ -273,7 +273,6 @@ export function LanguageProvider({
     normalizeLanguage(initialLanguage),
   );
 
-  const supabase = useMemo(() => createClient(), []);
   const languageRef = useRef(language);
   const translatorRef = useRef<
     ReturnType<typeof createDocumentTranslator> | null
@@ -326,6 +325,10 @@ export function LanguageProvider({
         return;
       }
 
+      // Account persistence is the only part of localization that needs
+      // Supabase. Create the browser client lazily so public/static pages can
+      // render and prerender even when no Supabase environment is available.
+      const supabase = createClient();
       const {
         data: { user },
         error: userError,
@@ -356,7 +359,7 @@ export function LanguageProvider({
 
       applyCommittedLanguage();
     },
-    [supabase],
+    [],
   );
 
   const option = getLanguageOption(language);

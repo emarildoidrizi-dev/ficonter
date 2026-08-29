@@ -63,6 +63,7 @@ function parseMigrationContract() {
 
   const functions = new Set();
   const relations = new Set();
+  const storageBuckets = new Set();
 
   for (const match of sql.matchAll(
     /create\s+(?:or\s+replace\s+)?function\s+(?:"public"\.|public\.)?(?:"([^".]+)"|([a-zA-Z0-9_]+))\s*\(/gi,
@@ -76,7 +77,17 @@ function parseMigrationContract() {
     relations.add(match[1] ?? match[2]);
   }
 
-  return { functions, relations };
+  // Storage buckets are referenced with `.storage.from("bucket")`, which the
+  // source scanner intentionally sees as a relation-like dependency. Discover
+  // bucket IDs from ordered migrations so private buckets are verified without
+  // maintaining a brittle hard-coded allow-list.
+  for (const match of sql.matchAll(
+    /insert\s+into\s+(?:"storage"\.|storage\.)buckets\s*\([^)]*\)\s*values\s*\(\s*["']([^"']+)["']/gi,
+  )) {
+    storageBuckets.add(match[1]);
+  }
+
+  return { functions, relations, storageBuckets };
 }
 
 const requiredFiles = [baselinePath, manifestPath, typesPath, contractTypesPath];
@@ -112,7 +123,13 @@ for (const token of forbidden) {
 
 const source = collectSourceContracts();
 const migration = parseMigrationContract();
-const storageBuckets = new Set(["business-assets", "profile-photos"]);
+const storageBuckets = new Set([
+  // Legacy baseline buckets are preserved here for compatibility; all newer
+  // buckets must be discoverable from ordered migrations.
+  "business-assets",
+  "profile-photos",
+  ...migration.storageBuckets,
+]);
 
 const missingFunctions = [...source.rpc.keys()].filter(
   (name) => !migration.functions.has(name),
@@ -154,7 +171,7 @@ if (manifest.counts.functions < 100 || manifest.counts.tables < 45) {
 console.log(
   `Database contract verified: ${source.rpc.size} RPCs, ${
     source.relations.size - [...source.relations.keys()].filter((name) => storageBuckets.has(name)).length
-  } relations, ${manifest.counts.functions} baseline functions, ${
+  } relations, ${storageBuckets.size} storage buckets, ${manifest.counts.functions} baseline functions, ${
     manifest.counts.tables
   } tables and ${manifest.counts.views} view.`,
 );

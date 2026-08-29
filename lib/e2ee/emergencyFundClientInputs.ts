@@ -33,11 +33,35 @@ function monthSeries(first: string, last: string) {
   return months;
 }
 
+function normalizedToken(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\-_]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 function isEmergencyFundSaving(transaction: CurrencySourceData["transactions"][number]) {
-  return (
-    String(transaction.type ?? "").trim().toLowerCase() === "saving" &&
-    String(transaction.category ?? "").trim().toLowerCase() === "emergency fund"
-  );
+  const type = normalizedToken(transaction.type);
+  const category = normalizedToken(transaction.category);
+
+  // Support both the canonical stored values and legacy/display labels that
+  // existed before the E2EE migration. The Emergency Fund page must mirror the
+  // same saving activity visible in Transactions rather than silently dropping
+  // older records because of a label/value mismatch.
+  const savingType =
+    type === "saving" ||
+    type === "savings" ||
+    type === "general saving" ||
+    type === "general savings";
+
+  const emergencyCategory =
+    category === "emergency fund" ||
+    category === "emergency savings" ||
+    category === "emergency fund saving" ||
+    category === "emergency fund savings";
+
+  return savingType && emergencyCategory;
 }
 
 export function buildEmergencyFundClientInputs(

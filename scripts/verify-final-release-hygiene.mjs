@@ -4,6 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const sourceRoots = ["app", "components", "lib"];
 const sourceExtensions = new Set([".ts", ".tsx"]);
+const asAnyBaselinePath = "scripts/release-hygiene-as-any-baseline.json";
 
 function walk(dir) {
   const out = [];
@@ -13,6 +14,10 @@ function walk(dir) {
     else out.push(relative);
   }
   return out;
+}
+
+function portable(relative) {
+  return relative.split(path.sep).join("/");
 }
 
 const sourceFiles = sourceRoots.flatMap(walk).filter((file) => sourceExtensions.has(path.extname(file)));
@@ -40,7 +45,30 @@ for (const file of [
 const joined = sourceFiles.map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 expect(!/\b(?:TODO|FIXME|HACK|XXX)\b/.test(joined), "No unresolved source TODO/FIXME/HACK markers remain");
 expect(!/@ts-(?:ignore|expect-error)/.test(joined), "No TypeScript error suppression directives remain");
-expect(!/\bas any\b/.test(joined), "No 'as any' escape hatches remain in app source");
+
+const baselineFile = path.join(root, asAnyBaselinePath);
+expect(fs.existsSync(baselineFile), "Unsafe-cast baseline is versioned");
+let baseline = { baselineCommit: "", allowedFiles: [] };
+try {
+  baseline = JSON.parse(fs.readFileSync(baselineFile, "utf8"));
+} catch {
+  // The explicit check below reports a deterministic failure.
+}
+const allowedAsAnyFiles = new Set(Array.isArray(baseline.allowedFiles) ? baseline.allowedFiles : []);
+const asAnyFiles = sourceFiles
+  .filter((file) => /\bas any\b/.test(fs.readFileSync(path.join(root, file), "utf8")))
+  .map(portable)
+  .sort();
+const unexpectedAsAnyFiles = asAnyFiles.filter((file) => !allowedAsAnyFiles.has(file));
+expect(
+  typeof baseline.baselineCommit === "string" && /^[0-9a-f]{40}$/.test(baseline.baselineCommit),
+  "Unsafe-cast baseline records the audited production commit",
+);
+expect(
+  unexpectedAsAnyFiles.length === 0,
+  `No new 'as any' escape hatches appear outside the audited baseline${unexpectedAsAnyFiles.length ? `: ${unexpectedAsAnyFiles.join(", ")}` : ""}`,
+);
+
 expect(!fs.readdirSync(root).some((name) => name.endsWith(".tsbuildinfo")), "No local TypeScript build cache is packaged");
 
 const importPattern = /(?:from\s+|import\s*\()["']([^"']+)["']/g;

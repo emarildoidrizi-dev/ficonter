@@ -32,7 +32,9 @@ const required = [
   "components/SupportConversations.tsx",
   "components/NotificationCenter.tsx",
   "components/DocumentVault.tsx",
+  "lib/e2ee/documentVaultE2eeBoundary.ts",
   "supabase/support_messaging_notifications_document_vault.sql",
+  "supabase/migrations/20260822175907_add_document_vault_e2ee_foundation.sql",
 ];
 for (const file of required) check(`Required file exists: ${file}`, fs.existsSync(path.join(root, file)));
 
@@ -41,6 +43,7 @@ const customerInbox = read("components/SupportConversations.tsx");
 const adminInbox = read("components/SupportInbox.tsx");
 const notifications = read("components/NotificationCenter.tsx");
 const documentVault = read("components/DocumentVault.tsx");
+const documentBoundary = read("lib/e2ee/documentVaultE2eeBoundary.ts");
 const uploadIntent = read("app/api/documents/upload-intent/route.ts");
 const completeUpload = read("app/api/documents/complete/route.ts");
 const documentAccess = read("app/api/documents/[id]/access/route.ts");
@@ -49,6 +52,7 @@ const customerReply = read("app/api/support/threads/[id]/messages/route.ts");
 const adminReply = read("app/api/admin/support/[id]/messages/route.ts");
 const notificationRoute = read("app/api/notifications/route.ts");
 const sql = read("supabase/support_messaging_notifications_document_vault.sql");
+const e2eeDocumentSql = read("supabase/migrations/20260822175907_add_document_vault_e2ee_foundation.sql");
 const accountDelete = read("app/api/account/delete/route.ts");
 const adminDelete = read("app/api/admin/users/[id]/route.ts");
 const settings = read("components/SettingsWorkspace.tsx");
@@ -67,11 +71,13 @@ check("Notification center has unread counters", notifications.includes("unreadC
 check("Notifications can be marked read", notificationRoute.includes("export async function PATCH") && notifications.includes("Mark all read"));
 check("Notifications are realtime for customers", notifications.includes("user_notifications") && notifications.includes("postgres_changes"));
 check("Document Vault accepts controlled formats", documentVault.includes("application/pdf,image/jpeg,image/png,image/webp"));
-check("Document Vault validates file signatures", documentVault.includes("hasValidDocumentSignature") && completeUpload.includes("hasValidDocumentSignature"));
+check("Document Vault validates plaintext signatures before encryption", documentVault.includes("hasValidDocumentSignature") && documentVault.includes("file.slice(0, 16)"));
+check("Document Vault encrypts document bytes before storage upload", documentBoundary.includes("encryptDocumentFile") && documentBoundary.includes('contentType: "application/octet-stream"'));
+check("Document upload completion validates the encrypted envelope", completeUpload.includes('new TextEncoder().encode("FICONTER-DOC-V1\\0")') && completeUpload.includes("hasEncryptedDocumentMagic"));
 check("Document upload bypasses Vercel request payload limits", documentVault.includes("uploadToSignedUrl") && uploadIntent.includes("createSignedUploadUrl"));
-check("Document upload reservations enforce atomic quota and pending limits", uploadIntent.includes('rpc("reserve_document_upload"') && sql.includes("pg_advisory_xact_lock") && sql.includes("too_many_pending_document_uploads") && sql.includes("document_vault_quota_exceeded"));
+check("Document upload reservations enforce atomic E2EE quota and pending limits", uploadIntent.includes('rpc("reserve_document_upload_e2ee"') && e2eeDocumentSql.includes("pg_advisory_xact_lock") && e2eeDocumentSql.includes("too_many_pending_document_uploads") && e2eeDocumentSql.includes("document_vault_quota_exceeded"));
 check("Expired upload objects are cleaned before new reservations", uploadIntent.includes("removeExpiredUploadIntents") && uploadIntent.includes("storage.from(DOCUMENT_BUCKET).remove(paths)"));
-check("Document upload completion re-verifies stored content", completeUpload.includes(".download(intent.storage_path)") && completeUpload.includes("bytes.byteLength"));
+check("Document upload completion re-verifies stored ciphertext length", completeUpload.includes(".download(intent.storage_path)") && completeUpload.includes("bytes.byteLength"));
 check("Document files are accessed with short-lived signed URLs", documentAccess.includes("createSignedUrl") && documentAccess.includes(", 300"));
 check("Document deletion checks ownership", documentDelete.includes('.eq("user_id", user.id)'));
 check("Document bucket is private", sql.includes("'financial-documents'") && sql.includes("public = false"));

@@ -356,6 +356,16 @@ type ContractFunctions = {
   update_business_document_e2ee: AnyFunction;
   update_business_sale_e2ee_atomic: AnyFunction;
   update_business_workspace_e2ee: AnyFunction;
+
+  admin_issue_vault_recovery_access: AnyFunction;
+  admin_revoke_vault_recovery_access: AnyFunction;
+  customer_bind_vault_recovery_key: AnyFunction;
+  customer_claim_vault_recovery_access: AnyFunction;
+  customer_complete_vault_assisted_recovery: AnyFunction;
+  customer_complete_vault_recovery_bootstrap: AnyFunction;
+  customer_create_financial_vault_with_recovery: AnyFunction;
+  customer_submit_vault_recovery_consent: AnyFunction;
+  ficonter_get_active_recovery_private_key: AnyFunction;
 };
 
 export type Database = Omit<GeneratedDatabase, "public"> & {

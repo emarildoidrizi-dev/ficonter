@@ -25,6 +25,16 @@ function localDateTimeValue(date = new Date()) {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
+function dateTimePickerValue(previousValue: string, nextValue: string) {
+  const current = localDateTimeValue();
+  const today = current.slice(0, 10);
+  const previousDate = previousValue.slice(0, 10);
+  const nextDate = nextValue.slice(0, 10);
+
+  if (nextDate === today && previousDate !== today) return current;
+  return nextValue;
+}
+
 type RateState = {
   rate: number;
   date: string;
@@ -971,7 +981,7 @@ export function TransactionForm({
                   value={occurredAt}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => {
                     transactionTimeWasEdited.current = true;
-                    setOccurredAt(event.target.value);
+                    setOccurredAt((current) => dateTimePickerValue(current, event.target.value));
                   }}
                 />
               </div>

@@ -136,6 +136,14 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     setPin("");
   }
 
+  function handleStartPinSetup() {
+    lockVault();
+    setShowRecovery(true);
+    setLocalError("");
+    setPin("");
+    setRecoveryInput("");
+  }
+
   function handleLock() {
     lockVault();
     setOpen(false);
@@ -222,7 +230,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
             {status === "locked" && (!quickUnlockEnabled || showRecovery) ? (
               <>
                 <div className={styles.notice}>
-                  Use your recovery code on a new device, after forgetting your PIN, or when Quick Unlock is unavailable.
+                  <strong>Your recovery code stays exactly the same.</strong> Enter it once to verify this device and, if Quick Unlock is not enabled yet, create your 6-digit PIN next.
                 </div>
                 <input
                   className={styles.field}
@@ -235,7 +243,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                   spellCheck={false}
                 />
                 <button type="button" className={styles.primary} disabled={busy || !recoveryInput.trim()} onClick={handleRecoveryUnlock}>
-                  {busy ? "Unlocking…" : "Unlock with recovery code"}
+                  {busy ? "Verifying…" : quickUnlockEnabled ? "Unlock with recovery code" : "Verify recovery code"}
                 </button>
                 {quickUnlockEnabled ? (
                   <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(false); setLocalError(""); }}>
@@ -270,6 +278,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                     <div className={styles.pinLabel}>Set a 6-digit Quick Unlock PIN for this device</div>
                     {pendingRecoveryCode ? (
                       <>
+                        <p className={styles.unlockedText}>This PIN is an extra device shortcut. It does not replace, reset, or modify your recovery code.</p>
                         <input
                           className={styles.pinInput}
                           inputMode="numeric"
@@ -280,11 +289,14 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                           aria-label="Create 6-digit FICONTER PIN"
                         />
                         <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handleEnablePin}>
-                          {busy ? "Saving…" : "Enable Quick Unlock"}
+                          {busy ? "Saving…" : "Create 6-digit PIN"}
                         </button>
                       </>
                     ) : (
-                      <p className={styles.unlockedText}>To enable Quick Unlock, lock the vault and unlock once with your recovery code.</p>
+                      <>
+                        <p className={styles.unlockedText}>Your recovery code will remain unchanged. Verify it once to authorize Quick Unlock on this device.</p>
+                        <button type="button" className={styles.primary} onClick={handleStartPinSetup}>Set up 6-digit PIN</button>
+                      </>
                     )}
                   </div>
                 ) : (

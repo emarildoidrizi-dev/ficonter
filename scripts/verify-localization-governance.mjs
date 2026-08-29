@@ -15,7 +15,7 @@ if (!source.includes(globalRowsBlock)) {
 }
 source = source.replace(
   globalRowsBlock,
-  `${globalRowsBlock}\nconst governanceRows = findCatalogRows(\n  "lib/i18n/governanceUiCatalog.ts",\n  "GOVERNANCE_UI_TRANSLATIONS",\n);`,
+  `${globalRowsBlock}\nconst governanceRows = findCatalogRows(\n  "lib/i18n/governanceUiCatalog.ts",\n  "GOVERNANCE_UI_TRANSLATIONS",\n);\nconst governanceRowsBatch2 = findCatalogRows(\n  "lib/i18n/governanceUiCatalogBatch2.ts",\n  "GOVERNANCE_UI_TRANSLATIONS_BATCH_2",\n);`,
 );
 
 const catalogLoop = "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows])";
@@ -24,7 +24,7 @@ if (!source.includes(catalogLoop)) {
 }
 source = source.replace(
   catalogLoop,
-  "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows, governanceRows])",
+  "for (const catalog of [fullRows, landingRows, wealthRows, wealthTemplateRows, globalTemplateRows, governanceRows, governanceRowsBatch2])",
 );
 
 const coveredTail = `  ...wealthRows.keys(),\n]);`;
@@ -33,7 +33,7 @@ if (!source.includes(coveredTail)) {
 }
 source = source.replace(
   coveredTail,
-  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n]);`,
+  `  ...wealthRows.keys(),\n  ...governanceRows.keys(),\n  ...governanceRowsBatch2.keys(),\n]);`,
 );
 
 const globalCountAssert = "assert(globalTemplateRows.size >= 75, `Global runtime template catalog is unexpectedly small (${globalTemplateRows.size}).`);";
@@ -42,7 +42,7 @@ if (!source.includes(globalCountAssert)) {
 }
 source = source.replace(
   globalCountAssert,
-  `${globalCountAssert}\nassert(governanceRows.size >= 1, "Governance UI translation catalog is empty.");`,
+  `${globalCountAssert}\nassert(governanceRows.size >= 1, "Governance UI translation catalog is empty.");\nassert(governanceRowsBatch2.size >= 1, "Governance UI translation catalog batch 2 is empty.");`,
 );
 
 writeFileSync(generatedPath, source, "utf8");

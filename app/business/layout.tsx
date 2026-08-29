@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import {
-  BusinessSidebar,
-} from "@/components/BusinessSidebar";
+import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
+import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
+import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
+import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
 import { VaultAccessPanel } from "@/components/VaultAccessPanel";
 import { VaultProvider } from "@/components/VaultProvider";
@@ -26,23 +27,47 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function readAccountLanguage(metadata: unknown): string | undefined {
-  if (!metadata || typeof metadata !== "object") return undefined;
+type StoredPreferences = {
+  appearance?: string;
+  density?: string;
+  backgroundMotion?: string;
+  wallpaperScene?: string;
+  surfaceOpacity?: number;
+  language?: string;
+};
+
+function readInterfacePreferences(metadata: unknown): StoredPreferences {
+  if (!metadata || typeof metadata !== "object") return {};
   const preferences = (metadata as Record<string, unknown>).ficonter_preferences;
-  if (!preferences || typeof preferences !== "object") return undefined;
-  const language = (preferences as Record<string, unknown>).language;
-  return typeof language === "string" ? language : undefined;
+  if (!preferences || typeof preferences !== "object") return {};
+  const value = preferences as Record<string, unknown>;
+  return {
+    appearance: typeof value.appearance === "string" ? value.appearance : undefined,
+    density: typeof value.density === "string" ? value.density : undefined,
+    backgroundMotion:
+      typeof value.backgroundMotion === "string" ? value.backgroundMotion : undefined,
+    wallpaperScene:
+      typeof value.wallpaperScene === "string" ? value.wallpaperScene : undefined,
+    surfaceOpacity:
+      typeof value.surfaceOpacity === "number"
+        ? value.surfaceOpacity
+        : typeof value.surfaceOpacity === "string"
+          ? Number(value.surfaceOpacity)
+          : undefined,
+    language: typeof value.language === "string" ? value.language : undefined,
+  };
 }
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const { user, businesses, business, membership } = await getBusinessContext();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?entry=app");
 
   const [{ admin }, subscriptionAccess] = await Promise.all([
     requireAdmin(),
     getCurrentSubscriptionAccess(),
   ]);
   const isPlatformOwner = isOwnerEmail(user.email);
+  const canManageWallpapers = admin?.role === "super_admin";
   const canManageBusiness = Boolean(
     business &&
       (business.owner_id === user.id ||
@@ -57,15 +82,22 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         membership?.role === "member"),
   );
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
-  const accountLanguage = readAccountLanguage(user.user_metadata);
+  const interfacePreferences = readInterfacePreferences(user.user_metadata);
+  const baseCurrency = business?.base_currency ?? "EUR";
 
   return (
     <CurrencyDisplayProvider
       workspace="business"
-      baseCurrency={business?.base_currency ?? "EUR"}
+      baseCurrency={baseCurrency}
     >
       <div className="app-shell business-shell">
-        <AuthenticatedLanguageBootstrap language={accountLanguage} />
+        <InterfacePreferencesBootstrap
+          {...interfacePreferences}
+          wallpaperAccessEnabled={canManageWallpapers}
+        />
+        <TimeAwareWallpaperBootstrap enabled={canManageWallpapers} />
+        <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
+        <BaseCurrencyBootstrap workspace="business" currency={baseCurrency} />
         <LivingThemeBackdrop />
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />
@@ -114,7 +146,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             <BusinessVaultProvider
               userId={user.id}
               businessId={business?.id ?? null}
-              baseCurrency={business?.base_currency ?? "EUR"}
+              baseCurrency={baseCurrency}
               canManage={canManageBusiness}
               canWrite={canWriteBusiness}
             >

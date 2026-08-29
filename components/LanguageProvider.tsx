@@ -31,6 +31,7 @@ import { translateGovernancePhraseBatch5 } from "@/lib/i18n/governanceUiCatalogB
 import { translateGovernancePhraseBatch6 } from "@/lib/i18n/governanceUiCatalogBatch6";
 import { translateGovernancePhraseBatch7 } from "@/lib/i18n/governanceUiCatalogBatch7";
 import { translateGovernancePhraseBatch8 } from "@/lib/i18n/governanceUiCatalogBatch8";
+import { translateFinancialCategory } from "@/lib/i18n/financialCategoryTranslations";
 
 type LanguageContextValue = {
   language: FiconterLanguage;
@@ -71,200 +72,8 @@ type TextTranslationState = {
 
 type AttributeTranslationState = Record<string, TextTranslationState>;
 
-type CriticalTranslationRow = Record<Exclude<FiconterLanguage, "en">, string>;
-
-const CRITICAL_UI_TRANSLATIONS: Record<string, CriticalTranslationRow> = {
-  "Category": {
-    de: "Kategorie",
-    es: "Categoría",
-    sq: "Kategoria",
-    ar: "الفئة",
-    pt: "Categoria",
-    it: "Categoria",
-    ru: "Категория",
-  },
-  "Choose category": {
-    de: "Kategorie auswählen",
-    es: "Elegir categoría",
-    sq: "Zgjidh kategorinë",
-    ar: "اختر الفئة",
-    pt: "Escolher categoria",
-    it: "Scegli categoria",
-    ru: "Выберите категорию",
-  },
-  "Income and earnings": {
-    de: "Einkommen und Einnahmen",
-    es: "Ingresos y ganancias",
-    sq: "Të ardhurat dhe fitimet",
-    ar: "الدخل والأرباح",
-    pt: "Rendimentos e ganhos",
-    it: "Entrate e guadagni",
-    ru: "Доходы и заработок",
-  },
-  "About 10 seconds": {
-    de: "Etwa 10 Sekunden",
-    es: "Unos 10 segundos",
-    sq: "Rreth 10 sekonda",
-    ar: "حوالي 10 ثوانٍ",
-    pt: "Cerca de 10 segundos",
-    it: "Circa 10 secondi",
-    ru: "Около 10 секунд",
-  },
-  "About 30 seconds": {
-    de: "Etwa 30 Sekunden",
-    es: "Unos 30 segundos",
-    sq: "Rreth 30 sekonda",
-    ar: "حوالي 30 ثانية",
-    pt: "Cerca de 30 segundos",
-    it: "Circa 30 secondi",
-    ru: "Около 30 секунд",
-  },
-  "Maximum control": {
-    de: "Maximale Kontrolle",
-    es: "Control máximo",
-    sq: "Kontroll maksimal",
-    ar: "أقصى تحكم",
-    pt: "Controlo máximo",
-    it: "Massimo controllo",
-    ru: "Максимальный контроль",
-  },
-  "One screen · 3 choices": {
-    de: "Ein Bildschirm · 3 Optionen",
-    es: "Una pantalla · 3 opciones",
-    sq: "Një ekran · 3 zgjedhje",
-    ar: "شاشة واحدة · 3 خيارات",
-    pt: "Um ecrã · 3 opções",
-    it: "Una schermata · 3 scelte",
-    ru: "Один экран · 3 варианта",
-  },
-  "3 steps · optional details": {
-    de: "3 Schritte · optionale Details",
-    es: "3 pasos · detalles opcionales",
-    sq: "3 hapa · detaje opsionale",
-    ar: "3 خطوات · تفاصيل اختيارية",
-    pt: "3 passos · detalhes opcionais",
-    it: "3 passaggi · dettagli opzionali",
-    ru: "3 шага · дополнительные детали",
-  },
-  "Full form · all fields": {
-    de: "Vollständiges Formular · alle Felder",
-    es: "Formulario completo · todos los campos",
-    sq: "Formular i plotë · të gjitha fushat",
-    ar: "نموذج كامل · جميع الحقول",
-    pt: "Formulário completo · todos os campos",
-    it: "Modulo completo · tutti i campi",
-    ru: "Полная форма · все поля",
-  },
-  "Not provided": {
-    de: "Nicht angegeben",
-    es: "No proporcionado",
-    sq: "Nuk është dhënë",
-    ar: "غير متوفر",
-    pt: "Não fornecido",
-    it: "Non fornito",
-    ru: "Не указано",
-  },
-  "Document metadata is not encrypted v1 data.": {
-    de: "Dieses Dokument konnte nicht geladen werden.",
-    es: "No se pudo cargar este documento.",
-    sq: "Ky dokument nuk mund të ngarkohej.",
-    ar: "تعذر تحميل هذا المستند.",
-    pt: "Não foi possível carregar este documento.",
-    it: "Non è stato possibile caricare questo documento.",
-    ru: "Не удалось загрузить этот документ.",
-  },
-  "This document could not be loaded.": {
-    de: "Dieses Dokument konnte nicht geladen werden.",
-    es: "No se pudo cargar este documento.",
-    sq: "Ky dokument nuk mund të ngarkohej.",
-    ar: "تعذر تحميل هذا المستند.",
-    pt: "Não foi possível carregar este documento.",
-    it: "Non è stato possibile caricare questo documento.",
-    ru: "Не удалось загрузить этот документ.",
-  },
-};
-
-const ENGLISH_MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
-
-const ENGLISH_SHORT_MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
 function normalizeSource(value: string): string {
   return value.replace(/\s+/g, " ").trim();
-}
-
-function translateCriticalUiPhrase(
-  language: FiconterLanguage,
-  source: string,
-): string | null {
-  if (language === "en") {
-    if (source === "Document metadata is not encrypted v1 data.") {
-      return "This document could not be loaded.";
-    }
-    return null;
-  }
-  return CRITICAL_UI_TRANSLATIONS[source]?.[language] ?? null;
-}
-
-function translateLocaleDateLiteral(
-  language: FiconterLanguage,
-  source: string,
-): string | null {
-  if (language === "en") return null;
-
-  const locale = getLanguageOption(language).locale;
-  const monthYearMatch = source.match(
-    /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/,
-  );
-
-  if (monthYearMatch) {
-    const monthIndex = ENGLISH_MONTHS.indexOf(
-      monthYearMatch[1] as (typeof ENGLISH_MONTHS)[number],
-    );
-    const year = Number(monthYearMatch[2]);
-    if (monthIndex >= 0 && Number.isFinite(year)) {
-      return new Intl.DateTimeFormat(locale, {
-        month: "long",
-        year: "numeric",
-      }).format(new Date(year, monthIndex, 1));
-    }
-  }
-
-  const shortMonthIndex = ENGLISH_SHORT_MONTHS.indexOf(
-    source as (typeof ENGLISH_SHORT_MONTHS)[number],
-  );
-  if (shortMonthIndex >= 0) {
-    return new Intl.DateTimeFormat(locale, { month: "short" }).format(
-      new Date(2026, shortMonthIndex, 1),
-    );
-  }
-
-  return null;
 }
 
 function renderTranslatedText(
@@ -276,11 +85,18 @@ function renderTranslatedText(
   const leading = source.match(/^\s*/)?.[0] ?? "";
   const trailing = source.match(/\s*$/)?.[0] ?? "";
   const normalized = normalizeSource(source);
-  const criticalTranslation =
-    translateCriticalUiPhrase(language, normalized) ??
-    translateLocaleDateLiteral(language, normalized);
+
+  // Financial categories are canonical English data values and therefore
+  // receive an explicit display-only translation before the generic catalogs.
+  // This guarantees native category dropdowns are localized without mutating
+  // their OPTION values or any persisted/encrypted financial record.
+  const categoryTranslation = translateFinancialCategory(language, normalized);
+  if (categoryTranslation && categoryTranslation !== normalized) {
+    return `${leading}${categoryTranslation}${trailing}`;
+  }
+
   const runtimeTranslation = translateRuntimePhrase(language, normalized);
-  const translated = criticalTranslation ?? (runtimeTranslation === normalized
+  const translated = runtimeTranslation === normalized
     ? translateGovernanceTemplate(language, normalized)
       ?? translateGovernancePhrase(language, normalized)
       ?? translateGovernancePhraseBatch2(language, normalized)
@@ -291,7 +107,7 @@ function renderTranslatedText(
       ?? translateGovernancePhraseBatch7(language, normalized)
       ?? translateGovernancePhraseBatch8(language, normalized)
       ?? normalized
-    : runtimeTranslation);
+    : runtimeTranslation;
 
   return translated === normalized
     ? source
@@ -370,27 +186,8 @@ function createDocumentTranslator(
           element.setAttribute("label", rendered);
         }
       } else if (element.textContent !== rendered) {
-        // Native selects display OPTION textContent in their closed control and
-        // popup menu. Keep the canonical value unchanged so filtering, saving,
-        // encryption and financial calculations continue to use stable IDs.
         element.textContent = rendered;
       }
-    } finally {
-      applying = false;
-    }
-  }
-
-  function processNativeLocaleControl(element: Element) {
-    if (element.tagName !== "INPUT") return;
-    const input = element as HTMLInputElement;
-    if (!["date", "month", "datetime-local"].includes(input.type)) return;
-
-    const locale = getLanguageOption(getLanguage()).locale;
-    if (input.getAttribute("lang") === locale) return;
-
-    applying = true;
-    try {
-      input.setAttribute("lang", locale);
     } finally {
       applying = false;
     }
@@ -428,7 +225,6 @@ function createDocumentTranslator(
     }
 
     processNativeSelectLabel(element, state);
-    processNativeLocaleControl(element);
     attributeState.set(element, state);
   }
 
@@ -584,9 +380,6 @@ export function LanguageProvider({
         return;
       }
 
-      // Account persistence is the only part of localization that needs
-      // Supabase. Create the browser client lazily so public/static pages can
-      // render and prerender even when no Supabase environment is available.
       const supabase = createClient();
       const {
         data: { user },

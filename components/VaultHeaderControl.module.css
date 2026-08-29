@@ -1,3 +1,4 @@
+.desktopHost{display:inline-flex;align-items:center}.mobileHost{display:none;align-items:center}
 .root{position:relative;display:inline-flex}
 .trigger{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--text-primary);font-size:13px;font-weight:800;cursor:pointer;transition:.16s ease}
 .trigger:hover,.triggerOpen{border-color:color-mix(in srgb,var(--sage) 12%,transparent);background:color-mix(in srgb,var(--sage-soft) 72%,transparent)}
@@ -29,4 +30,4 @@
 .actions{display:flex;gap:8px;margin-top:12px}.actions button{flex:1}
 .unlockedCard{margin-top:18px;padding:15px;border:1px solid var(--border-subtle);border-radius:15px;background:var(--surface-subtle)}
 .unlockedTitle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:850}.unlockedText{margin:6px 0 0;color:var(--text-secondary);font-size:12px;line-height:1.5}
-@media(max-width:900px){.trigger{width:46px;min-width:46px;min-height:46px;padding:0;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 92%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08)}.trigger span:not(.statusDot):not(.statusDotUnlocked){display:none}.statusDot{position:absolute;right:6px;bottom:6px;width:6px;height:6px}.dialog{padding:18px;border-radius:19px}}
+@media(max-width:900px){.desktopHost{display:none}.mobileHost{display:inline-flex}.trigger{width:46px;min-width:46px;min-height:46px;padding:0;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 92%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08)}.trigger span:not(.statusDot):not(.statusDotUnlocked){display:none}.statusDot{position:absolute;right:6px;bottom:6px;width:6px;height:6px}.dialog{padding:18px;border-radius:19px}}

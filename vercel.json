@@ -1,0 +1,3 @@
+{
+  "buildCommand": "npm run verify:localization && npm run build"
+}

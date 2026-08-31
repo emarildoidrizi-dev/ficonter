@@ -63,11 +63,19 @@ const provider = fs.readFileSync(
   "utf8",
 );
 
-const billFinalizerIndex = provider.indexOf(
-  "await finalizePendingEncryptedBillTransactions(",
+const maintenanceStart = provider.indexOf("const maintenanceSteps = [");
+const maintenanceEnd = provider.indexOf("] as const;", maintenanceStart);
+
+if (maintenanceStart < 0 || maintenanceEnd < 0) {
+  throw new Error("Encrypted Transaction provider is missing the maintenance pipeline.");
+}
+
+const maintenancePipeline = provider.slice(maintenanceStart, maintenanceEnd);
+const billFinalizerIndex = maintenancePipeline.indexOf(
+  "finalizePendingEncryptedBillTransactions(",
 );
-const legacyFinalizerIndex = provider.indexOf(
-  "await finalizePendingServerTransactions(",
+const legacyFinalizerIndex = maintenancePipeline.indexOf(
+  "finalizePendingServerTransactions(",
 );
 
 if (billFinalizerIndex < 0 || legacyFinalizerIndex < 0) {
@@ -77,6 +85,16 @@ if (billFinalizerIndex > legacyFinalizerIndex) {
   throw new Error(
     "Encrypted Bill transaction finalization must run before legacy source reconstruction.",
   );
+}
+
+for (const token of [
+  "for (const step of maintenanceSteps)",
+  "await step.run()",
+  "recoverable error",
+]) {
+  if (!provider.includes(token)) {
+    throw new Error(`Encrypted Transaction maintenance isolation missing token: ${token}`);
+  }
 }
 
 const migration = fs.readFileSync(

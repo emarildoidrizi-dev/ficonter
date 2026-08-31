@@ -33,7 +33,8 @@
     "verify:monthly-budget": "node scripts/verify-monthly-spending-budget.mjs",
     "verify:credit-cards": "node scripts/verify-credit-card-management.mjs",
     "verify:database-contract": "node scripts/verify-database-contract.mjs",
-    "verify:hardening": "node scripts/verify-release-candidate.mjs",
+    "verify:resilience": "node scripts/verify-production-resilience.mjs",
+    "verify:hardening": "node scripts/verify-release-candidate.mjs && npm run verify:resilience",
     "verify:mobile-ui-phase2": "node scripts/verify-mobile-ui-phase2.mjs",
     "verify:mobile-ui-phase3": "node scripts/verify-mobile-ui-phase3.mjs",
     "verify:mobile-ui-phase4": "node scripts/verify-mobile-ui-phase4.mjs",
@@ -60,7 +61,7 @@
     "verify:owner-music": "node scripts/verify-owner-music.mjs",
     "verify:performance-stability-v2": "node scripts/verify-platform-performance-stability-v2.mjs",
     "verify:e2ee-vault": "node scripts/verify-e2ee-vault.mjs",
-    "verify:release-quality": "npm run lint && npm run typecheck && npm run verify:all && npm run verify:localization && npm run build"
+    "verify:release-quality": "npm run lint && npm run typecheck && npm run verify:all && npm run verify:localization && npm run verify:resilience && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

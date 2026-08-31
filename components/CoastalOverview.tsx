@@ -4,8 +4,11 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { ArrowRight, CircleAlert, Plus, Target } from "lucide-react";
 import { formatCurrency, type CurrencyCode } from "@/lib/financialOptions";
+import { translateOverviewRuntime } from "@/lib/i18n/overviewRuntime";
+import type { FiconterLanguage } from "@/lib/i18n/config";
 import type { FinancialHealthResult } from "@/lib/wealth/financialHealth";
 import type { FinancialGpsResult } from "@/lib/wealth/financialGps";
+import { useLanguage } from "./LanguageProvider";
 import styles from "./CoastalOverview.module.css";
 
 export type CoastalUpcomingBill = {
@@ -34,15 +37,19 @@ type Props = {
   errorMessages?: string[];
 };
 
-function dueLabel(dueDate: string): string {
+function dueLabel(dueDate: string, language: FiconterLanguage): string {
   const due = new Date(`${dueDate}T12:00:00`);
   const today = new Date();
   today.setHours(12, 0, 0, 0);
   const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
-  if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
-  if (days === 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  return `In ${days} days`;
+  const source = days < 0
+    ? `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`
+    : days === 0
+      ? "Today"
+      : days === 1
+        ? "Tomorrow"
+        : `In ${days} days`;
+  return translateOverviewRuntime(language, source);
 }
 
 export function CoastalOverview({
@@ -63,11 +70,13 @@ export function CoastalOverview({
   previousMonthChange,
   errorMessages = [],
 }: Props) {
+  const { language } = useLanguage();
+  const tr = (source: string) => translateOverviewRuntime(language, source);
   const leftAfterEverything = availableNow - stillToPay;
   const score = financialHealth.scoreAvailable ? financialHealth.score : 0;
   const scoreLabel = financialHealth.scoreAvailable
-    ? financialHealth.label
-    : "Finish setup";
+    ? tr(financialHealth.label)
+    : tr("Finish setup");
   const safeSavingCapacity = Math.max(0, leftAfterEverything);
   const cashFlowScale = Math.max(monthIncome, monthSpent, 0);
   const cashFlowColumns = [
@@ -77,19 +86,22 @@ export function CoastalOverview({
     ...column,
     height: cashFlowScale > 0 ? (column.amount / cashFlowScale) * 100 : 0,
   }));
-  const comparisonInsight = previousMonthChange === null
+  const comparisonInsightSource = previousMonthChange === null
     ? "A full month will unlock spending comparisons"
     : previousMonthChange <= 0
       ? `Spending is ${Math.abs(previousMonthChange).toFixed(0)}% lower this month`
       : `Spending is ${previousMonthChange.toFixed(0)}% higher this month`;
+  const comparisonInsight = tr(comparisonInsightSource);
   const uniqueErrors = [...new Set(errorMessages.filter(Boolean))];
   const hasSpendingBudget = spendingRhythm !== null && spendingBudget > 0;
   const spendingProgress = hasSpendingBudget
     ? Math.min(100, Math.max(0, spendingRhythm ?? 0))
     : 0;
-  const spendingRhythmLabel = hasSpendingBudget
-    ? `${Math.round(spendingRhythm ?? 0)}% of the monthly spending budget used`
-    : "No monthly spending budget has been set";
+  const spendingRhythmLabel = tr(
+    hasSpendingBudget
+      ? `${Math.round(spendingRhythm ?? 0)}% of the monthly spending budget used`
+      : "No monthly spending budget has been set",
+  );
 
   return (
     <div className={styles.overview}>
@@ -132,7 +144,7 @@ export function CoastalOverview({
           <div className={styles.healthTrack} aria-label={`Financial health ${score} out of 100`}>
             <span style={{ width: `${score}%` }} />
           </div>
-          <p className={styles.healthMessage}>{financialHealth.nextBestAction}</p>
+          <p className={styles.healthMessage}>{tr(financialHealth.nextBestAction)}</p>
         </article>
 
         <article className={`${styles.card} ${styles.cashCard}`}>
@@ -166,11 +178,11 @@ export function CoastalOverview({
             {upcomingBills.length ? upcomingBills.map((bill) => (
               <Link href="/dashboard/bills" className={styles.upcomingItem} key={bill.id}>
                 <time dateTime={bill.dueDate}>{Number(bill.dueDate.slice(-2))}</time>
-                <span><strong>{bill.name}</strong><small>{dueLabel(bill.dueDate)}</small></span>
+                <span><strong>{bill.name}</strong><small>{dueLabel(bill.dueDate, language)}</small></span>
                 <b>{bill.amount === null ? "—" : formatCurrency(bill.amount, currency)}</b>
               </Link>
             )) : (
-              <div className={styles.emptyUpcoming}>No upcoming bills. Your horizon is clear.</div>
+              <div className={styles.emptyUpcoming}>{tr("No upcoming bills. Your horizon is clear.")}</div>
             )}
           </div>
         </article>
@@ -194,18 +206,18 @@ export function CoastalOverview({
             <div className={styles.missingBudget}>
               <p>{formatCurrency(spendingAmount, currency)} spent this month · No monthly budget set</p>
               <Link href="/dashboard/budget">
-                Set a monthly budget <ArrowRight size={14} />
+                {tr("Set a monthly budget")} <ArrowRight size={14} />
               </Link>
             </div>
           )}
         </article>
 
         <article className={`${styles.card} ${styles.insightsCard}`}>
-          <h2>Smart insights</h2>
+          <h2>{tr("Smart insights")}</h2>
           <div className={styles.insightList}>
             <Link href="/dashboard/cash-flow"><span>↗ {comparisonInsight}</span><ArrowRight size={15} /></Link>
             <Link href="/dashboard/savings"><span>◎ You can save {formatCurrency(safeSavingCapacity, currency)} more safely</span><ArrowRight size={15} /></Link>
-            <Link href={financialGps.primaryAction.href}><span>△ {financialGps.primaryAction.title}</span><ArrowRight size={15} /></Link>
+            <Link href={financialGps.primaryAction.href}><span>△ {tr(financialGps.primaryAction.title)}</span><ArrowRight size={15} /></Link>
           </div>
         </article>
       </section>

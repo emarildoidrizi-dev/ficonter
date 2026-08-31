@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, '[email-resend-patched]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,18 +34,16 @@ jobs:
   const next = encodeURIComponent("/dashboard/settings?section=profile");
   return `https://www.ficonter.com/auth/callback?next=${next}`;
 }'''
-          if old not in s:
-            raise SystemExit('emailChangeRedirectUrl block not found')
-          s = s.replace(old, new, 1)
+          if old in s:
+            s = s.replace(old, new, 1)
 
           old_state = '''  const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);'''
           new_state = '''  const [emailRequesting, setEmailRequesting] = useState(false);
   const [emailResending, setEmailResending] = useState(false);
   const [emailResendCooldown, setEmailResendCooldown] = useState(0);'''
-          if old_state not in s:
-            raise SystemExit('email resend state block not found')
-          s = s.replace(old_state, new_state, 1)
+          if old_state in s and 'emailResendCooldown' not in s:
+            s = s.replace(old_state, new_state, 1)
 
           marker = '''  async function resendEmailChange() {
     if (!pendingEmail || emailResending) return;
@@ -117,15 +114,13 @@ jobs:
       setEmailResending(false);
     }
   }'''
-          if marker not in s:
-            raise SystemExit('resendEmailChange block not found')
-          s = s.replace(marker, replacement, 1)
+          if marker in s:
+            s = s.replace(marker, replacement, 1)
 
           old_button = '''<button type="button" className={styles.secondaryButton} disabled={emailResending} onClick={() => void resendEmailChange()}>{emailResending ? "Sending…" : "Resend link"}</button>'''
           new_button = '''<button type="button" className={styles.secondaryButton} disabled={emailResending || emailResendCooldown > 0} onClick={() => void resendEmailChange()}>{emailResending ? "Sending…" : emailResendCooldown > 0 ? `Resend in ${emailResendCooldown}s` : "Resend link"}</button>'''
-          if old_button not in s:
-            raise SystemExit('resend button block not found')
-          s = s.replace(old_button, new_button, 1)
+          if old_button in s:
+            s = s.replace(old_button, new_button, 1)
 
           p.write_text(s)
           PY
@@ -136,14 +131,19 @@ jobs:
           p = Path('scripts/verify-profile-identity.mjs')
           s = p.read_text()
           needle = '[settings.includes(\'type: "email_change"\') && settings.includes("resendEmailChange"), "Pending email confirmation can be resent"],'
-          replacement = needle + '\n  [settings.includes("emailResendCooldown") && settings.includes("Resend in ${emailResendCooldown}s"), "Email-change resend has visible cooldown and repeat support"],\n  [settings.includes("https://www.ficonter.com/auth/callback"), "Email-change confirmations always return to the public production domain"],'
-          if needle not in s:
-            raise SystemExit('verification insertion point not found')
-          s = s.replace(needle, replacement, 1)
-          p.write_text(s)
+          if 'Email-change resend has visible cooldown and repeat support' not in s:
+            replacement = needle + '\n  [settings.includes("emailResendCooldown") && settings.includes("Resend in ${emailResendCooldown}s"), "Email-change resend has visible cooldown and repeat support"],\n  [settings.includes("https://www.ficonter.com/auth/callback"), "Email-change confirmations always return to the public production domain"],'
+            if needle not in s:
+              raise SystemExit('verification insertion point not found')
+            s = s.replace(needle, replacement, 1)
+            p.write_text(s)
           PY
-      - name: Commit patch
+      - name: Commit patch when needed
         run: |
+          if git diff --quiet -- components/SettingsWorkspace.tsx scripts/verify-profile-identity.mjs; then
+            echo "Patch already applied."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add components/SettingsWorkspace.tsx scripts/verify-profile-identity.mjs

@@ -45,10 +45,13 @@ jobs:
         run: npm run verify:hardening
 
       - name: Verify production resilience contract
+        if: always()
         run: npm run verify:resilience
 
       - name: Lint
+        if: always()
         run: npm run lint
 
       - name: Build and type-check application
+        if: always()
         run: npm run build

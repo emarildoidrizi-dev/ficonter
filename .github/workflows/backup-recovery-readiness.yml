@@ -1,0 +1,32 @@
+name: Backup Recovery Readiness
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 3 * * 1"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/operations/backup-recovery.md"
+      - "scripts/verify-backup-recovery-readiness.mjs"
+      - ".github/workflows/backup-recovery-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-backup-recovery-readiness:
+    name: Verify backup recovery readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify backup and restore contract
+        run: node scripts/verify-backup-recovery-readiness.mjs

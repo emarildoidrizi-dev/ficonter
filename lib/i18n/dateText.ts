@@ -1,5 +1,66 @@
 import { getLanguageOption, type FiconterLanguage } from "./config";
 
+type NonEnglishLanguage = Exclude<FiconterLanguage, "en">;
+
+type ConfigUiTranslationRow = Record<NonEnglishLanguage, string>;
+
+const CONFIG_UI_TRANSLATIONS: Record<string, ConfigUiTranslationRow> = {
+  "About 10 seconds": {
+    de: "Etwa 10 Sekunden",
+    es: "Unos 10 segundos",
+    sq: "Rreth 10 sekonda",
+    ar: "حوالي 10 ثوانٍ",
+    pt: "Cerca de 10 segundos",
+    it: "Circa 10 secondi",
+    ru: "Около 10 секунд",
+  },
+  "One screen · 3 choices": {
+    de: "Ein Bildschirm · 3 Auswahlmöglichkeiten",
+    es: "Una pantalla · 3 opciones",
+    sq: "Një ekran · 3 zgjedhje",
+    ar: "شاشة واحدة · 3 خيارات",
+    pt: "Um ecrã · 3 escolhas",
+    it: "Una schermata · 3 scelte",
+    ru: "Один экран · 3 варианта",
+  },
+  "About 30 seconds": {
+    de: "Etwa 30 Sekunden",
+    es: "Unos 30 segundos",
+    sq: "Rreth 30 sekonda",
+    ar: "حوالي 30 ثانية",
+    pt: "Cerca de 30 segundos",
+    it: "Circa 30 secondi",
+    ru: "Около 30 секунд",
+  },
+  "3 steps · optional details": {
+    de: "3 Schritte · optionale Details",
+    es: "3 pasos · detalles opcionales",
+    sq: "3 hapa · detaje opsionale",
+    ar: "3 خطوات · تفاصيل اختيارية",
+    pt: "3 passos · detalhes opcionais",
+    it: "3 passaggi · dettagli facoltativi",
+    ru: "3 шага · дополнительные детали",
+  },
+  "Maximum control": {
+    de: "Maximale Kontrolle",
+    es: "Control máximo",
+    sq: "Kontroll maksimal",
+    ar: "أقصى تحكم",
+    pt: "Controlo máximo",
+    it: "Controllo massimo",
+    ru: "Максимальный контроль",
+  },
+  "Full form · all fields": {
+    de: "Vollständiges Formular · alle Felder",
+    es: "Formulario completo · todos los campos",
+    sq: "Formular i plotë · të gjitha fushat",
+    ar: "نموذج كامل · جميع الحقول",
+    pt: "Formulário completo · todos os campos",
+    it: "Modulo completo · tutti i campi",
+    ru: "Полная форма · все поля",
+  },
+};
+
 const MONTH_TOKENS: Record<string, { index: number; style: "short" | "long" }> = {
   jan: { index: 0, style: "short" },
   january: { index: 0, style: "long" },
@@ -99,15 +160,18 @@ function monthLooksDateLike(source: string, start: number, end: number): boolean
 
 /**
  * Localizes English month/weekday tokens embedded in runtime-generated date
- * labels. Many legacy modules format a date before the global translator sees
- * it; this normalizer ensures the selected FICONTER locale still wins visually
- * without changing financial values or parsing semantics.
+ * labels and exact configuration-driven UI fragments that are rendered from
+ * non-component data structures. This keeps the selected FICONTER language as
+ * the single visual source of truth without touching user-entered values.
  */
 export function localizeEnglishDateTokens(
   source: string,
   language: FiconterLanguage,
 ): string {
   if (language === "en" || !source.trim()) return source;
+
+  const configTranslation = CONFIG_UI_TRANSLATIONS[source]?.[language];
+  if (configTranslation) return configTranslation;
 
   let result = source.replace(
     /\b(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sun|Mon|Tue|Tues|Wed|Thu|Thur|Thurs|Fri|Sat)\b/gi,

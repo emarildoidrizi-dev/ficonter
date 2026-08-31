@@ -35,6 +35,12 @@ export default async function RegisterPage() {
             </>
           ) : null}
           <AuthForm mode="register" betaEntry={betaEntry} />
+          <p className="center muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
+            By creating an account, you agree to the{" "}
+            <Link href="/legal/terms"><strong>Terms of Service</strong></Link>{" "}
+            and acknowledge the{" "}
+            <Link href="/legal/privacy"><strong>Privacy Policy</strong></Link>.
+          </p>
           <p className="center">
             <Link href="/">← Back to homepage</Link>
           </p>

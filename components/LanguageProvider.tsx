@@ -20,6 +20,7 @@ import {
   normalizeLanguage,
   type FiconterLanguage,
 } from "@/lib/i18n/config";
+import { localizeEnglishDateTokens } from "@/lib/i18n/dateText";
 import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
 import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
 
@@ -157,10 +158,11 @@ function renderTranslatedText(
   }
 
   const translated = translateRuntimePhrase(language, normalized);
+  const localizedDates = localizeEnglishDateTokens(translated, language);
 
-  return translated === normalized
+  return localizedDates === normalized
     ? source
-    : `${leading}${translated}${trailing}`;
+    : `${leading}${localizedDates}${trailing}`;
 }
 
 function shouldSkipElement(element: Element | null): boolean {

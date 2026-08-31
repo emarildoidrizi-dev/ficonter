@@ -30,3 +30,6 @@ jobs:
 
       - name: Run complete FICONTER release quality gate
         run: npm run verify:release-quality
+
+      - name: Verify production resilience contract
+        run: npm run verify:resilience

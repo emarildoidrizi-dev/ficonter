@@ -6,6 +6,8 @@ const settings = fs.readFileSync(path.join(root, "components/SettingsWorkspace.t
 const sidebar = fs.readFileSync(path.join(root, "components/Sidebar.tsx"), "utf8");
 const css = fs.readFileSync(path.join(root, "components/SettingsWorkspace.module.css"), "utf8");
 const callback = fs.readFileSync(path.join(root, "app/auth/callback/route.ts"), "utf8");
+const login = fs.readFileSync(path.join(root, "app/login/page.tsx"), "utf8");
+const resultNotice = fs.readFileSync(path.join(root, "components/EmailChangeResultNotice.tsx"), "utf8");
 
 const checks = [
   [settings.includes("Full name") && settings.includes("Display name"), "Profile keeps editable full and display names"],
@@ -17,6 +19,9 @@ const checks = [
   [callback.includes("isEmailChangeReturn") && callback.includes('email_change", status'), "Email-change callback has a dedicated completion path"],
   [callback.includes("if (!code)") && callback.includes("if (emailChangeReturn)"), "Email-change redirects without PKCE code are not treated as password recovery"],
   [callback.includes('emailChangeReturnPath(next, "error")'), "Email-change confirmation errors stay in the Profile flow"],
+  [login.includes("EmailChangeResultNotice"), "Login renders email confirmation result guidance"],
+  [resultNotice.includes("otp_expired") && resultNotice.includes("Resend link"), "Expired email-change links explain how to recover"],
+  [resultNotice.includes("both your current email address and your new email address"), "Secure Email Change two-address approval is explained"],
   [!settings.includes("Phone number") && !settings.includes("phone_number"), "Phone field is not included"],
   [sidebar.includes("accountEmail") && sidebar.includes("detail.email"), "Sidebar identity updates when email changes"],
   [!sidebar.includes('["/dashboard/inbox", InboxIcon, "Inbox"]'), "Removed duplicate sidebar Inbox link stays removed"],

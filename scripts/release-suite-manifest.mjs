@@ -5,6 +5,7 @@ export const CURRENT_RELEASE_SUITES = [
   'verify-bill-paid-unpaid-sync.mjs',
   'verify-account-recovery.mjs',
   'verify-branded-login-entry.mjs',
+  'verify-config-driven-localization.mjs',
   'verify-contact-support.mjs',
   'verify-credit-card-management.mjs',
   'verify-currency-foundation.mjs',

@@ -6,37 +6,34 @@ import { createServiceClient } from "@/lib/supabase/admin";
 
 export type AdminRole = "admin" | "super_admin";
 
-const FALLBACK_SUPER_ADMIN_EMAIL = "wixlyydo@gmail.com";
+function configuredEmail(name: "FICONTER_OWNER_EMAIL" | "FICONTER_SUPER_ADMIN_EMAIL"): string {
+  return process.env[name]?.trim().toLowerCase() ?? "";
+}
 
 export function getPrimarySuperAdminEmail(): string {
-  return (
-    process.env.FICONTER_SUPER_ADMIN_EMAIL?.trim().toLowerCase() ||
-    FALLBACK_SUPER_ADMIN_EMAIL
-  );
+  return configuredEmail("FICONTER_SUPER_ADMIN_EMAIL");
 }
 
 export function isPrimarySuperAdminEmail(
   email: string | null | undefined,
 ): boolean {
-  return email?.trim().toLowerCase() === getPrimarySuperAdminEmail();
+  const configured = getPrimarySuperAdminEmail();
+  return Boolean(configured) && email?.trim().toLowerCase() === configured;
 }
 
 /**
- * The Owner is the platform's final authority. Existing installations that only
- * configured FICONTER_SUPER_ADMIN_EMAIL keep working: that protected account is
- * treated as Owner until FICONTER_OWNER_EMAIL is explicitly configured.
+ * The Owner is the platform's final authority and must be configured explicitly
+ * through a server-only environment variable. Missing configuration fails closed.
  */
 export function getOwnerEmail(): string {
-  return (
-    process.env.FICONTER_OWNER_EMAIL?.trim().toLowerCase() ||
-    getPrimarySuperAdminEmail()
-  );
+  return configuredEmail("FICONTER_OWNER_EMAIL");
 }
 
 export function isOwnerEmail(
   email: string | null | undefined,
 ): boolean {
-  return email?.trim().toLowerCase() === getOwnerEmail();
+  const configured = getOwnerEmail();
+  return Boolean(configured) && email?.trim().toLowerCase() === configured;
 }
 
 export const requireAdmin = cache(async () => {

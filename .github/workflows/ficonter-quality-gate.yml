@@ -44,6 +44,9 @@ jobs:
       - name: Verify database and application contracts
         run: npm run verify:hardening
 
+      - name: Verify production resilience contract
+        run: npm run verify:resilience
+
       - name: Lint
         run: npm run lint
 

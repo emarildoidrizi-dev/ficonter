@@ -27,12 +27,37 @@ function recoveryFailurePath(next: string, error: "invalid_link" | "expired_link
   return withAuthEntry(`/recover-account?mode=password&error=${error}`, entry);
 }
 
+function isEmailChangeReturn(next: string): boolean {
+  const nextUrl = new URL(next, "https://ficonter.invalid");
+  return (
+    nextUrl.pathname === "/dashboard/settings" &&
+    nextUrl.searchParams.get("section") === "profile"
+  );
+}
+
+function emailChangeReturnPath(next: string, status: "confirmed" | "error") {
+  const nextUrl = new URL(next, "https://ficonter.invalid");
+  nextUrl.searchParams.set("email_change", status);
+  return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const next = safeNextPath(request.nextUrl.searchParams.get("next"));
   const origin = publicOrigin(request);
+  const emailChangeReturn = isEmailChangeReturn(next);
 
+  // Supabase verifies an email-change token before redirecting to emailRedirectTo.
+  // Depending on the auth flow, that redirect may not include a PKCE code. In that
+  // case the confirmation has already happened and this route must never reinterpret
+  // the request as a password-recovery failure.
   if (!code) {
+    if (emailChangeReturn) {
+      return NextResponse.redirect(
+        new URL(emailChangeReturnPath(next, "confirmed"), origin),
+      );
+    }
+
     return NextResponse.redirect(
       new URL(recoveryFailurePath(next, "invalid_link"), origin),
     );
@@ -42,8 +67,20 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    if (emailChangeReturn) {
+      return NextResponse.redirect(
+        new URL(emailChangeReturnPath(next, "error"), origin),
+      );
+    }
+
     return NextResponse.redirect(
       new URL(recoveryFailurePath(next, "expired_link"), origin),
+    );
+  }
+
+  if (emailChangeReturn) {
+    return NextResponse.redirect(
+      new URL(emailChangeReturnPath(next, "confirmed"), origin),
     );
   }
 

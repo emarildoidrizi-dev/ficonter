@@ -32,4 +32,5 @@ jobs:
         run: npm run verify:release-quality
 
       - name: Verify production resilience contract
+        if: always()
         run: npm run verify:resilience

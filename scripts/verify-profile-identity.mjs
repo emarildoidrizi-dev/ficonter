@@ -5,6 +5,7 @@ const root = process.cwd();
 const settings = fs.readFileSync(path.join(root, "components/SettingsWorkspace.tsx"), "utf8");
 const sidebar = fs.readFileSync(path.join(root, "components/Sidebar.tsx"), "utf8");
 const css = fs.readFileSync(path.join(root, "components/SettingsWorkspace.module.css"), "utf8");
+const callback = fs.readFileSync(path.join(root, "app/auth/callback/route.ts"), "utf8");
 
 const checks = [
   [settings.includes("Full name") && settings.includes("Display name"), "Profile keeps editable full and display names"],
@@ -13,6 +14,9 @@ const checks = [
   [settings.includes('type: "email_change"') && settings.includes("resendEmailChange"), "Pending email confirmation can be resent"],
   [settings.includes("Pending confirmation") && settings.includes("current email remains active"), "Pending state is explained"],
   [settings.includes("pending_email_change"), "Pending email survives refresh through user metadata"],
+  [callback.includes("isEmailChangeReturn") && callback.includes('email_change", status'), "Email-change callback has a dedicated completion path"],
+  [callback.includes("if (!code)") && callback.includes("if (emailChangeReturn)"), "Email-change redirects without PKCE code are not treated as password recovery"],
+  [callback.includes('emailChangeReturnPath(next, "error")'), "Email-change confirmation errors stay in the Profile flow"],
   [!settings.includes("Phone number") && !settings.includes("phone_number"), "Phone field is not included"],
   [sidebar.includes("accountEmail") && sidebar.includes("detail.email"), "Sidebar identity updates when email changes"],
   [!sidebar.includes('["/dashboard/inbox", InboxIcon, "Inbox"]'), "Removed duplicate sidebar Inbox link stays removed"],

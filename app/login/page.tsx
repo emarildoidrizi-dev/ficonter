@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/AuthForm";
 import { Brand } from "@/components/Brand";
 import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
+import { EmailChangeResultNotice } from "@/components/EmailChangeResultNotice";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { normalizeAuthEntry } from "@/lib/auth/recovery";
@@ -53,6 +54,7 @@ export default async function LoginPage({
               <p className="muted">Enter your Ficonter account details.</p>
             </>
           ) : null}
+          <EmailChangeResultNotice />
           <AuthForm mode="login" betaEntry={betaEntry} entry={entry} />
           {!showEntrance ? (
             <p className="center">

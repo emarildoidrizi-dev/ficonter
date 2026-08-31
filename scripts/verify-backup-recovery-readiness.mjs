@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from "node:fs";
 const requiredFiles = [
   "docs/operations/backup-recovery.md",
   ".github/workflows/backup-recovery-readiness.yml",
+  "scripts/run-secure-backup.sh",
 ];
 
 const failures = [];
@@ -12,6 +13,7 @@ for (const file of requiredFiles) {
 
 const doc = existsSync(requiredFiles[0]) ? readFileSync(requiredFiles[0], "utf8") : "";
 const workflow = existsSync(requiredFiles[1]) ? readFileSync(requiredFiles[1], "utf8") : "";
+const runner = existsSync(requiredFiles[2]) ? readFileSync(requiredFiles[2], "utf8") : "";
 
 const checks = [
   [doc.includes("Storage is independent from database backups"), "documents database/storage separation"],
@@ -24,6 +26,14 @@ const checks = [
   [workflow.includes("verify-backup-recovery-readiness.mjs"), "workflow executes readiness verifier"],
   [!workflow.includes("actions/upload-artifact"), "workflow does not upload sensitive backups to GitHub artifacts"],
   [!workflow.includes("SUPABASE_DB_URL:"), "workflow does not expose database URL in source"],
+  [runner.includes("set -euo pipefail"), "backup runner fails closed"],
+  [runner.includes("supabase db dump"), "backup runner exports database with Supabase CLI"],
+  [runner.includes("rclone copy \"supabase:${bucket}\""), "backup runner copies every discovered Storage bucket"],
+  [runner.includes("rclone check"), "backup runner verifies copied Storage objects"],
+  [runner.includes("sha256sum database/*.sql"), "backup runner creates database checksums"],
+  [runner.includes("BACKUP_S3_BUCKET"), "backup runner requires independent destination configuration"],
+  [!runner.includes("actions/upload-artifact"), "backup runner never writes backups to GitHub artifacts"],
+  [!runner.includes("NEXT_PUBLIC_"), "backup credentials are never defined as browser-public variables"],
 ];
 
 for (const [ok, label] of checks) {

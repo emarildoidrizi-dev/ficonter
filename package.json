@@ -33,6 +33,8 @@
     "verify:monthly-budget": "node scripts/verify-monthly-spending-budget.mjs",
     "verify:credit-cards": "node scripts/verify-credit-card-management.mjs",
     "verify:database-contract": "node scripts/verify-database-contract.mjs",
+    "verify:resilience": "node scripts/verify-production-resilience.mjs",
+    "verify:production-core": "node scripts/verify-production-core.mjs",
     "verify:hardening": "node scripts/verify-release-candidate.mjs",
     "verify:mobile-ui-phase2": "node scripts/verify-mobile-ui-phase2.mjs",
     "verify:mobile-ui-phase3": "node scripts/verify-mobile-ui-phase3.mjs",

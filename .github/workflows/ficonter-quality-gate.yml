@@ -41,7 +41,11 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Verify database and application contracts
+      - name: Verify current production architecture
+        run: npm run verify:production-core
+
+      - name: Run legacy compatibility audit
+        continue-on-error: true
         run: npm run verify:hardening
 
       - name: Lint

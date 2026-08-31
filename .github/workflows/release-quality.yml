@@ -15,6 +15,14 @@ jobs:
     name: Release Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_ci_placeholder
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      FICONTER_SUPER_ADMIN_EMAIL: ci@example.invalid
+      OPENAI_MODEL: gpt-5-mini
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

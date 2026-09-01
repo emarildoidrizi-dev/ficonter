@@ -437,7 +437,7 @@ function readEmailIdentity(
 function emailChangeRedirectUrl() {
   if (typeof window === "undefined") return undefined;
   const next = encodeURIComponent("/dashboard/settings?section=profile");
-  return `${window.location.origin}/auth/callback?next=${next}`;
+  return `https://www.ficonter.com/auth/callback?next=${next}`;
 }
 
 function formatSubscriptionDate(value: string | null | undefined) {
@@ -1020,7 +1020,7 @@ export function SettingsWorkspace({
     try {
       const { error } = await supabase.auth.resend({
         type: "email_change",
-        email: pendingEmail,
+        email: currentEmail,
         options: { emailRedirectTo: emailChangeRedirectUrl() },
       });
       if (error) throw error;

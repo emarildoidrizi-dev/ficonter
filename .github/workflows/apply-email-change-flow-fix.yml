@@ -1,158 +1,25 @@
-name: Apply email change flow fix
+name: Apply Email Change Fix
 
 on:
   push:
-    branches:
-      - fix/email-change-flow-production
 
 permissions:
   contents: write
 
 jobs:
-  patch:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/email-change-flow-production
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Patch email change flow
+      - name: Patch production email change flow
+        shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p = Path('components/SettingsWorkspace.tsx')
-          s = p.read_text()
-
-          old_redirect = '''function emailChangeRedirectUrl() {
-  if (typeof window === "undefined") return undefined;
-  const next = encodeURIComponent("/dashboard/settings?section=profile");
-  return `${window.location.origin}/auth/callback?next=${next}`;
-}'''
-          new_redirect = '''function emailChangeRedirectUrl() {
-  const next = encodeURIComponent("/dashboard/settings?section=profile");
-  return `https://www.ficonter.com/auth/callback?next=${next}`;
-}'''
-          if old_redirect not in s:
-              raise SystemExit('redirect helper not found')
-          s = s.replace(old_redirect, new_redirect, 1)
-
-          old_state = '''  const [emailRequesting, setEmailRequesting] = useState(false);
-  const [emailResending, setEmailResending] = useState(false);'''
-          new_state = '''  const [emailRequesting, setEmailRequesting] = useState(false);
-  const [emailResending, setEmailResending] = useState(false);
-  const [emailResendCooldown, setEmailResendCooldown] = useState(0);'''
-          if old_state not in s:
-              raise SystemExit('resend state block not found')
-          s = s.replace(old_state, new_state, 1)
-
-          old_resend = '''  async function resendEmailChange() {
-    if (!pendingEmail || emailResending) return;
-    setEmailResending(true);
-    setMessage(null);
-
-    try {
-      const { error } = await supabase.auth.resend({
-        type: "email_change",
-        email: pendingEmail,
-        options: { emailRedirectTo: emailChangeRedirectUrl() },
-      });
-      if (error) throw error;
-      showSuccess("A new confirmation link was sent to the pending email address.");
-    } catch (error) {
-      showError(error, "The confirmation link could not be resent.");
-    } finally {
-      setEmailResending(false);
-    }
-  }'''
-          new_resend = '''  useEffect(() => {
-    if (emailResendCooldown <= 0) return;
-    const timer = window.setInterval(() => {
-      setEmailResendCooldown((current) => Math.max(0, current - 1));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [emailResendCooldown]);
-
-  async function resendEmailChange() {
-    if (!pendingEmail || emailResending || emailResendCooldown > 0) return;
-    setEmailResending(true);
-    setMessage(null);
-
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      const identity = readEmailIdentity(
-        userData.user as AuthIdentityUser | null,
-        currentEmail,
-        pendingEmail,
-      );
-
-      if (!identity.pending) {
-        setPendingEmail("");
-        setAccountEmail(identity.current);
-        showSuccess("There is no email change waiting for confirmation.");
-        return;
-      }
-
-      setCurrentEmail(identity.current);
-      setPendingEmail(identity.pending);
-      setAccountEmail(identity.pending);
-
-      const { error } = await supabase.auth.resend({
-        type: "email_change",
-        email: identity.pending,
-        options: { emailRedirectTo: emailChangeRedirectUrl() },
-      });
-      if (error) throw error;
-
-      setEmailResendCooldown(60);
-      showSuccess(
-        "A new confirmation link was sent. You can request another one in 60 seconds if needed.",
-      );
-    } catch (error) {
-      const text = error instanceof Error ? error.message : String(error ?? "");
-      if (/rate|too many|seconds|429/i.test(text)) {
-        setEmailResendCooldown(60);
-        setMessage({
-          type: "error",
-          text: "Please wait about 60 seconds before requesting another confirmation email.",
-        });
-      } else {
-        showError(error, "The confirmation link could not be resent.");
-      }
-    } finally {
-      setEmailResending(false);
-    }
-  }'''
-          if old_resend not in s:
-              raise SystemExit('resend function not found')
-          s = s.replace(old_resend, new_resend, 1)
-
-          old_button = '''<button type="button" className={styles.secondaryButton} disabled={emailResending} onClick={() => void resendEmailChange()}>{emailResending ? "Sending…" : "Resend link"}</button>'''
-          new_button = '''<button type="button" className={styles.secondaryButton} disabled={emailResending || emailResendCooldown > 0} onClick={() => void resendEmailChange()}>{emailResending ? "Sending…" : emailResendCooldown > 0 ? `Resend in ${emailResendCooldown}s` : "Resend link"}</button>'''
-          if old_button not in s:
-              raise SystemExit('resend button not found')
-          s = s.replace(old_button, new_button, 1)
-
-          p.write_text(s)
-
-          verify = Path('scripts/verify-profile-identity.mjs')
-          v = verify.read_text()
-          needle = '[settings.includes(\'type: "email_change"\') && settings.includes("resendEmailChange"), "Pending email confirmation can be resent"],'
-          extra = needle + '\n  [settings.includes("emailResendCooldown") && settings.includes("Resend in ${emailResendCooldown}s"), "Email-change resend supports repeat requests with a visible cooldown"],\n  [settings.includes("https://www.ficonter.com/auth/callback"), "Email-change confirmations always return to the public production domain"],'
-          if needle in v and 'Email-change resend supports repeat requests with a visible cooldown' not in v:
-              v = v.replace(needle, extra, 1)
-              verify.write_text(v)
-          PY
-      - name: Remove one-time patch workflow
-        run: rm .github/workflows/apply-email-change-flow-fix.yml
-      - name: Commit patch
-        run: |
+          python -c 'from pathlib import Path; p=Path("components/SettingsWorkspace.tsx"); s=p.read_text(); s=s.replace("return `${window.location.origin}/auth/callback?next=${next}`;", "return `https://www.ficonter.com/auth/callback?next=${next}`;", 1); s=s.replace("email: pendingEmail,\n        options: { emailRedirectTo: emailChangeRedirectUrl() },", "email: currentEmail,\n        options: { emailRedirectTo: emailChangeRedirectUrl() },", 1); p.write_text(s)'
+          rm .github/workflows/apply-email-change-flow-fix.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add components/SettingsWorkspace.tsx scripts/verify-profile-identity.mjs .github/workflows/apply-email-change-flow-fix.yml
-          git commit -m "fix(auth): make email-change confirmation and resend reliable"
+          git add components/SettingsWorkspace.tsx .github/workflows/apply-email-change-flow-fix.yml
+          git commit -m "fix(auth): correct email change resend target and redirect"
           git push origin HEAD:fix/email-change-flow-production

@@ -1,0 +1,261 @@
+.panel {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.12));
+  border-radius: 24px;
+  background: var(--surface-raised, rgba(255, 255, 255, 0.7));
+  box-shadow: 0 18px 44px rgba(25, 28, 30, 0.08);
+}
+
+.heading {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.headingIcon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.12));
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.54));
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--muted, #77716a);
+}
+
+.heading h2,
+.workspaceTitle h3 {
+  margin: 0;
+}
+
+.heading h2 {
+  font-size: 24px;
+}
+
+.heading p,
+.destinationCard p,
+.workspaceTitle p,
+.finePrint,
+.boundaryNote p {
+  color: var(--muted, #706b65);
+}
+
+.heading p {
+  margin: 8px 0 0;
+  line-height: 1.55;
+  max-width: 760px;
+}
+
+.notice {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.noticeSuccess {
+  background: rgba(31, 111, 74, 0.1);
+  color: #1d6646;
+}
+
+.noticeError {
+  background: rgba(150, 43, 43, 0.1);
+  color: #8b2e2e;
+}
+
+.destinationGrid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.destinationCard {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.12));
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.5));
+}
+
+.destinationCardActive {
+  outline: 2px solid color-mix(in srgb, #9a7d45 34%, transparent);
+}
+
+.destinationTitle,
+.workspaceTitle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.destinationTitle strong,
+.destinationTitle span {
+  display: block;
+}
+
+.destinationTitle span {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted, #77716a);
+}
+
+.destinationCard p {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.workspaceGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.workspaceCard {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.12));
+  background: var(--surface-raised-solid, rgba(255, 255, 255, 0.72));
+}
+
+.workspaceTitle p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.15));
+  border-radius: 12px;
+  background: var(--surface-raised-solid, #fff);
+}
+
+.inputWrap input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  padding: 12px 0;
+  font: inherit;
+}
+
+.primaryButton,
+.secondaryButton {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 0;
+  background: var(--text-primary, #202426);
+  color: var(--surface-raised-solid, #fff);
+}
+
+.secondaryButton {
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.15));
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.55));
+  color: inherit;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.filePicker {
+  margin-top: 16px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--line, rgba(32, 36, 38, 0.2));
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.5));
+}
+
+.filePicker input {
+  display: none;
+}
+
+.finePrint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.boundaryNote {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line, rgba(32, 36, 38, 0.12));
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.45));
+}
+
+.boundaryNote p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .destinationGrid,
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .heading h2 {
+    font-size: 21px;
+  }
+}

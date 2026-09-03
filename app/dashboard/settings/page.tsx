@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { BackupRecoverySettings } from "@/components/BackupRecoverySettings";
+import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
@@ -177,13 +177,11 @@ export default async function SettingsPage({
           canManageWallpapers={canManageWallpapers}
         />
 
-        {section === "privacy" ? (
-          <BackupRecoverySettings
-            userId={user.id}
-            email={user.email ?? ""}
-            metadata={metadata}
-          />
-        ) : null}
+        <BackupRecoverySettingsGate
+          userId={user.id}
+          email={user.email ?? ""}
+          metadata={metadata}
+        />
 
         <ProfileIdentityDetailsForm
           userId={user.id}

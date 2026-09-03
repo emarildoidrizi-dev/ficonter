@@ -10,43 +10,54 @@ type Props = {
   metadata: Record<string, unknown>;
 };
 
-function currentSection() {
-  if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("section");
+function isPrivacySectionVisible() {
+  if (typeof window === "undefined") return false;
+
+  const section = new URLSearchParams(window.location.search).get("section");
+  if (section === "privacy") return true;
+
+  const headings = Array.from(
+    document.querySelectorAll<HTMLElement>("h1, h2, h3, [role='heading']"),
+  );
+
+  return headings.some((heading) => {
+    const text = heading.textContent?.trim().toLowerCase();
+    if (text !== "data & privacy") return false;
+
+    const style = window.getComputedStyle(heading);
+    return style.display !== "none" && style.visibility !== "hidden";
+  });
 }
 
 export function BackupRecoverySettingsGate({ userId, email, metadata }: Props) {
-  const [section, setSection] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const syncSection = () => setSection(currentSection());
-    syncSection();
+    const syncVisibility = () => setVisible(isPrivacySectionVisible());
+    syncVisibility();
 
-    const originalPushState = window.history.pushState.bind(window.history);
-    const originalReplaceState = window.history.replaceState.bind(window.history);
+    const observer = new MutationObserver(syncVisibility);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+    });
 
-    window.history.pushState = (...args) => {
-      originalPushState(...args);
-      window.dispatchEvent(new Event("ficonter:locationchange"));
-    };
+    window.addEventListener("popstate", syncVisibility);
+    window.addEventListener("ficonter:locationchange", syncVisibility);
 
-    window.history.replaceState = (...args) => {
-      originalReplaceState(...args);
-      window.dispatchEvent(new Event("ficonter:locationchange"));
-    };
-
-    window.addEventListener("popstate", syncSection);
-    window.addEventListener("ficonter:locationchange", syncSection);
+    const interval = window.setInterval(syncVisibility, 250);
 
     return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.removeEventListener("popstate", syncSection);
-      window.removeEventListener("ficonter:locationchange", syncSection);
+      observer.disconnect();
+      window.clearInterval(interval);
+      window.removeEventListener("popstate", syncVisibility);
+      window.removeEventListener("ficonter:locationchange", syncVisibility);
     };
   }, []);
 
-  if (section !== "privacy") return null;
+  if (!visible) return null;
 
   return (
     <BackupRecoverySettings

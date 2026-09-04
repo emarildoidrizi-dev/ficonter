@@ -91,6 +91,29 @@
   background: var(--surface-subtle, rgba(255, 255, 255, 0.5));
 }
 
+.destinationButton {
+  width: 100%;
+  appearance: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.destinationButton:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, #9a7d45 40%, var(--line, rgba(32, 36, 38, 0.12)));
+}
+
+.destinationButton:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.filePicker:focus-within {
+  outline: 2px solid color-mix(in srgb, #9a7d45 55%, transparent);
+  outline-offset: 2px;
+}
+
 .destinationCardActive {
   outline: 2px solid color-mix(in srgb, #9a7d45 34%, transparent);
 }
@@ -195,8 +218,8 @@
 
 .primaryButton:disabled,
 .secondaryButton:disabled {
-  opacity: 0.6;
-  cursor: wait;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .filePicker {

@@ -4,7 +4,7 @@ import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsG
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
-import { requireAdmin } from "@/lib/admin/access";
+import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
 import { getCurrentSubscriptionAccess } from "@/lib/subscriptionAccess";
@@ -65,6 +65,7 @@ export default async function SettingsPage({
   const { admin } = await requireAdmin();
   const isSubscriptionExempt = Boolean(admin);
   const canManageWallpapers = admin?.role === "super_admin";
+  const canAccessBackupRecovery = isOwnerEmail(user.email);
 
   const query = await searchParams;
   const section = Array.isArray(query?.section)
@@ -177,11 +178,13 @@ export default async function SettingsPage({
           canManageWallpapers={canManageWallpapers}
         />
 
-        <BackupRecoverySettingsGate
-          userId={user.id}
-          email={user.email ?? ""}
-          metadata={metadata}
-        />
+        {canAccessBackupRecovery ? (
+          <BackupRecoverySettingsGate
+            userId={user.id}
+            email={user.email ?? ""}
+            metadata={metadata}
+          />
+        ) : null}
 
         <ProfileIdentityDetailsForm
           userId={user.id}

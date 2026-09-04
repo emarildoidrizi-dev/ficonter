@@ -128,6 +128,70 @@ function addBillCiphertextWriteBoundary(client: BrowserClient): BrowserClient {
 }
 
 /**
+ * Portable Backup is currently an Owner-only operational feature. The database
+ * no longer permits direct authenticated execution of the original restore RPC.
+ * Before that exact RPC is invoked, obtain a short-lived one-time authorization
+ * ticket from the trusted FICONTER server and transparently call the guarded RPC.
+ *
+ * This keeps the existing Backup UI stable while enforcing the permission at
+ * the UI, server and database layers.
+ */
+function addOwnerBackupRestoreBoundary(client: BrowserClient): BrowserClient {
+  const rawClient = client as BrowserClient & {
+    rpc: (fn: string, args?: Record<string, unknown>, options?: unknown) => any;
+    __ficonterOwnerBackupBoundary?: boolean;
+  };
+
+  if (rawClient.__ficonterOwnerBackupBoundary) return client;
+
+  const originalRpc = rawClient.rpc.bind(client);
+  rawClient.rpc = ((
+    fn: string,
+    args?: Record<string, unknown>,
+    options?: unknown,
+  ) => {
+    if (fn !== "restore_portable_backup_v2") {
+      return originalRpc(fn, args, options);
+    }
+
+    return (async () => {
+      const response = await fetch("/api/owner/backup/authorize-restore", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      });
+
+      const authorizationResult = (await response.json().catch(() => null)) as
+        | { authorization?: string; error?: string }
+        | null;
+
+      if (!response.ok || !authorizationResult?.authorization) {
+        throw new Error(
+          authorizationResult?.error ??
+            "Only the FICONTER Owner can authorize backup restore.",
+        );
+      }
+
+      return originalRpc(
+        "restore_portable_backup_v2_owner",
+        {
+          p_payload: args?.p_payload ?? null,
+          p_authorization: authorizationResult.authorization,
+        },
+        options,
+      );
+    })();
+  }) as typeof rawClient.rpc;
+
+  rawClient.__ficonterOwnerBackupBoundary = true;
+  return client;
+}
+
+/**
  * Returns one shared browser client per session-persistence mode.
  *
  * Several dashboard widgets mount together. Reusing the client prevents each
@@ -152,8 +216,10 @@ export function createClient(keepSignedInOverride?: boolean): BrowserClient {
   const cached = clientCache.get(keepSignedIn);
   if (cached) return cached;
 
-  const client = addBillCiphertextWriteBoundary(
-    createConfiguredBrowserClient(url, key, keepSignedIn),
+  const client = addOwnerBackupRestoreBoundary(
+    addBillCiphertextWriteBoundary(
+      createConfiguredBrowserClient(url, key, keepSignedIn),
+    ),
   );
   clientCache.set(keepSignedIn, client);
   return client;

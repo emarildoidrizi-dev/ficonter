@@ -10,7 +10,7 @@ export const revalidate = 0;
 export default async function RecoveryRecordsAdminPage() {
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
-  if (!admin) redirect("/dashboard");
+  if (!admin) redirect("/dashboard/access-denied");
 
   const rawCases = await listVaultRecoveryCases();
   const cases = await attachRecoveryDeliveryState(rawCases as any[]);

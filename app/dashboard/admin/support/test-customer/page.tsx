@@ -8,8 +8,8 @@ export const revalidate = 0;
 export default async function StagingTestCustomerPage() {
   const { user, admin } = await requireAdmin();
   if (!user) redirect("/login");
-  if (!admin) redirect("/dashboard");
-  if (admin.role !== "super_admin") redirect("/dashboard/admin/support");
+  if (!admin) redirect("/dashboard/access-denied");
+  if (admin.role !== "super_admin") redirect("/dashboard/access-denied");
 
   return <StagingTestCustomerManager />;
 }

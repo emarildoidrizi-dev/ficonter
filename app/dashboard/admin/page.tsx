@@ -16,7 +16,7 @@ export default async function AdminPage() {
   const { user, admin } = await requireAdmin();
 
   if (!user) redirect("/login");
-  if (!admin) redirect("/dashboard");
+  if (!admin) redirect("/dashboard/access-denied");
 
   const { supabase } = await getCurrentUser();
   const [snapshot, logsResult, health] = await Promise.all([

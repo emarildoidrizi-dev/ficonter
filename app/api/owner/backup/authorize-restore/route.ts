@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
     return errorResponse("Only the FICONTER Owner can authorize backup restore.", 403);
   }
 
-  const service = createServiceClient();
+  // This table is introduced by the matching Supabase migration and therefore
+  // is intentionally accessed through the runtime client before generated
+  // database types are refreshed.
+  const service = createServiceClient() as any;
   const token = randomUUID();
   const expiresAt = new Date(
     Date.now() + RESTORE_AUTHORIZATION_MINUTES * 60 * 1000,

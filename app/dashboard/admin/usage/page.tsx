@@ -12,7 +12,7 @@ export default async function PersonalUsageAdminPage() {
   const { user, admin } = await requireAdmin();
 
   if (!user) redirect("/login");
-  if (!admin) redirect("/dashboard");
+  if (!admin) redirect("/dashboard/access-denied");
 
   const { supabase } = await getCurrentUser();
   const snapshot = await loadPlatformUsageSnapshot(

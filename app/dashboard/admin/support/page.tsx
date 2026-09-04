@@ -25,7 +25,7 @@ export default async function AdminSupportPage() {
   const { user, admin } = await requireAdmin();
 
   if (!user) redirect("/login");
-  if (!admin) redirect("/dashboard");
+  if (!admin) redirect("/dashboard/access-denied");
 
   const requests = await loadSupportRequests();
   return (

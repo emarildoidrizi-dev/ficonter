@@ -23,6 +23,7 @@ const speed = read("components/NavigationSpeedBoost.tsx");
 const migration = read("supabase/credit_card_management_v1.sql");
 const exportSource = read("lib/accountExport.ts");
 const settings = read("components/SettingsWorkspace.tsx");
+const accounting = read("lib/finance/creditCardAccounting.ts");
 
 check(page.includes('from("credit_card_activities")'), "Credit Cards page loads card activity.");
 check(page.includes('.ilike("category", "credit card")'), "Credit Cards page reads existing credit-card debt rows.");
@@ -59,6 +60,18 @@ check(
   "Minimum payment is calculated automatically at 3%."
 );
 check(
+  accounting.includes("CREDIT_CARD_MINIMUM_PAYMENT_DECIMALS = 2") &&
+    accounting.includes("roundCreditCardMinimumPayment") &&
+    accounting.includes("return roundMoney(value)"),
+  "Credit-card minimum payments are explicitly locked to standard two-decimal money rounding."
+);
+check(
+  accounting.includes("45.678 -> 45.68") &&
+    accounting.includes("45.674 -> 45.67") &&
+    accounting.includes("45.675 -> 45.68"),
+  "Credit-card rounding examples document normal cent rounding at the half-cent boundary."
+);
+check(
   manager.includes("<span>Minimum payment due</span>"),
   "Credit-card cards use the clear Minimum payment due label."
 );
@@ -76,14 +89,18 @@ check(
   "The statement form displays a protected automatic 3% amount."
 );
 check(
-  minimumMigration.includes("new.statement_balance * 0.03"),
-  "Supabase enforces the 3% minimum-payment rule."
+  minimumMigration.includes("new.statement_balance * 0.03") &&
+    minimumMigration.includes("round(new.statement_balance * 0.03, 2)"),
+  "Supabase enforces the 3% minimum-payment rule with two-decimal rounding."
+);
+check(
+  monthlyHistoryMigration.includes("round(p_statement_balance * 0.03, 2)"),
+  "Historical credit-card statements use the same two-decimal rounding rule."
 );
 check(
   minimumMigration.includes("credit_card_minimum_payment_3_percent"),
   "The 3% database trigger is included."
 );
-
 
 check(
   page.includes('from("credit_card_monthly_records")'),
@@ -133,8 +150,6 @@ check(
     settings.includes('"credit_card_monthly_records"'),
   "Account export includes credit-card monthly history."
 );
-
-
 
 check(
   manager.includes('"save_credit_card_monthly_record"') &&

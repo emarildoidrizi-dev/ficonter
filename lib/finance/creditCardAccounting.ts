@@ -1,6 +1,7 @@
 import { finiteNumber, roundMoney, sumMoney } from "@/lib/finance/money";
 
 export const CREDIT_CARD_MINIMUM_PAYMENT_RATE = 0.03;
+export const CREDIT_CARD_MINIMUM_PAYMENT_DECIMALS = 2;
 
 export type CreditCardStatementLike = {
   statement_balance: number | string;
@@ -14,11 +15,22 @@ export type CreditCardPaymentLike = {
   paid_at: string;
 };
 
+/**
+ * Credit-card minimum payments are monetary amounts and always use
+ * FICONTER's standard two-decimal money rounding.
+ * Examples: 45.678 -> 45.68, 45.674 -> 45.67, 45.675 -> 45.68.
+ */
+export function roundCreditCardMinimumPayment(value: unknown) {
+  return roundMoney(value);
+}
+
 export function creditCardMinimumPayment(statementBalance: unknown) {
   const balance = Math.max(0, finiteNumber(statementBalance));
   return Math.min(
     balance,
-    roundMoney(balance * CREDIT_CARD_MINIMUM_PAYMENT_RATE),
+    roundCreditCardMinimumPayment(
+      balance * CREDIT_CARD_MINIMUM_PAYMENT_RATE,
+    ),
   );
 }
 
@@ -40,7 +52,7 @@ export function creditCardMinimumRemaining(
 ) {
   return Math.max(
     0,
-    roundMoney(
+    roundCreditCardMinimumPayment(
       creditCardMinimumPayment(statementBalance) -
         finiteNumber(paymentsApplied),
     ),

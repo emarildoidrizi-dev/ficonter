@@ -36,6 +36,7 @@ import {
 import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { currentRecordAmountInBaseCurrency, historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { creditCardMinimumPayment } from "@/lib/finance/creditCardAccounting";
 import styles from "./CreditCardsManager.module.css";
 
 type CreditCardDebt = {
@@ -258,11 +259,8 @@ const EMPTY_PAYMENT: PaymentForm = {
   notes: "",
 };
 
-const AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03;
-
 function automaticMinimumPayment(balanceValue: unknown) {
-  const balance = Math.max(0, finiteNumber(balanceValue));
-  return Math.min(balance, roundMoney(balance * AUTOMATIC_MINIMUM_PAYMENT_RATE));
+  return creditCardMinimumPayment(balanceValue);
 }
 
 function money(value: unknown, currency = "EUR") {
@@ -389,11 +387,6 @@ export function CreditCardsManager({
   const activityEffectBase = useCallback((activity: CreditCardActivity) => historicalField(activity.balance_effect, activity.currency, activity.balance_effect_eur, activity.occurred_at), [historicalField]);
   const recordFieldBase = useCallback((record: CreditCardMonthlyRecord, native: unknown, eur: unknown) => historicalField(native, record.currency, eur, record.statement_date), [historicalField]);
 
-  // Carry-forward is the balance that existed at the start of a month.
-  // Reconstruct it from the live balance by reversing every later card effect:
-  // activity effects are removed, while payments are added back because they
-  // reduced the live balance. This lets Statement balance remain a historical
-  // record without forcing it to mirror Current balance during the month.
   const carriedForwardNative = useCallback((card: CreditCardDebt, month: string) => {
     const start = new Date(`${month}-01T00:00:00`).getTime();
     const activityEffectsAfterStart = sumMoney(
@@ -671,10 +664,6 @@ export function CreditCardsManager({
       ? recordFieldBase(record, record.statement_balance, record.statement_balance_eur)
       : 0;
     const carriedForwardBalance = carriedForwardBase(card, selectedMonth);
-    // Statement balance is a monthly record. When the month has no saved
-    // statement yet, show the amount carried in from the previous month as
-    // the provisional statement basis. Saving the statement freezes it.
-    // Current balance / Balance left to pay continue moving live on their own.
     const statementBalance = record
       ? recordedStatementBalance
       : carriedForwardBalance;
@@ -1107,9 +1096,6 @@ export function CreditCardsManager({
         });
         if (error) throw error;
       } else {
-        // A statement is an issuer snapshot only. Saving it must never rewrite
-        // current_balance. The existing debts trigger persists the matching
-        // credit_card_monthly_records snapshot after these statement fields change.
         const { data, error } = await supabase
           .from("debts")
           .update({
@@ -1804,7 +1790,7 @@ export function CreditCardsManager({
                     </strong>
                     <small>
                       {metrics.isCurrentMonth
-                        ? `Automatic 3% of Current balance · updates live`
+                        ? `Automatic 3% of Current balance · rounded up to the next cent · updates live`
                         : metrics.record
                           ? `Recorded minimum · ${displayMoney(minimumRemaining)} still to pay · ${paymentStatus(
                               metrics.record,
@@ -1993,7 +1979,7 @@ export function CreditCardsManager({
             <h2>Update {statementTarget.name}</h2>
             <p>
               {selectedMonth === monthKey()
-                ? "Enter the statement exactly as issued. It is kept as a monthly record and does not change Current balance. The live minimum payment is calculated as 3% of Current balance and updates whenever the live balance changes."
+                ? "Enter the statement exactly as issued. It is kept as a monthly record and does not change Current balance. The live minimum payment is calculated as 3% of Current balance, rounded up to the next cent when needed, and updates whenever the live balance changes."
                 : "Enter the exact historical figures shown by the issuer. Historical minimum payment remains tied to that saved monthly record."}
             </p>
             <div className={styles.modalGrid}>
@@ -2036,7 +2022,7 @@ export function CreditCardsManager({
                 />
                 <small>
                   {selectedMonth === monthKey()
-                    ? "Calculated automatically as 3% of Current balance and updated live."
+                    ? "Calculated as 3% of Current balance and rounded up to the next cent when needed."
                     : "Saved with the historical monthly record."}
                 </small>
               </label>

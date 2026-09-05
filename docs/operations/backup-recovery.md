@@ -47,6 +47,24 @@ Destination secrets:
 
 The destination must be private, encrypted at rest, and independent of the Supabase project.
 
+## Production execution
+
+The production backup runner is `scripts/run-secure-backup.sh` and the scheduled execution workflow is `.github/workflows/secure-production-backup.yml`.
+
+The workflow:
+
+- runs once per day and can also be started manually;
+- installs the official Supabase CLI and `rclone`;
+- reads all database and Storage credentials only from GitHub Secrets;
+- exports roles, schema, and data;
+- copies every discovered Supabase Storage bucket to the independent destination;
+- verifies Storage copies with `rclone check`;
+- writes database SHA-256 checksums and a non-secret manifest;
+- never uploads customer backups to GitHub Actions artifacts;
+- fails closed if any required credential or Storage bucket discovery step is missing.
+
+A workflow definition is not proof that a recoverable backup exists. The production backup requirement is satisfied only after a workflow run completes successfully against a private, independent destination and the resulting backup set is validated.
+
 ## Backup packaging
 
 Each successful backup is stored under a UTC timestamp prefix and contains:
@@ -90,6 +108,24 @@ Storage drill:
 2. Confirm representative private objects can be listed and downloaded with authorized access.
 3. Confirm public/private bucket classifications match production expectations.
 4. Never overwrite production Storage during a validation drill.
+
+## Recovery drill evidence
+
+### 2026-09-06 — isolated staging row-recovery drill
+
+Project: `FICONTER E2EE STAGING` (`zlegwxjplrxojeosgphq`).
+
+A non-production recovery drill was performed against the dedicated E2EE test account. Representative encrypted financial rows were copied to temporary recovery snapshots, deleted in staging, restored, and compared column-for-column before the transaction was accepted.
+
+Results:
+
+- Transactions: 1 backed up, 1 deleted, 1 restored, exact match confirmed.
+- Bills: 1 backed up, 1 deleted, 1 restored, exact match confirmed.
+- Debt: 1 backed up, deleted, and restored exactly.
+- Credit-card monthly history linked to that debt: 2 rows restored exactly.
+- Production data was not modified.
+
+This confirms that representative FICONTER financial rows can survive a controlled database delete/restore cycle, including encrypted records and credit-card history. It is useful recovery evidence, but it does **not** replace the required full logical backup restore from the independent off-site destination. The full database-dump restore and the Storage-object restore remain required before this item is closed.
 
 ## Recovery decision order
 

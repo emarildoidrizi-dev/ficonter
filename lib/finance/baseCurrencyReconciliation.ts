@@ -7,6 +7,7 @@ import {
   subtractMoney,
   sumMoney,
 } from "@/lib/finance/money";
+import { creditCardMinimumPayment } from "@/lib/finance/creditCardAccounting";
 import {
   originalAmountInBaseCurrency,
   type BaseCurrencyBill,
@@ -287,7 +288,7 @@ export function debtMinimumAmount(
   context: BaseCurrencyReconciliationContext,
 ): number {
   if (debt.category?.toLowerCase() === "credit card") {
-    return roundMoney(debtCurrentAmount(debt, context) * 0.03);
+    return creditCardMinimumPayment(debtCurrentAmount(debt, context));
   }
 
   return currentRecordAmountInBaseCurrency({
@@ -375,9 +376,6 @@ export function reconcileFinancialHealthToBaseCurrency(
     },
     goals: {
       ...reconciled.goals,
-      // Goals were historically stored in FICONTER's canonical EUR layer.
-      // They remain converted through the selected base-currency lens until
-      // Phase 4 migrates goal-native currency metadata.
       totalTarget: canonicalAmountInBaseCurrency(reconciled.goals.totalTarget, context),
       totalCurrent: canonicalAmountInBaseCurrency(reconciled.goals.totalCurrent, context),
     },

@@ -16,12 +16,15 @@ export type CreditCardPaymentLike = {
 };
 
 /**
- * Credit-card minimum payments are monetary amounts and always use
- * FICONTER's standard two-decimal money rounding.
- * Examples: 45.678 -> 45.68, 45.674 -> 45.67, 45.675 -> 45.68.
+ * FICONTER's automatic credit-card minimum is intentionally conservative:
+ * after the 3% calculation, any fraction of a cent is rounded upward to the
+ * next cent. Exact-cent values remain unchanged.
+ * Examples: 88.6746 -> 88.68, 45.671 -> 45.68, 45.6700 -> 45.67.
  */
 export function roundCreditCardMinimumPayment(value: unknown) {
-  return roundMoney(value);
+  const amount = Math.max(0, finiteNumber(value));
+  const factor = 10 ** CREDIT_CARD_MINIMUM_PAYMENT_DECIMALS;
+  return Math.ceil(amount * factor - 1e-9) / factor;
 }
 
 export function creditCardMinimumPayment(statementBalance: unknown) {
@@ -52,7 +55,7 @@ export function creditCardMinimumRemaining(
 ) {
   return Math.max(
     0,
-    roundCreditCardMinimumPayment(
+    roundMoney(
       creditCardMinimumPayment(statementBalance) -
         finiteNumber(paymentsApplied),
     ),

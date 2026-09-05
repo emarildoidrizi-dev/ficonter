@@ -8,12 +8,21 @@ export function GlobalLanguageControl() {
   const pathname = usePathname();
   const insideApplication = pathname.startsWith("/dashboard") || pathname.startsWith("/business");
   const landingOwnsLanguageControl = pathname === "/";
-
-  if (insideApplication || landingOwnsLanguageControl) return null;
+  const showLanguageControl = !insideApplication && !landingOwnsLanguageControl;
 
   return (
-    <div className={styles.control}>
-      <LanguageSelector variant="public" />
-    </div>
+    <>
+      {showLanguageControl ? (
+        <div className={styles.control}>
+          <LanguageSelector variant="public" />
+        </div>
+      ) : null}
+      <div
+        className={`${styles.copyright}${insideApplication ? ` ${styles.copyrightApplication}` : ""}`}
+        aria-label="Copyright notice"
+      >
+        © 2026 FICONTER. All rights reserved.
+      </div>
+    </>
   );
 }

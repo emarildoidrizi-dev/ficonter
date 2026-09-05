@@ -24,6 +24,7 @@ const migration = read("supabase/credit_card_management_v1.sql");
 const exportSource = read("lib/accountExport.ts");
 const settings = read("components/SettingsWorkspace.tsx");
 const accounting = read("lib/finance/creditCardAccounting.ts");
+const roundUpMigration = read("supabase/credit_card_minimum_payment_round_up_cents.sql");
 
 check(page.includes('from("credit_card_activities")'), "Credit Cards page loads card activity.");
 check(page.includes('.ilike("category", "credit card")'), "Credit Cards page reads existing credit-card debt rows.");
@@ -52,24 +53,29 @@ check(manager.includes('activity_type !== "statement_adjustment"'), "Confirmed s
 check(exportSource.includes('| "credit_card_activities"'), "Account export includes credit-card activity.");
 check(settings.includes('"credit_card_activities"'), "JSON/PDF account archive loads credit-card activity.");
 
-const minimumMigration = read("supabase/credit_card_minimum_payment_3_percent.sql");
 const monthlyHistoryMigration = read("supabase/credit_card_monthly_history_v1.sql");
 
 check(
-  manager.includes("AUTOMATIC_MINIMUM_PAYMENT_RATE = 0.03"),
-  "Minimum payment is calculated automatically at 3%."
+  accounting.includes("CREDIT_CARD_MINIMUM_PAYMENT_RATE = 0.03") &&
+    manager.includes("creditCardMinimumPayment(balanceValue)"),
+  "Minimum payment is calculated automatically at 3% through the shared accounting rule."
 );
 check(
-  accounting.includes("CREDIT_CARD_MINIMUM_PAYMENT_DECIMALS = 2") &&
-    accounting.includes("roundCreditCardMinimumPayment") &&
-    accounting.includes("return roundMoney(value)"),
-  "Credit-card minimum payments are explicitly locked to standard two-decimal money rounding."
+  accounting.includes("Math.ceil(amount * factor - 1e-9) / factor") &&
+    accounting.includes("88.6746 -> 88.68") &&
+    accounting.includes("45.671 -> 45.68") &&
+    accounting.includes("45.6700 -> 45.67"),
+  "Credit-card minimum payments round upward to the next cent only when a fraction of a cent remains."
 );
 check(
-  accounting.includes("45.678 -> 45.68") &&
-    accounting.includes("45.674 -> 45.67") &&
-    accounting.includes("45.675 -> 45.68"),
-  "Credit-card rounding examples document normal cent rounding at the half-cent boundary."
+  manager.includes("rounded up to the next cent") &&
+    debt.includes("creditCardMinimumPayment(currentDebtValue(debt))"),
+  "Credit Cards and the Debt bridge use the same upward-cent minimum-payment rule."
+);
+check(
+  roundUpMigration.includes("ceil(greatest(p_balance, 0) * 0.03 * 100) / 100") &&
+    roundUpMigration.includes("credit_card_monthly_minimum_payment_round_up"),
+  "Supabase enforces the same 3% upward-cent rule for live and monthly records."
 );
 check(
   manager.includes("<span>Minimum payment due</span>"),
@@ -87,19 +93,6 @@ check(
   manager.includes("readOnly") &&
     manager.includes("Minimum payment due — automatic 3%"),
   "The statement form displays a protected automatic 3% amount."
-);
-check(
-  minimumMigration.includes("new.statement_balance * 0.03") &&
-    minimumMigration.includes("round(new.statement_balance * 0.03, 2)"),
-  "Supabase enforces the 3% minimum-payment rule with two-decimal rounding."
-);
-check(
-  monthlyHistoryMigration.includes("round(p_statement_balance * 0.03, 2)"),
-  "Historical credit-card statements use the same two-decimal rounding rule."
-);
-check(
-  minimumMigration.includes("credit_card_minimum_payment_3_percent"),
-  "The 3% database trigger is included."
 );
 
 check(

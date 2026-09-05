@@ -24,6 +24,7 @@ import { finiteNumber, roundMoney, roundRate, sumMoney } from "@/lib/finance/mon
 import { CURRENCY_CODES, currencyName, currencySymbol, formatCurrency } from "@/lib/financialOptions";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { currentRecordAmountInBaseCurrency, historicalRecordAmountInBaseCurrency } from "@/lib/finance/baseCurrencyReconciliation";
+import { creditCardMinimumPayment } from "@/lib/finance/creditCardAccounting";
 import styles from "./DebtManager.module.css";
 
 type DebtStatus = "active" | "paid_off" | "paused";
@@ -252,7 +253,7 @@ export function DebtManager({
   const minimumDebtValue = useCallback(
     (debt: Debt) => {
       if (debt.category.toLowerCase() === "credit card") {
-        return roundMoney(currentDebtValue(debt) * 0.03);
+        return creditCardMinimumPayment(currentDebtValue(debt));
       }
 
       return currentRecordAmountInBaseCurrency({

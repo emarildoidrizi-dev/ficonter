@@ -4,6 +4,50 @@
   top: 18px;
   inset-inline-end: 18px;
 }
+
+.copyright {
+  position: fixed;
+  z-index: 110;
+  inset-inline-end: 18px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  max-width: min(320px, calc(100vw - 36px));
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, Canvas 84%, transparent);
+  color: color-mix(in srgb, CanvasText 72%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.copyrightApplication {
+  bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 640px) {
-  .control { top: 12px; inset-inline-end: 12px; }
+  .control {
+    top: 12px;
+    inset-inline-end: 12px;
+  }
+
+  .copyright {
+    inset-inline-end: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .copyrightApplication {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
 }

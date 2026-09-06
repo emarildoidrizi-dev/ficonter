@@ -2,112 +2,109 @@
 
 ## Objective
 
-Maintain recoverable copies of both the Supabase Postgres database and Supabase Storage objects without committing customer data, financial records, authentication data, documents, or media to the public GitHub repository.
+Keep a recoverable FICONTER backup under the Owner's direct physical control, without storing production backup copies in AWS or another third-party backup destination.
 
-## Current production facts
+The owner-controlled backup must cover three separate things:
 
-- Supabase project: `bbqwhesigazgziiuexlv`
-- Region: `eu-central-1`
-- Database: PostgreSQL 17
-- Storage is independent from database backups. Database restoration restores Storage metadata only; deleted Storage objects are not restored by a database backup.
-- FICONTER therefore treats database backup and object backup as two separate recovery streams.
+1. the full FICONTER Git history and a current source snapshot;
+2. the Supabase Postgres database;
+3. Supabase Storage objects.
 
-## Required recovery streams
+Production customer data, authentication records, financial data, documents, and media must never be committed to the public GitHub repository or uploaded to GitHub Actions artifacts.
 
-### 1. Database
+## Owner-controlled offline model
 
-Create three logical exports using the current Supabase CLI:
+The approved FICONTER recovery model is an encrypted external SSD or equivalent encrypted removable drive physically controlled by the Owner.
 
-- roles
-- schema
-- data
+GitHub and Supabase remain live service providers, but the disaster-recovery copy is not stored with another cloud backup provider.
 
-The backup job must use `supabase db dump` rather than raw `pg_dump` so Supabase-managed schemas and reserved roles are handled using Supabase's supported filtering.
+The local backup runner is:
 
-The database connection string must be supplied only at runtime through a secret named `SUPABASE_DB_URL`.
+`scripts/create-owner-offline-backup.ps1`
 
-### 2. Storage objects
+It is intentionally not scheduled in GitHub Actions because a GitHub-hosted runner cannot write to the Owner's physically attached drive.
 
-All production buckets must be copied to a private off-site S3-compatible destination. Supabase S3 credentials are server-only credentials and must never be exposed to the browser or committed to GitHub.
+## Backup contents
 
-Source secrets:
+Each backup set is written to a timestamped folder such as:
+
+`FICONTER-20260906T070000Z/`
+
+and contains:
+
+- `code/ficonter-full-history.bundle` — complete Git history, branches and refs available locally;
+- `code/ficonter-main-source.zip` — current source snapshot;
+- `database/roles.sql`;
+- `database/schema.sql`;
+- `database/data.sql`;
+- `storage/<bucket>/...`;
+- `manifest/backup-info.txt`;
+- `manifest/sha256.txt`.
+
+The Git bundle allows the repository to be reconstructed even if normal Git hosting is unavailable. The source ZIP is a convenient current-code snapshot.
+
+## Database backup
+
+The runner uses the Supabase CLI and `supabase db dump` for roles, schema and data.
+
+The production database connection string is supplied only at runtime through `SUPABASE_DB_URL`. It must not be written into the backup manifest or committed to the repository.
+
+## Storage backup
+
+Database backups do not contain the bytes of Supabase Storage objects. Storage therefore has to be copied separately.
+
+The runner reads server-side Supabase S3 credentials only from local environment variables:
 
 - `SUPABASE_STORAGE_S3_ENDPOINT`
 - `SUPABASE_STORAGE_S3_REGION`
 - `SUPABASE_STORAGE_S3_ACCESS_KEY_ID`
 - `SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY`
 
-Destination secrets:
+It discovers every live bucket, copies the objects to the Owner's local backup directory, and verifies each copy with `rclone check`.
 
-- `BACKUP_S3_ENDPOINT`
-- `BACKUP_S3_REGION`
-- `BACKUP_S3_BUCKET`
-- `BACKUP_S3_ACCESS_KEY_ID`
-- `BACKUP_S3_SECRET_ACCESS_KEY`
+No destination S3/AWS credentials are used.
 
-The destination must be private, encrypted at rest, and independent of the Supabase project.
+## Physical security
 
-## Production execution
+The backup destination should be an encrypted external SSD controlled by the Owner. On Windows, BitLocker or an equivalent full-volume encryption mechanism is appropriate.
 
-The production backup runner is `scripts/run-secure-backup.sh` and the scheduled execution workflow is `.github/workflows/secure-production-backup.yml`.
+Recommended operating model:
 
-The workflow:
+- SSD A: primary owner backup, kept offline when not in use;
+- SSD B: second owner-controlled copy, stored in a different secure physical location;
+- do not leave either drive permanently connected to the production computer;
+- do not store the encryption recovery key on the same drive;
+- do not place the production backup folder inside OneDrive, Dropbox, Google Drive, iCloud, or another automatic cloud-sync directory unless the Owner explicitly changes this policy.
 
-- runs once per day and can also be started manually;
-- installs the official Supabase CLI and `rclone`;
-- reads all database and Storage credentials only from GitHub Secrets;
-- exports roles, schema, and data;
-- copies every discovered Supabase Storage bucket to the independent destination;
-- verifies Storage copies with `rclone check`;
-- writes database SHA-256 checksums and a non-secret manifest;
-- never uploads customer backups to GitHub Actions artifacts;
-- fails closed if any required credential or Storage bucket discovery step is missing.
+## Running a backup
 
-A workflow definition is not proof that a recoverable backup exists. The production backup requirement is satisfied only after a workflow run completes successfully against a private, independent destination and the resulting backup set is validated.
+Prerequisites on the Owner's computer:
 
-## Backup packaging
+- Git;
+- Supabase CLI;
+- rclone;
+- the required production database and Storage credentials loaded locally as environment variables;
+- the encrypted external drive mounted and unlocked.
 
-Each successful backup is stored under a UTC timestamp prefix and contains:
+Run from PowerShell:
 
-- `database/roles.sql`
-- `database/schema.sql`
-- `database/data.sql`
-- `storage/<bucket>/...`
-- `manifest/sha256.txt`
-- `manifest/backup-info.txt`
+`powershell -ExecutionPolicy Bypass -File scripts/create-owner-offline-backup.ps1 -BackupRoot "E:\\FICONTER-BACKUPS"`
 
-The manifest contains checksums and counts only. It must not contain database connection strings, access keys, JWTs, encryption keys, or service-role credentials.
+Replace `E:\\FICONTER-BACKUPS` with the actual encrypted drive path.
 
-## Retention
+The runner refuses to place the backup inside the FICONTER repository.
 
-Recommended baseline before public commercial launch:
+## Verification
 
-- daily backup: retain 14 days
-- weekly backup: retain 8 weeks
-- monthly backup: retain 12 months
+Every backup creates SHA-256 checksums for the files in the backup set. Storage objects are also compared against the Supabase source using `rclone check`.
 
-Retention is configured at the destination provider, not in this repository.
+A backup should not be considered valid until:
 
-## Restore validation
-
-A backup is not considered validated merely because upload succeeded. At least one restore drill must be completed before #15 is closed.
-
-Use a non-production Supabase project for the drill.
-
-Database drill:
-
-1. Download one complete backup set.
-2. Create or select an isolated non-production project.
-3. Restore roles, schema, then data using the supported Supabase/psql process.
-4. Confirm the application-critical schemas, authentication records, and representative financial tables exist.
-5. Run FICONTER's database/security verification suites against the restored project.
-
-Storage drill:
-
-1. Restore copied objects into isolated test buckets only.
-2. Confirm representative private objects can be listed and downloaded with authorized access.
-3. Confirm public/private bucket classifications match production expectations.
-4. Never overwrite production Storage during a validation drill.
+- the script exits successfully;
+- the timestamped backup directory exists on the encrypted drive;
+- `manifest/sha256.txt` exists;
+- the Git bundle can be verified with `git bundle verify`;
+- a sample database restore and Storage restore have been tested in a non-production environment.
 
 ## Recovery drill evidence
 
@@ -115,43 +112,54 @@ Storage drill:
 
 Project: `FICONTER E2EE STAGING` (`zlegwxjplrxojeosgphq`).
 
-A non-production recovery drill was performed against the dedicated E2EE test account. Representative encrypted financial rows were copied to temporary recovery snapshots, deleted in staging, restored, and compared column-for-column before the transaction was accepted.
+Representative encrypted financial rows were copied to temporary recovery snapshots, deleted in staging, restored, and compared column-for-column.
 
 Results:
 
-- Transactions: 1 backed up, 1 deleted, 1 restored, exact match confirmed.
-- Bills: 1 backed up, 1 deleted, 1 restored, exact match confirmed.
-- Debt: 1 backed up, deleted, and restored exactly.
-- Credit-card monthly history linked to that debt: 2 rows restored exactly.
+- Transactions: restored exactly.
+- Bills: restored exactly.
+- Debt: restored exactly.
+- Credit-card monthly history: two linked rows restored exactly.
 - Production data was not modified.
 
-This confirms that representative FICONTER financial rows can survive a controlled database delete/restore cycle, including encrypted records and credit-card history. It is useful recovery evidence, but it does **not** replace the required full logical backup restore from the independent off-site destination. The full database-dump restore and the Storage-object restore remain required before this item is closed.
+This proves representative financial records can survive a controlled delete/restore cycle. A complete owner-drive backup and full restore drill are still required before backup/recovery is marked fully complete.
 
-## Recovery decision order
+## Recovery order
 
-1. Application-only regression: roll back Vercel/GitHub deployment first.
-2. Database corruption or accidental destructive mutation: use Supabase managed restore/PITR if available, otherwise logical off-site backup.
-3. Deleted/corrupted Storage object: restore the affected object from the off-site Storage copy.
-4. Full Supabase project loss: provision a new project, restore database, recreate project configuration/secrets, restore Storage objects, validate RLS/Auth/Realtime, then move application environment variables.
+1. Application/code regression: use the local Git bundle/source snapshot or normal Git history to recover the application.
+2. Database loss/corruption: restore the owner-held logical database dump into an isolated/new Supabase project.
+3. Storage loss: restore the affected bucket objects from the owner-held Storage copy.
+4. Full Supabase project loss: provision a replacement project, restore database and Storage, reconfigure secrets, validate RLS/Auth/Realtime, then repoint the application.
 
 ## Security rules
 
-- Never upload backups to GitHub Actions artifacts.
-- Never commit SQL data dumps to this repository.
-- Never copy production data into a public bucket.
-- Never put backup credentials in `NEXT_PUBLIC_*` variables.
-- Do not run destructive restore commands against production as a test.
-- Keep source Supabase S3 credentials read-capable only where practical; destination credentials should be restricted to the dedicated backup bucket.
+- Never commit production database dumps or Storage objects to GitHub.
+- Never upload owner backups to GitHub Actions artifacts.
+- Never write passwords, database URLs, S3 secrets, JWTs, service-role keys, or encryption keys into the manifest.
+- Never run a destructive restore drill against production.
+- Keep the backup media encrypted and offline when not actively creating or validating a backup.
+- Treat possession of an unlocked backup drive as privileged production-data access.
 
-## Closure criteria for launch item #15
+## Retention
 
-#15 can be marked complete only when all of the following are true:
+A practical owner-controlled baseline is:
 
-- a current database backup exists outside the production Supabase project;
-- every live Storage bucket has an independent object copy;
-- checksums/manifests are generated;
-- the backup destination is private and access-controlled;
-- one isolated database restore drill succeeds;
-- one isolated Storage restore drill succeeds;
-- the restore procedure and recovery owner are documented;
-- backup age/failure monitoring is enabled.
+- keep the latest 7 daily backups;
+- keep 4 weekly backups;
+- keep 6 monthly backups.
+
+Older sets can be deleted manually after a newer backup has been verified.
+
+## Completion criteria
+
+Backup/recovery is fully complete only when:
+
+- one real production backup has been created on the Owner's encrypted removable drive;
+- the full Git bundle and source snapshot are present;
+- the database roles/schema/data dumps are present;
+- every live Storage bucket has been copied;
+- checksums are present and validate;
+- an isolated full database restore succeeds;
+- an isolated Storage restore succeeds;
+- the Owner can physically locate and unlock the backup media;
+- a second owner-controlled copy exists in a separate secure physical location.

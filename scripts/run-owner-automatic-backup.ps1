@@ -55,7 +55,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Git bundle creation failed.' }
   & git -C $repoRoot archive --format=zip "--output=$sourceZipPath" HEAD
   if ($LASTEXITCODE -ne 0) { throw 'Git source snapshot failed.' }
-  & git bundle verify $bundlePath > $null
+  & git -C $repoRoot bundle verify $bundlePath > $null
   if ($LASTEXITCODE -ne 0) { throw 'Git bundle verification failed.' }
 
   $dbDumpPath = Join-Path $dbDir 'FICONTER-PRODUCTION.dump'

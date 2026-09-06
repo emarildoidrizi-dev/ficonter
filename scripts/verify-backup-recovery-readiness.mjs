@@ -4,12 +4,14 @@ const requiredFiles = [
   "docs/operations/backup-recovery.md",
   "docs/operations/owner-secrets-checklist.md",
   "docs/operations/full-zero-rebuild-drill.md",
+  "docs/operations/long-term-backup-preservation.md",
   ".github/workflows/backup-recovery-readiness.yml",
   "scripts/create-owner-offline-backup.ps1",
   "scripts/create-owner-secrets-vault.ps1",
   "scripts/rebuild-supabase-from-recovery.ps1",
   "scripts/configure-owner-automatic-backup.ps1",
   "scripts/run-owner-automatic-backup.ps1",
+  "scripts/watch-owner-backup-drive.ps1",
 ];
 
 const failures = [];
@@ -20,12 +22,14 @@ for (const file of requiredFiles) {
 const doc = existsSync(requiredFiles[0]) ? readFileSync(requiredFiles[0], "utf8") : "";
 const secretsDoc = existsSync(requiredFiles[1]) ? readFileSync(requiredFiles[1], "utf8") : "";
 const drillDoc = existsSync(requiredFiles[2]) ? readFileSync(requiredFiles[2], "utf8") : "";
-const readinessWorkflow = existsSync(requiredFiles[3]) ? readFileSync(requiredFiles[3], "utf8") : "";
-const runner = existsSync(requiredFiles[4]) ? readFileSync(requiredFiles[4], "utf8") : "";
-const secretsRunner = existsSync(requiredFiles[5]) ? readFileSync(requiredFiles[5], "utf8") : "";
-const rebuildRunner = existsSync(requiredFiles[6]) ? readFileSync(requiredFiles[6], "utf8") : "";
-const scheduleConfig = existsSync(requiredFiles[7]) ? readFileSync(requiredFiles[7], "utf8") : "";
-const automaticRunner = existsSync(requiredFiles[8]) ? readFileSync(requiredFiles[8], "utf8") : "";
+const preservationDoc = existsSync(requiredFiles[3]) ? readFileSync(requiredFiles[3], "utf8") : "";
+const readinessWorkflow = existsSync(requiredFiles[4]) ? readFileSync(requiredFiles[4], "utf8") : "";
+const runner = existsSync(requiredFiles[5]) ? readFileSync(requiredFiles[5], "utf8") : "";
+const secretsRunner = existsSync(requiredFiles[6]) ? readFileSync(requiredFiles[6], "utf8") : "";
+const rebuildRunner = existsSync(requiredFiles[7]) ? readFileSync(requiredFiles[7], "utf8") : "";
+const connectConfig = existsSync(requiredFiles[8]) ? readFileSync(requiredFiles[8], "utf8") : "";
+const automaticRunner = existsSync(requiredFiles[9]) ? readFileSync(requiredFiles[9], "utf8") : "";
+const watcher = existsSync(requiredFiles[10]) ? readFileSync(requiredFiles[10], "utf8") : "";
 
 const checks = [
   [doc.includes("Owner's direct physical control"), "documents owner-controlled physical backup model"],
@@ -42,6 +46,7 @@ const checks = [
   [secretsDoc.includes("master recovery password") && secretsDoc.includes("separate"), "secrets checklist separates master password from backup media"],
   [drillDoc.includes("Never run the drill against Production project `bbqwhesigazgziiuexlv`"), "zero-rebuild drill forbids production target"],
   [drillDoc.includes("full zero-rebuild item is complete only after"), "zero-rebuild drill has explicit completion definition"],
+  [preservationDoc.includes("continuous recoverability") && preservationDoc.includes("3-5 years"), "documents long-term media migration rather than permanent reliance on one SSD"],
   [readinessWorkflow.includes("verify-backup-recovery-readiness.mjs"), "readiness workflow executes verifier"],
   [!readinessWorkflow.includes("actions/upload-artifact"), "readiness workflow does not upload sensitive backups"],
   [runner.includes("bundle create"), "owner runner creates full Git bundle"],
@@ -65,7 +70,9 @@ const checks = [
   [secretsRunner.includes("Remove-Item $secretFile"), "owner secrets tool removes temporary plaintext secret file"],
   [rebuildRunner.includes("Refusing to restore into the FICONTER Production project"), "rebuild tool refuses production target"],
   [rebuildRunner.includes("pg_restore") && rebuildRunner.includes("rclone copy"), "rebuild tool restores database and Storage"],
-  [scheduleConfig.includes("Export-Clixml") && scheduleConfig.includes("Register-ScheduledTask"), "automatic backup setup uses Windows-protected credentials and Task Scheduler"],
+  [connectConfig.includes("TriggerMode = 'drive_connect'") && connectConfig.includes("New-ScheduledTaskTrigger -AtLogOn"), "backup setup enables SSD-connect watcher at Windows logon"],
+  [watcher.includes("Start-Sleep -Seconds 15") && watcher.includes("Invoke-FiconterBackup"), "SSD watcher detects connect transitions and launches one backup"],
+  [watcher.includes("'absent'") && watcher.includes("$currentPresent"), "SSD watcher requires disconnect before a later connection can retrigger"],
   [automaticRunner.includes("FICONTER-AUTOMATIC-BACKUP-STATUS.txt"), "automatic runner records backup status"],
   [automaticRunner.includes("7z t") && automaticRunner.includes("Get-FileHash -Algorithm SHA256"), "automatic runner verifies encrypted archive and checksum"],
 ];

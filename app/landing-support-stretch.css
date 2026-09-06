@@ -1,0 +1,26 @@
+/* Landing hero support card: extend the workspace-switch visual toward the left while keeping it inside the hero frame. */
+[class*="heroVisual"] [class*="heroSupportCard"] {
+  left: 120px !important;
+  right: 28px !important;
+  width: auto !important;
+}
+
+[class*="heroVisual"] [class*="heroSupportImage"] > img {
+  object-position: left center !important;
+}
+
+@media (max-width: 900px) {
+  [class*="heroVisual"] [class*="heroSupportCard"] {
+    left: 18px !important;
+    right: 18px !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [class*="heroVisual"] [class*="heroSupportCard"] {
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+  }
+}

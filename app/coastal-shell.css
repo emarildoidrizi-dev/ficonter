@@ -107,6 +107,31 @@ html[data-resolved-theme="dark"][data-wallpaper-schedule="automatic"] .living-th
   .app-main::before {
     left: 0;
   }
+
+  /* Landing hero: reserve a dedicated lower band for the supporting image so
+     it never covers the financial metrics in the demo dashboard. */
+  main [class*="floatingDashboard"] {
+    inset: 18px 18px 168px 18px !important;
+  }
+
+  main [class*="heroSupportCard"] {
+    right: 18px !important;
+    bottom: 18px !important;
+    width: 220px !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+
+  main [class*="heroSupportImage"] {
+    min-height: 126px !important;
+  }
+
+  main [class*="heroSupportBadge"] {
+    top: 18px !important;
+    left: 18px !important;
+    padding: 6px 9px !important;
+    font-size: 8px !important;
+  }
 }
 
 @media (max-width: 900px) {

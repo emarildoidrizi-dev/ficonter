@@ -49,17 +49,20 @@ try {
     $finalArchive = Join-Path $backupRoot "FICONTER-MASTER-RECOVERY-$stamp.7z"
   }
 
-  & git -C $repoRoot bundle create (Join-Path $codeDir 'FICONTER-CODE.bundle') --all
+  $bundlePath = Join-Path $codeDir 'FICONTER-CODE.bundle'
+  $sourceZipPath = Join-Path $codeDir 'FICONTER-SOURCE.zip'
+  & git -C $repoRoot bundle create $bundlePath --all
   if ($LASTEXITCODE -ne 0) { throw 'Git bundle creation failed.' }
-  & git -C $repoRoot archive --format=zip --output=(Join-Path $codeDir 'FICONTER-SOURCE.zip') HEAD
+  & git -C $repoRoot archive --format=zip "--output=$sourceZipPath" HEAD
   if ($LASTEXITCODE -ne 0) { throw 'Git source snapshot failed.' }
-  & git bundle verify (Join-Path $codeDir 'FICONTER-CODE.bundle') > $null
+  & git bundle verify $bundlePath > $null
   if ($LASTEXITCODE -ne 0) { throw 'Git bundle verification failed.' }
 
+  $dbDumpPath = Join-Path $dbDir 'FICONTER-PRODUCTION.dump'
   $env:PGPASSWORD = $dbPass
-  & pg_dump --host='aws-0-eu-central-1.pooler.supabase.com' --port=5432 --username='postgres.bbqwhesigazgziiuexlv' --dbname='postgres' --format=custom --no-owner --no-privileges --file=(Join-Path $dbDir 'FICONTER-PRODUCTION.dump')
+  & pg_dump --host='aws-0-eu-central-1.pooler.supabase.com' --port=5432 --username='postgres.bbqwhesigazgziiuexlv' --dbname='postgres' --format=custom --no-owner --no-privileges "--file=$dbDumpPath"
   if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL backup failed.' }
-  & pg_restore --list (Join-Path $dbDir 'FICONTER-PRODUCTION.dump') > $null
+  & pg_restore --list $dbDumpPath > $null
   if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL dump verification failed.' }
   Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
 

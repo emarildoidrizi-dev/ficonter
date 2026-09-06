@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Ficonter personal and business workspace switch</title>
+  <desc id="desc">A compact premium illustration showing separate personal and business workspaces connected by a two-way switch.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8f4ea"/>
+      <stop offset="0.52" stop-color="#eef3ef"/>
+      <stop offset="1" stop-color="#e5eee9"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b99a61"/>
+      <stop offset="1" stop-color="#d7c18d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-30%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#173238" flood-opacity=".12"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="540" rx="42" fill="url(#bg)"/>
+  <circle cx="98" cy="102" r="108" fill="#dfe9df" opacity=".78"/>
+  <circle cx="858" cy="120" r="120" fill="#d9e8e5" opacity=".72"/>
+  <path d="M24 391c41-78 66-110 103-139 22-17 52-36 72-47" stroke="#b8cbb8" stroke-width="19" stroke-linecap="round" opacity=".55"/>
+  <path d="M48 404c19-70 35-107 72-154" stroke="#738f72" stroke-width="10" stroke-linecap="round" opacity=".82"/>
+
+  <text x="480" y="74" text-anchor="middle" font-family="Georgia,Times New Roman,serif" font-size="40" fill="#17313a">Separate spaces. One clear system.</text>
+  <text x="480" y="108" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#65757b">Move between personal and business finances without mixing records.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="68" y="148" width="326" height="310" rx="30" fill="#fffdf8" stroke="#dfe6df"/>
+    <circle cx="120" cy="203" r="28" fill="#e6eee4"/>
+    <path d="M120 190a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-18 40c4-10 12-15 18-15s14 5 18 15" fill="none" stroke="#285b5d" stroke-width="4" stroke-linecap="round"/>
+    <text x="160" y="196" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#17313a">Personal workspace</text>
+    <text x="160" y="222" font-family="Arial,sans-serif" font-size="14" fill="#738087">Your life, in focus</text>
+    <line x1="96" y1="254" x2="366" y2="254" stroke="#e4e8e3"/>
+
+    <text x="104" y="300" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Goals &amp; savings</text>
+    <text x="352" y="300" text-anchor="end" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#17313a">€2,600</text>
+    <text x="104" y="345" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Bills &amp; expenses</text>
+    <text x="352" y="345" text-anchor="end" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#17313a">€980</text>
+    <text x="104" y="390" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Monthly overview</text>
+    <g transform="translate(260 367)">
+      <rect x="0" y="16" width="13" height="20" rx="3" fill="#dce5df"/>
+      <rect x="20" y="8" width="13" height="28" rx="3" fill="#c7d7cd"/>
+      <rect x="40" y="2" width="13" height="34" rx="3" fill="#a9c3b5"/>
+      <rect x="60" y="12" width="13" height="24" rx="3" fill="#7fa89a"/>
+      <rect x="80" y="0" width="13" height="36" rx="3" fill="#3b7875"/>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="566" y="148" width="326" height="310" rx="30" fill="#fffdf8" stroke="#dfe6df"/>
+    <circle cx="618" cy="203" r="28" fill="#1f6365"/>
+    <path d="M607 216v-27h22v27m-16-20h4m-4 7h4m-4 7h4" fill="none" stroke="#f8f1df" stroke-width="3.2" stroke-linecap="round"/>
+    <text x="658" y="196" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#17313a">Business workspace</text>
+    <text x="658" y="222" font-family="Arial,sans-serif" font-size="14" fill="#738087">Your business, informed</text>
+    <line x1="594" y1="254" x2="864" y2="254" stroke="#e4e8e3"/>
+
+    <text x="602" y="300" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Revenue</text>
+    <text x="850" y="300" text-anchor="end" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#17313a">€8,420</text>
+    <text x="602" y="345" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Costs</text>
+    <text x="850" y="345" text-anchor="end" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#17313a">€2,160</text>
+    <text x="602" y="390" font-family="Arial,sans-serif" font-size="15" fill="#4e6268">Profit overview</text>
+    <g transform="translate(758 367)">
+      <rect x="0" y="16" width="13" height="20" rx="3" fill="#dce5df"/>
+      <rect x="20" y="8" width="13" height="28" rx="3" fill="#c7d7cd"/>
+      <rect x="40" y="2" width="13" height="34" rx="3" fill="#a9c3b5"/>
+      <rect x="60" y="12" width="13" height="24" rx="3" fill="#7fa89a"/>
+      <rect x="80" y="0" width="13" height="36" rx="3" fill="#3b7875"/>
+    </g>
+  </g>
+
+  <g>
+    <path d="M411 236c30-37 65-52 105-42 17 4 31 12 42 23" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round"/>
+    <path d="M549 207l11 15-18 1" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M549 365c-30 37-65 52-105 42-17-4-31-12-42-23" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round"/>
+    <path d="M411 394l-11-15 18-1" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="480" cy="302" r="52" fill="#fffdf8" stroke="#e1e5df" filter="url(#shadow)"/>
+    <text x="480" y="317" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#ad8c51">↔</text>
+  </g>
+
+  <text x="480" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="7" fill="#a88750">FICONTER</text>
+</svg>

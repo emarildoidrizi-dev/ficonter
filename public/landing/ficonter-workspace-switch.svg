@@ -7,10 +7,6 @@
       <stop offset="0.52" stop-color="#eef3ef"/>
       <stop offset="1" stop-color="#e5eee9"/>
     </linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#b99a61"/>
-      <stop offset="1" stop-color="#d7c18d"/>
-    </linearGradient>
     <filter id="shadow" x="-20%" y="-30%" width="140%" height="160%">
       <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#173238" flood-opacity=".12"/>
     </filter>
@@ -70,12 +66,13 @@
   </g>
 
   <g>
-    <path d="M411 236c30-37 65-52 105-42 17 4 31 12 42 23" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round"/>
-    <path d="M549 207l11 15-18 1" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M549 365c-30 37-65 52-105 42-17-4-31-12-42-23" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round"/>
-    <path d="M411 394l-11-15 18-1" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="480" cy="302" r="52" fill="#fffdf8" stroke="#e1e5df" filter="url(#shadow)"/>
-    <text x="480" y="317" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#ad8c51">↔</text>
+
+    <path d="M451 289h48" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round"/>
+    <path d="M490 280l11 9-11 9" fill="none" stroke="#7ca598" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <path d="M509 315h-48" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round"/>
+    <path d="M470 306l-11 9 11 9" fill="none" stroke="#b99a61" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
   <text x="480" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="7" fill="#a88750">FICONTER</text>

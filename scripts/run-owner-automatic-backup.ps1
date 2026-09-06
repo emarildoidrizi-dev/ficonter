@@ -37,7 +37,9 @@ $s3Access = [string]$credential.StorageAccessKeyId
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $dateStamp = (Get-Date).ToString('yyyy-MM-dd')
 $finalArchive = Join-Path $backupRoot "FICONTER-MASTER-RECOVERY-$dateStamp.7z"
-$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "FICONTER-AUTO-$stamp-$([guid]::NewGuid().ToString('N'))"
+$tempBase = Join-Path $env:SystemDrive 'FBR'
+New-Item -ItemType Directory -Force -Path $tempBase | Out-Null
+$tempRoot = Join-Path $tempBase ([guid]::NewGuid().ToString('N').Substring(0, 8))
 $codeDir = Join-Path $tempRoot 'code'
 $dbDir = Join-Path $tempRoot 'database'
 $storageDir = Join-Path $tempRoot 'storage'

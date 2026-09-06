@@ -13,7 +13,6 @@ import "./mobile-page-stack.css";
 import "./theme-governance.css";
 import "./theme-visibility-v129.css";
 import "./theme-typography-v133.css";
-import "./landing-hero-full.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

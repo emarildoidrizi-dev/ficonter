@@ -1,13 +1,6 @@
 param(
   [Parameter(Mandatory = $false)]
-  [string]$BackupRoot = 'D:\FICONTER-BACKUPS',
-
-  [Parameter(Mandatory = $false)]
-  [ValidateSet('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')]
-  [string]$DayOfWeek = 'Sunday',
-
-  [Parameter(Mandatory = $false)]
-  [string]$Time = '20:00'
+  [string]$BackupRoot = 'D:\FICONTER-BACKUPS'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,7 +8,9 @@ Set-StrictMode -Version Latest
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runner = Join-Path $PSScriptRoot 'run-owner-automatic-backup.ps1'
+$watcher = Join-Path $PSScriptRoot 'watch-owner-backup-drive.ps1'
 if (-not (Test-Path $runner)) { throw 'Automatic backup runner is missing.' }
+if (-not (Test-Path $watcher)) { throw 'Backup-drive watcher is missing.' }
 
 $stateDir = Join-Path $env:LOCALAPPDATA 'FICONTER\Recovery'
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
@@ -23,7 +18,8 @@ $credentialFile = Join-Path $stateDir 'backup-credentials.clixml'
 $configFile = Join-Path $stateDir 'backup-config.json'
 
 Write-Host ''
-Write-Host 'FICONTER AUTOMATIC BACKUP SETUP'
+Write-Host 'FICONTER BACKUP-ON-CONNECT SETUP'
+Write-Host 'A backup will run once whenever the configured external SSD becomes connected.'
 Write-Host 'Credentials are encrypted by Windows DPAPI for your Windows user account.'
 Write-Host 'Do not copy backup-credentials.clixml to the external SSD.'
 Write-Host ''
@@ -47,24 +43,28 @@ $credential | Export-Clixml -Path $credentialFile
 $config = [ordered]@{
   BackupRoot = [System.IO.Path]::GetFullPath($BackupRoot)
   RepoRoot = $repoRoot
-  DayOfWeek = $DayOfWeek
-  Time = $Time
   CredentialFile = $credentialFile
+  Runner = $runner
+  Watcher = $watcher
+  TriggerMode = 'drive_connect'
 }
 $config | ConvertTo-Json | Set-Content -Encoding UTF8 $configFile
 
-$taskName = 'FICONTER Owner Automatic Backup'
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ConfigFile `"$configFile`""
-$trigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek $DayOfWeek -At $Time
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 4)
+$taskName = 'FICONTER Backup On SSD Connect'
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$watcher`" -ConfigFile `"$configFile`""
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero)
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description 'Creates a verified encrypted FICONTER owner recovery backup on the external SSD.' -Force | Out-Null
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description 'Watches for the FICONTER external backup SSD and creates one verified encrypted backup whenever it is connected.' -Force | Out-Null
 
 Write-Host ''
-Write-Host 'AUTOMATIC BACKUP CONFIGURED.'
-Write-Host "Schedule: every $DayOfWeek at $Time"
+Write-Host 'BACKUP-ON-CONNECT CONFIGURED.'
 Write-Host "Destination: $BackupRoot"
 Write-Host "Windows task: $taskName"
+Write-Host 'Trigger: once whenever the external SSD changes from disconnected to connected.'
 Write-Host ''
-Write-Host 'IMPORTANT: the external SSD must be connected at backup time.'
-Write-Host 'If it is not connected, the run will fail safely and Production will not be changed.'
+Write-Host 'IMPORTANT:'
+Write-Host '- The SSD does NOT need to remain connected.'
+Write-Host '- Keep it disconnected when not in use.'
+Write-Host '- Reconnecting it later will trigger a new backup.'
+Write-Host '- Production is read only during backup and is never overwritten.'

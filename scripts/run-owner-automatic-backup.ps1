@@ -100,7 +100,7 @@ try {
     Sort-Object FullName |
     ForEach-Object {
       $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
-      $relative = [System.IO.Path]::GetRelativePath($tempRoot, $_.FullName).Replace('\', '/')
+      $relative = $_.FullName.Substring($tempRoot.Length).TrimStart('\').Replace('\', '/')
       "$hash  $relative"
     } | Set-Content -Encoding UTF8 (Join-Path $manifestDir 'SHA256SUMS.txt')
 

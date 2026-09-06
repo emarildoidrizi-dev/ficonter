@@ -1,21 +1,32 @@
-/* Landing hero support card: extend the workspace-switch visual further left and make it slightly larger while keeping it inside the hero frame. */
+/* Landing hero support card: keep the workspace-switch visual as a wide rectangle below the financial stats without covering Income, Committed, or Reserve. */
+[class*="heroVisual"] [class*="floatingDashboard"] {
+  inset: 18px 18px 220px 18px !important;
+}
+
 [class*="heroVisual"] [class*="heroSupportCard"] {
-  left: 82px !important;
+  left: 22px !important;
   right: 22px !important;
   bottom: 22px !important;
   width: auto !important;
-  padding: 12px !important;
+  padding: 10px !important;
+  border-radius: 20px !important;
 }
 
 [class*="heroVisual"] [class*="heroSupportImage"] {
-  min-height: 205px !important;
+  min-height: 176px !important;
+  border-radius: 14px !important;
 }
 
 [class*="heroVisual"] [class*="heroSupportImage"] > img {
-  object-position: left center !important;
+  object-fit: cover !important;
+  object-position: center !important;
 }
 
 @media (max-width: 900px) {
+  [class*="heroVisual"] [class*="floatingDashboard"] {
+    inset: 18px 18px 205px 18px !important;
+  }
+
   [class*="heroVisual"] [class*="heroSupportCard"] {
     left: 16px !important;
     right: 16px !important;
@@ -24,19 +35,24 @@
   }
 
   [class*="heroVisual"] [class*="heroSupportImage"] {
-    min-height: 174px !important;
+    min-height: 166px !important;
   }
 }
 
 @media (max-width: 640px) {
+  [class*="heroVisual"] [class*="floatingDashboard"] {
+    inset: 14px 14px 186px 14px !important;
+  }
+
   [class*="heroVisual"] [class*="heroSupportCard"] {
     left: 12px !important;
     right: 12px !important;
     bottom: 12px !important;
     width: auto !important;
+    padding: 8px !important;
   }
 
   [class*="heroVisual"] [class*="heroSupportImage"] {
-    min-height: 154px !important;
+    min-height: 148px !important;
   }
 }

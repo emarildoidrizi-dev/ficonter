@@ -138,11 +138,13 @@ export default async function HomePage({
 
           <div className={styles.floatingDashboard}>
             <div className={styles.floatingHeader}>
-              <div className={styles.workspaceIdentity}>
+              <div
+                className={styles.workspaceIdentity}
+                style={{ color: "#51656d", fontSize: "12px", fontWeight: 800 }}
+              >
                 <span className={styles.workspaceDot} aria-hidden="true" />
-                <span>Ficonter · Personal workspace</span>
+                <span>Personal workspace</span>
               </div>
-              <span className={styles.healthPill}>Healthy</span>
             </div>
 
             <div className={styles.floatingBody}>

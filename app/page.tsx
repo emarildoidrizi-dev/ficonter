@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -22,6 +23,12 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 
 import footerStyles from "./landing-footer.module.css";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const productViews = [
   {

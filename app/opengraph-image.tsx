@@ -25,12 +25,24 @@ export default function OpenGraphImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
-          <img
-            src="https://ficonter.com/ficonter-mark.svg"
-            width="88"
-            height="88"
-            alt=""
-          />
+          <div
+            style={{
+              width: "88px",
+              height: "88px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid rgba(47, 119, 119, 0.24)",
+              borderRadius: "24px",
+              background: "rgba(255,255,255,0.64)",
+              color: "#2f7777",
+              fontSize: "34px",
+              fontWeight: 900,
+              letterSpacing: "-0.08em",
+            }}
+          >
+            FC
+          </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span
               style={{

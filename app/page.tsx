@@ -132,6 +132,45 @@ export default async function HomePage({
             <span><Check size={16} /> No advertising</span>
             <span><Check size={16} /> Your data stays yours</span>
           </div>
+          <aside
+            aria-label="Platform development status"
+            style={{
+              maxWidth: "555px",
+              marginTop: "20px",
+              padding: "13px 14px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+              border: "1px solid rgba(47, 119, 119, 0.18)",
+              borderRadius: "14px",
+              background: "rgba(238, 244, 239, 0.8)",
+              color: "#53666d",
+              fontSize: "12px",
+              lineHeight: 1.55,
+            }}
+          >
+            <Sparkles
+              size={17}
+              aria-hidden="true"
+              style={{ flex: "0 0 auto", marginTop: "1px", color: "#2f7777" }}
+            />
+            <span>
+              <strong
+                style={{
+                  display: "block",
+                  marginBottom: "2px",
+                  color: "#24434b",
+                  fontSize: "12px",
+                  fontWeight: 850,
+                }}
+              >
+                Final interface refinement
+              </strong>
+              FICONTER is available to use normally today. The remaining work is
+              focused on visual and interface polish; the core platform functions
+              are already in place.
+            </span>
+          </aside>
         </div>
 
         <div className={styles.heroVisual}>

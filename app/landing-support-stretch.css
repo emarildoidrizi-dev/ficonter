@@ -1,13 +1,13 @@
-/* Landing hero support card: keep the workspace-switch visual in a dedicated lower band so the Income, Committed, and Reserve values remain fully visible. */
-[class*="heroVisual"] {
+/* Landing hero compatibility layer.
+   Keep only the final geometry that intentionally differs from the base
+   page.module.css. Dead inset rules and duplicate image-fit overrides were
+   removed so this file no longer carries ineffective or redundant CSS. */
+
+main[class*="page-module__"][class*="__page"] [class*="__heroVisual"] {
   min-height: 590px !important;
 }
 
-[class*="heroVisual"] [class*="floatingDashboard"] {
-  inset: 18px 18px 220px 18px !important;
-}
-
-[class*="heroVisual"] [class*="heroSupportCard"] {
+main[class*="page-module__"][class*="__page"] [class*="__heroSupportCard"] {
   left: 22px !important;
   right: 22px !important;
   bottom: 14px !important;
@@ -16,47 +16,34 @@
   border-radius: 20px !important;
 }
 
-[class*="heroVisual"] [class*="heroSupportImage"] {
+main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
   min-height: 176px !important;
   border-radius: 14px !important;
 }
 
-[class*="heroVisual"] [class*="heroSupportImage"] > img {
-  object-fit: cover !important;
-  object-position: center !important;
-}
-
 @media (max-width: 900px) {
-  [class*="heroVisual"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroVisual"] {
     min-height: 560px !important;
   }
 
-  [class*="heroVisual"] [class*="floatingDashboard"] {
-    inset: 18px 18px 205px 18px !important;
-  }
-
-  [class*="heroVisual"] [class*="heroSupportCard"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroSupportCard"] {
     left: 16px !important;
     right: 16px !important;
     bottom: 14px !important;
     width: auto !important;
   }
 
-  [class*="heroVisual"] [class*="heroSupportImage"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 166px !important;
   }
 }
 
 @media (max-width: 640px) {
-  [class*="heroVisual"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroVisual"] {
     min-height: 535px !important;
   }
 
-  [class*="heroVisual"] [class*="floatingDashboard"] {
-    inset: 14px 14px 186px 14px !important;
-  }
-
-  [class*="heroVisual"] [class*="heroSupportCard"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroSupportCard"] {
     left: 12px !important;
     right: 12px !important;
     bottom: 10px !important;
@@ -64,7 +51,7 @@
     padding: 8px !important;
   }
 
-  [class*="heroVisual"] [class*="heroSupportImage"] {
+  main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 148px !important;
   }
 }

@@ -112,7 +112,7 @@ export default async function HomePage({
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <div className={styles.eyebrow}>Financial Control Center</div>
-          <h1><span>Know where you stand.</span><span>Decide what comes next.</span></h1>
+          <h1><span>Your financial world,</span><span>structured with purpose.</span></h1>
           <p className={styles.heroLead}>
             Ficonter brings personal and business finances into one private,
             considered workspace—so every number has context and every plan has

@@ -1,7 +1,6 @@
-/* Landing hero compatibility layer.
-   Keep only the final geometry that intentionally differs from the base
-   page.module.css. Dead inset rules and duplicate image-fit overrides were
-   removed so this file no longer carries ineffective or redundant CSS. */
+/* Landing public compatibility layer.
+   Keep the approved hero geometry stable while housing the small, scoped
+   landing-page corrections that must win over the shared application theme. */
 
 main[class*="page-module__"][class*="__page"] [class*="__heroVisual"] {
   min-height: 590px !important;
@@ -19,6 +18,112 @@ main[class*="page-module__"][class*="__page"] [class*="__heroSupportCard"] {
 main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
   min-height: 176px !important;
   border-radius: 14px !important;
+}
+
+/* Public header/navigation polish.
+   Keep the landing header visually independent from a signed-in user's
+   stored workspace theme, preserve a clear CTA hierarchy and make sticky
+   anchor navigation land below the header instead of underneath it. */
+main[class*="page-module__"][class*="__page"] > header[class*="__header"] {
+  border-bottom-color: rgba(24, 48, 58, 0.09) !important;
+  background: rgba(248, 246, 240, 0.94) !important;
+  box-shadow: 0 10px 30px rgba(21, 43, 51, 0.04) !important;
+  -webkit-backdrop-filter: saturate(125%) blur(18px);
+  backdrop-filter: saturate(125%) blur(18px);
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a[href^="#"]::after {
+  position: absolute;
+  right: 1px;
+  bottom: 6px;
+  left: 1px;
+  height: 1px;
+  border-radius: 999px;
+  background: #2f7777;
+  content: "";
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a[href^="#"]:hover::after {
+  opacity: 0.75;
+  transform: scaleX(1);
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerCta"] {
+  border: 1px solid rgba(124, 93, 38, 0.16) !important;
+  background: #b89a61 !important;
+  box-shadow: 0 10px 24px rgba(129, 102, 51, 0.16) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerCta"]:hover {
+  background: #bea36c !important;
+  box-shadow: 0 13px 28px rgba(129, 102, 51, 0.2) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] button[aria-haspopup="listbox"] {
+  min-height: 42px !important;
+  border-color: rgba(24, 48, 58, 0.13) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 253, 247, 0.72) !important;
+  color: #4b5d64 !important;
+  box-shadow: 0 6px 18px rgba(21, 43, 51, 0.035);
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] button[aria-haspopup="listbox"]:hover,
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] button[aria-haspopup="listbox"][aria-expanded="true"] {
+  border-color: rgba(24, 48, 58, 0.22) !important;
+  background: #fffdf7 !important;
+  color: #18303a !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [role="listbox"] {
+  border-color: rgba(24, 48, 58, 0.12) !important;
+  background: #fffdf7 !important;
+  box-shadow: 0 20px 56px rgba(21, 43, 51, 0.16) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [role="option"] {
+  color: #18303a !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [role="option"] small {
+  color: #718086 !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [role="option"]:hover,
+main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [role="option"][aria-selected="true"] {
+  background: #edf2ec !important;
+}
+
+main[class*="page-module__"][class*="__page"] #platform,
+main[class*="page-module__"][class*="__page"] #for-you,
+main[class*="page-module__"][class*="__page"] #privacy {
+  scroll-margin-top: 96px;
+}
+
+/* Keep the most useful section links visible on compact laptops/tablets.
+   The long Personal & Business label is the first item to collapse. */
+@media (min-width: 721px) and (max-width: 1120px) {
+  main[class*="page-module__"][class*="__page"] [class*="__navigation"] {
+    gap: 14px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a:nth-child(1),
+  main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a:nth-child(3) {
+    display: inline-flex !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a:nth-child(2) {
+    display: none !important;
+  }
 }
 
 /* The desktop two-column hero becomes cramped before the main tablet
@@ -54,6 +159,14 @@ main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
 
   main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 166px !important;
+  }
+}
+
+/* Between phone and tablet widths, keep the primary account actions visible
+   and let the section links collapse so the brand never feels crowded. */
+@media (min-width: 641px) and (max-width: 720px) {
+  main[class*="page-module__"][class*="__page"] [class*="__navigation"] > a:nth-child(-n + 3) {
+    display: none !important;
   }
 }
 

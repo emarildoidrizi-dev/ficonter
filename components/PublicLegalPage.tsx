@@ -61,4 +61,17 @@ export function PublicLegalPage({
   );
 }
 
-export { styles as publicLegalStyles };
+export function PublicLegalSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={styles.section}>
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}

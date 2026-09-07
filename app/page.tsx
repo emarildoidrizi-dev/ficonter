@@ -406,6 +406,14 @@ export default async function HomePage({
             <Link href="/register">Start free</Link>
             <Link href="/login?entry=brand">Log in</Link>
           </div>
+          <div>
+            <span className={footerStyles.groupLabel}>Legal</span>
+            <Link href="/impressum">Impressum</Link>
+            <Link href="/datenschutz">Privacy Policy</Link>
+            <Link href="/agb">Terms & Conditions</Link>
+            <Link href="/widerruf">Withdrawal</Link>
+            <Link href="/cookies">Cookies & Technology</Link>
+          </div>
         </nav>
 
         <div className={footerStyles.bottom}>

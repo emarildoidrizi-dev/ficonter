@@ -4,12 +4,21 @@ import { usePathname } from "next/navigation";
 import { LanguageSelector } from "./LanguageSelector";
 import styles from "./GlobalLanguageControl.module.css";
 
+const LEGAL_PATHS = new Set([
+  "/impressum",
+  "/datenschutz",
+  "/agb",
+  "/widerruf",
+  "/cookies",
+]);
+
 export function GlobalLanguageControl() {
   const pathname = usePathname();
   const insideApplication = pathname.startsWith("/dashboard") || pathname.startsWith("/business");
   const landingOwnsLanguageControl = pathname === "/";
+  const legalPageOwnsCopyright = LEGAL_PATHS.has(pathname);
   const showLanguageControl = !insideApplication && !landingOwnsLanguageControl;
-  const showCopyright = !landingOwnsLanguageControl;
+  const showCopyright = !landingOwnsLanguageControl && !legalPageOwnsCopyright;
 
   return (
     <>

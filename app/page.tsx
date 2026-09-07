@@ -20,6 +20,7 @@ import {
 import { Brand } from "@/components/Brand";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
+import footerStyles from "./landing-footer.module.css";
 import styles from "./page.module.css";
 
 const productViews = [
@@ -387,13 +388,29 @@ export default async function HomePage({
         </div>
       </section>
 
-      <footer className={styles.footer}>
-        <Brand />
-        <p>Financial control for the life you are building.</p>
-        <div>
-          <a href="#platform">Platform</a>
-          <a href="#privacy">Privacy</a>
-          <Link href="/login?entry=brand">Log in</Link>
+      <footer className={`${styles.footer} ${footerStyles.footer}`}>
+        <div className={footerStyles.identity}>
+          <Brand />
+          <p>Financial control for the life you are building.</p>
+        </div>
+
+        <nav className={footerStyles.navigation} aria-label="Footer navigation">
+          <div>
+            <span className={footerStyles.groupLabel}>Platform</span>
+            <a href="#platform">Platform overview</a>
+            <a href="#for-you">Personal & Business</a>
+            <a href="#privacy">Privacy</a>
+          </div>
+          <div>
+            <span className={footerStyles.groupLabel}>Access</span>
+            <Link href="/register">Start free</Link>
+            <Link href="/login?entry=brand">Log in</Link>
+          </div>
+        </nav>
+
+        <div className={footerStyles.bottom}>
+          <span>© 2026 FICONTER. All rights reserved.</span>
+          <span>FICONTER · Financial Control Center</span>
         </div>
       </footer>
     </main>

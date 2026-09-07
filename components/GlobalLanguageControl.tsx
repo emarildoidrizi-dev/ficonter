@@ -16,9 +16,9 @@ export function GlobalLanguageControl() {
   const pathname = usePathname();
   const insideApplication = pathname.startsWith("/dashboard") || pathname.startsWith("/business");
   const landingOwnsLanguageControl = pathname === "/";
-  const legalPageOwnsCopyright = LEGAL_PATHS.has(pathname);
-  const showLanguageControl = !insideApplication && !landingOwnsLanguageControl;
-  const showCopyright = !landingOwnsLanguageControl && !legalPageOwnsCopyright;
+  const legalPageOwnsPublicChrome = LEGAL_PATHS.has(pathname);
+  const showLanguageControl = !insideApplication && !landingOwnsLanguageControl && !legalPageOwnsPublicChrome;
+  const showCopyright = !landingOwnsLanguageControl && !legalPageOwnsPublicChrome;
 
   return (
     <>

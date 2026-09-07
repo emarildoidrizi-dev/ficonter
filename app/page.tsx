@@ -148,10 +148,8 @@ export default async function HomePage({
             <div className={styles.floatingBody}>
               <div className={styles.floatingTitleRow}>
                 <div>
-                  <span className={styles.demoLabel}>Demo workspace</span>
                   <strong>This month</strong>
                 </div>
-                <span className={styles.demoTag}>Fictional demo data</span>
               </div>
 
               <div className={styles.heroMetricGrid}>

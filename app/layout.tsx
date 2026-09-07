@@ -38,6 +38,10 @@ import {
   WALLPAPER_SCENE_VALUES,
 } from "@/lib/interfaceThemes";
 
+const SITE_URL = "https://ficonter.com";
+const SITE_DESCRIPTION =
+  "FICONTER brings personal and business finances into one private financial control center for planning, cash flow, goals and long-term direction.";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -47,16 +51,27 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Ficonter",
-    template: "%s · Ficonter",
+    default: "FICONTER | Financial Control Center",
+    template: "%s · FICONTER",
   },
-  description: "Your private financial command center.",
-  applicationName: "Ficonter",
+  description: SITE_DESCRIPTION,
+  applicationName: "FICONTER",
+  keywords: [
+    "personal finance",
+    "financial planning",
+    "budget planner",
+    "cash flow",
+    "financial control center",
+    "business finance",
+  ],
+  creator: "FICONTER",
+  publisher: "FICONTER",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Ficonter",
+    title: "FICONTER",
     statusBarStyle: "default",
   },
   formatDetection: {
@@ -82,10 +97,26 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Ficonter",
-    description: "Your private financial command center.",
-    siteName: "Ficonter",
+    title: "FICONTER | Financial Control Center",
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "FICONTER",
+    locale: "en_GB",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "FICONTER — Financial Control Center",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FICONTER | Financial Control Center",
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
   },
 };
 

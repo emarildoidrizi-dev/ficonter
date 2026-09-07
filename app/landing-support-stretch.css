@@ -21,6 +21,25 @@ main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
   border-radius: 14px !important;
 }
 
+/* The desktop two-column hero becomes cramped before the main tablet
+   breakpoint. Stack it slightly earlier so 901-1020px layouts remain
+   balanced instead of forcing the copy into a narrow column. */
+@media (min-width: 901px) and (max-width: 1020px) {
+  main[class*="page-module__"][class*="__page"] [class*="__hero"] {
+    grid-template-columns: 1fr !important;
+    gap: 38px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__heroCopy"] {
+    max-width: 680px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__hero"] h1 {
+    max-width: 680px !important;
+    font-size: clamp(52px, 7vw, 64px) !important;
+  }
+}
+
 @media (max-width: 900px) {
   main[class*="page-module__"][class*="__page"] [class*="__heroVisual"] {
     min-height: 560px !important;
@@ -53,5 +72,22 @@ main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
 
   main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 148px !important;
+  }
+}
+
+/* Preserve breathing room in the mobile header on very narrow phones.
+   The public language selector switches to icon-only below 380px rather
+   than allowing the brand, login action and language label to collide. */
+@media (max-width: 380px) {
+  main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [class*="LanguageSelector-module__"][class*="__public"] [class*="__trigger"] {
+    width: 40px !important;
+    min-width: 40px !important;
+    padding-inline: 0 !important;
+    gap: 0 !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [class*="LanguageSelector-module__"][class*="__public"] [class*="__trigger"] > span,
+  main[class*="page-module__"][class*="__page"] [class*="__headerLanguage"] [class*="LanguageSelector-module__"][class*="__public"] [class*="__trigger"] > svg:last-child {
+    display: none !important;
   }
 }

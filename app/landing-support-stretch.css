@@ -180,6 +180,104 @@ main[class*="page-module__"][class*="__page"] #privacy {
   scroll-margin-top: 96px;
 }
 
+/* Landing section consistency.
+   Use one restrained surface, border and shadow language across the content
+   sections so the page reads as one product rather than a collection of
+   unrelated cards. Non-interactive feature cards also lose the link-like
+   arrow/lift affordance. */
+main[class*="page-module__"][class*="__page"] [class*="__proofStrip"] {
+  border-color: rgba(24, 48, 58, 0.1) !important;
+  background: rgba(255, 253, 248, 0.94) !important;
+  box-shadow: 0 14px 38px rgba(24, 48, 58, 0.055) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__sectionIntro"] > p {
+  max-width: 690px;
+  margin-inline: auto !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__sectionIntro"] h2,
+main[class*="page-module__"][class*="__page"] [class*="__sectionIntroLeft"] h2,
+main[class*="page-module__"][class*="__page"] [class*="__privacyCopy"] h2,
+main[class*="page-module__"][class*="__page"] [class*="__finalSection"] h2 {
+  text-wrap: balance;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__productWindow"] {
+  border-color: rgba(24, 48, 58, 0.12) !important;
+  box-shadow: 0 28px 72px rgba(21, 46, 55, 0.115) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__overviewGrid"] article,
+main[class*="page-module__"][class*="__page"] [class*="__viewCard"],
+main[class*="page-module__"][class*="__page"] [class*="__storyCard"] {
+  border-color: rgba(24, 48, 58, 0.095) !important;
+  background: #fffdf8 !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__overviewGrid"] article {
+  box-shadow: 0 12px 30px rgba(34, 54, 60, 0.055) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__viewCard"] {
+  border-radius: 22px !important;
+  box-shadow: 0 10px 28px rgba(24, 48, 58, 0.045) !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__viewCard"]:hover {
+  transform: none !important;
+  border-color: rgba(24, 48, 58, 0.13) !important;
+  box-shadow: 0 12px 32px rgba(24, 48, 58, 0.055) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__viewCardTop"] > svg {
+  display: none !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__viewCard"] > p,
+main[class*="page-module__"][class*="__page"] [class*="__storyBody"] > p,
+main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] p {
+  color: #617278 !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__viewStat"] span {
+  color: #76878d !important;
+  font-size: 10px !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__storyCard"] {
+  box-shadow: 0 16px 46px rgba(24, 48, 58, 0.065) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__storyBody"] {
+  padding: 30px 32px 32px !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] {
+  border-color: rgba(24, 48, 58, 0.095) !important;
+  border-radius: 28px !important;
+  background: #edf2eb !important;
+  box-shadow: 0 14px 38px rgba(24, 48, 58, 0.045) !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] article {
+  min-height: 260px !important;
+  padding: 36px !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] h3 {
+  margin-top: 36px !important;
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__privacySection"] {
+  box-shadow: 0 28px 74px rgba(13, 27, 35, 0.14);
+}
+
+main[class*="page-module__"][class*="__page"] [class*="__finalSection"] {
+  border-bottom: 1px solid rgba(24, 48, 58, 0.065);
+}
+
 /* Keep the most useful section links visible on compact laptops/tablets.
    The long Personal & Business label is the first item to collapse. */
 @media (min-width: 721px) and (max-width: 1120px) {
@@ -231,6 +329,19 @@ main[class*="page-module__"][class*="__page"] #privacy {
   main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 166px !important;
   }
+
+  main[class*="page-module__"][class*="__page"] [class*="__storyBody"] {
+    padding: 28px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] article {
+    min-height: 0 !important;
+    padding: 32px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] h3 {
+    margin-top: 28px !important;
+  }
 }
 
 /* Between phone and tablet widths, keep the primary account actions visible
@@ -268,6 +379,18 @@ main[class*="page-module__"][class*="__page"] #privacy {
 
   main[class*="page-module__"][class*="__page"] [class*="__heroSupportImage"] {
     min-height: 148px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__storyBody"] {
+    padding: 24px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] article {
+    padding: 28px 24px !important;
+  }
+
+  main[class*="page-module__"][class*="__page"] [class*="__principleGrid"] h3 {
+    margin-top: 24px !important;
   }
 }
 

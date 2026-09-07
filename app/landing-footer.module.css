@@ -1,4 +1,4 @@
-.footer {
+.footer.footer {
   width: min(1240px, calc(100% - 48px));
   min-height: 0;
   margin: 0 auto 28px;
@@ -13,11 +13,14 @@
   border-top: 1px solid rgba(24, 48, 58, 0.1);
 }
 
-.identity {
+.footer > .identity {
   grid-area: identity;
   max-width: 390px;
   display: grid;
   gap: 18px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .identity p {
@@ -27,11 +30,14 @@
   line-height: 1.65;
 }
 
-.navigation {
+.footer > .navigation {
   grid-area: navigation;
   display: grid;
   grid-template-columns: repeat(2, minmax(132px, 1fr));
   gap: 36px 58px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .navigation > div {
@@ -63,7 +69,7 @@
   color: #18303a;
 }
 
-.bottom {
+.footer > .bottom {
   grid-area: bottom;
   margin-top: 2px;
   padding-top: 20px;
@@ -83,7 +89,7 @@
 }
 
 @media (max-width: 900px) {
-  .footer {
+  .footer.footer {
     width: min(100% - 32px, 760px);
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -93,29 +99,29 @@
     gap: 32px;
   }
 
-  .identity {
+  .footer > .identity {
     max-width: 520px;
   }
 
-  .navigation {
+  .footer > .navigation {
     justify-self: stretch;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .footer {
+  .footer.footer {
     width: calc(100% - 24px);
     margin-bottom: 18px;
     padding: 36px 0 18px;
     gap: 28px;
   }
 
-  .navigation {
+  .footer > .navigation {
     gap: 28px;
   }
 
-  .bottom {
+  .footer > .bottom {
     align-items: flex-start;
     flex-direction: column;
     gap: 6px;
@@ -127,7 +133,7 @@
 }
 
 @media (max-width: 380px) {
-  .navigation {
+  .footer > .navigation {
     grid-template-columns: 1fr;
     gap: 24px;
   }

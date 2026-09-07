@@ -33,8 +33,8 @@
 .footer > .navigation {
   grid-area: navigation;
   display: grid;
-  grid-template-columns: repeat(2, minmax(132px, 1fr));
-  gap: 36px 58px;
+  grid-template-columns: repeat(3, minmax(118px, 1fr));
+  gap: 34px 42px;
   color: inherit;
   font-size: inherit;
   font-weight: inherit;
@@ -105,7 +105,8 @@
 
   .footer > .navigation {
     justify-self: stretch;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
   }
 }
 
@@ -118,7 +119,8 @@
   }
 
   .footer > .navigation {
-    gap: 28px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
   }
 
   .footer > .bottom {

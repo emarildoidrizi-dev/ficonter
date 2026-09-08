@@ -11,7 +11,7 @@
 .workspacePill { gap:7px;padding:0 18px;color:var(--text-primary);font-size:14px;font-weight:650 }
 .headerActions>:global([class*="LanguageSelector_root"]) button { min-height:54px;padding-inline:18px;border-color:var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 94%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08);color:var(--text-primary);font-size:14px }
 .headerActions>:global([class*="NotificationCenter_root"]) { grid-template-columns:1fr }
-.headerActions>:global([class*="NotificationCenter_root"])>button:first-child { display:none }
+.headerActions>:global([class*="NotificationCenter_root"])>button:nth-of-type(1) { display:none }
 .headerActions>:global([class*="NotificationCenter_root"]) button { min-width:54px;min-height:54px;border-color:var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 88%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08);color:var(--text-primary) }
 .navigation { min-height:58px;display:flex;align-items:center;gap:9px;margin-top:8px;padding:6px 9px;border:1px solid var(--border-subtle);border-radius:17px;background:color-mix(in srgb,var(--surface-card) 95%,transparent);box-shadow:0 14px 34px rgba(42,75,67,.08) }
 .overviewLink,.settingsLink,.navGroup summary { min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 17px;border:1px solid transparent;border-radius:12px;color:var(--text-primary);font-size:13px;font-weight:800;cursor:pointer;list-style:none;transition:.16s ease }
@@ -68,8 +68,8 @@
   .headerActions{margin-left:auto;gap:5px;min-width:0}
   .headerActions>:global([class*="LanguageSelector_root"]){display:block!important}
   .headerActions>:global([class*="LanguageSelector_root"]) button{min-width:46px;min-height:46px;padding-inline:8px;border-radius:14px}
-  .headerActions>:global([class*="NotificationCenter_root"]){display:grid!important;grid-template-columns:46px 46px!important;gap:5px}
-  .headerActions>:global([class*="NotificationCenter_root"])>button:first-child{display:grid!important}
+  .headerActions>:global([class*="NotificationCenter_root"]){display:grid!important;grid-template-columns:46px 46px 46px!important;gap:5px}
+  .headerActions>:global([class*="NotificationCenter_root"])>button:nth-of-type(1){display:grid!important}
   .headerActions>:global([class*="NotificationCenter_root"]) button{min-width:46px;min-height:46px;border-radius:14px}
   .accountButton{min-width:58px;min-height:46px;grid-template-columns:30px 16px;gap:4px;padding:4px 6px;border-radius:14px}
   .avatar{width:30px;height:30px;border-radius:10px}
@@ -84,7 +84,7 @@
   .brandArea,.headerActions{gap:4px}
   .brandCard{width:54px;min-width:54px}
   .headerActions>:global([class*="LanguageSelector_root"]) button{min-width:42px;width:42px;padding-inline:5px}
-  .headerActions>:global([class*="NotificationCenter_root"]){grid-template-columns:40px 40px!important;gap:4px}
+  .headerActions>:global([class*="NotificationCenter_root"]){grid-template-columns:40px 40px 40px!important;gap:4px}
   .headerActions>:global([class*="NotificationCenter_root"]) button{min-width:40px;width:40px}
   .accountButton{min-width:53px;padding-inline:4px}
   .mobileBackButton{width:38px;flex-basis:38px}

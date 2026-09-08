@@ -5,10 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BriefcaseBusiness,
-  CircleGauge,
-  PiggyBank,
   Sparkles,
-  Target,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
@@ -103,11 +100,20 @@ export function LandingHeroShowcase() {
   const [hoverPaused, setHoverPaused] = useState(false);
   const [focusPaused, setFocusPaused] = useState(false);
   const [manualPaused, setManualPaused] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const manualPauseTimer = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const activeSlide = slides[activeIndex];
-  const isPaused = hoverPaused || focusPaused || manualPaused;
+  const isPaused = hoverPaused || focusPaused || manualPaused || reduceMotion;
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotionPreference = () => setReduceMotion(query.matches);
+    syncMotionPreference();
+    query.addEventListener("change", syncMotionPreference);
+    return () => query.removeEventListener("change", syncMotionPreference);
+  }, []);
 
   useEffect(() => {
     if (isPaused) return;

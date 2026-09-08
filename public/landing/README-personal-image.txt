@@ -1,1 +1,0 @@
-The Personal landing card should use the exact user-approved lifestyle image showing a woman at a laptop with the FICONTER dashboard, Mediterranean/coastal home background, olive branch and coffee cup. Asset restoration is handled in this PR.

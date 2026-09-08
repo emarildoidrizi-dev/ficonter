@@ -335,9 +335,10 @@ export default async function HomePage({
           <article className={styles.storyCard}>
             <div className={styles.storyImage}>
               <Image
-                src="/landing/ficonter-personal-finance-v2.webp"
+                src="/landing/personal-image"
                 alt="People using Ficonter to plan their household finances"
                 fill
+                unoptimized
                 sizes="(max-width: 800px) 100vw, 50vw"
               />
             </div>

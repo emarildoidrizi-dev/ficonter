@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Copy, Lock, ShieldCheck, Unlock, X } from "lucide-react";
 
 import { useVault } from "@/components/VaultProvider";
@@ -49,6 +50,20 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
   if (hidden) return null;
 
   const message = localError || error;
@@ -77,8 +92,8 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     setLocalError("");
     try {
       await unlockVault(code);
-      setPendingRecoveryCode(code);
       setRecoveryInput("");
+      setOpen(false);
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "The vault could not be unlocked.");
     } finally {
@@ -149,6 +164,158 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     setOpen(false);
   }
 
+  const dialog = open && typeof document !== "undefined" ? createPortal(
+    <div className={styles.overlay} role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) setOpen(false);
+    }}>
+      <section className={styles.dialog} role="dialog" aria-modal="true" aria-label="Financial Vault">
+        <div className={styles.header}>
+          <div className={styles.titleRow}>
+            <div className={styles.iconBox}>
+              {unlocked ? <ShieldCheck size={20} /> : <Lock size={20} />}
+            </div>
+            <div>
+              <h2 className={styles.title}>Financial Vault</h2>
+              <p className={styles.subtitle}>
+                {status === "not_created"
+                  ? "Create your private encrypted vault."
+                  : unlocked
+                    ? "Your encrypted financial data is available on this device."
+                    : "Unlock your encrypted financial data."}
+              </p>
+            </div>
+          </div>
+          <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        {status === "loading" ? (
+          <div className={styles.notice}>Checking your encrypted vault…</div>
+        ) : null}
+
+        {status === "not_created" ? (
+          <>
+            <div className={styles.notice}>
+              FICONTER creates the encryption key inside your browser. The readable vault key is never stored in the database.
+            </div>
+            <button type="button" className={styles.primary} disabled={busy} onClick={handleCreateVault}>
+              {busy ? "Creating vault…" : "Create secure vault"}
+            </button>
+          </>
+        ) : null}
+
+        {status === "locked" && quickUnlockEnabled && !showRecovery ? (
+          <div className={styles.pinWrap}>
+            <div className={styles.pinLabel}>Enter your 6-digit FICONTER PIN</div>
+            <input
+              autoFocus
+              className={styles.pinInput}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={6}
+              value={pin}
+              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(event) => { if (event.key === "Enter") void handlePinUnlock(); }}
+              aria-label="6-digit FICONTER PIN"
+            />
+            <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handlePinUnlock}>
+              {busy ? "Unlocking…" : "Unlock vault"}
+            </button>
+            <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(true); setPin(""); setLocalError(""); }}>
+              Forgot PIN? Use recovery code
+            </button>
+          </div>
+        ) : null}
+
+        {status === "locked" && (!quickUnlockEnabled || showRecovery) ? (
+          <>
+            <div className={styles.notice}>
+              <strong>Your recovery code stays exactly the same.</strong> Enter it once to verify this device and, if Quick Unlock is not enabled yet, create your 6-digit PIN next.
+            </div>
+            <input
+              className={styles.field}
+              type="password"
+              value={recoveryInput}
+              onChange={(event) => setRecoveryInput(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") void handleRecoveryUnlock(); }}
+              placeholder="FICONTER-RECOVERY-1.…"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button type="button" className={styles.primary} disabled={busy || !recoveryInput.trim()} onClick={handleRecoveryUnlock}>
+              {busy ? "Verifying…" : quickUnlockEnabled ? "Unlock with recovery code" : "Verify recovery code"}
+            </button>
+            {quickUnlockEnabled ? (
+              <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(false); setLocalError(""); }}>
+                Back to PIN
+              </button>
+            ) : null}
+          </>
+        ) : null}
+
+        {unlocked ? (
+          <>
+            <div className={styles.unlockedCard}>
+              <div className={styles.unlockedTitle}><Check size={17} /> Vault unlocked</div>
+              <p className={styles.unlockedText}>Your active encryption key remains inside this browser session.</p>
+            </div>
+
+            {newRecoveryCode ? (
+              <div className={styles.notice}>
+                <strong>Save your recovery code now.</strong> You may need it on another device or if Quick Unlock is unavailable.
+                <div className={styles.recoveryCode}>{newRecoveryCode}</div>
+                <div className={styles.actions}>
+                  <button type="button" className={styles.secondary} onClick={handleCopyRecoveryCode}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy code"}
+                  </button>
+                  <button type="button" className={styles.secondary} onClick={() => setNewRecoveryCode(null)}>I saved it</button>
+                </div>
+              </div>
+            ) : null}
+
+            {!quickUnlockEnabled ? (
+              <div className={styles.pinWrap}>
+                <div className={styles.pinLabel}>Set a 6-digit Quick Unlock PIN for this device</div>
+                {pendingRecoveryCode ? (
+                  <>
+                    <p className={styles.unlockedText}>This PIN is an extra device shortcut. It does not replace, reset, or modify your recovery code.</p>
+                    <input
+                      className={styles.pinInput}
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      maxLength={6}
+                      value={pin}
+                      onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      aria-label="Create 6-digit FICONTER PIN"
+                    />
+                    <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handleEnablePin}>
+                      {busy ? "Saving…" : "Create 6-digit PIN"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.unlockedText}>Your recovery code will remain unchanged. Verify it once to authorize Quick Unlock on this device.</p>
+                    <button type="button" className={styles.primary} onClick={handleStartPinSetup}>Set up 6-digit PIN</button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <button type="button" className={styles.secondary} onClick={handleDisableQuickUnlock}>
+                Remove Quick Unlock from this device
+              </button>
+            )}
+
+            <button type="button" className={styles.secondary} onClick={handleLock}>Lock vault now</button>
+          </>
+        ) : null}
+
+        {message ? <p className={styles.error}>{message}</p> : null}
+      </section>
+    </div>,
+    document.body,
+  ) : null;
+
   return (
     <div className={styles.root}>
       <button
@@ -162,157 +329,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
         <span>Vault</span>
         <span className={`${styles.statusDot}${unlocked ? ` ${styles.statusDotUnlocked}` : ""}`} aria-hidden="true" />
       </button>
-
-      {open ? (
-        <div className={styles.overlay} role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setOpen(false);
-        }}>
-          <section className={styles.dialog} role="dialog" aria-modal="true" aria-label="Financial Vault">
-            <div className={styles.header}>
-              <div className={styles.titleRow}>
-                <div className={styles.iconBox}>
-                  {unlocked ? <ShieldCheck size={20} /> : <Lock size={20} />}
-                </div>
-                <div>
-                  <h2 className={styles.title}>Financial Vault</h2>
-                  <p className={styles.subtitle}>
-                    {status === "not_created"
-                      ? "Create your private encrypted vault."
-                      : unlocked
-                        ? "Your encrypted financial data is available on this device."
-                        : "Unlock your encrypted financial data."}
-                  </p>
-                </div>
-              </div>
-              <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
-                <X size={18} />
-              </button>
-            </div>
-
-            {status === "loading" ? (
-              <div className={styles.notice}>Checking your encrypted vault…</div>
-            ) : null}
-
-            {status === "not_created" ? (
-              <>
-                <div className={styles.notice}>
-                  FICONTER creates the encryption key inside your browser. The readable vault key is never stored in the database.
-                </div>
-                <button type="button" className={styles.primary} disabled={busy} onClick={handleCreateVault}>
-                  {busy ? "Creating vault…" : "Create secure vault"}
-                </button>
-              </>
-            ) : null}
-
-            {status === "locked" && quickUnlockEnabled && !showRecovery ? (
-              <div className={styles.pinWrap}>
-                <div className={styles.pinLabel}>Enter your 6-digit FICONTER PIN</div>
-                <input
-                  autoFocus
-                  className={styles.pinInput}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                  onKeyDown={(event) => { if (event.key === "Enter") void handlePinUnlock(); }}
-                  aria-label="6-digit FICONTER PIN"
-                />
-                <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handlePinUnlock}>
-                  {busy ? "Unlocking…" : "Unlock vault"}
-                </button>
-                <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(true); setPin(""); setLocalError(""); }}>
-                  Forgot PIN? Use recovery code
-                </button>
-              </div>
-            ) : null}
-
-            {status === "locked" && (!quickUnlockEnabled || showRecovery) ? (
-              <>
-                <div className={styles.notice}>
-                  <strong>Your recovery code stays exactly the same.</strong> Enter it once to verify this device and, if Quick Unlock is not enabled yet, create your 6-digit PIN next.
-                </div>
-                <input
-                  className={styles.field}
-                  type="password"
-                  value={recoveryInput}
-                  onChange={(event) => setRecoveryInput(event.target.value)}
-                  onKeyDown={(event) => { if (event.key === "Enter") void handleRecoveryUnlock(); }}
-                  placeholder="FICONTER-RECOVERY-1.…"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <button type="button" className={styles.primary} disabled={busy || !recoveryInput.trim()} onClick={handleRecoveryUnlock}>
-                  {busy ? "Verifying…" : quickUnlockEnabled ? "Unlock with recovery code" : "Verify recovery code"}
-                </button>
-                {quickUnlockEnabled ? (
-                  <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(false); setLocalError(""); }}>
-                    Back to PIN
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-
-            {unlocked ? (
-              <>
-                <div className={styles.unlockedCard}>
-                  <div className={styles.unlockedTitle}><Check size={17} /> Vault unlocked</div>
-                  <p className={styles.unlockedText}>Your active encryption key remains inside this browser session.</p>
-                </div>
-
-                {newRecoveryCode ? (
-                  <div className={styles.notice}>
-                    <strong>Save your recovery code now.</strong> You may need it on another device or if Quick Unlock is unavailable.
-                    <div className={styles.recoveryCode}>{newRecoveryCode}</div>
-                    <div className={styles.actions}>
-                      <button type="button" className={styles.secondary} onClick={handleCopyRecoveryCode}>
-                        {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy code"}
-                      </button>
-                      <button type="button" className={styles.secondary} onClick={() => setNewRecoveryCode(null)}>I saved it</button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!quickUnlockEnabled ? (
-                  <div className={styles.pinWrap}>
-                    <div className={styles.pinLabel}>Set a 6-digit Quick Unlock PIN for this device</div>
-                    {pendingRecoveryCode ? (
-                      <>
-                        <p className={styles.unlockedText}>This PIN is an extra device shortcut. It does not replace, reset, or modify your recovery code.</p>
-                        <input
-                          className={styles.pinInput}
-                          inputMode="numeric"
-                          autoComplete="new-password"
-                          maxLength={6}
-                          value={pin}
-                          onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                          aria-label="Create 6-digit FICONTER PIN"
-                        />
-                        <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handleEnablePin}>
-                          {busy ? "Saving…" : "Create 6-digit PIN"}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className={styles.unlockedText}>Your recovery code will remain unchanged. Verify it once to authorize Quick Unlock on this device.</p>
-                        <button type="button" className={styles.primary} onClick={handleStartPinSetup}>Set up 6-digit PIN</button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <button type="button" className={styles.secondary} onClick={handleDisableQuickUnlock}>
-                    Remove Quick Unlock from this device
-                  </button>
-                )}
-
-                <button type="button" className={styles.secondary} onClick={handleLock}>Lock vault now</button>
-              </>
-            ) : null}
-
-            {message ? <p className={styles.error}>{message}</p> : null}
-          </section>
-        </div>
-      ) : null}
+      {dialog}
     </div>
   );
 }

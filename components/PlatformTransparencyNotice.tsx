@@ -16,19 +16,65 @@ export function PlatformTransparencyNotice() {
   const [open, setOpen] = useState(false);
   const [autoClosePaused, setAutoClosePaused] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const autoCloseTimerRef = useRef<number | null>(null);
+  const remainingAutoCloseMsRef = useRef(AUTO_CLOSE_MS);
+  const countdownStartedAtRef = useRef<number | null>(null);
+
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current !== null) {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
 
   const close = useCallback(() => {
+    clearAutoCloseTimer();
+
     try {
       window.sessionStorage.setItem(NOTICE_KEY, "dismissed");
     } catch {
       // Session storage can be unavailable in hardened/private browser modes.
     }
     setOpen(false);
-  }, []);
+  }, [clearAutoCloseTimer]);
+
+  const scheduleAutoClose = useCallback(() => {
+    clearAutoCloseTimer();
+
+    if (remainingAutoCloseMsRef.current <= 0) {
+      close();
+      return;
+    }
+
+    countdownStartedAtRef.current = performance.now();
+    autoCloseTimerRef.current = window.setTimeout(
+      close,
+      remainingAutoCloseMsRef.current,
+    );
+  }, [clearAutoCloseTimer, close]);
 
   const pauseAutoClose = useCallback(() => {
+    if (autoClosePaused) return;
+
+    if (countdownStartedAtRef.current !== null) {
+      const elapsed = performance.now() - countdownStartedAtRef.current;
+      remainingAutoCloseMsRef.current = Math.max(
+        0,
+        remainingAutoCloseMsRef.current - elapsed,
+      );
+    }
+
+    countdownStartedAtRef.current = null;
+    clearAutoCloseTimer();
     setAutoClosePaused(true);
-  }, []);
+  }, [autoClosePaused, clearAutoCloseTimer]);
+
+  const resumeAutoClose = useCallback(() => {
+    if (!autoClosePaused || !open) return;
+
+    setAutoClosePaused(false);
+    scheduleAutoClose();
+  }, [autoClosePaused, open, scheduleAutoClose]);
 
   useEffect(() => {
     setMounted(true);
@@ -69,14 +115,32 @@ export function PlatformTransparencyNotice() {
   }, [close, open]);
 
   useEffect(() => {
-    if (!open || autoClosePaused) return;
+    if (!open) return;
 
-    const autoCloseTimer = window.setTimeout(close, AUTO_CLOSE_MS);
+    remainingAutoCloseMsRef.current = AUTO_CLOSE_MS;
+    countdownStartedAtRef.current = null;
+    setAutoClosePaused(false);
+    scheduleAutoClose();
 
     return () => {
-      window.clearTimeout(autoCloseTimer);
+      clearAutoCloseTimer();
+      countdownStartedAtRef.current = null;
     };
-  }, [autoClosePaused, close, open]);
+  }, [clearAutoCloseTimer, open, scheduleAutoClose]);
+
+  useEffect(() => {
+    if (!open || !autoClosePaused) return;
+
+    const handlePointerRelease = () => resumeAutoClose();
+
+    window.addEventListener("pointerup", handlePointerRelease);
+    window.addEventListener("pointercancel", handlePointerRelease);
+
+    return () => {
+      window.removeEventListener("pointerup", handlePointerRelease);
+      window.removeEventListener("pointercancel", handlePointerRelease);
+    };
+  }, [autoClosePaused, open, resumeAutoClose]);
 
   if (!mounted || !open) return null;
 
@@ -89,7 +153,6 @@ export function PlatformTransparencyNotice() {
         aria-labelledby="ficonter-transparency-title"
         aria-describedby="ficonter-transparency-description"
         onPointerDown={pauseAutoClose}
-        onWheel={pauseAutoClose}
       >
         <div className={styles.topAccent} aria-hidden="true" />
 
@@ -166,7 +229,7 @@ export function PlatformTransparencyNotice() {
             <strong>Thank you for being part of FICONTER.</strong>
             <span className={styles.autoClose} aria-live="polite">
               {autoClosePaused
-                ? "Auto-close paused. Close this notice when you are ready."
+                ? "Countdown paused while pressed. Release to continue."
                 : "This notice closes automatically after 15 seconds."}
             </span>
           </div>

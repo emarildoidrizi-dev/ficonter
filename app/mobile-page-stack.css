@@ -171,3 +171,36 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   [class*="SettingsWorkspace_sectionButton"]:active {
   transform: scale(0.985);
 }
+
+/* V1.16 — iOS/Safari clarity hardening.
+   The native chrome keeps a hidden, fixed backdrop mounted even while its
+   drawer/profile sheet is closed. WebKit can keep that composited
+   backdrop-filter layer active and visually blur the workspace. Remove blur
+   from mobile app backdrops and fully remove the inactive chrome backdrop
+   from layout/compositing. */
+@media (max-width: 1180px) {
+  html[data-ficonter-native-app="true"] .app-main {
+    filter: none !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="FiconterNativeAppChrome_backdrop"],
+  html[data-ficonter-native-app="true"]
+    [class*="PlatformTransparencyNotice_backdrop"],
+  html[data-ficonter-native-app="true"]
+    .app-main :where([class*="modalBackdrop"], [class*="backdrop"]) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="FiconterNativeAppChrome_backdrop"]:not([class*="FiconterNativeAppChrome_backdropOpen"]) {
+    display: none !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    [class*="PlatformTransparencyNotice_backdrop"] {
+    place-items: center !important;
+    background: rgba(16, 32, 37, 0.18) !important;
+  }
+}

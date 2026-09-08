@@ -9,28 +9,25 @@ import chunk5 from "@/lib/landing-personal-image/chunk5";
 import chunk6 from "@/lib/landing-personal-image/chunk6";
 import chunk7 from "@/lib/landing-personal-image/chunk7";
 
-const imageBase64 = [
-  chunk0,
-  chunk1,
-  chunk2,
-  chunk3,
-  chunk4,
-  chunk5,
-  chunk6,
-  chunk7,
-].join("");
+const chunks = [chunk0, chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7];
+const imageBase64 = chunks.join("");
+
+function hash(value: string | Buffer) {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 export async function GET() {
   const imageBuffer = Buffer.from(imageBase64, "base64");
   const bytes = new Uint8Array(imageBuffer);
-  const digest = createHash("sha256").update(imageBuffer).digest("hex");
 
   return new Response(bytes, {
     headers: {
       "Content-Type": "image/webp",
       "Content-Length": String(bytes.byteLength),
       "Cache-Control": "public, max-age=3600, must-revalidate",
-      ETag: `"${digest}"`,
+      ETag: `"${hash(imageBuffer)}"`,
+      "X-Image-Chunk-Lengths": chunks.map((chunk) => chunk.length).join(","),
+      "X-Image-Chunk-Hashes": chunks.map((chunk) => hash(chunk)).join(","),
     },
   });
 }

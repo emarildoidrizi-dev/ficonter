@@ -10,6 +10,7 @@ import {
   type NotificationItem,
   type SupportReadEventDetail,
 } from "@/lib/supportMessaging";
+import { VaultHeaderControl } from "./VaultHeaderControl";
 import styles from "./NotificationCenter.module.css";
 
 function formatRelative(value: string): string {
@@ -160,6 +161,10 @@ export function NotificationCenter({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className={styles.root} ref={rootRef}>
+      <span className={styles.vaultSlot} data-ficonter-vault-slot="header-mobile">
+        <VaultHeaderControl />
+      </span>
+
       <button
         type="button"
         className={styles.iconButton}

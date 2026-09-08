@@ -23,6 +23,7 @@ import {
 
 import { Brand } from "@/components/Brand";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
 
 import styles from "./PublicSiteHeader.module.css";
 
@@ -140,155 +141,158 @@ export function PublicSiteHeader() {
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className={styles.header} ref={headerRef}>
-      <div className={styles.inner}>
-        <Brand />
+    <>
+      <PlatformTransparencyNotice />
+      <header className={styles.header} ref={headerRef}>
+        <div className={styles.inner}>
+          <Brand />
 
-        <div className={styles.desktopArea}>
-          <nav className={styles.nav} aria-label="Public navigation">
-            <div
-              className={styles.navGroup}
-              onMouseEnter={() => setOpenMenu("platform")}
-              onMouseLeave={() => setOpenMenu((current) => current === "platform" ? null : current)}
-              onFocus={() => setOpenMenu("platform")}
+          <div className={styles.desktopArea}>
+            <nav className={styles.nav} aria-label="Public navigation">
+              <div
+                className={styles.navGroup}
+                onMouseEnter={() => setOpenMenu("platform")}
+                onMouseLeave={() => setOpenMenu((current) => current === "platform" ? null : current)}
+                onFocus={() => setOpenMenu("platform")}
+              >
+                <div className={styles.navTriggerRow}>
+                  <Link className={isActive("/platform") ? styles.activeLink : undefined} href="/platform">
+                    Platform
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.chevronButton}
+                    aria-label="Open Platform menu"
+                    aria-expanded={openMenu === "platform"}
+                    onClick={() => setOpenMenu((current) => current === "platform" ? null : "platform")}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+                <div className={`${styles.megaMenu} ${openMenu === "platform" ? styles.megaMenuOpen : ""}`}>
+                  <div className={styles.menuIntro}>
+                    <span>FICONTER PLATFORM</span>
+                    <strong>A financial control center built around decisions, not disconnected screens.</strong>
+                    <Link href="/platform">Explore the full platform →</Link>
+                  </div>
+                  <div className={styles.menuGrid}>
+                    {platformItems.map(({ href, icon: Icon, title, copy }) => (
+                      <Link className={styles.menuItem} href={href} key={title}>
+                        <div className={styles.menuIcon}><Icon size={18} /></div>
+                        <div><strong>{title}</strong><span>{copy}</span></div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={styles.navGroup}
+                onMouseEnter={() => setOpenMenu("personal-business")}
+                onMouseLeave={() => setOpenMenu((current) => current === "personal-business" ? null : current)}
+                onFocus={() => setOpenMenu("personal-business")}
+              >
+                <div className={styles.navTriggerRow}>
+                  <Link className={isActive("/personal-business") ? styles.activeLink : undefined} href="/personal-business">
+                    Personal & Business
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.chevronButton}
+                    aria-label="Open Personal and Business menu"
+                    aria-expanded={openMenu === "personal-business"}
+                    onClick={() => setOpenMenu((current) => current === "personal-business" ? null : "personal-business")}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+                <div className={`${styles.megaMenu} ${styles.megaMenuCompact} ${openMenu === "personal-business" ? styles.megaMenuOpen : ""}`}>
+                  <div className={styles.workspacePreview}>
+                    <div><UserRound size={18} /><span>Personal</span></div>
+                    <div className={styles.workspaceLine} />
+                    <div><Building2 size={18} /><span>Business</span></div>
+                  </div>
+                  <div className={styles.menuGridSingle}>
+                    {personalBusinessItems.map(({ href, icon: Icon, title, copy }) => (
+                      <Link className={styles.menuItem} href={href} key={title}>
+                        <div className={styles.menuIcon}><Icon size={18} /></div>
+                        <div><strong>{title}</strong><span>{copy}</span></div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={styles.navGroup}
+                onMouseEnter={() => setOpenMenu("privacy")}
+                onMouseLeave={() => setOpenMenu((current) => current === "privacy" ? null : current)}
+                onFocus={() => setOpenMenu("privacy")}
+              >
+                <div className={styles.navTriggerRow}>
+                  <Link className={isActive("/privacy") ? styles.activeLink : undefined} href="/privacy">
+                    Privacy
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.chevronButton}
+                    aria-label="Open Privacy menu"
+                    aria-expanded={openMenu === "privacy"}
+                    onClick={() => setOpenMenu((current) => current === "privacy" ? null : "privacy")}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+                <div className={`${styles.megaMenu} ${styles.megaMenuPrivacy} ${openMenu === "privacy" ? styles.megaMenuOpen : ""}`}>
+                  <div className={styles.trustPanel}>
+                    <LockKeyhole size={23} />
+                    <span>TRUST CENTER</span>
+                    <strong>Your financial workspace should be understandable, controlled and private.</strong>
+                  </div>
+                  <div className={styles.menuGridSingle}>
+                    {privacyItems.map(({ href, icon: Icon, title, copy }) => (
+                      <Link className={styles.menuItem} href={href} key={title}>
+                        <div className={styles.menuIcon}><Icon size={18} /></div>
+                        <div><strong>{title}</strong><span>{copy}</span></div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Link className={isActive("/about") ? styles.activeLink : undefined} href="/about">About</Link>
+              <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
+              <Link className={styles.startButton} href="/register">Start free</Link>
+            </nav>
+            <LanguageSelector variant="public" />
+          </div>
+
+          <div className={styles.mobileActions}>
+            <LanguageSelector variant="public" />
+            <button
+              type="button"
+              className={styles.mobileToggle}
+              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen((value) => !value)}
             >
-              <div className={styles.navTriggerRow}>
-                <Link className={isActive("/platform") ? styles.activeLink : undefined} href="/platform">
-                  Platform
-                </Link>
-                <button
-                  type="button"
-                  className={styles.chevronButton}
-                  aria-label="Open Platform menu"
-                  aria-expanded={openMenu === "platform"}
-                  onClick={() => setOpenMenu((current) => current === "platform" ? null : "platform")}
-                >
-                  <ChevronDown size={14} />
-                </button>
-              </div>
-              <div className={`${styles.megaMenu} ${openMenu === "platform" ? styles.megaMenuOpen : ""}`}>
-                <div className={styles.menuIntro}>
-                  <span>FICONTER PLATFORM</span>
-                  <strong>A financial control center built around decisions, not disconnected screens.</strong>
-                  <Link href="/platform">Explore the full platform →</Link>
-                </div>
-                <div className={styles.menuGrid}>
-                  {platformItems.map(({ href, icon: Icon, title, copy }) => (
-                    <Link className={styles.menuItem} href={href} key={title}>
-                      <div className={styles.menuIcon}><Icon size={18} /></div>
-                      <div><strong>{title}</strong><span>{copy}</span></div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={styles.navGroup}
-              onMouseEnter={() => setOpenMenu("personal-business")}
-              onMouseLeave={() => setOpenMenu((current) => current === "personal-business" ? null : current)}
-              onFocus={() => setOpenMenu("personal-business")}
-            >
-              <div className={styles.navTriggerRow}>
-                <Link className={isActive("/personal-business") ? styles.activeLink : undefined} href="/personal-business">
-                  Personal & Business
-                </Link>
-                <button
-                  type="button"
-                  className={styles.chevronButton}
-                  aria-label="Open Personal and Business menu"
-                  aria-expanded={openMenu === "personal-business"}
-                  onClick={() => setOpenMenu((current) => current === "personal-business" ? null : "personal-business")}
-                >
-                  <ChevronDown size={14} />
-                </button>
-              </div>
-              <div className={`${styles.megaMenu} ${styles.megaMenuCompact} ${openMenu === "personal-business" ? styles.megaMenuOpen : ""}`}>
-                <div className={styles.workspacePreview}>
-                  <div><UserRound size={18} /><span>Personal</span></div>
-                  <div className={styles.workspaceLine} />
-                  <div><Building2 size={18} /><span>Business</span></div>
-                </div>
-                <div className={styles.menuGridSingle}>
-                  {personalBusinessItems.map(({ href, icon: Icon, title, copy }) => (
-                    <Link className={styles.menuItem} href={href} key={title}>
-                      <div className={styles.menuIcon}><Icon size={18} /></div>
-                      <div><strong>{title}</strong><span>{copy}</span></div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={styles.navGroup}
-              onMouseEnter={() => setOpenMenu("privacy")}
-              onMouseLeave={() => setOpenMenu((current) => current === "privacy" ? null : current)}
-              onFocus={() => setOpenMenu("privacy")}
-            >
-              <div className={styles.navTriggerRow}>
-                <Link className={isActive("/privacy") ? styles.activeLink : undefined} href="/privacy">
-                  Privacy
-                </Link>
-                <button
-                  type="button"
-                  className={styles.chevronButton}
-                  aria-label="Open Privacy menu"
-                  aria-expanded={openMenu === "privacy"}
-                  onClick={() => setOpenMenu((current) => current === "privacy" ? null : "privacy")}
-                >
-                  <ChevronDown size={14} />
-                </button>
-              </div>
-              <div className={`${styles.megaMenu} ${styles.megaMenuPrivacy} ${openMenu === "privacy" ? styles.megaMenuOpen : ""}`}>
-                <div className={styles.trustPanel}>
-                  <LockKeyhole size={23} />
-                  <span>TRUST CENTER</span>
-                  <strong>Your financial workspace should be understandable, controlled and private.</strong>
-                </div>
-                <div className={styles.menuGridSingle}>
-                  {privacyItems.map(({ href, icon: Icon, title, copy }) => (
-                    <Link className={styles.menuItem} href={href} key={title}>
-                      <div className={styles.menuIcon}><Icon size={18} /></div>
-                      <div><strong>{title}</strong><span>{copy}</span></div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <Link className={isActive("/about") ? styles.activeLink : undefined} href="/about">About</Link>
-            <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
-            <Link className={styles.startButton} href="/register">Start free</Link>
-          </nav>
-          <LanguageSelector variant="public" />
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
 
-        <div className={styles.mobileActions}>
-          <LanguageSelector variant="public" />
-          <button
-            type="button"
-            className={styles.mobileToggle}
-            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-            aria-expanded={mobileOpen}
-            onClick={() => setMobileOpen((value) => !value)}
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+        <div className={`${styles.mobilePanel} ${mobileOpen ? styles.mobilePanelOpen : ""}`}>
+          <div className={styles.mobilePanelInner}>
+            <Link href="/platform"><Layers3 size={18} /> <span><strong>Platform</strong><small>Overview, planning and intelligence</small></span></Link>
+            <Link href="/personal-business"><BriefcaseBusiness size={18} /> <span><strong>Personal & Business</strong><small>Two workspaces, one account</small></span></Link>
+            <Link href="/privacy"><LockKeyhole size={18} /> <span><strong>Privacy</strong><small>Trust, control and security</small></span></Link>
+            <Link href="/about"><BarChart3 size={18} /> <span><strong>About</strong><small>Why FICONTER exists</small></span></Link>
+            <div className={styles.mobileDivider} />
+            <Link href="/login?entry=brand">Log in</Link>
+            <Link className={styles.mobileStart} href="/register">Start free</Link>
+          </div>
         </div>
-      </div>
-
-      <div className={`${styles.mobilePanel} ${mobileOpen ? styles.mobilePanelOpen : ""}`}>
-        <div className={styles.mobilePanelInner}>
-          <Link href="/platform"><Layers3 size={18} /> <span><strong>Platform</strong><small>Overview, planning and intelligence</small></span></Link>
-          <Link href="/personal-business"><BriefcaseBusiness size={18} /> <span><strong>Personal & Business</strong><small>Two workspaces, one account</small></span></Link>
-          <Link href="/privacy"><LockKeyhole size={18} /> <span><strong>Privacy</strong><small>Trust, control and security</small></span></Link>
-          <Link href="/about"><BarChart3 size={18} /> <span><strong>About</strong><small>Why FICONTER exists</small></span></Link>
-          <div className={styles.mobileDivider} />
-          <Link href="/login?entry=brand">Log in</Link>
-          <Link className={styles.mobileStart} href="/register">Start free</Link>
-        </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

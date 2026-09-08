@@ -107,13 +107,13 @@ Object.assign(LANDING_UI_TRANSLATIONS, {
     "Questo avviso si chiude automaticamente dopo 15 secondi.",
     "Это уведомление автоматически закроется через 15 секунд.",
   ),
-  "Auto-close paused. Close this notice when you are ready.": row(
-    "Das automatische Schließen wurde pausiert. Schließen Sie diesen Hinweis, wenn Sie bereit sind.",
-    "El cierre automático está en pausa. Cierra este aviso cuando estés listo.",
-    "Mbyllja automatike është ndalur. Mbylleni këtë njoftim kur të jeni gati.",
-    "تم إيقاف الإغلاق التلقائي مؤقتًا. أغلق هذا الإشعار عندما تكون مستعدًا.",
-    "O fecho automático foi pausado. Feche este aviso quando estiver pronto.",
-    "La chiusura automatica è in pausa. Chiudi questo avviso quando sei pronto.",
-    "Автоматическое закрытие приостановлено. Закройте это уведомление, когда будете готовы.",
+  "Countdown paused while pressed. Release to continue.": row(
+    "Der Countdown pausiert, solange Sie gedrückt halten. Loslassen, um fortzufahren.",
+    "La cuenta atrás se pausa mientras mantienes pulsado. Suelta para continuar.",
+    "Numërimi mbrapsht ndalon sa kohë e mbani të shtypur. Lëshojeni për të vazhduar.",
+    "يتوقف العدّ التنازلي مؤقتًا أثناء الضغط. حرّر الضغط للمتابعة.",
+    "A contagem decrescente fica em pausa enquanto mantém premido. Solte para continuar.",
+    "Il conto alla rovescia resta in pausa mentre tieni premuto. Rilascia per continuare.",
+    "Обратный отсчёт приостанавливается, пока вы удерживаете нажатие. Отпустите, чтобы продолжить.",
   ),
 } satisfies Record<string, TranslationRow>);

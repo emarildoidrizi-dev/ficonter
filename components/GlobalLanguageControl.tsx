@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import "@/lib/i18n/landingPageCurrentCatalog";
 import "@/lib/i18n/landingHeroShowcaseCatalog";
+import "@/lib/i18n/landingWhyCatalog";
 import { LanguageSelector } from "./LanguageSelector";
 import styles from "./GlobalLanguageControl.module.css";
 
@@ -18,9 +19,11 @@ export function GlobalLanguageControl() {
   const pathname = usePathname();
   const insideApplication = pathname.startsWith("/dashboard") || pathname.startsWith("/business");
   const landingOwnsLanguageControl = pathname === "/";
+  const whyPageOwnsPublicChrome = pathname.startsWith("/why/");
   const legalPageOwnsPublicChrome = LEGAL_PATHS.has(pathname);
-  const showLanguageControl = !insideApplication && !landingOwnsLanguageControl && !legalPageOwnsPublicChrome;
-  const showCopyright = !landingOwnsLanguageControl && !legalPageOwnsPublicChrome;
+  const publicPageOwnsChrome = landingOwnsLanguageControl || whyPageOwnsPublicChrome || legalPageOwnsPublicChrome;
+  const showLanguageControl = !insideApplication && !publicPageOwnsChrome;
+  const showCopyright = !publicPageOwnsChrome;
 
   return (
     <>

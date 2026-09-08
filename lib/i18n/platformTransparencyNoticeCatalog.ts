@@ -107,4 +107,13 @@ Object.assign(LANDING_UI_TRANSLATIONS, {
     "Questo avviso si chiude automaticamente dopo 15 secondi.",
     "Это уведомление автоматически закроется через 15 секунд.",
   ),
+  "Auto-close paused. Close this notice when you are ready.": row(
+    "Das automatische Schließen wurde pausiert. Schließen Sie diesen Hinweis, wenn Sie bereit sind.",
+    "El cierre automático está en pausa. Cierra este aviso cuando estés listo.",
+    "Mbyllja automatike është ndalur. Mbylleni këtë njoftim kur të jeni gati.",
+    "تم إيقاف الإغلاق التلقائي مؤقتًا. أغلق هذا الإشعار عندما تكون مستعدًا.",
+    "O fecho automático foi pausado. Feche este aviso quando estiver pronto.",
+    "La chiusura automatica è in pausa. Chiudi questo avviso quando sei pronto.",
+    "Автоматическое закрытие приостановлено. Закройте это уведомление, когда будете готовы.",
+  ),
 } satisfies Record<string, TranslationRow>);

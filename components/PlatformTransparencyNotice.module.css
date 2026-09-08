@@ -1,0 +1,297 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 32, 37, 0.34);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  animation: backdropIn 220ms ease-out both;
+}
+
+.dialog {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid rgba(47, 119, 119, 0.2);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(184, 157, 96, 0.13), transparent 30%),
+    linear-gradient(145deg, rgba(253, 252, 248, 0.985), rgba(244, 249, 246, 0.985));
+  box-shadow:
+    0 28px 90px rgba(18, 38, 44, 0.24),
+    0 2px 12px rgba(18, 38, 44, 0.08);
+  color: #18343b;
+  animation: dialogIn 320ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.topAccent {
+  height: 4px;
+  background: linear-gradient(90deg, #2f7777 0%, #6d9086 56%, #b89d60 100%);
+}
+
+.closeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(32, 66, 75, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #31525a;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.closeButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(47, 119, 119, 0.3);
+  background: #ffffff;
+}
+
+.closeButton:focus-visible {
+  outline: 3px solid rgba(47, 119, 119, 0.24);
+  outline-offset: 3px;
+}
+
+.content {
+  padding: 42px 46px 34px;
+}
+
+.identityRow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-right: 52px;
+  margin-bottom: 28px;
+}
+
+.mark {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brandName {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #17343c;
+}
+
+.brandDescriptor {
+  margin-top: 5px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #6a7b7f;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8c7135;
+}
+
+.title {
+  max-width: 560px;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(31px, 4.4vw, 45px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: #18343b;
+}
+
+.lead {
+  margin: 19px 0 0;
+  max-width: 590px;
+  font-size: 16px;
+  line-height: 1.72;
+  color: #566d74;
+}
+
+.assurance {
+  margin: 24px 0 0;
+  padding: 18px 19px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  border: 1px solid rgba(47, 119, 119, 0.16);
+  border-radius: 18px;
+  background: rgba(230, 242, 236, 0.62);
+}
+
+.assuranceIcon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(47, 119, 119, 0.11);
+  color: #2f7777;
+}
+
+.assurance strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+  color: #24434b;
+}
+
+.assurance p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #566d74;
+}
+
+.bodyCopy {
+  margin-top: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.bodyCopy p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.72;
+  color: #5d7177;
+}
+
+.thanks {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(32, 66, 75, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.thanks strong {
+  font-size: 13px;
+  color: #24434b;
+}
+
+.autoClose {
+  font-size: 11px;
+  color: #7b8b8f;
+  white-space: nowrap;
+}
+
+.progressTrack {
+  height: 3px;
+  overflow: hidden;
+  background: rgba(47, 119, 119, 0.08);
+}
+
+.progressBar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #2f7777, #6d9086);
+  animation: countdown 15s linear forwards;
+}
+
+@keyframes countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .backdrop {
+    padding: 14px;
+    align-items: end;
+  }
+
+  .dialog {
+    max-height: calc(100vh - 28px);
+    border-radius: 24px;
+  }
+
+  .content {
+    padding: 34px 24px 28px;
+  }
+
+  .closeButton {
+    top: 16px;
+    right: 16px;
+  }
+
+  .identityRow {
+    margin-bottom: 24px;
+    padding-right: 44px;
+  }
+
+  .title {
+    font-size: clamp(30px, 10vw, 39px);
+  }
+
+  .lead {
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  .assurance {
+    padding: 16px;
+  }
+
+  .thanks {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .autoClose {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .progressBar {
+    animation: none;
+  }
+}

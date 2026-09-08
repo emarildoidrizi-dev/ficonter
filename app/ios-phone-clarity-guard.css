@@ -1,0 +1,19 @@
+/* FICONTER iOS phone clarity guard.
+   iOS WebKit can mis-composite many simultaneous backdrop-filter layers in
+   the authenticated mobile workspace and leave the page visually blurred.
+   This visual-only safeguard applies only to the native phone workspace.
+   Desktop, tablet and public pages are untouched. */
+
+@supports (-webkit-touch-callout: none) {
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] .app-main,
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] .app-main > * {
+    filter: none !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] body *,
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] body *::before,
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] body *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}

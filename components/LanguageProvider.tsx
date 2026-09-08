@@ -345,6 +345,7 @@ export function LanguageProvider({
   const translatorRef = useRef<
     ReturnType<typeof createDocumentTranslator> | null
   >(null);
+  const accountPersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     languageRef.current = language;
@@ -394,19 +395,24 @@ export function LanguageProvider({
         );
       };
 
-      if (!persistAccount) {
-        applyCommittedLanguage();
-        return;
-      }
+      // Language selection is an immediate-confirm action. Apply the browser
+      // preference first so logged-out visitors and temporary account-sync
+      // failures can never block the interface from changing language.
+      applyCommittedLanguage();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      if (!persistAccount) return;
 
-      if (userError) throw userError;
+      const persistAccountLanguage = async () => {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (user) {
+        // A public visitor has no authenticated account to update. The local
+        // cookie/storage preference already succeeded, so this is not an error.
+        // Likewise, a transient session lookup failure must not undo the UI.
+        if (userError || !user) return;
+
         const metadata = user.user_metadata ?? {};
         const existingPreferences =
           metadata.ficonter_preferences &&
@@ -425,12 +431,16 @@ export function LanguageProvider({
         });
 
         if (error) throw error;
-      }
+      };
 
-      // The interface changes only after the explicit Save action has
-      // successfully committed the preference (or there is no signed-in
-      // account to persist).
-      applyCommittedLanguage();
+      // Preserve rapid selections in tap order while keeping the visible
+      // language switch independent from network latency.
+      const persistenceTask = accountPersistenceQueueRef.current
+        .catch(() => undefined)
+        .then(persistAccountLanguage);
+
+      accountPersistenceQueueRef.current = persistenceTask.catch(() => undefined);
+      await persistenceTask;
     },
     [supabase],
   );

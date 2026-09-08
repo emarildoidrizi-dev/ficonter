@@ -9,6 +9,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { Brand } from "@/components/Brand";
 import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
 import { EmailChangeResultNotice } from "@/components/EmailChangeResultNotice";
+import { LandingHeroShowcase } from "@/components/LandingHeroShowcase";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { normalizeAuthEntry } from "@/lib/auth/recovery";
@@ -65,40 +66,8 @@ export default async function LoginPage({
                 <span><CheckCircle2 size={16} aria-hidden="true" /> Personal & business</span>
               </div>
 
-              <div className={styles.preview} aria-label="FICONTER workspace preview">
-                <div className={styles.previewHeader}>
-                  <span className={styles.workspaceLabel}>
-                    <i className={styles.workspaceDot} aria-hidden="true" />
-                    Personal workspace
-                  </span>
-                  <span className={styles.secureLabel}>
-                    <LockKeyhole size={13} aria-hidden="true" />
-                    Protected access
-                  </span>
-                </div>
-
-                <div className={styles.previewBody}>
-                  <div className={styles.previewHeadline}>
-                    <div>
-                      <span>Available after planning</span>
-                      <strong>€6,260</strong>
-                    </div>
-                    <div className={styles.healthPill}>
-                      <small>Financial health</small>
-                      <b>78 / 100</b>
-                    </div>
-                  </div>
-
-                  <div className={styles.previewProgress} aria-hidden="true">
-                    <span />
-                  </div>
-
-                  <div className={styles.previewStats}>
-                    <div><span>Income</span><strong>€8,420</strong></div>
-                    <div><span>Committed</span><strong>€2,160</strong></div>
-                    <div><span>Reserve</span><strong>€1,850</strong></div>
-                  </div>
-                </div>
+              <div className={styles.preview} aria-label="FICONTER rotating workspace preview">
+                <LandingHeroShowcase />
               </div>
             </div>
 

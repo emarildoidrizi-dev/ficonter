@@ -7,6 +7,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
+import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { UsageHeartbeat } from "@/components/UsageHeartbeat";
@@ -55,6 +56,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
       baseCurrency={business?.base_currency ?? "EUR"}
     >
       <div className="app-shell business-shell">
+        <PlatformTransparencyNotice scope="app" />
         <LivingThemeBackdrop />
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />

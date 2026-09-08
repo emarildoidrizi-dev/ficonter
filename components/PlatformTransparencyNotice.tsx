@@ -14,6 +14,7 @@ const AUTO_CLOSE_MS = 15_000;
 export function PlatformTransparencyNotice() {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+  const [autoClosePaused, setAutoClosePaused] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => {
@@ -23,6 +24,10 @@ export function PlatformTransparencyNotice() {
       // Session storage can be unavailable in hardened/private browser modes.
     }
     setOpen(false);
+  }, []);
+
+  const pauseAutoClose = useCallback(() => {
+    setAutoClosePaused(true);
   }, []);
 
   useEffect(() => {
@@ -36,6 +41,7 @@ export function PlatformTransparencyNotice() {
       // If session storage is unavailable, still show the notice for this visit.
     }
 
+    setAutoClosePaused(false);
     setOpen(true);
   }, []);
 
@@ -47,7 +53,6 @@ export function PlatformTransparencyNotice() {
     document.body.style.overflow = "hidden";
 
     const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 50);
-    const autoCloseTimer = window.setTimeout(close, AUTO_CLOSE_MS);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
@@ -57,12 +62,21 @@ export function PlatformTransparencyNotice() {
 
     return () => {
       window.clearTimeout(focusTimer);
-      window.clearTimeout(autoCloseTimer);
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus?.();
     };
   }, [close, open]);
+
+  useEffect(() => {
+    if (!open || autoClosePaused) return;
+
+    const autoCloseTimer = window.setTimeout(close, AUTO_CLOSE_MS);
+
+    return () => {
+      window.clearTimeout(autoCloseTimer);
+    };
+  }, [autoClosePaused, close, open]);
 
   if (!mounted || !open) return null;
 
@@ -74,6 +88,8 @@ export function PlatformTransparencyNotice() {
         aria-modal="true"
         aria-labelledby="ficonter-transparency-title"
         aria-describedby="ficonter-transparency-description"
+        onPointerDown={pauseAutoClose}
+        onWheel={pauseAutoClose}
       >
         <div className={styles.topAccent} aria-hidden="true" />
 
@@ -148,12 +164,19 @@ export function PlatformTransparencyNotice() {
 
           <div className={styles.thanks}>
             <strong>Thank you for being part of FICONTER.</strong>
-            <span className={styles.autoClose}>This notice closes automatically after 15 seconds.</span>
+            <span className={styles.autoClose} aria-live="polite">
+              {autoClosePaused
+                ? "Auto-close paused. Close this notice when you are ready."
+                : "This notice closes automatically after 15 seconds."}
+            </span>
           </div>
         </div>
 
         <div className={styles.progressTrack} aria-hidden="true">
-          <span className={styles.progressBar} />
+          <span
+            className={styles.progressBar}
+            style={{ animationPlayState: autoClosePaused ? "paused" : "running" }}
+          />
         </div>
       </section>
     </div>,

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { Brand } from "@/components/Brand";
+import { LandingHeroShowcase } from "@/components/LandingHeroShowcase";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 import footerStyles from "./landing-footer.module.css";
@@ -226,14 +227,7 @@ export default async function HomePage({
           </div>
 
           <div className={styles.heroSupportCard}>
-            <div className={styles.heroSupportImage}>
-              <Image
-                src="/landing/ficonter-workspace-switch.svg"
-                alt="Ficonter personal and business workspaces shown as separate records with a workspace switch between them"
-                fill
-                sizes="(max-width: 900px) calc(100vw - 68px), 292px"
-              />
-            </div>
+            <LandingHeroShowcase />
           </div>
         </div>
       </section>
@@ -341,7 +335,7 @@ export default async function HomePage({
           <article className={styles.storyCard}>
             <div className={styles.storyImage}>
               <Image
-                src="/landing/ficonter-personal-finance.webp"
+                src="/landing/ficonter-personal-finance-v2.webp"
                 alt="People using Ficonter to plan their household finances"
                 fill
                 sizes="(max-width: 800px) 100vw, 50vw"

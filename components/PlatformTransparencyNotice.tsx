@@ -157,7 +157,20 @@ export function PlatformTransparencyNotice({
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className={styles.backdrop}>
+    <div
+      className={styles.backdrop}
+      data-notice-scope={scope}
+      style={
+        scope === "app"
+          ? {
+              WebkitBackdropFilter: "none",
+              backdropFilter: "none",
+              filter: "none",
+              background: "rgba(16, 32, 37, 0.18)",
+            }
+          : undefined
+      }
+    >
       <section
         className={styles.dialog}
         role="dialog"

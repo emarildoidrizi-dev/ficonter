@@ -4,8 +4,8 @@
 .trigger:hover,.triggerOpen{border-color:color-mix(in srgb,var(--sage) 12%,transparent);background:color-mix(in srgb,var(--sage-soft) 72%,transparent)}
 .statusDot{width:7px;height:7px;border-radius:999px;background:var(--burgundy)}
 .statusDotUnlocked{background:var(--sage)}
-.overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;background:rgba(12,20,18,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.dialog{width:min(440px,100%);max-height:min(720px,calc(100vh - 40px));overflow:auto;padding:22px;border:1px solid var(--border-strong);border-radius:22px;background:color-mix(in srgb,var(--surface-raised) 98%,transparent);box-shadow:0 28px 90px rgba(17,50,54,.28);color:var(--text-primary)}
+.overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));background:rgba(12,20,18,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.dialog{width:min(440px,100%);max-height:min(720px,calc(100dvh - 40px));margin:auto;overflow:auto;overscroll-behavior:contain;padding:22px;border:1px solid var(--border-strong);border-radius:22px;background:color-mix(in srgb,var(--surface-raised) 98%,transparent);box-shadow:0 28px 90px rgba(17,50,54,.28);color:var(--text-primary)}
 .header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
 .titleRow{display:flex;align-items:center;gap:11px}
 .iconBox{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:13px;background:var(--surface-subtle)}
@@ -42,8 +42,8 @@
 :global(html[data-language="it"]) .trigger>span:not(.statusDot):not(.statusDotUnlocked)::after{content:"Cassaforte"}
 :global(html[data-language="ru"]) .trigger>span:not(.statusDot):not(.statusDotUnlocked)::after{content:"Хранилище"}
 
-@media(max-width:900px){.desktopHost{display:none}.mobileHost{display:inline-flex}.trigger{width:46px;min-width:46px;min-height:46px;padding:0;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 92%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08)}.trigger span:not(.statusDot):not(.statusDotUnlocked){display:none}.statusDot{position:absolute;right:6px;bottom:6px;width:6px;height:6px}.dialog{padding:18px;border-radius:19px}}
-@media(max-width:390px){.trigger{width:40px;min-width:40px}.statusDot{right:5px;bottom:5px}}
+@media(max-width:900px){.desktopHost{display:none}.mobileHost{display:inline-flex}.trigger{width:46px;min-width:46px;min-height:46px;padding:0;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 92%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08)}.trigger span:not(.statusDot):not(.statusDotUnlocked){display:none}.statusDot{position:absolute;right:6px;bottom:6px;width:6px;height:6px}.overlay{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}.dialog{width:min(430px,100%);max-height:calc(100dvh - 32px);padding:18px;border-radius:19px}}
+@media(max-width:390px){.trigger{width:40px;min-width:40px}.statusDot{right:5px;bottom:5px}.dialog{padding:16px}}
 
 /* Desktop workspace placement remains independent; mobile Vault now lives in the header action row. */
 .persistentDesktopHost{position:absolute;z-index:116;top:98px;right:clamp(28px,3vw,48px);display:inline-flex;align-items:center;pointer-events:auto}

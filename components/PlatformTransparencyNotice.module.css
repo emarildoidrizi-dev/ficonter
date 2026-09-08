@@ -242,7 +242,10 @@
 @media (max-width: 640px) {
   .backdrop {
     padding: 14px;
-    align-items: end;
+    place-items: center;
+    background: rgba(16, 32, 37, 0.2);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .dialog {

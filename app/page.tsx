@@ -233,18 +233,33 @@ export default async function HomePage({
       </section>
 
       <div className={styles.proofStrip}>
-        <div className={styles.proofItem}>
+        <Link
+          className={styles.proofItem}
+          href="/why/private-workspace"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
           <LockKeyhole size={20} />
           <div><strong>Private workspace</strong><span>Account data remains isolated</span></div>
-        </div>
-        <div className={styles.proofItem}>
+          <ArrowUpRight size={17} aria-hidden="true" style={{ marginInlineStart: "auto", opacity: 0.48 }} />
+        </Link>
+        <Link
+          className={styles.proofItem}
+          href="/why/financial-picture"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
           <CircleDollarSign size={20} />
           <div><strong>Clear financial picture</strong><span>Daily control and long-term direction</span></div>
-        </div>
-        <div className={styles.proofItem}>
+          <ArrowUpRight size={17} aria-hidden="true" style={{ marginInlineStart: "auto", opacity: 0.48 }} />
+        </Link>
+        <Link
+          className={styles.proofItem}
+          href="/why/personal-business"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
           <Landmark size={20} />
           <div><strong>Two worlds, one system</strong><span>Personal and business without confusion</span></div>
-        </div>
+          <ArrowUpRight size={17} aria-hidden="true" style={{ marginInlineStart: "auto", opacity: 0.48 }} />
+        </Link>
       </div>
 
       <section id="platform" className={styles.platformSection}>

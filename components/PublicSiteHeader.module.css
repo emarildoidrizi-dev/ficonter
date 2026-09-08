@@ -1,0 +1,449 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  border-top: 2px solid #2f7777;
+  border-bottom: 1px solid rgba(24, 48, 58, 0.08);
+  background: rgba(248, 246, 240, 0.94);
+  box-shadow: 0 10px 34px rgba(21, 43, 51, 0.04);
+  backdrop-filter: blur(20px);
+}
+
+.inner {
+  width: min(1310px, calc(100% - 42px));
+  min-height: 80px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.desktopArea {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 21px;
+  color: #5a676c;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.nav > a,
+.navTriggerRow > a {
+  position: relative;
+  color: inherit;
+  white-space: nowrap;
+  transition: color 180ms ease;
+}
+
+.nav > a:not(.startButton):hover,
+.navTriggerRow > a:hover,
+.activeLink {
+  color: #18303a !important;
+}
+
+.nav > a:not(.startButton)::after,
+.navTriggerRow > a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 2px;
+  border-radius: 99px;
+  background: #b89a61;
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.nav > a:not(.startButton):hover::after,
+.navTriggerRow > a:hover::after,
+.activeLink::after {
+  opacity: 1 !important;
+  transform: scaleX(1) !important;
+}
+
+.navGroup {
+  position: relative;
+  padding: 28px 0;
+  margin: -28px 0;
+}
+
+.navTriggerRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.chevronButton {
+  width: 22px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #748187;
+  cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.navGroup:hover .chevronButton,
+.navGroup:focus-within .chevronButton {
+  color: #18303a;
+}
+
+.chevronButton[aria-expanded="true"] {
+  transform: rotate(180deg);
+}
+
+.loginLink {
+  color: #344c54 !important;
+}
+
+.startButton {
+  min-height: 44px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #b89a61;
+  color: #13262d !important;
+  box-shadow: 0 10px 24px rgba(129, 102, 51, 0.14);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.startButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(129, 102, 51, 0.18);
+}
+
+.megaMenu {
+  position: absolute;
+  top: calc(100% - 7px);
+  left: 50%;
+  width: 760px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 0.82fr 1.6fr;
+  gap: 12px;
+  border: 1px solid rgba(24, 48, 58, 0.11);
+  border-radius: 22px;
+  background: rgba(255, 253, 247, 0.985);
+  box-shadow: 0 30px 80px rgba(19, 39, 48, 0.17);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -7px) scale(0.985);
+  transform-origin: top center;
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 180ms ease, visibility 150ms ease;
+}
+
+.megaMenu::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.megaMenuOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0) scale(1);
+  pointer-events: auto;
+}
+
+.megaMenuCompact {
+  width: 650px;
+  grid-template-columns: 0.7fr 1.35fr;
+}
+
+.megaMenuPrivacy {
+  width: 690px;
+  grid-template-columns: 0.7fr 1.4fr;
+}
+
+.menuIntro,
+.trustPanel,
+.workspacePreview {
+  min-height: 100%;
+  padding: 22px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(184, 154, 97, 0.22), transparent 30%),
+    linear-gradient(145deg, #18303a 0%, #203f47 100%);
+  color: #f8f5ed;
+}
+
+.menuIntro {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.menuIntro > span,
+.trustPanel > span {
+  color: #d2b87e;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.menuIntro > strong,
+.trustPanel > strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.18;
+}
+
+.menuIntro > a {
+  margin-top: 5px;
+  color: #d9e8e4;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.menuGrid,
+.menuGridSingle {
+  display: grid;
+  gap: 6px;
+}
+
+.menuGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menuGridSingle {
+  grid-template-columns: 1fr;
+}
+
+.menuItem {
+  min-width: 0;
+  padding: 13px;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 11px;
+  align-items: start;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: #18303a;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.menuItem:hover {
+  border-color: rgba(47, 119, 119, 0.11);
+  background: #f1f5f1;
+  transform: translateY(-1px);
+}
+
+.menuIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #e7f0ec;
+  color: #2f7777;
+}
+
+.menuItem > div:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.menuItem strong {
+  font-size: 12px;
+  font-weight: 830;
+}
+
+.menuItem span {
+  color: #68777c;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.workspacePreview {
+  display: grid;
+  align-content: center;
+  gap: 13px;
+}
+
+.workspacePreview > div:not(.workspaceLine) {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #edf5f2;
+  font-weight: 800;
+}
+
+.workspaceLine {
+  width: 1px;
+  height: 22px;
+  margin-left: 23px;
+  background: rgba(210, 184, 126, 0.55);
+}
+
+.trustPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.trustPanel > svg {
+  margin-bottom: auto;
+  color: #93c0b3;
+}
+
+.mobileActions,
+.mobilePanel {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .inner {
+    width: min(1180px, calc(100% - 32px));
+  }
+
+  .nav {
+    gap: 14px;
+    font-size: 12px;
+  }
+
+  .megaMenu {
+    width: 700px;
+  }
+
+  .megaMenuCompact,
+  .megaMenuPrivacy {
+    width: 620px;
+  }
+}
+
+@media (max-width: 930px) {
+  .header {
+    border-top-width: 1px;
+  }
+
+  .inner {
+    min-height: 70px;
+    width: calc(100% - 28px);
+  }
+
+  .desktopArea {
+    display: none;
+  }
+
+  .mobileActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobileToggle {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(24, 48, 58, 0.12);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #18303a;
+    cursor: pointer;
+  }
+
+  .mobilePanel {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    border-top: 1px solid transparent;
+    background: rgba(248, 246, 240, 0.985);
+    opacity: 0;
+    transition: max-height 260ms ease, opacity 180ms ease, border-color 180ms ease;
+  }
+
+  .mobilePanelOpen {
+    max-height: 620px;
+    border-color: rgba(24, 48, 58, 0.08);
+    opacity: 1;
+  }
+
+  .mobilePanelInner {
+    width: calc(100% - 28px);
+    margin: 0 auto;
+    padding: 12px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .mobilePanelInner > a {
+    min-height: 58px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 13px;
+    color: #18303a;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .mobilePanelInner > a:hover {
+    background: rgba(47, 119, 119, 0.07);
+  }
+
+  .mobilePanelInner > a > svg {
+    flex: 0 0 auto;
+    color: #2f7777;
+  }
+
+  .mobilePanelInner > a > span {
+    display: grid;
+    gap: 3px;
+  }
+
+  .mobilePanelInner small {
+    color: #718086;
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  .mobileDivider {
+    height: 1px;
+    margin: 6px 0;
+    background: rgba(24, 48, 58, 0.08);
+  }
+
+  .mobileStart {
+    justify-content: center;
+    background: #b89a61;
+    color: #13262d !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .inner {
+    width: calc(100% - 20px);
+  }
+
+  .mobilePanelInner {
+    width: calc(100% - 20px);
+  }
+}

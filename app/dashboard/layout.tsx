@@ -18,6 +18,7 @@ import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
+import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
@@ -109,6 +110,7 @@ export default async function DashboardLayout({
         />
         <TimeAwareWallpaperBootstrap enabled={canManageWallpapers} />
         <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
+        <PlatformTransparencyNotice scope="app" />
         <BaseCurrencyBootstrap workspace="personal" currency={baseCurrency} />
         <LivingThemeBackdrop />
         <RealtimeRefreshBridge />

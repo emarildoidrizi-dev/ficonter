@@ -8,10 +8,21 @@ import { ShieldCheck, Sparkles, X } from "lucide-react";
 import "@/lib/i18n/platformTransparencyNoticeCatalog";
 import styles from "./PlatformTransparencyNotice.module.css";
 
-const NOTICE_KEY = "ficonter:platform-transparency-notice:2026-09-v1";
+const NOTICE_KEYS = {
+  public: "ficonter:platform-transparency-notice:2026-09-v1",
+  app: "ficonter:platform-transparency-notice:2026-09-v1:app",
+} as const;
 const AUTO_CLOSE_MS = 15_000;
 
-export function PlatformTransparencyNotice() {
+type TransparencyNoticeScope = keyof typeof NOTICE_KEYS;
+
+type PlatformTransparencyNoticeProps = {
+  scope?: TransparencyNoticeScope;
+};
+
+export function PlatformTransparencyNotice({
+  scope = "public",
+}: PlatformTransparencyNoticeProps) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [autoClosePaused, setAutoClosePaused] = useState(false);
@@ -19,6 +30,7 @@ export function PlatformTransparencyNotice() {
   const autoCloseTimerRef = useRef<number | null>(null);
   const remainingAutoCloseMsRef = useRef(AUTO_CLOSE_MS);
   const countdownStartedAtRef = useRef<number | null>(null);
+  const noticeKey = NOTICE_KEYS[scope];
 
   const clearAutoCloseTimer = useCallback(() => {
     if (autoCloseTimerRef.current !== null) {
@@ -31,12 +43,12 @@ export function PlatformTransparencyNotice() {
     clearAutoCloseTimer();
 
     try {
-      window.sessionStorage.setItem(NOTICE_KEY, "dismissed");
+      window.sessionStorage.setItem(noticeKey, "dismissed");
     } catch {
       // Session storage can be unavailable in hardened/private browser modes.
     }
     setOpen(false);
-  }, [clearAutoCloseTimer]);
+  }, [clearAutoCloseTimer, noticeKey]);
 
   const scheduleAutoClose = useCallback(() => {
     clearAutoCloseTimer();
@@ -80,7 +92,7 @@ export function PlatformTransparencyNotice() {
     setMounted(true);
 
     try {
-      if (window.sessionStorage.getItem(NOTICE_KEY) === "dismissed") {
+      if (window.sessionStorage.getItem(noticeKey) === "dismissed") {
         return;
       }
     } catch {
@@ -89,7 +101,7 @@ export function PlatformTransparencyNotice() {
 
     setAutoClosePaused(false);
     setOpen(true);
-  }, []);
+  }, [noticeKey]);
 
   useEffect(() => {
     if (!open) return;

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import chunk0 from "@/lib/landing-personal-image/chunk0";
 import chunk1 from "@/lib/landing-personal-image/chunk1";
 import chunk2 from "@/lib/landing-personal-image/chunk2";
@@ -19,12 +21,16 @@ const imageBase64 = [
 ].join("");
 
 export async function GET() {
-  const bytes = new Uint8Array(Buffer.from(imageBase64, "base64"));
+  const imageBuffer = Buffer.from(imageBase64, "base64");
+  const bytes = new Uint8Array(imageBuffer);
+  const digest = createHash("sha256").update(imageBuffer).digest("hex");
 
   return new Response(bytes, {
     headers: {
       "Content-Type": "image/webp",
+      "Content-Length": String(bytes.byteLength),
       "Cache-Control": "public, max-age=3600, must-revalidate",
+      ETag: `"${digest}"`,
     },
   });
 }

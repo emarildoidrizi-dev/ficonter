@@ -20,7 +20,7 @@ import {
 
 import { Brand } from "@/components/Brand";
 import { LandingHeroShowcase } from "@/components/LandingHeroShowcase";
-import { LanguageSelector } from "@/components/LanguageSelector";
+import { PublicSiteHeader } from "@/components/PublicSiteHeader";
 
 import footerStyles from "./landing-footer.module.css";
 import styles from "./page.module.css";
@@ -98,25 +98,7 @@ export default async function HomePage({
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <Brand />
-          <div className={styles.headerActions}>
-            <nav className={styles.navigation} aria-label="Public navigation">
-              <a href="#platform">Platform</a>
-              <a href="#for-you">Personal & Business</a>
-              <a href="#privacy">Privacy</a>
-              <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
-              <Link className={styles.headerCta} href="/register">
-                Start free
-              </Link>
-            </nav>
-            <div className={styles.headerLanguage}>
-              <LanguageSelector variant="public" />
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicSiteHeader />
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
@@ -412,8 +394,8 @@ export default async function HomePage({
             platform is built without advertising and without selling financial
             data.
           </p>
-          <Link className={styles.privacyLink} href="/register">
-            Create a private workspace <ArrowRight size={17} />
+          <Link className={styles.privacyLink} href="/privacy">
+            Explore privacy & trust <ArrowRight size={17} />
           </Link>
         </div>
         <div className={styles.privacyVisual}>
@@ -452,10 +434,11 @@ export default async function HomePage({
 
         <nav className={footerStyles.navigation} aria-label="Footer navigation">
           <div>
-            <span className={footerStyles.groupLabel}>Platform</span>
-            <a href="#platform">Platform overview</a>
-            <a href="#for-you">Personal & Business</a>
-            <a href="#privacy">Privacy</a>
+            <span className={footerStyles.groupLabel}>Explore</span>
+            <Link href="/platform">Platform</Link>
+            <Link href="/personal-business">Personal & Business</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/about">About</Link>
           </div>
           <div>
             <span className={footerStyles.groupLabel}>Access</span>

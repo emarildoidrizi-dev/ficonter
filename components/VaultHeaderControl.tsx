@@ -93,7 +93,12 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     try {
       await unlockVault(code);
       setRecoveryInput("");
-      setOpen(false);
+      if (quickUnlockEnabled) {
+        setOpen(false);
+      } else {
+        setPendingRecoveryCode(code);
+        setPin("");
+      }
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "The vault could not be unlocked.");
     } finally {
@@ -126,6 +131,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       setQuickUnlockEnabled(true);
       setPin("");
       setPendingRecoveryCode(null);
+      setOpen(false);
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "Quick unlock could not be enabled.");
     } finally {
@@ -287,6 +293,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                       maxLength={6}
                       value={pin}
                       onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      onKeyDown={(event) => { if (event.key === "Enter") void handleEnablePin(); }}
                       aria-label="Create 6-digit FICONTER PIN"
                     />
                     <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handleEnablePin}>

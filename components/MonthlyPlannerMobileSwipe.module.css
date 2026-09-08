@@ -23,14 +23,6 @@
   display: none;
 }
 
-.standardSectionCard {
-  display: contents;
-}
-
-.standardSectionCard > article {
-  min-width: 0;
-}
-
 @media (max-width: 1200px) {
   .primaryTrack {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import "@/lib/i18n/landingPageCurrentCatalog";
+import "@/lib/i18n/landingHeroShowcaseCatalog";
 import { LanguageSelector } from "./LanguageSelector";
 import styles from "./GlobalLanguageControl.module.css";
 

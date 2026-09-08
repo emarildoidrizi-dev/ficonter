@@ -31,13 +31,16 @@ type Plan = { id:string; user_id:string; month:string; start_balance:number|stri
 type Item = { id:string; user_id:string; month:string; section:Section; label:string; planned_amount:number|string; position:number; created_at:string; updated_at:string };
 type Goal = { id:string; user_id:string; name:string; target_amount:number|string; current_amount:number|string; target_date:string|null; status:string; created_at:string; updated_at:string };
 type PlannerSection = {key:Section; title:string};
+type PlannerSwipeItem = {key:Section|"goals"; title:string};
 
 const compactSections = new Set<Section>(["income","bills","expenses","savings","debt"]);
 const sections: PlannerSection[] = [
   {key:"income",title:"Income"},{key:"bills",title:"Bills"},{key:"expenses",title:"Expenses"},{key:"savings",title:"Savings"},{key:"debt",title:"Debt"},
 ];
-const primarySwipeSections=sections.slice(0,3);
-const remainingSections=sections.slice(3);
+const primarySwipeItems: PlannerSwipeItem[] = [
+  ...sections,
+  {key:"goals",title:"Goals"},
+];
 const debtWords=["debt","loan","credit-card","credit card","mortgage principal","student-loan","personal-loan"];
 const savingWords=["savings","emergency fund","retirement","stocks","etfs","bonds","crypto","investment","house deposit","education fund"];
 const monthKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -544,6 +547,37 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
     );
   }
 
+  function renderGoalCard(){
+    const invested = totalGoalInvested;
+    const target = totalGoalTarget;
+    const progress = target ? Math.min(100, invested / target * 100) : 0;
+    return (
+      <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
+        <header className={styles.cleanCardHeader}>
+          <div className={styles.cardHeaderIdentity}>
+            <span className={styles.cardHeaderMarker} aria-hidden="true" />
+            <h3>Goals</h3>
+          </div>
+          <div className={styles.cardHeaderMetric}>
+            <span>Invested</span>
+            <strong>{money(invested)}</strong>
+          </div>
+        </header>
+        <div className={styles.goalSummaryBody}>
+          <div className={styles.goalSummaryAmounts}>
+            <span>Invested<b>{money(invested)}</b></span>
+            <span>Target<b>{money(target)}</b></span>
+          </div>
+          <div className={styles.goalSummaryProgress}><i style={{width:`${progress}%`}}/></div>
+          <div className={styles.goalSummaryFooter}>
+            <strong>{progress.toFixed(1)}% complete</strong>
+            <a href="/dashboard/goals">View goals</a>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   return <section className={styles.planner}>
     <header className={styles.header}><div><span>MONTHLY FINANCIAL PLANNER</span><h1>{monthTitle(month)}</h1><p>Your complete monthly activity and financial position in one view.</p></div><div className={styles.monthNav}><button onClick={()=>shiftMonth(-1)}><ChevronLeft/></button><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button onClick={()=>shiftMonth(1)}><ChevronRight/></button></div></header>
     {notice&&<div className={styles.notice}>{notice}</div>}
@@ -604,45 +638,14 @@ export function MonthlyPlanner({userId,initialTransactions,initialBills,initialP
           ref={primarySwipeTrackRef}
           onScroll={syncPrimarySwipeIndex}
           role="region"
-          aria-label="Swipe between Income, Bills and Expenses"
+          aria-label="Swipe between Income, Bills, Expenses, Savings, Debt and Goals"
         >
-          {primarySwipeSections.map((section)=><div className={swipeStyles.primarySlide} data-planner-primary-card key={section.key}>{renderSectionCard(section)}</div>)}
+          {primarySwipeItems.map((item)=><div className={swipeStyles.primarySlide} data-planner-primary-card key={item.key}>{item.key==="goals"?renderGoalCard():renderSectionCard({key:item.key,title:item.title})}</div>)}
         </div>
         <div className={swipeStyles.primaryDots} role="group" aria-label="Monthly planner card navigation">
-          {primarySwipeSections.map((section,index)=><button type="button" key={section.key} data-active={primarySwipeIndex===index?"true":"false"} aria-label={`Show ${section.title}`} aria-current={primarySwipeIndex===index?"page":undefined} onClick={()=>showPrimarySwipeCard(index)}><span/></button>)}
+          {primarySwipeItems.map((item,index)=><button type="button" key={item.key} data-active={primarySwipeIndex===index?"true":"false"} aria-label={`Show ${item.title}`} aria-current={primarySwipeIndex===index?"page":undefined} onClick={()=>showPrimarySwipeCard(index)}><span/></button>)}
         </div>
       </div>
-
-      {remainingSections.map((section)=><div className={swipeStyles.standardSectionCard} key={section.key}>{renderSectionCard(section)}</div>)}
-
-      <article className={`${styles.tableCard} ${styles.goals} ${styles.goalSummaryCard}`}>
-        <header className={styles.cleanCardHeader}>
-          <div className={styles.cardHeaderIdentity}>
-            <span className={styles.cardHeaderMarker} aria-hidden="true" />
-            <h3>Goals</h3>
-          </div>
-          <div className={styles.cardHeaderMetric}>
-            <span>Invested</span>
-            <strong>{money(totalGoalInvested)}</strong>
-          </div>
-        </header>
-        {(() => {
-          const invested = totalGoalInvested;
-          const target = totalGoalTarget;
-          const progress = target ? Math.min(100, invested / target * 100) : 0;
-          return <div className={styles.goalSummaryBody}>
-            <div className={styles.goalSummaryAmounts}>
-              <span>Invested<b>{money(invested)}</b></span>
-              <span>Target<b>{money(target)}</b></span>
-            </div>
-            <div className={styles.goalSummaryProgress}><i style={{width:`${progress}%`}}/></div>
-            <div className={styles.goalSummaryFooter}>
-              <strong>{progress.toFixed(1)}% complete</strong>
-              <a href="/dashboard/goals">View goals</a>
-            </div>
-          </div>;
-        })()}
-      </article>
     </div>
     <div className={styles.bottomGrid}><article className={styles.expenseTracker}><h3>Expense tracker</h3><div className={styles.expenseHead}><span>Date</span><span>Amount</span><span>Category</span><span>Notes</span></div><div className={`${styles.expenseViewport} ficonter-scroll-region`} tabIndex={expenseTransactions.length>10?0:undefined} aria-label="Monthly expense transactions. The newest ten are visible first; scroll for older records.">{expenseTransactions.map(t=><div className={styles.expenseRow} key={t.id}><span>{t.transaction_date}</span><span>{money(finiteNumber(t.amount_eur))}</span><span>{t.category}</span><span>{t.description}</span></div>)}</div>{expenseTransactions.length>10&&<p className={styles.expenseScrollHint}>Showing 10 transactions at a time · Scroll for older activity</p>}</article><article className={styles.spending}><h3>Spending breakdown</h3>{spendingBreakdown.map(([k,v])=><div key={k}><span>{k}</span><b>{money(v)}</b><em>{totalOut?`${(v/totalOut*100).toFixed(1)}%`:"0%"}</em></div>)}</article></div>
   </section>

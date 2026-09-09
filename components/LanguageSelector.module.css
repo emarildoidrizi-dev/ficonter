@@ -259,3 +259,25 @@
   .menu[data-adaptive-language-menu="true"] button[aria-selected="true"] {
   background: #294038 !important;
 }
+
+/* Mobile adaptive menu height authority.
+   The body-portal menu must size to its content instead of inheriting any
+   workspace block height. Keep a compact viewport-relative cap and scroll the
+   language rows when needed. */
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .menu[data-adaptive-language-menu="true"] {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(300px, calc(100dvh - 150px)) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="tablet"])
+  .menu[data-adaptive-language-menu="true"] {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(360px, calc(100dvh - 170px)) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}

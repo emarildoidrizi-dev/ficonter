@@ -59,6 +59,18 @@ html[data-theme] .app-shell :where(
   background-color: color-mix(in srgb, var(--theme-surface-raised) 97%, transparent);
 }
 
+/* CSS-module child names such as drawerLinkLabel and drawerLinkStatus also
+   contain the word "drawer". They are content, not structural surfaces, so
+   they must never inherit the drawer's opaque sheet background. */
+html[data-theme] .app-shell :where(
+  [class*="drawerLinkLabel" i],
+  [class*="drawerLinkStatus" i]
+) {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
 /* Financial numbers and primary labels are always high-contrast. */
 html[data-theme] .app-shell :where(
   h1,h2,h3,h4,h5,h6,

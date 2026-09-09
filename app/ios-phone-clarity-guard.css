@@ -23,10 +23,11 @@
       [class*="LanguageSelector_menu"] {
       position: fixed !important;
       top: calc(max(8px, env(safe-area-inset-top)) + 66px) !important;
-      inset-inline-start: 12px !important;
-      inset-inline-end: 12px !important;
-      width: auto !important;
-      max-width: none !important;
+      inset-inline-start: 50% !important;
+      inset-inline-end: auto !important;
+      width: min(214px, calc(100vw - 20px)) !important;
+      max-width: 214px !important;
+      transform: translateX(-50%) !important;
       max-height: min(420px, calc(100dvh - 160px)) !important;
       padding: 8px !important;
       border-radius: 16px !important;

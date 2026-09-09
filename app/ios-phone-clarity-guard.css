@@ -16,4 +16,17 @@
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
+
+  /* Keep navigation labels visually integrated with their cards. iOS can
+     surface a solid text backing in the native More sheet; the label itself
+     should remain transparent so the card surface shows through naturally. */
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    [class*="FiconterNativeAppChrome_drawerLinkLabel"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
 }

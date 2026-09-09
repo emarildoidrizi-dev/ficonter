@@ -220,6 +220,20 @@
     padding-inline-end: max(var(--adaptive-page-gutter), env(safe-area-inset-right)) !important;
   }
 
+  /* More-sheet labels are content, not one-line badges. Keep the existing
+     cards and typography, but allow every navigation name to wrap naturally
+     instead of replacing the end of the name with an ellipsis. */
+  html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawerLinkLabel"] {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    line-height: 1.2;
+  }
+
   /* Viewport-managed language menu. Its geometry is calculated from the globe
      button and then clamped inside the live visual viewport. The existing menu
      colours, rows and typography are preserved. */

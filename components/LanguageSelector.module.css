@@ -210,3 +210,52 @@
 }
 
 /* V1.27 — choosing a language is the confirmation; no separate Save action. */
+
+/* Adaptive workspace popover surface authority.
+   The popover is rendered in a body portal, so it must own a fully opaque
+   surface rather than inherit workspace transparency/wallpaper opacity. */
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="light"])
+  .menu[data-adaptive-language-menu="true"] {
+  opacity: 1 !important;
+  background: #fffdf9 !important;
+  border-color: rgba(23, 50, 60, 0.16) !important;
+  box-shadow:
+    0 24px 64px rgba(22, 41, 36, 0.24),
+    0 4px 14px rgba(22, 41, 36, 0.1) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate;
+}
+
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="light"])
+  .menu[data-adaptive-language-menu="true"] button:hover {
+  background: #f4f6f2 !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="light"])
+  .menu[data-adaptive-language-menu="true"] button[aria-selected="true"] {
+  background: #e9f1ed !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="dark"])
+  .menu[data-adaptive-language-menu="true"] {
+  opacity: 1 !important;
+  background: #17241f !important;
+  border-color: rgba(244, 245, 240, 0.14) !important;
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.28) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate;
+}
+
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="dark"])
+  .menu[data-adaptive-language-menu="true"] button:hover {
+  background: #20312b !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-resolved-theme="dark"])
+  .menu[data-adaptive-language-menu="true"] button[aria-selected="true"] {
+  background: #294038 !important;
+}

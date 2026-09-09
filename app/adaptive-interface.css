@@ -1,0 +1,284 @@
+/* FICONTER ADAPTIVE INTERFACE V1
+   A single dimensional layer for authenticated phone/tablet workspaces.
+   It does not change financial logic, colours, data, navigation behaviour or
+   desktop presentation. Dimensions scale continuously with the usable viewport
+   instead of relying on one fixed phone size. */
+
+@media (max-width: 900px) {
+  html[data-ficonter-native-app="true"] {
+    --adaptive-page-gutter: clamp(10px, 3.6vw, 22px);
+    --adaptive-shell-gap: clamp(3px, 1.35vw, 7px);
+    --adaptive-control-size: clamp(40px, 11.5vw, 48px);
+    --adaptive-account-size: clamp(50px, 14.5vw, 58px);
+    --adaptive-brand-size: clamp(50px, 14.5vw, 58px);
+    --adaptive-radius: clamp(14px, 4.2vw, 20px);
+    --adaptive-radius-small: clamp(10px, 3.2vw, 15px);
+    --adaptive-page-title: clamp(24px, 7.2vw, 34px);
+    --adaptive-section-title: clamp(19px, 5.2vw, 26px);
+    --adaptive-card-title: clamp(16px, 4.25vw, 19px);
+    --adaptive-body-size: clamp(14px, 3.8vw, 15.5px);
+    --adaptive-menu-width: clamp(200px, 58vw, 260px);
+    --adaptive-dialog-gutter: clamp(12px, 4vw, 24px);
+
+    --mobile-page-x: var(--adaptive-page-gutter);
+    --mobile-ui-radius: var(--adaptive-radius);
+    --mobile-ui-radius-small: var(--adaptive-radius-small);
+    --mobile-page-title-size: var(--adaptive-page-title);
+    --mobile-section-title-size: var(--adaptive-section-title);
+    --mobile-card-title-size: var(--adaptive-card-title);
+    --mobile-body-size: var(--adaptive-body-size);
+  }
+
+  html[data-ficonter-native-app="true"],
+  html[data-ficonter-native-app="true"] body,
+  html[data-ficonter-native-app="true"] .app-shell,
+  html[data-ficonter-native-app="true"] .app-main {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: clip;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main {
+    width: 100% !important;
+    padding-inline-start: max(var(--adaptive-page-gutter), env(safe-area-inset-left)) !important;
+    padding-inline-end: max(var(--adaptive-page-gutter), env(safe-area-inset-right)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-inline: auto;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"] .app-main > * {
+    width: 100% !important;
+  }
+
+  html[data-ficonter-native-app="true"][data-ficonter-device="tablet"] .app-main > * {
+    width: min(100%, 980px) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main h1 {
+    font-size: var(--adaptive-page-title) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main h2 {
+    font-size: var(--adaptive-section-title) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main h3 {
+    font-size: var(--adaptive-card-title) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main :where(
+    .panel,
+    .kpi,
+    article,
+    section[class*="card"],
+    div[class*="card"]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    border-radius: var(--adaptive-radius) !important;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main :where(
+    img,
+    video,
+    canvas
+  ) {
+    max-width: 100%;
+  }
+
+  html[data-ficonter-native-app="true"] .app-main :where(
+    [class*="tableWrap"],
+    [class*="TableWrap"],
+    [class*="tableViewport"],
+    [class*="TableViewport"],
+    [class*="tableScroll"],
+    [class*="TableScroll"]
+  ) {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  html[data-ficonter-native-app="true"] body [role="dialog"] {
+    box-sizing: border-box;
+    max-width: calc(100vw - (2 * var(--adaptive-dialog-gutter))) !important;
+    max-height: calc(100dvh - (2 * var(--adaptive-dialog-gutter))) !important;
+  }
+
+  /* Personal + Business mobile utility header. Keep its visual design, but
+     scale the geometry continuously with the viewport. */
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_shellHeader"],
+    [class*="BusinessSidebar_shellHeader"]
+  ) {
+    width: 100% !important;
+    padding-inline-start: max(var(--adaptive-page-gutter), env(safe-area-inset-left)) !important;
+    padding-inline-end: max(var(--adaptive-page-gutter), env(safe-area-inset-right)) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_topRow"],
+    [class*="BusinessSidebar_topRow"]
+  ) {
+    min-width: 0;
+    gap: var(--adaptive-shell-gap) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_brandArea"],
+    [class*="SidebarNavigation_headerActions"],
+    [class*="BusinessSidebar_brandArea"],
+    [class*="BusinessSidebar_headerActions"]
+  ) {
+    min-width: 0;
+    gap: var(--adaptive-shell-gap) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_brandCard"],
+    [class*="BusinessSidebar_brandCard"]
+  ) {
+    width: var(--adaptive-brand-size) !important;
+    min-width: var(--adaptive-brand-size) !important;
+    min-height: var(--adaptive-account-size) !important;
+    padding: clamp(4px, 1.4vw, 6px) !important;
+    border-radius: var(--adaptive-radius-small) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_brandCard"],
+    [class*="BusinessSidebar_brandCard"]
+  ) :where(img) {
+    width: clamp(38px, 10.8vw, 42px) !important;
+    height: clamp(38px, 10.8vw, 42px) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_headerActions"],
+    [class*="BusinessSidebar_headerActions"]
+  ) > [class*="LanguageSelector_root"] [class*="LanguageSelector_trigger"] {
+    width: var(--adaptive-control-size) !important;
+    min-width: var(--adaptive-control-size) !important;
+    min-height: var(--adaptive-control-size) !important;
+    padding-inline: 0 !important;
+    border-radius: var(--adaptive-radius-small) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_headerActions"],
+    [class*="BusinessSidebar_headerActions"]
+  ) [class*="NotificationCenter_root"] {
+    grid-template-columns: repeat(3, var(--adaptive-control-size)) !important;
+    gap: var(--adaptive-shell-gap) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_headerActions"],
+    [class*="BusinessSidebar_headerActions"]
+  ) [class*="NotificationCenter_root"] button,
+  html[data-ficonter-native-app="true"] [class*="VaultHeaderControl_mobileHost"] [class*="VaultHeaderControl_trigger"] {
+    width: var(--adaptive-control-size) !important;
+    min-width: var(--adaptive-control-size) !important;
+    min-height: var(--adaptive-control-size) !important;
+    border-radius: var(--adaptive-radius-small) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_accountButton"],
+    [class*="BusinessSidebar_accountButton"]
+  ) {
+    width: var(--adaptive-account-size) !important;
+    min-width: var(--adaptive-account-size) !important;
+    min-height: var(--adaptive-control-size) !important;
+    padding-inline: clamp(4px, 1.4vw, 7px) !important;
+    border-radius: var(--adaptive-radius-small) !important;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_mobileBackButton"],
+    [class*="BusinessSidebar_mobileBackButton"]
+  ) {
+    width: var(--adaptive-control-size) !important;
+    min-width: var(--adaptive-control-size) !important;
+    height: var(--adaptive-control-size) !important;
+    flex-basis: var(--adaptive-control-size) !important;
+    border-radius: var(--adaptive-radius-small) !important;
+  }
+
+  html[data-ficonter-native-app="true"] [class*="BusinessSidebar_businessIdentity"] {
+    max-width: 100% !important;
+  }
+
+  /* The legacy native dock is hidden by the current light-header authority,
+     but keep it adaptive for routes/configurations where it is mounted. */
+  html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_bottomDock"] {
+    padding-inline-start: max(var(--adaptive-page-gutter), env(safe-area-inset-left)) !important;
+    padding-inline-end: max(var(--adaptive-page-gutter), env(safe-area-inset-right)) !important;
+  }
+
+  /* Viewport-managed language menu. Its geometry is calculated from the globe
+     button and then clamped inside the live visual viewport. The existing menu
+     colours, rows and typography are preserved. */
+  html[data-ficonter-native-app="true"] [data-adaptive-language-menu="true"] {
+    position: fixed !important;
+    top: var(--ficonter-language-menu-top) !important;
+    left: var(--ficonter-language-menu-left) !important;
+    right: auto !important;
+    inset-inline-start: auto !important;
+    inset-inline-end: auto !important;
+    width: var(--ficonter-language-menu-width, var(--adaptive-menu-width)) !important;
+    max-width: calc(100vw - (2 * var(--adaptive-page-gutter))) !important;
+    max-height: var(--ficonter-language-menu-max-height, min(344px, calc(100dvh - 120px))) !important;
+    transform: none !important;
+    contain: layout style !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    z-index: 4000 !important;
+  }
+}
+
+@media (max-width: 360px) {
+  html[data-ficonter-native-app="true"] {
+    --adaptive-page-gutter: 9px;
+    --adaptive-shell-gap: 3px;
+    --adaptive-control-size: 38px;
+    --adaptive-account-size: 46px;
+    --adaptive-brand-size: 48px;
+    --adaptive-page-title: 24px;
+    --adaptive-section-title: 19px;
+    --adaptive-card-title: 16px;
+  }
+
+  html[data-ficonter-native-app="true"] :where(
+    [class*="SidebarNavigation_brandCard"],
+    [class*="BusinessSidebar_brandCard"]
+  ) :where(img) {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  html[data-ficonter-native-app="true"] {
+    --adaptive-page-gutter: clamp(18px, 3vw, 28px);
+    --adaptive-shell-gap: clamp(6px, 1.2vw, 10px);
+    --adaptive-control-size: 48px;
+    --adaptive-account-size: 58px;
+    --adaptive-brand-size: 58px;
+    --adaptive-menu-width: clamp(240px, 36vw, 300px);
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  html[data-ficonter-native-app="true"] {
+    --adaptive-page-gutter: clamp(10px, 2.5vw, 20px);
+  }
+
+  html[data-ficonter-native-app="true"] body [role="dialog"] {
+    max-height: calc(100dvh - 16px) !important;
+  }
+}

@@ -209,4 +209,42 @@
   }
 }
 
+/* Native phone only: preserve the existing language-card appearance, but render it
+   against the viewport so the sticky header cannot clip it. */
+.mobileCenteredMenu {
+  position: fixed;
+  top: calc(max(8px, env(safe-area-inset-top)) + 66px);
+  left: 50%;
+  right: auto;
+  inset-inline-start: auto;
+  inset-inline-end: auto;
+  width: min(264px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(420px, calc(100dvh - 150px));
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--surface-raised);
+  box-shadow: 0 24px 70px rgba(8, 18, 29, 0.32);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  contain: none;
+  transform: translateX(-50%);
+  z-index: 4000;
+}
+.mobileCenteredMenu button {
+  min-height: 44px;
+  padding: 7px 10px;
+  border-radius: 10px;
+}
+.mobileCenteredMenu strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+.mobileCenteredMenu small {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
 /* V1.27 — choosing a language is the confirmation; no separate Save action. */

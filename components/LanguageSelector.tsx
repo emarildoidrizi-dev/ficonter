@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, Globe2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { LANGUAGE_OPTIONS, type FiconterLanguage } from "@/lib/i18n/config";
 import { translateMessage } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageProvider";
@@ -18,6 +19,7 @@ export function LanguageSelector({
 }) {
   const { language, changeLanguage, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
   const latestSelectionRef = useRef(0);
@@ -25,7 +27,13 @@ export function LanguageSelector({
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (
+        !containerRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
@@ -71,6 +79,40 @@ export function LanguageSelector({
       });
   }
 
+  const useCenteredPhoneMenu =
+    open &&
+    variant === "compact" &&
+    typeof document !== "undefined" &&
+    document.documentElement.dataset.ficonterNativeApp === "true" &&
+    document.documentElement.dataset.ficonterDevice === "phone";
+
+  const menu = open ? (
+    <div
+      ref={menuRef}
+      className={`${styles.menu} ${useCenteredPhoneMenu ? styles.mobileCenteredMenu : ""}`}
+      role="listbox"
+      aria-label={t("chooseLanguage")}
+    >
+      {LANGUAGE_OPTIONS.map((option) => (
+        <button
+          type="button"
+          role="option"
+          aria-selected={option.code === language}
+          key={option.code}
+          onClick={() => selectLanguage(option.code)}
+          lang={option.locale}
+          dir={option.direction}
+        >
+          <span>
+            <strong>{option.nativeName}</strong>
+            <small>{option.englishName}</small>
+          </span>
+          {option.code === language ? <Check size={16} /> : null}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <div
       ref={containerRef}
@@ -100,27 +142,7 @@ export function LanguageSelector({
         <ChevronDown size={15} className={open ? styles.chevronOpen : ""} />
       </button>
 
-      {open ? (
-        <div className={styles.menu} role="listbox" aria-label={t("chooseLanguage")}>
-          {LANGUAGE_OPTIONS.map((option) => (
-            <button
-              type="button"
-              role="option"
-              aria-selected={option.code === language}
-              key={option.code}
-              onClick={() => selectLanguage(option.code)}
-              lang={option.locale}
-              dir={option.direction}
-            >
-              <span>
-                <strong>{option.nativeName}</strong>
-                <small>{option.englishName}</small>
-              </span>
-              {option.code === language ? <Check size={16} /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {useCenteredPhoneMenu && menu ? createPortal(menu, document.body) : menu}
 
       {showDetails ? (
         <div className={styles.details}>

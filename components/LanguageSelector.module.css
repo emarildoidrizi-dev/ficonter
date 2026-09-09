@@ -209,47 +209,4 @@
   }
 }
 
-/* Native-phone floating language popover.
-   It is portaled to document.body and anchored to the globe trigger, so the
-   compact panel stays readable without covering the app or being clipped by
-   the sticky header. */
-.mobilePopoverMenu {
-  position: fixed;
-  inset: auto;
-  max-width: calc(100vw - 24px);
-  max-height: min(260px, calc(100dvh - 132px));
-  padding: 6px;
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  background: var(--surface-raised);
-  box-shadow: 0 16px 44px rgba(8, 18, 29, 0.24);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  contain: none;
-  z-index: 4000;
-}
-.mobilePopoverMenu button {
-  min-height: 42px;
-  padding: 6px 9px;
-  gap: 9px;
-  border-radius: 9px;
-}
-.mobilePopoverMenu button span {
-  min-width: 0;
-  gap: 1px;
-}
-.mobilePopoverMenu strong {
-  font-size: 12.5px;
-  line-height: 1.25;
-}
-.mobilePopoverMenu small {
-  margin-top: 1px;
-  font-size: 9.5px;
-  line-height: 1.2;
-}
-.mobilePopoverMenu svg {
-  flex: 0 0 auto;
-}
-
 /* V1.27 — choosing a language is the confirmation; no separate Save action. */

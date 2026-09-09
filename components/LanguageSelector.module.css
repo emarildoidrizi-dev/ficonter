@@ -209,4 +209,36 @@
   }
 }
 
+.mobilePortalMenu {
+  position: fixed;
+  top: calc(max(8px, env(safe-area-inset-top)) + 68px);
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  width: auto;
+  max-width: none;
+  max-height: min(440px, calc(100dvh - 150px));
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--surface-raised);
+  box-shadow: 0 24px 70px rgba(8, 18, 29, 0.32);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  contain: none;
+  z-index: 4000;
+}
+.mobilePortalMenu button {
+  min-height: 46px;
+  padding: 7px 12px;
+  border-radius: 10px;
+}
+.mobilePortalMenu strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+.mobilePortalMenu small {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
 /* V1.27 — choosing a language is the confirmation; no separate Save action. */

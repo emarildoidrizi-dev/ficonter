@@ -23,7 +23,7 @@
       [class*="LanguageSelector_menu"] {
       position: fixed !important;
       top: calc(max(8px, env(safe-area-inset-top)) + 66px) !important;
-      inset-inline-start: 50% !important;
+      inset-inline-start: 54% !important;
       inset-inline-end: auto !important;
       width: min(214px, calc(100vw - 20px)) !important;
       max-width: 214px !important;

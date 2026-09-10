@@ -1,7 +1,7 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
    Destructive confirmations must appear immediately inside the currently
-   visible native-app viewport. They never require the user to scroll to find
-   them. The full-screen veil owns the interaction while a confirmation is open. */
+   visible native-app viewport. A single-transaction confirmation is anchored
+   over the exact transaction row that opened it; bulk confirmations stay centered. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -24,9 +24,8 @@ html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Transaction delete confirmation: always occupy the current viewport rather
-   than inheriting any scrolling/card/page-stack positioning. This is the core
-   guarantee that the dialog is visible the instant Delete is tapped. */
+/* All TransactionLedger confirmations own the current viewport and stop page
+   interaction while the user decides. */
 html[data-ficonter-native-app="true"]
   .app-main
   [class*="TransactionLedger_backdrop"]:has(> [role="alertdialog"]) {
@@ -66,6 +65,38 @@ html[data-ficonter-native-app="true"]
   touch-action: pan-y !important;
   transition: none !important;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
+}
+
+/* Single-transaction delete only. The interaction bridge captures the row's
+   viewport centre on the Delete tap. If an app ancestor creates an iOS fixed
+   containing block, the backdrop is shifted back onto the visible viewport;
+   the confirmation is then absolutely positioned inside that stable veil. */
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-anchor="true"]
+  .app-main
+  [class*="TransactionLedger_backdrop"]:has(
+    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
+  ) {
+  transform: translate(
+    var(--ficonter-delete-backdrop-shift-x, 0px),
+    var(--ficonter-delete-backdrop-shift-y, 0px)
+  ) !important;
+  transform-origin: top left !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-anchor="true"]
+  .app-main
+  [class*="TransactionLedger_backdrop"]:has(
+    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
+  )
+  > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"]) {
+  position: absolute !important;
+  top: var(--ficonter-delete-anchor-y, 50%) !important;
+  left: var(--ficonter-delete-anchor-x, 50%) !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 @media (orientation: landscape) and (max-height: 620px) {

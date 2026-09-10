@@ -1,7 +1,7 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
    Alert dialogs remain centered by default. A single-transaction delete
-   confirmation is positioned directly over the transaction that opened it
-   and freezes the workspace until the user acts on that confirmation. */
+   confirmation is positioned directly over the transaction that opened it.
+   The workspace is frozen only after the confirmation has rendered. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -38,18 +38,14 @@ html[data-ficonter-native-app="true"]
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  touch-action: pan-y !important;
   transition: none !important;
 }
 
-/* The whole page becomes modal while a transaction deletion is being
-   confirmed. The underlying list and page cannot scroll, so the confirmation
-   never drifts away from the transaction that triggered it. */
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"],
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"] body {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-}
-
+/* Do not force html/body overflow changes here. On iOS, changing root overflow
+   during a tap can move the visual viewport or interrupt click delivery. The
+   full-screen modal veil plus the non-passive touch/wheel guard in
+   KeyboardInteractionBridge freezes the background without moving the page. */
 html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"]
   .ficonter-scroll-region {
   overflow: hidden !important;
@@ -66,6 +62,7 @@ html[data-ficonter-native-app="true"]
   backdrop-filter: blur(7px) !important;
   -webkit-backdrop-filter: blur(7px) !important;
   overscroll-behavior: none !important;
+  touch-action: none !important;
 }
 
 html[data-ficonter-native-app="true"]
@@ -75,6 +72,7 @@ html[data-ficonter-native-app="true"]
   )
   > [role="alertdialog"] {
   pointer-events: auto !important;
+  touch-action: pan-y !important;
 }
 
 @media (orientation: landscape) and (max-height: 620px) {

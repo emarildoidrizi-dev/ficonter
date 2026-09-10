@@ -30,10 +30,6 @@ export function KeyboardInteractionBridge() {
     let anchoredDialog: HTMLElement | null = null;
     let connectTimeout = 0;
     let scrollLocked = false;
-    let previousHtmlOverflow = "";
-    let previousHtmlOverscroll = "";
-    let previousBodyOverflow = "";
-    let previousBodyOverscroll = "";
 
     function isNativeWorkspace() {
       return document.documentElement.dataset.ficonterNativeApp === "true";
@@ -41,32 +37,13 @@ export function KeyboardInteractionBridge() {
 
     function lockTransactionDeleteScroll() {
       if (scrollLocked || !isNativeWorkspace()) return;
-
-      const html = document.documentElement;
-      const body = document.body;
-      previousHtmlOverflow = html.style.overflow;
-      previousHtmlOverscroll = html.style.overscrollBehavior;
-      previousBodyOverflow = body.style.overflow;
-      previousBodyOverscroll = body.style.overscrollBehavior;
-
-      html.dataset.ficonterTransactionDeleteLocked = "true";
-      html.style.overflow = "hidden";
-      html.style.overscrollBehavior = "none";
-      body.style.overflow = "hidden";
-      body.style.overscrollBehavior = "none";
+      document.documentElement.dataset.ficonterTransactionDeleteLocked = "true";
       scrollLocked = true;
     }
 
     function unlockTransactionDeleteScroll() {
       if (!scrollLocked) return;
-
-      const html = document.documentElement;
-      const body = document.body;
-      delete html.dataset.ficonterTransactionDeleteLocked;
-      html.style.overflow = previousHtmlOverflow;
-      html.style.overscrollBehavior = previousHtmlOverscroll;
-      body.style.overflow = previousBodyOverflow;
-      body.style.overscrollBehavior = previousBodyOverscroll;
+      delete document.documentElement.dataset.ficonterTransactionDeleteLocked;
       scrollLocked = false;
     }
 
@@ -172,8 +149,16 @@ export function KeyboardInteractionBridge() {
       const dialog = findTransactionDeleteDialog();
       if (!dialog) return;
 
+      // React has now rendered the confirmation. Only at this point do we
+      // freeze the workspace. Locking earlier during the originating click can
+      // interrupt iOS click dispatch and prevent the dialog from rendering.
       anchoredDialog = dialog;
       positionTransactionDeleteDialog();
+      lockTransactionDeleteScroll();
+
+      // Re-measure once after the modal lock has been applied so any small
+      // viewport/layout adjustment cannot move the confirmation off its source.
+      window.requestAnimationFrame(positionTransactionDeleteDialog);
     }
 
     function scheduleTransactionDeleteConnect() {
@@ -186,8 +171,11 @@ export function KeyboardInteractionBridge() {
 
       if (connectTimeout) window.clearTimeout(connectTimeout);
       connectTimeout = window.setTimeout(() => {
-        if (!anchoredDialog) releaseTransactionDelete();
-      }, 1200);
+        connectTimeout = 0;
+        // Never hide a confirmation if anchoring fails. The base CSS keeps the
+        // dialog centered as a safe fallback; only discard the pending anchor.
+        if (!anchoredDialog) deleteAnchor = null;
+      }, 1500);
     }
 
     function handleDocumentClick(event: MouseEvent) {
@@ -210,7 +198,10 @@ export function KeyboardInteractionBridge() {
           x: rect.left + rect.width / 2,
           y: rect.top + rect.height / 2,
         };
-        lockTransactionDeleteScroll();
+
+        // Important: do not lock scrolling here. This listener runs in the
+        // capture phase, before TransactionLedger's React onClick. We only
+        // capture the position and allow the React click to open the dialog.
         scheduleTransactionDeleteConnect();
         return;
       }
@@ -222,6 +213,19 @@ export function KeyboardInteractionBridge() {
           }
         });
       }
+    }
+
+    function preventBackgroundScroll(event: Event) {
+      if (!scrollLocked) return;
+      const target = event.target;
+      if (
+        anchoredDialog &&
+        target instanceof Node &&
+        anchoredDialog.contains(target)
+      ) {
+        return;
+      }
+      event.preventDefault();
     }
 
     const dialogObserver = new MutationObserver(() => {
@@ -238,6 +242,14 @@ export function KeyboardInteractionBridge() {
     });
 
     document.addEventListener("click", handleDocumentClick, true);
+    document.addEventListener("touchmove", preventBackgroundScroll, {
+      capture: true,
+      passive: false,
+    });
+    document.addEventListener("wheel", preventBackgroundScroll, {
+      capture: true,
+      passive: false,
+    });
     window.addEventListener("resize", positionTransactionDeleteDialog);
     window.visualViewport?.addEventListener(
       "resize",
@@ -245,6 +257,17 @@ export function KeyboardInteractionBridge() {
     );
 
     function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+
+      if (
+        scrollLocked &&
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) &&
+        (!(target instanceof Node) || !anchoredDialog?.contains(target))
+      ) {
+        event.preventDefault();
+        return;
+      }
+
       if (
         event.key !== "Enter" ||
         event.defaultPrevented ||
@@ -258,7 +281,6 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
-      const target = event.target;
       if (!(target instanceof HTMLElement)) return;
 
       if (
@@ -316,6 +338,8 @@ export function KeyboardInteractionBridge() {
       releaseTransactionDelete();
       dialogObserver.disconnect();
       document.removeEventListener("click", handleDocumentClick, true);
+      document.removeEventListener("touchmove", preventBackgroundScroll, true);
+      document.removeEventListener("wheel", preventBackgroundScroll, true);
       window.removeEventListener("resize", positionTransactionDeleteDialog);
       window.visualViewport?.removeEventListener(
         "resize",

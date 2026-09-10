@@ -35,6 +35,7 @@ export function KeyboardInteractionBridge() {
       dialog.style.removeProperty("--ficonter-anchor-left");
       dialog.style.removeProperty("--ficonter-anchor-top");
       dialog.style.removeProperty("visibility");
+      dialog.style.removeProperty("opacity");
     }
 
     function releaseTransactionAnchor() {
@@ -45,80 +46,70 @@ export function KeyboardInteractionBridge() {
 
     function findTransactionDeleteDialog(): HTMLElement | null {
       const dialogs = Array.from(
-        document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
+        document.querySelectorAll<HTMLElement>(
+          '[role="alertdialog"][class*="TransactionLedger_modal"]',
+        ),
       );
 
       return (
-        dialogs.find((dialog) => {
-          const confirm = dialog.querySelector<HTMLElement>(
-            '[data-enter-confirm="true"]',
-          );
-          return confirm?.textContent?.trim() === "Delete transaction";
-        }) ?? null
+        dialogs.find(
+          (dialog) => dialog.getAttribute("aria-labelledby") !== "bulk-delete-title",
+        ) ?? null
       );
     }
 
     function positionTransactionDialog() {
       positionFrame = 0;
 
-      if (!isNativeWorkspace() || !anchorRow || !anchoredDialog) {
-        return;
-      }
+      if (!isNativeWorkspace() || !anchorRow || !anchoredDialog) return;
 
       if (!anchorRow.isConnected || !anchoredDialog.isConnected) {
         releaseTransactionAnchor();
         return;
       }
 
-      const visualViewport = window.visualViewport;
-      const viewportLeft = visualViewport?.offsetLeft ?? 0;
-      const viewportTop = visualViewport?.offsetTop ?? 0;
-      const viewportWidth =
-        visualViewport?.width ?? document.documentElement.clientWidth;
-      const viewportHeight = visualViewport?.height ?? window.innerHeight;
-      const viewportRight = viewportLeft + viewportWidth;
-      const viewportBottom = viewportTop + viewportHeight;
+      // getBoundingClientRect() and fixed-position CSS use viewport-relative
+      // coordinates. Keep the coordinate origin at 0/0 so iOS VisualViewport
+      // offsets cannot incorrectly classify a visible transaction as offscreen.
+      const viewportWidth = Math.max(
+        1,
+        window.visualViewport?.width ??
+          window.innerWidth ??
+          document.documentElement.clientWidth,
+      );
+      const viewportHeight = Math.max(
+        1,
+        window.visualViewport?.height ??
+          window.innerHeight ??
+          document.documentElement.clientHeight,
+      );
       const edgeGap = 12;
       const rowGap = 10;
       const bottomChromeAllowance = 96;
       const usableBottom = Math.max(
-        viewportTop + edgeGap,
-        viewportBottom - bottomChromeAllowance,
+        edgeGap,
+        viewportHeight - bottomChromeAllowance,
       );
 
-      const rowRect = anchorRow.getBoundingClientRect();
-
-      // If the originating transaction has completely left the visible app
-      // viewport, hide the confirmation with it instead of leaving a detached
-      // dialog floating elsewhere on the screen. It reappears when the row is
-      // scrolled back into view.
-      if (
-        rowRect.bottom < viewportTop ||
-        rowRect.top > viewportBottom ||
-        rowRect.right < viewportLeft ||
-        rowRect.left > viewportRight
-      ) {
-        anchoredDialog.style.visibility = "hidden";
-        return;
-      }
-
-      anchoredDialog.style.visibility = "visible";
       anchoredDialog.setAttribute("data-ficonter-transaction-anchor", "true");
+      anchoredDialog.style.visibility = "visible";
+      anchoredDialog.style.opacity = "1";
 
+      const rowRect = anchorRow.getBoundingClientRect();
       const dialogRect = anchoredDialog.getBoundingClientRect();
       const dialogWidth = Math.min(
         dialogRect.width || 420,
-        Math.max(0, viewportWidth - edgeGap * 2),
+        Math.max(1, viewportWidth - edgeGap * 2),
       );
       const dialogHeight = Math.min(
         dialogRect.height || 300,
-        Math.max(0, viewportHeight - edgeGap * 2),
+        Math.max(1, viewportHeight - edgeGap * 2),
       );
 
-      const minLeft = viewportLeft + edgeGap;
+      const minLeft = edgeGap;
       const maxLeft = Math.max(
         minLeft,
-        viewportRight - edgeGap - dialogWidth,
+        viewportWidth - edgeGap - dialogWidth,
       );
       const centeredLeft = rowRect.left + rowRect.width / 2 - dialogWidth / 2;
       const left = Math.min(maxLeft, Math.max(minLeft, centeredLeft));
@@ -126,7 +117,7 @@ export function KeyboardInteractionBridge() {
       const belowTop = rowRect.bottom + rowGap;
       const aboveTop = rowRect.top - rowGap - dialogHeight;
       const canFitBelow = belowTop + dialogHeight <= usableBottom;
-      const canFitAbove = aboveTop >= viewportTop + edgeGap;
+      const canFitAbove = aboveTop >= edgeGap;
 
       let top: number;
       if (canFitBelow) {
@@ -134,13 +125,11 @@ export function KeyboardInteractionBridge() {
       } else if (canFitAbove) {
         top = aboveTop;
       } else {
-        // On short viewports keep the dialog as close as possible to the
-        // transaction instead of snapping to a generic top/bottom position.
-        const minTop = viewportTop + edgeGap;
-        const maxTop = Math.max(
-          minTop,
-          usableBottom - dialogHeight,
-        );
+        // Keep the dialog visible even when the row is partly offscreen or the
+        // viewport is short. It remains biased toward the originating row and
+        // moves continuously as that row moves during scrolling.
+        const minTop = edgeGap;
+        const maxTop = Math.max(minTop, usableBottom - dialogHeight);
         const rowCenteredTop =
           rowRect.top + rowRect.height / 2 - dialogHeight / 2;
         top = Math.min(maxTop, Math.max(minTop, rowCenteredTop));
@@ -168,6 +157,8 @@ export function KeyboardInteractionBridge() {
 
       anchoredDialog = dialog;
       anchoredDialog.setAttribute("data-ficonter-transaction-anchor", "true");
+      anchoredDialog.style.visibility = "visible";
+      anchoredDialog.style.opacity = "1";
       scheduleTransactionPosition();
       window.requestAnimationFrame(scheduleTransactionPosition);
     }
@@ -189,11 +180,20 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
+      // The contextual backdrop lets touch scrolling pass through. Block taps
+      // on underlying controls while the confirmation is open so accidental
+      // actions cannot occur behind the dialog.
       if (
         anchoredDialog &&
-        (target.closest('[role="alertdialog"] button') ||
-          target.closest('[class*="backdrop"]'))
+        anchoredDialog.isConnected &&
+        !anchoredDialog.contains(target)
       ) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (anchoredDialog && anchoredDialog.contains(target)) {
         window.requestAnimationFrame(() => {
           if (anchoredDialog && !anchoredDialog.isConnected) {
             releaseTransactionAnchor();

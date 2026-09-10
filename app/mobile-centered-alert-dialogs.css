@@ -1,8 +1,7 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
-   Alert dialogs remain centered by default. A single-transaction delete
-   confirmation stays inside the stable full-screen modal grid and is shifted
-   toward the transaction that opened it. This avoids iOS fixed-child viewport
-   drift while keeping the confirmation visible and contextual. */
+   Destructive confirmations must appear immediately inside the currently
+   visible native-app viewport. They never require the user to scroll to find
+   them. The full-screen veil owns the interaction while a confirmation is open. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -19,76 +18,58 @@ html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   overflow-y: auto !important;
   border-radius: 24px !important;
   z-index: 1001 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Single-transaction delete only: let the backdrop grid do the reliable
-   centering, then translate that visible dialog toward its source row. */
+/* Transaction delete confirmation: always occupy the current viewport rather
+   than inheriting any scrolling/card/page-stack positioning. This is the core
+   guarantee that the dialog is visible the instant Delete is tapped. */
 html[data-ficonter-native-app="true"]
   .app-main
-  [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
+  [class*="TransactionLedger_backdrop"]:has(> [role="alertdialog"]) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+  background: rgba(25, 27, 28, 0.62) !important;
+}
+
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_backdrop"]:has(> [role="alertdialog"])
+  > [role="alertdialog"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translate(
-    var(--ficonter-anchor-shift-x, 0px),
-    var(--ficonter-anchor-shift-y, 0px)
-  ) !important;
+  transform: translate(-50%, -50%) !important;
   width: min(420px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px) !important;
-  max-height: min(68dvh, calc(100dvh - 116px)) !important;
+  max-height: calc(100dvh - 32px) !important;
   margin: 0 !important;
-  border-radius: 22px !important;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   touch-action: pan-y !important;
   transition: none !important;
-}
-
-/* Freeze the transaction list only after the confirmation has rendered.
-   The full-screen veil blocks touch panning without changing html/body
-   overflow, so iOS does not move the visual viewport. */
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"]
-  .ficonter-scroll-region {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-}
-
-html[data-ficonter-native-app="true"]
-  .app-main
-  [class*="TransactionLedger_backdrop"]:has(
-    > [role="alertdialog"][data-ficonter-transaction-anchor="true"]
-  ) {
-  pointer-events: auto !important;
-  background: rgba(25, 27, 28, 0.62) !important;
-  backdrop-filter: blur(7px) !important;
-  -webkit-backdrop-filter: blur(7px) !important;
-  overscroll-behavior: none !important;
-  touch-action: none !important;
-}
-
-html[data-ficonter-native-app="true"]
-  .app-main
-  [class*="TransactionLedger_backdrop"]:has(
-    > [role="alertdialog"][data-ficonter-transaction-anchor="true"]
-  )
-  > [role="alertdialog"] {
-  pointer-events: auto !important;
-  touch-action: pan-y !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
 }
 
 @media (orientation: landscape) and (max-height: 620px) {
   html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
     max-height: calc(100dvh - 20px) !important;
-  }
-
-  html[data-ficonter-native-app="true"]
-    .app-main
-    [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
-    max-height: calc(100dvh - 24px) !important;
   }
 }

@@ -1,7 +1,7 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
    Destructive confirmations must appear immediately inside the currently
-   visible native-app viewport. A single-transaction confirmation is anchored
-   over the exact transaction row that opened it; bulk confirmations stay centered. */
+   visible native-app viewport. A single-transaction confirmation is placed
+   directly below the Select all visible bar; bulk confirmations stay centered. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -67,11 +67,10 @@ html[data-ficonter-native-app="true"]
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
 }
 
-/* Single-transaction delete only. The interaction bridge captures the row's
-   viewport centre on the Delete tap. If an app ancestor creates an iOS fixed
-   containing block, the backdrop is shifted back onto the visible viewport;
-   the confirmation is then absolutely positioned inside that stable veil. */
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-anchor="true"]
+/* Single-transaction delete only. Keep the full-screen veil stable on iOS,
+   then place the top edge of the confirmation immediately beneath the
+   Select all visible bar. The page remains frozen while the dialog is open. */
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-selection-anchor="true"]
   .app-main
   [class*="TransactionLedger_backdrop"]:has(
     > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
@@ -83,20 +82,27 @@ html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-anchor="t
   transform-origin: top left !important;
 }
 
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-anchor="true"]
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-selection-anchor="true"]
   .app-main
   [class*="TransactionLedger_backdrop"]:has(
     > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
   )
   > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"]) {
   position: absolute !important;
-  top: var(--ficonter-delete-anchor-y, 50%) !important;
-  left: var(--ficonter-delete-anchor-x, 50%) !important;
+  top: var(--ficonter-delete-panel-top, 50%) !important;
+  left: var(--ficonter-delete-panel-x, 50%) !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translateX(-50%) !important;
+  width: min(420px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: var(--ficonter-delete-panel-max-height, calc(100dvh - 32px)) !important;
+  margin: 0 !important;
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow-y: auto !important;
+  touch-action: pan-y !important;
 }
 
 @media (orientation: landscape) and (max-height: 620px) {

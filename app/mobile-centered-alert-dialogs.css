@@ -1,7 +1,8 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
    Destructive confirmations must appear immediately inside the currently
-   visible native-app viewport. A single-transaction confirmation is placed
-   directly below the Select all visible bar; bulk confirmations stay centered. */
+   visible native-app viewport. Bulk confirmations use the centered fallback;
+   the single-transaction delete confirmation is positioned at runtime directly
+   beneath the visible Select all visible bar. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -24,7 +25,7 @@ html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   -webkit-overflow-scrolling: touch;
 }
 
-/* All TransactionLedger confirmations own the current viewport and stop page
+/* TransactionLedger confirmations own the current viewport and stop page
    interaction while the user decides. */
 html[data-ficonter-native-app="true"]
   .app-main
@@ -67,43 +68,10 @@ html[data-ficonter-native-app="true"]
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
 }
 
-/* Single-transaction delete only. Keep the full-screen veil stable on iOS,
-   then place the top edge of the confirmation immediately beneath the
-   Select all visible bar. The page remains frozen while the dialog is open. */
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-selection-anchor="true"]
-  .app-main
-  [class*="TransactionLedger_backdrop"]:has(
-    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
-  ) {
-  transform: translate(
-    var(--ficonter-delete-backdrop-shift-x, 0px),
-    var(--ficonter-delete-backdrop-shift-y, 0px)
-  ) !important;
-  transform-origin: top left !important;
-}
-
-html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-selection-anchor="true"]
-  .app-main
-  [class*="TransactionLedger_backdrop"]:has(
-    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"])
-  )
-  > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"]) {
-  position: absolute !important;
-  top: var(--ficonter-delete-panel-top, 50%) !important;
-  left: var(--ficonter-delete-panel-x, 50%) !important;
-  right: auto !important;
-  bottom: auto !important;
-  transform: translateX(-50%) !important;
-  width: min(420px, calc(100vw - 24px)) !important;
-  max-width: calc(100vw - 24px) !important;
-  max-height: var(--ficonter-delete-panel-max-height, calc(100dvh - 32px)) !important;
-  margin: 0 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  overflow-y: auto !important;
-  touch-action: pan-y !important;
-}
+/* The single-delete dialog receives inline !important top/left coordinates from
+   KeyboardInteractionBridge after the actual selection bar and backdrop are
+   measured. Keeping this stylesheet as a centered fallback means a positioning
+   failure can never make the confirmation disappear. */
 
 @media (orientation: landscape) and (max-height: 620px) {
   html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {

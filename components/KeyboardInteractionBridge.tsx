@@ -30,6 +30,8 @@ export function KeyboardInteractionBridge() {
     let deleteDialog: HTMLElement | null = null;
     let deleteBackdrop: HTMLElement | null = null;
     let connectTimer = 0;
+    let backdropShiftX = 0;
+    let backdropShiftY = 0;
 
     function isNativeWorkspace() {
       return document.documentElement.dataset.ficonterNativeApp === "true";
@@ -47,6 +49,8 @@ export function KeyboardInteractionBridge() {
       deleteAnchor = null;
       deleteDialog = null;
       deleteBackdrop = null;
+      backdropShiftX = 0;
+      backdropShiftY = 0;
       delete document.documentElement.dataset.ficonterTransactionDeleteAnchor;
       document.documentElement.style.removeProperty("--ficonter-delete-anchor-x");
       document.documentElement.style.removeProperty("--ficonter-delete-anchor-y");
@@ -89,11 +93,11 @@ export function KeyboardInteractionBridge() {
       );
 
       // A fixed element can still be scoped by a transformed app ancestor on iOS.
-      // Measure where the backdrop actually landed and shift it back onto the
-      // current visual viewport before positioning the confirmation inside it.
+      // Preserve the accumulated compensation instead of recomputing from a
+      // backdrop that has already been shifted into place on a later frame.
       const backdropRect = deleteBackdrop.getBoundingClientRect();
-      const backdropShiftX = -backdropRect.left;
-      const backdropShiftY = -backdropRect.top;
+      backdropShiftX -= backdropRect.left;
+      backdropShiftY -= backdropRect.top;
 
       document.documentElement.style.setProperty(
         "--ficonter-delete-backdrop-shift-x",

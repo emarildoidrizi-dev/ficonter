@@ -42,6 +42,7 @@ export function KeyboardInteractionBridge() {
       singleDeletePending = false;
       if (deleteDialog) {
         deleteDialog.removeAttribute("data-ficonter-below-selection");
+        deleteDialog.removeAttribute("data-ficonter-below-ledger-header");
       }
       deleteDialog = null;
       deleteBackdrop = null;
@@ -59,25 +60,17 @@ export function KeyboardInteractionBridge() {
       );
     }
 
-    function findVisibleSelectionBar(viewportHeight: number) {
-      const bars = Array.from(
-        document.querySelectorAll<HTMLElement>('[class*="TransactionLedger_selectionBar"]'),
-      ).filter((bar) => {
-        const rect = bar.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      });
-
-      return (
-        bars.find((bar) => {
-          const rect = bar.getBoundingClientRect();
-          return rect.bottom > 0 && rect.top < viewportHeight;
-        }) ??
-        bars[0] ??
-        null
+    function findTransactionLedgerHeader() {
+      const header = document.querySelector<HTMLElement>(
+        ".transaction-ledger-panel > .panel-head",
       );
+      if (!header) return null;
+
+      const rect = header.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 ? header : null;
     }
 
-    function positionDeleteDialogBelowSelection() {
+    function positionDeleteDialogBelowLedgerHeader() {
       if (!isNativeWorkspace() || !deleteDialog || !deleteBackdrop) return;
       if (!deleteDialog.isConnected || !deleteBackdrop.isConnected) {
         clearSingleDeletePlacement();
@@ -90,19 +83,25 @@ export function KeyboardInteractionBridge() {
           document.documentElement.clientHeight ??
           window.innerHeight,
       );
-      const selectionBar = findVisibleSelectionBar(viewportHeight);
-      if (!selectionBar) return;
+      const ledgerHeader = findTransactionLedgerHeader();
+      if (!ledgerHeader) return;
 
-      const selectionRect = selectionBar.getBoundingClientRect();
+      const ledgerHeaderRect = ledgerHeader.getBoundingClientRect();
       const backdropRect = deleteBackdrop.getBoundingClientRect();
       const edgeGap = 12;
       const sectionGap = 10;
 
-      // Absolute invariant for single-transaction delete:
-      // the rendered top edge of the confirmation must be BELOW the rendered
-      // bottom edge of Select all visible. Never clamp the dialog upward.
-      const targetViewportTop = selectionRect.bottom + sectionGap;
-      const targetViewportCenterX = selectionRect.left + selectionRect.width / 2;
+      // New mobile rule: the single-transaction delete confirmation belongs
+      // directly below the Transaction Ledger header, never below Select all visible.
+      // When the header has already scrolled above the visible viewport, keep the
+      // confirmation at the top of the currently visible ledger area so the user
+      // never needs to scroll around to find it.
+      const targetViewportTop = Math.max(
+        ledgerHeaderRect.bottom + sectionGap,
+        edgeGap,
+      );
+      const targetViewportCenterX =
+        ledgerHeaderRect.left + ledgerHeaderRect.width / 2;
 
       // A transformed iOS app shell can scale the backdrop's local coordinate
       // system. Convert viewport pixels into that local coordinate system first.
@@ -118,11 +117,16 @@ export function KeyboardInteractionBridge() {
       const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1;
 
       let localTop = (targetViewportTop - backdropRect.top) / safeScaleY;
-      const localCenterX = (targetViewportCenterX - backdropRect.left) / safeScaleX;
-      const availableViewportHeight = Math.max(72, viewportHeight - targetViewportTop - edgeGap);
+      const localCenterX =
+        (targetViewportCenterX - backdropRect.left) / safeScaleX;
+      const availableViewportHeight = Math.max(
+        72,
+        viewportHeight - targetViewportTop - edgeGap,
+      );
       const availableLocalHeight = availableViewportHeight / safeScaleY;
 
-      deleteDialog.setAttribute("data-ficonter-below-selection", "true");
+      deleteDialog.removeAttribute("data-ficonter-below-selection");
+      deleteDialog.setAttribute("data-ficonter-below-ledger-header", "true");
       deleteDialog.style.setProperty("position", "absolute", "important");
       deleteDialog.style.setProperty("top", `${localTop}px`, "important");
       deleteDialog.style.setProperty("left", `${localCenterX}px`, "important");
@@ -136,9 +140,9 @@ export function KeyboardInteractionBridge() {
       deleteDialog.style.setProperty("pointer-events", "auto", "important");
       deleteDialog.style.setProperty("transition", "none", "important");
 
-      // Verify the result in the actual rendered viewport. If any ancestor
-      // transform or browser quirk still leaves even one pixel of the dialog
-      // above the selection bar, push it downward until the invariant is true.
+      // Verify the rendered result. If a transformed ancestor leaves the dialog
+      // above the requested ledger-header position, push it downward until the
+      // rule is satisfied. Never move it upward past the ledger-header anchor.
       for (let attempt = 0; attempt < 4; attempt += 1) {
         const renderedDialogRect = deleteDialog.getBoundingClientRect();
         const shortfall = targetViewportTop - renderedDialogRect.top;
@@ -159,8 +163,8 @@ export function KeyboardInteractionBridge() {
 
       deleteDialog = dialog;
       deleteBackdrop = backdrop;
-      positionDeleteDialogBelowSelection();
-      window.requestAnimationFrame(positionDeleteDialogBelowSelection);
+      positionDeleteDialogBelowLedgerHeader();
+      window.requestAnimationFrame(positionDeleteDialogBelowLedgerHeader);
     }
 
     function handleDocumentClick(event: MouseEvent) {
@@ -176,8 +180,8 @@ export function KeyboardInteractionBridge() {
       singleDeletePending = true;
 
       // React opens the existing delete confirmation from this same click. The
-      // MutationObserver connects as soon as it mounts and then enforces that
-      // its TOP edge is below the BOTTOM edge of Select all visible.
+      // MutationObserver connects as soon as it mounts and places it directly
+      // below the Transaction Ledger header while the background stays locked.
       window.requestAnimationFrame(connectDeleteDialog);
       connectTimer = window.setTimeout(() => {
         connectTimer = 0;
@@ -210,8 +214,11 @@ export function KeyboardInteractionBridge() {
       capture: true,
       passive: false,
     });
-    window.addEventListener("resize", positionDeleteDialogBelowSelection);
-    window.visualViewport?.addEventListener("resize", positionDeleteDialogBelowSelection);
+    window.addEventListener("resize", positionDeleteDialogBelowLedgerHeader);
+    window.visualViewport?.addEventListener(
+      "resize",
+      positionDeleteDialogBelowLedgerHeader,
+    );
 
     function handleKeyDown(event: KeyboardEvent) {
       if (
@@ -291,8 +298,11 @@ export function KeyboardInteractionBridge() {
       document.removeEventListener("click", handleDocumentClick, true);
       document.removeEventListener("touchmove", preventBackgroundScroll, true);
       document.removeEventListener("wheel", preventBackgroundScroll, true);
-      window.removeEventListener("resize", positionDeleteDialogBelowSelection);
-      window.visualViewport?.removeEventListener("resize", positionDeleteDialogBelowSelection);
+      window.removeEventListener("resize", positionDeleteDialogBelowLedgerHeader);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        positionDeleteDialogBelowLedgerHeader,
+      );
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);

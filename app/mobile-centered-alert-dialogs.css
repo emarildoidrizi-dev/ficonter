@@ -1,7 +1,7 @@
-/* FICONTER MOBILE — CENTERED CONFIRMATION DIALOGS
-   Destructive/confirmation alert dialogs must always appear in the visual
-   center of the app viewport. Regular form dialogs may continue to use the
-   mobile bottom-sheet presentation defined by the main mobile layout layer. */
+/* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
+   Alert dialogs remain centered by default. A transaction delete confirmation
+   can opt into contextual anchoring so it stays visually attached to the
+   transaction row that opened it while the user scrolls. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -21,8 +21,29 @@ html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   -webkit-overflow-scrolling: touch;
 }
 
+html[data-ficonter-native-app="true"]
+  .app-main
+  [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
+  top: var(--ficonter-anchor-top, 50%) !important;
+  left: var(--ficonter-anchor-left, 50%) !important;
+  transform: none !important;
+  width: min(420px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: min(68dvh, calc(100dvh - 116px)) !important;
+  margin: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34) !important;
+  transition: top 90ms linear, left 90ms linear, opacity 120ms ease !important;
+}
+
 @media (orientation: landscape) and (max-height: 620px) {
   html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
     max-height: calc(100dvh - 20px) !important;
+  }
+
+  html[data-ficonter-native-app="true"]
+    .app-main
+    [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
+    max-height: calc(100dvh - 24px) !important;
   }
 }

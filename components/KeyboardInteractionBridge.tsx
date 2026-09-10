@@ -19,14 +19,55 @@ function topmostDialog(): HTMLElement | null {
   return dialogs.at(-1) ?? null;
 }
 
+type DeleteAnchor = {
+  x: number;
+  y: number;
+};
+
 export function KeyboardInteractionBridge() {
   useEffect(() => {
-    let anchorRow: HTMLElement | null = null;
+    let deleteAnchor: DeleteAnchor | null = null;
     let anchoredDialog: HTMLElement | null = null;
-    let positionFrame = 0;
+    let connectTimeout = 0;
+    let scrollLocked = false;
+    let previousHtmlOverflow = "";
+    let previousHtmlOverscroll = "";
+    let previousBodyOverflow = "";
+    let previousBodyOverscroll = "";
 
     function isNativeWorkspace() {
       return document.documentElement.dataset.ficonterNativeApp === "true";
+    }
+
+    function lockTransactionDeleteScroll() {
+      if (scrollLocked || !isNativeWorkspace()) return;
+
+      const html = document.documentElement;
+      const body = document.body;
+      previousHtmlOverflow = html.style.overflow;
+      previousHtmlOverscroll = html.style.overscrollBehavior;
+      previousBodyOverflow = body.style.overflow;
+      previousBodyOverscroll = body.style.overscrollBehavior;
+
+      html.dataset.ficonterTransactionDeleteLocked = "true";
+      html.style.overflow = "hidden";
+      html.style.overscrollBehavior = "none";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+      scrollLocked = true;
+    }
+
+    function unlockTransactionDeleteScroll() {
+      if (!scrollLocked) return;
+
+      const html = document.documentElement;
+      const body = document.body;
+      delete html.dataset.ficonterTransactionDeleteLocked;
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      scrollLocked = false;
     }
 
     function clearDialogPresentation(dialog: HTMLElement | null) {
@@ -38,39 +79,42 @@ export function KeyboardInteractionBridge() {
       dialog.style.removeProperty("opacity");
     }
 
-    function releaseTransactionAnchor() {
+    function releaseTransactionDelete() {
+      if (connectTimeout) {
+        window.clearTimeout(connectTimeout);
+        connectTimeout = 0;
+      }
       clearDialogPresentation(anchoredDialog);
-      anchorRow = null;
       anchoredDialog = null;
+      deleteAnchor = null;
+      unlockTransactionDeleteScroll();
     }
 
     function findTransactionDeleteDialog(): HTMLElement | null {
       const dialogs = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          '[role="alertdialog"][class*="TransactionLedger_modal"]',
-        ),
+        document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
       );
 
       return (
-        dialogs.find(
-          (dialog) => dialog.getAttribute("aria-labelledby") !== "bulk-delete-title",
-        ) ?? null
+        dialogs.find((dialog) => {
+          if (dialog.getAttribute("aria-labelledby") === "bulk-delete-title") {
+            return false;
+          }
+          const confirm = dialog.querySelector<HTMLElement>(
+            '[data-enter-confirm="true"]',
+          );
+          return confirm?.textContent?.trim() === "Delete transaction";
+        }) ?? null
       );
     }
 
-    function positionTransactionDialog() {
-      positionFrame = 0;
-
-      if (!isNativeWorkspace() || !anchorRow || !anchoredDialog) return;
-
-      if (!anchorRow.isConnected || !anchoredDialog.isConnected) {
-        releaseTransactionAnchor();
+    function positionTransactionDeleteDialog() {
+      if (!isNativeWorkspace() || !deleteAnchor || !anchoredDialog) return;
+      if (!anchoredDialog.isConnected) {
+        releaseTransactionDelete();
         return;
       }
 
-      // getBoundingClientRect() and fixed-position CSS use viewport-relative
-      // coordinates. Keep the coordinate origin at 0/0 so iOS VisualViewport
-      // offsets cannot incorrectly classify a visible transaction as offscreen.
       const viewportWidth = Math.max(
         1,
         window.visualViewport?.width ??
@@ -84,18 +128,12 @@ export function KeyboardInteractionBridge() {
           document.documentElement.clientHeight,
       );
       const edgeGap = 12;
-      const rowGap = 10;
-      const bottomChromeAllowance = 96;
-      const usableBottom = Math.max(
-        edgeGap,
-        viewportHeight - bottomChromeAllowance,
-      );
+      const bottomChromeAllowance = 92;
 
       anchoredDialog.setAttribute("data-ficonter-transaction-anchor", "true");
       anchoredDialog.style.visibility = "visible";
       anchoredDialog.style.opacity = "1";
 
-      const rowRect = anchorRow.getBoundingClientRect();
       const dialogRect = anchoredDialog.getBoundingClientRect();
       const dialogWidth = Math.min(
         dialogRect.width || 420,
@@ -105,35 +143,19 @@ export function KeyboardInteractionBridge() {
         dialogRect.height || 300,
         Math.max(1, viewportHeight - edgeGap * 2),
       );
+      const halfWidth = dialogWidth / 2;
+      const halfHeight = dialogHeight / 2;
 
-      const minLeft = edgeGap;
-      const maxLeft = Math.max(
-        minLeft,
-        viewportWidth - edgeGap - dialogWidth,
+      const minX = edgeGap + halfWidth;
+      const maxX = Math.max(minX, viewportWidth - edgeGap - halfWidth);
+      const minY = edgeGap + halfHeight;
+      const maxY = Math.max(
+        minY,
+        viewportHeight - bottomChromeAllowance - halfHeight,
       );
-      const centeredLeft = rowRect.left + rowRect.width / 2 - dialogWidth / 2;
-      const left = Math.min(maxLeft, Math.max(minLeft, centeredLeft));
 
-      const belowTop = rowRect.bottom + rowGap;
-      const aboveTop = rowRect.top - rowGap - dialogHeight;
-      const canFitBelow = belowTop + dialogHeight <= usableBottom;
-      const canFitAbove = aboveTop >= edgeGap;
-
-      let top: number;
-      if (canFitBelow) {
-        top = belowTop;
-      } else if (canFitAbove) {
-        top = aboveTop;
-      } else {
-        // Keep the dialog visible even when the row is partly offscreen or the
-        // viewport is short. It remains biased toward the originating row and
-        // moves continuously as that row moves during scrolling.
-        const minTop = edgeGap;
-        const maxTop = Math.max(minTop, usableBottom - dialogHeight);
-        const rowCenteredTop =
-          rowRect.top + rowRect.height / 2 - dialogHeight / 2;
-        top = Math.min(maxTop, Math.max(minTop, rowCenteredTop));
-      }
+      const left = Math.min(maxX, Math.max(minX, deleteAnchor.x));
+      const top = Math.min(maxY, Math.max(minY, deleteAnchor.y));
 
       anchoredDialog.style.setProperty(
         "--ficonter-anchor-left",
@@ -145,22 +167,27 @@ export function KeyboardInteractionBridge() {
       );
     }
 
-    function scheduleTransactionPosition() {
-      if (!anchorRow || !anchoredDialog || positionFrame) return;
-      positionFrame = window.requestAnimationFrame(positionTransactionDialog);
-    }
-
-    function connectTransactionDialog() {
-      if (!anchorRow || anchoredDialog || !isNativeWorkspace()) return;
+    function connectTransactionDeleteDialog() {
+      if (!deleteAnchor || anchoredDialog || !isNativeWorkspace()) return;
       const dialog = findTransactionDeleteDialog();
       if (!dialog) return;
 
       anchoredDialog = dialog;
-      anchoredDialog.setAttribute("data-ficonter-transaction-anchor", "true");
-      anchoredDialog.style.visibility = "visible";
-      anchoredDialog.style.opacity = "1";
-      scheduleTransactionPosition();
-      window.requestAnimationFrame(scheduleTransactionPosition);
+      positionTransactionDeleteDialog();
+    }
+
+    function scheduleTransactionDeleteConnect() {
+      window.requestAnimationFrame(() => {
+        connectTransactionDeleteDialog();
+        if (!anchoredDialog) {
+          window.requestAnimationFrame(connectTransactionDeleteDialog);
+        }
+      });
+
+      if (connectTimeout) window.clearTimeout(connectTimeout);
+      connectTimeout = window.setTimeout(() => {
+        if (!anchoredDialog) releaseTransactionDelete();
+      }, 1200);
     }
 
     function handleDocumentClick(event: MouseEvent) {
@@ -171,32 +198,27 @@ export function KeyboardInteractionBridge() {
         'button[aria-label="Delete transaction"]',
       );
       if (deleteButton && isNativeWorkspace()) {
+        const row =
+          deleteButton.closest<HTMLElement>('[class*="TransactionLedger_row"]') ??
+          deleteButton.closest<HTMLElement>("article") ??
+          deleteButton;
+        const rect = row.getBoundingClientRect();
+
         clearDialogPresentation(anchoredDialog);
         anchoredDialog = null;
-        anchorRow =
-          deleteButton.closest<HTMLElement>('[class*="TransactionLedger_row"]') ??
-          deleteButton;
-        window.requestAnimationFrame(connectTransactionDialog);
-        return;
-      }
-
-      // The contextual backdrop lets touch scrolling pass through. Block taps
-      // on underlying controls while the confirmation is open so accidental
-      // actions cannot occur behind the dialog.
-      if (
-        anchoredDialog &&
-        anchoredDialog.isConnected &&
-        !anchoredDialog.contains(target)
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
+        deleteAnchor = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        };
+        lockTransactionDeleteScroll();
+        scheduleTransactionDeleteConnect();
         return;
       }
 
       if (anchoredDialog && anchoredDialog.contains(target)) {
         window.requestAnimationFrame(() => {
           if (anchoredDialog && !anchoredDialog.isConnected) {
-            releaseTransactionAnchor();
+            releaseTransactionDelete();
           }
         });
       }
@@ -204,10 +226,10 @@ export function KeyboardInteractionBridge() {
 
     const dialogObserver = new MutationObserver(() => {
       if (anchoredDialog && !anchoredDialog.isConnected) {
-        releaseTransactionAnchor();
+        releaseTransactionDelete();
         return;
       }
-      if (anchorRow && !anchoredDialog) connectTransactionDialog();
+      if (deleteAnchor && !anchoredDialog) connectTransactionDeleteDialog();
     });
 
     dialogObserver.observe(document.body, {
@@ -216,15 +238,10 @@ export function KeyboardInteractionBridge() {
     });
 
     document.addEventListener("click", handleDocumentClick, true);
-    document.addEventListener("scroll", scheduleTransactionPosition, true);
-    window.addEventListener("resize", scheduleTransactionPosition);
+    window.addEventListener("resize", positionTransactionDeleteDialog);
     window.visualViewport?.addEventListener(
       "resize",
-      scheduleTransactionPosition,
-    );
-    window.visualViewport?.addEventListener(
-      "scroll",
-      scheduleTransactionPosition,
+      positionTransactionDeleteDialog,
     );
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -251,8 +268,6 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
-      // Native controls already implement Enter correctly. Leaving them alone
-      // prevents duplicate submissions and preserves browser accessibility.
       if (
         target.closest(
           'button, a[href], select, summary, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]',
@@ -270,8 +285,6 @@ export function KeyboardInteractionBridge() {
 
       const form = target.closest<HTMLFormElement>("form");
       if (form) {
-        // Browsers normally submit forms from single-line inputs. Only provide
-        // a fallback when the form has no native submit control.
         const nativeSubmit = form.querySelector<HTMLElement>(
           'button[type="submit"], input[type="submit"], button:not([type])',
         );
@@ -298,20 +311,15 @@ export function KeyboardInteractionBridge() {
     }
 
     document.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      if (positionFrame) window.cancelAnimationFrame(positionFrame);
-      releaseTransactionAnchor();
+      releaseTransactionDelete();
       dialogObserver.disconnect();
       document.removeEventListener("click", handleDocumentClick, true);
-      document.removeEventListener("scroll", scheduleTransactionPosition, true);
-      window.removeEventListener("resize", scheduleTransactionPosition);
+      window.removeEventListener("resize", positionTransactionDeleteDialog);
       window.visualViewport?.removeEventListener(
         "resize",
-        scheduleTransactionPosition,
-      );
-      window.visualViewport?.removeEventListener(
-        "scroll",
-        scheduleTransactionPosition,
+        positionTransactionDeleteDialog,
       );
       document.removeEventListener("keydown", handleKeyDown);
     };

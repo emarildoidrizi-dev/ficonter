@@ -1,7 +1,8 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
    Alert dialogs remain centered by default. A single-transaction delete
-   confirmation is positioned directly over the transaction that opened it.
-   The workspace is frozen only after the confirmation has rendered. */
+   confirmation stays inside the stable full-screen modal grid and is shifted
+   toward the transaction that opened it. This avoids iOS fixed-child viewport
+   drift while keeping the confirmation visible and contextual. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -21,14 +22,20 @@ html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Single-transaction delete only: let the backdrop grid do the reliable
+   centering, then translate that visible dialog toward its source row. */
 html[data-ficonter-native-app="true"]
   .app-main
   [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
-  top: var(--ficonter-anchor-top, 50%) !important;
-  left: var(--ficonter-anchor-left, 50%) !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translate(
+    var(--ficonter-anchor-shift-x, 0px),
+    var(--ficonter-anchor-shift-y, 0px)
+  ) !important;
   width: min(420px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px) !important;
   max-height: min(68dvh, calc(100dvh - 116px)) !important;
@@ -42,10 +49,9 @@ html[data-ficonter-native-app="true"]
   transition: none !important;
 }
 
-/* Do not force html/body overflow changes here. On iOS, changing root overflow
-   during a tap can move the visual viewport or interrupt click delivery. The
-   full-screen modal veil plus the non-passive touch/wheel guard in
-   KeyboardInteractionBridge freezes the background without moving the page. */
+/* Freeze the transaction list only after the confirmation has rendered.
+   The full-screen veil blocks touch panning without changing html/body
+   overflow, so iOS does not move the visual viewport. */
 html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"]
   .ficonter-scroll-region {
   overflow: hidden !important;

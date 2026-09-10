@@ -50,8 +50,8 @@ export function KeyboardInteractionBridge() {
     function clearDialogPresentation(dialog: HTMLElement | null) {
       if (!dialog) return;
       dialog.removeAttribute("data-ficonter-transaction-anchor");
-      dialog.style.removeProperty("--ficonter-anchor-left");
-      dialog.style.removeProperty("--ficonter-anchor-top");
+      dialog.style.removeProperty("--ficonter-anchor-shift-x");
+      dialog.style.removeProperty("--ficonter-anchor-shift-y");
       dialog.style.removeProperty("visibility");
       dialog.style.removeProperty("opacity");
     }
@@ -69,19 +69,15 @@ export function KeyboardInteractionBridge() {
 
     function findTransactionDeleteDialog(): HTMLElement | null {
       const dialogs = Array.from(
-        document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
+        document.querySelectorAll<HTMLElement>(
+          '[role="alertdialog"][class*="TransactionLedger_modal"]',
+        ),
       );
 
       return (
-        dialogs.find((dialog) => {
-          if (dialog.getAttribute("aria-labelledby") === "bulk-delete-title") {
-            return false;
-          }
-          const confirm = dialog.querySelector<HTMLElement>(
-            '[data-enter-confirm="true"]',
-          );
-          return confirm?.textContent?.trim() === "Delete transaction";
-        }) ?? null
+        dialogs.find(
+          (dialog) => dialog.getAttribute("aria-labelledby") !== "bulk-delete-title",
+        ) ?? null
       );
     }
 
@@ -92,17 +88,17 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
+      // Keep the confirmation inside the backdrop's normal centered grid and
+      // translate it toward the clicked transaction. This avoids iOS WebView
+      // fixed-position coordinate drift while still placing the dialog over
+      // the transaction that triggered it.
       const viewportWidth = Math.max(
         1,
-        window.visualViewport?.width ??
-          window.innerWidth ??
-          document.documentElement.clientWidth,
+        document.documentElement.clientWidth || window.innerWidth,
       );
       const viewportHeight = Math.max(
         1,
-        window.visualViewport?.height ??
-          window.innerHeight ??
-          document.documentElement.clientHeight,
+        window.innerHeight || document.documentElement.clientHeight,
       );
       const edgeGap = 12;
       const bottomChromeAllowance = 92;
@@ -120,27 +116,33 @@ export function KeyboardInteractionBridge() {
         dialogRect.height || 300,
         Math.max(1, viewportHeight - edgeGap * 2),
       );
-      const halfWidth = dialogWidth / 2;
-      const halfHeight = dialogHeight / 2;
 
-      const minX = edgeGap + halfWidth;
-      const maxX = Math.max(minX, viewportWidth - edgeGap - halfWidth);
-      const minY = edgeGap + halfHeight;
-      const maxY = Math.max(
-        minY,
-        viewportHeight - bottomChromeAllowance - halfHeight,
+      const viewportCenterX = viewportWidth / 2;
+      const viewportCenterY = viewportHeight / 2;
+      const desiredShiftX = deleteAnchor.x - viewportCenterX;
+      const desiredShiftY = deleteAnchor.y - viewportCenterY;
+
+      const minShiftX = edgeGap + dialogWidth / 2 - viewportCenterX;
+      const maxShiftX = Math.max(
+        minShiftX,
+        viewportWidth - edgeGap - dialogWidth / 2 - viewportCenterX,
+      );
+      const minShiftY = edgeGap + dialogHeight / 2 - viewportCenterY;
+      const maxShiftY = Math.max(
+        minShiftY,
+        viewportHeight - bottomChromeAllowance - dialogHeight / 2 - viewportCenterY,
       );
 
-      const left = Math.min(maxX, Math.max(minX, deleteAnchor.x));
-      const top = Math.min(maxY, Math.max(minY, deleteAnchor.y));
+      const shiftX = Math.min(maxShiftX, Math.max(minShiftX, desiredShiftX));
+      const shiftY = Math.min(maxShiftY, Math.max(minShiftY, desiredShiftY));
 
       anchoredDialog.style.setProperty(
-        "--ficonter-anchor-left",
-        `${Math.round(left)}px`,
+        "--ficonter-anchor-shift-x",
+        `${Math.round(shiftX)}px`,
       );
       anchoredDialog.style.setProperty(
-        "--ficonter-anchor-top",
-        `${Math.round(top)}px`,
+        "--ficonter-anchor-shift-y",
+        `${Math.round(shiftY)}px`,
       );
     }
 
@@ -149,15 +151,9 @@ export function KeyboardInteractionBridge() {
       const dialog = findTransactionDeleteDialog();
       if (!dialog) return;
 
-      // React has now rendered the confirmation. Only at this point do we
-      // freeze the workspace. Locking earlier during the originating click can
-      // interrupt iOS click dispatch and prevent the dialog from rendering.
       anchoredDialog = dialog;
       positionTransactionDeleteDialog();
       lockTransactionDeleteScroll();
-
-      // Re-measure once after the modal lock has been applied so any small
-      // viewport/layout adjustment cannot move the confirmation off its source.
       window.requestAnimationFrame(positionTransactionDeleteDialog);
     }
 
@@ -172,8 +168,8 @@ export function KeyboardInteractionBridge() {
       if (connectTimeout) window.clearTimeout(connectTimeout);
       connectTimeout = window.setTimeout(() => {
         connectTimeout = 0;
-        // Never hide a confirmation if anchoring fails. The base CSS keeps the
-        // dialog centered as a safe fallback; only discard the pending anchor.
+        // If contextual anchoring cannot connect, leave the normal centered
+        // confirmation untouched rather than hiding or freezing anything.
         if (!anchoredDialog) deleteAnchor = null;
       }, 1500);
     }
@@ -199,9 +195,7 @@ export function KeyboardInteractionBridge() {
           y: rect.top + rect.height / 2,
         };
 
-        // Important: do not lock scrolling here. This listener runs in the
-        // capture phase, before TransactionLedger's React onClick. We only
-        // capture the position and allow the React click to open the dialog.
+        // Let TransactionLedger's React onClick render the confirmation first.
         scheduleTransactionDeleteConnect();
         return;
       }
@@ -251,10 +245,6 @@ export function KeyboardInteractionBridge() {
       passive: false,
     });
     window.addEventListener("resize", positionTransactionDeleteDialog);
-    window.visualViewport?.addEventListener(
-      "resize",
-      positionTransactionDeleteDialog,
-    );
 
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target;
@@ -290,6 +280,8 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
+      // Native controls already implement Enter correctly. Leaving them alone
+      // prevents duplicate submissions and preserves browser accessibility.
       if (
         target.closest(
           'button, a[href], select, summary, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]',
@@ -307,6 +299,8 @@ export function KeyboardInteractionBridge() {
 
       const form = target.closest<HTMLFormElement>("form");
       if (form) {
+        // Browsers normally submit forms from single-line inputs. Only provide
+        // a fallback when the form has no native submit control.
         const nativeSubmit = form.querySelector<HTMLElement>(
           'button[type="submit"], input[type="submit"], button:not([type])',
         );
@@ -341,10 +335,6 @@ export function KeyboardInteractionBridge() {
       document.removeEventListener("touchmove", preventBackgroundScroll, true);
       document.removeEventListener("wheel", preventBackgroundScroll, true);
       window.removeEventListener("resize", positionTransactionDeleteDialog);
-      window.visualViewport?.removeEventListener(
-        "resize",
-        positionTransactionDeleteDialog,
-      );
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);

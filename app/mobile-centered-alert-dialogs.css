@@ -1,0 +1,28 @@
+/* FICONTER MOBILE — CENTERED CONFIRMATION DIALOGS
+   Destructive/confirmation alert dialogs must always appear in the visual
+   center of the app viewport. Regular form dialogs may continue to use the
+   mobile bottom-sheet presentation defined by the main mobile layout layer. */
+
+html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(470px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  margin: 0 !important;
+  padding: 24px 20px !important;
+  overflow-y: auto !important;
+  border-radius: 24px !important;
+  z-index: 1001 !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
+    max-height: calc(100dvh - 20px) !important;
+  }
+}

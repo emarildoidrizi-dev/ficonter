@@ -26,6 +26,8 @@ html[data-ficonter-native-app="true"]
   [role="alertdialog"][data-ficonter-transaction-anchor="true"] {
   top: var(--ficonter-anchor-top, 50%) !important;
   left: var(--ficonter-anchor-left, 50%) !important;
+  right: auto !important;
+  bottom: auto !important;
   transform: none !important;
   width: min(420px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px) !important;
@@ -33,7 +35,33 @@ html[data-ficonter-native-app="true"]
   margin: 0 !important;
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34) !important;
-  transition: top 90ms linear, left 90ms linear, opacity 120ms ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: top 90ms linear, left 90ms linear !important;
+}
+
+/* The single-transaction confirmation behaves like a contextual popover.
+   Allow swipe/scroll gestures to reach the transaction list behind the
+   visual veil, while the dialog itself remains fully interactive. */
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_backdrop"]:has(
+    > [role="alertdialog"][data-ficonter-transaction-anchor="true"]
+  ) {
+  pointer-events: none !important;
+  background: rgba(25, 27, 28, 0.28) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+}
+
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_backdrop"]:has(
+    > [role="alertdialog"][data-ficonter-transaction-anchor="true"]
+  )
+  > [role="alertdialog"] {
+  pointer-events: auto !important;
 }
 
 @media (orientation: landscape) and (max-height: 620px) {

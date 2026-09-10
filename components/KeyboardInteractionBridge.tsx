@@ -40,6 +40,9 @@ export function KeyboardInteractionBridge() {
 
     function clearSingleDeletePlacement() {
       singleDeletePending = false;
+      if (deleteDialog) {
+        deleteDialog.removeAttribute("data-ficonter-below-selection");
+      }
       deleteDialog = null;
       deleteBackdrop = null;
       if (connectTimer) {
@@ -93,29 +96,57 @@ export function KeyboardInteractionBridge() {
       const selectionRect = selectionBar.getBoundingClientRect();
       const backdropRect = deleteBackdrop.getBoundingClientRect();
       const edgeGap = 12;
-      const sectionGap = 8;
+      const sectionGap = 10;
 
-      // The backdrop may live inside an iOS/transformed app container. Position
-      // the dialog in the backdrop's own coordinate space so its rendered top
-      // edge is always the real bottom edge of Select all visible + the gap.
+      // Absolute invariant for single-transaction delete:
+      // the rendered top edge of the confirmation must be BELOW the rendered
+      // bottom edge of Select all visible. Never clamp the dialog upward.
       const targetViewportTop = selectionRect.bottom + sectionGap;
       const targetViewportCenterX = selectionRect.left + selectionRect.width / 2;
-      const localTop = targetViewportTop - backdropRect.top;
-      const localCenterX = targetViewportCenterX - backdropRect.left;
-      const availableHeight = Math.max(120, viewportHeight - targetViewportTop - edgeGap);
 
+      // A transformed iOS app shell can scale the backdrop's local coordinate
+      // system. Convert viewport pixels into that local coordinate system first.
+      const scaleX =
+        deleteBackdrop.offsetWidth > 0 && backdropRect.width > 0
+          ? backdropRect.width / deleteBackdrop.offsetWidth
+          : 1;
+      const scaleY =
+        deleteBackdrop.offsetHeight > 0 && backdropRect.height > 0
+          ? backdropRect.height / deleteBackdrop.offsetHeight
+          : 1;
+      const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1;
+      const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1;
+
+      let localTop = (targetViewportTop - backdropRect.top) / safeScaleY;
+      const localCenterX = (targetViewportCenterX - backdropRect.left) / safeScaleX;
+      const availableViewportHeight = Math.max(72, viewportHeight - targetViewportTop - edgeGap);
+      const availableLocalHeight = availableViewportHeight / safeScaleY;
+
+      deleteDialog.setAttribute("data-ficonter-below-selection", "true");
       deleteDialog.style.setProperty("position", "absolute", "important");
-      deleteDialog.style.setProperty("top", `${Math.round(localTop)}px`, "important");
-      deleteDialog.style.setProperty("left", `${Math.round(localCenterX)}px`, "important");
+      deleteDialog.style.setProperty("top", `${localTop}px`, "important");
+      deleteDialog.style.setProperty("left", `${localCenterX}px`, "important");
       deleteDialog.style.setProperty("right", "auto", "important");
       deleteDialog.style.setProperty("bottom", "auto", "important");
       deleteDialog.style.setProperty("transform", "translateX(-50%)", "important");
-      deleteDialog.style.setProperty("max-height", `${Math.round(availableHeight)}px`, "important");
+      deleteDialog.style.setProperty("max-height", `${availableLocalHeight}px`, "important");
       deleteDialog.style.setProperty("overflow-y", "auto", "important");
       deleteDialog.style.setProperty("visibility", "visible", "important");
       deleteDialog.style.setProperty("opacity", "1", "important");
       deleteDialog.style.setProperty("pointer-events", "auto", "important");
       deleteDialog.style.setProperty("transition", "none", "important");
+
+      // Verify the result in the actual rendered viewport. If any ancestor
+      // transform or browser quirk still leaves even one pixel of the dialog
+      // above the selection bar, push it downward until the invariant is true.
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const renderedDialogRect = deleteDialog.getBoundingClientRect();
+        const shortfall = targetViewportTop - renderedDialogRect.top;
+        if (!Number.isFinite(shortfall) || shortfall <= 0.5) break;
+
+        localTop += shortfall / safeScaleY;
+        deleteDialog.style.setProperty("top", `${localTop}px`, "important");
+      }
     }
 
     function connectDeleteDialog() {
@@ -145,8 +176,8 @@ export function KeyboardInteractionBridge() {
       singleDeletePending = true;
 
       // React opens the existing delete confirmation from this same click. The
-      // MutationObserver connects as soon as it mounts and places its top edge
-      // directly below Select all visible before the next visual frame.
+      // MutationObserver connects as soon as it mounts and then enforces that
+      // its TOP edge is below the BOTTOM edge of Select all visible.
       window.requestAnimationFrame(connectDeleteDialog);
       connectTimer = window.setTimeout(() => {
         connectTimer = 0;

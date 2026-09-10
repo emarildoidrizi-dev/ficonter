@@ -16,6 +16,7 @@ import "./theme-typography-v133.css";
 import "./landing-support-stretch.css";
 import "./ios-phone-clarity-guard.css";
 import "./adaptive-interface.css";
+import "./mobile-centered-alert-dialogs.css";
 
 import { KeyboardInteractionBridge } from "@/components/KeyboardInteractionBridge";
 import { PWARegister } from "@/components/PWARegister";

@@ -25,8 +25,6 @@ export function KeyboardInteractionBridge() {
     let deleteDialog: HTMLElement | null = null;
     let deleteBackdrop: HTMLElement | null = null;
     let connectTimer = 0;
-    let backdropShiftX = 0;
-    let backdropShiftY = 0;
 
     function isNativeWorkspace() {
       return document.documentElement.dataset.ficonterNativeApp === "true";
@@ -44,14 +42,6 @@ export function KeyboardInteractionBridge() {
       singleDeletePending = false;
       deleteDialog = null;
       deleteBackdrop = null;
-      backdropShiftX = 0;
-      backdropShiftY = 0;
-      delete document.documentElement.dataset.ficonterTransactionDeleteSelectionAnchor;
-      document.documentElement.style.removeProperty("--ficonter-delete-panel-x");
-      document.documentElement.style.removeProperty("--ficonter-delete-panel-top");
-      document.documentElement.style.removeProperty("--ficonter-delete-panel-max-height");
-      document.documentElement.style.removeProperty("--ficonter-delete-backdrop-shift-x");
-      document.documentElement.style.removeProperty("--ficonter-delete-backdrop-shift-y");
       if (connectTimer) {
         window.clearTimeout(connectTimer);
         connectTimer = 0;
@@ -66,6 +56,24 @@ export function KeyboardInteractionBridge() {
       );
     }
 
+    function findVisibleSelectionBar(viewportHeight: number) {
+      const bars = Array.from(
+        document.querySelectorAll<HTMLElement>('[class*="TransactionLedger_selectionBar"]'),
+      ).filter((bar) => {
+        const rect = bar.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+
+      return (
+        bars.find((bar) => {
+          const rect = bar.getBoundingClientRect();
+          return rect.bottom > 0 && rect.top < viewportHeight;
+        }) ??
+        bars[0] ??
+        null
+      );
+    }
+
     function positionDeleteDialogBelowSelection() {
       if (!isNativeWorkspace() || !deleteDialog || !deleteBackdrop) return;
       if (!deleteDialog.isConnected || !deleteBackdrop.isConnected) {
@@ -73,76 +81,41 @@ export function KeyboardInteractionBridge() {
         return;
       }
 
-      const selectionBar = document.querySelector<HTMLElement>(
-        '[class*="TransactionLedger_selectionBar"]',
-      );
-      if (!selectionBar) return;
-
-      const viewportWidth = Math.max(
-        1,
-        window.visualViewport?.width ??
-          document.documentElement.clientWidth ??
-          window.innerWidth,
-      );
       const viewportHeight = Math.max(
         1,
         window.visualViewport?.height ??
           document.documentElement.clientHeight ??
           window.innerHeight,
       );
-
-      // Native iOS app-shell transforms can create a fixed containing block.
-      // Keep the confirmation veil aligned to the currently visible viewport.
-      const backdropRect = deleteBackdrop.getBoundingClientRect();
-      backdropShiftX -= backdropRect.left;
-      backdropShiftY -= backdropRect.top;
-
-      document.documentElement.style.setProperty(
-        "--ficonter-delete-backdrop-shift-x",
-        `${Math.round(backdropShiftX)}px`,
-      );
-      document.documentElement.style.setProperty(
-        "--ficonter-delete-backdrop-shift-y",
-        `${Math.round(backdropShiftY)}px`,
-      );
+      const selectionBar = findVisibleSelectionBar(viewportHeight);
+      if (!selectionBar) return;
 
       const selectionRect = selectionBar.getBoundingClientRect();
-      const dialogRect = deleteDialog.getBoundingClientRect();
+      const backdropRect = deleteBackdrop.getBoundingClientRect();
       const edgeGap = 12;
       const sectionGap = 8;
-      const dialogWidth = Math.min(
-        dialogRect.width || 420,
-        Math.max(1, viewportWidth - edgeGap * 2),
-      );
-      const halfWidth = dialogWidth / 2;
 
-      const x = Math.min(
-        Math.max(selectionRect.left + selectionRect.width / 2, edgeGap + halfWidth),
-        Math.max(edgeGap + halfWidth, viewportWidth - edgeGap - halfWidth),
-      );
+      // The backdrop may live inside an iOS/transformed app container. Position
+      // the dialog in the backdrop's own coordinate space so its rendered top
+      // edge is always the real bottom edge of Select all visible + the gap.
+      const targetViewportTop = selectionRect.bottom + sectionGap;
+      const targetViewportCenterX = selectionRect.left + selectionRect.width / 2;
+      const localTop = targetViewportTop - backdropRect.top;
+      const localCenterX = targetViewportCenterX - backdropRect.left;
+      const availableHeight = Math.max(120, viewportHeight - targetViewportTop - edgeGap);
 
-      // The top edge of the delete confirmation starts immediately beneath the
-      // Select all visible bar. The dialog itself may scroll internally if a
-      // short viewport cannot display all of its content, but the page cannot.
-      const requestedTop = selectionRect.bottom + sectionGap;
-      const top = Math.min(
-        Math.max(requestedTop, edgeGap),
-        Math.max(edgeGap, viewportHeight - edgeGap - 120),
-      );
-      const maxHeight = Math.max(120, viewportHeight - top - edgeGap);
-
-      document.documentElement.style.setProperty(
-        "--ficonter-delete-panel-x",
-        `${Math.round(x)}px`,
-      );
-      document.documentElement.style.setProperty(
-        "--ficonter-delete-panel-top",
-        `${Math.round(top)}px`,
-      );
-      document.documentElement.style.setProperty(
-        "--ficonter-delete-panel-max-height",
-        `${Math.round(maxHeight)}px`,
-      );
+      deleteDialog.style.setProperty("position", "absolute", "important");
+      deleteDialog.style.setProperty("top", `${Math.round(localTop)}px`, "important");
+      deleteDialog.style.setProperty("left", `${Math.round(localCenterX)}px`, "important");
+      deleteDialog.style.setProperty("right", "auto", "important");
+      deleteDialog.style.setProperty("bottom", "auto", "important");
+      deleteDialog.style.setProperty("transform", "translateX(-50%)", "important");
+      deleteDialog.style.setProperty("max-height", `${Math.round(availableHeight)}px`, "important");
+      deleteDialog.style.setProperty("overflow-y", "auto", "important");
+      deleteDialog.style.setProperty("visibility", "visible", "important");
+      deleteDialog.style.setProperty("opacity", "1", "important");
+      deleteDialog.style.setProperty("pointer-events", "auto", "important");
+      deleteDialog.style.setProperty("transition", "none", "important");
     }
 
     function connectDeleteDialog() {
@@ -155,7 +128,6 @@ export function KeyboardInteractionBridge() {
 
       deleteDialog = dialog;
       deleteBackdrop = backdrop;
-      document.documentElement.dataset.ficonterTransactionDeleteSelectionAnchor = "true";
       positionDeleteDialogBelowSelection();
       window.requestAnimationFrame(positionDeleteDialogBelowSelection);
     }
@@ -171,10 +143,10 @@ export function KeyboardInteractionBridge() {
 
       clearSingleDeletePlacement();
       singleDeletePending = true;
-      document.documentElement.dataset.ficonterTransactionDeleteSelectionAnchor = "true";
 
-      // React opens the existing delete confirmation from this same click. Once
-      // mounted, place it directly below Select all visible and freeze the page.
+      // React opens the existing delete confirmation from this same click. The
+      // MutationObserver connects as soon as it mounts and places its top edge
+      // directly below Select all visible before the next visual frame.
       window.requestAnimationFrame(connectDeleteDialog);
       connectTimer = window.setTimeout(() => {
         connectTimer = 0;

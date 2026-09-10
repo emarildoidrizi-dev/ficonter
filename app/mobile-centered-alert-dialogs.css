@@ -1,7 +1,7 @@
 /* FICONTER MOBILE — CONFIRMATION DIALOG POSITIONING
-   Alert dialogs remain centered by default. A transaction delete confirmation
-   can opt into contextual anchoring so it stays visually attached to the
-   transaction row that opened it while the user scrolls. */
+   Alert dialogs remain centered by default. A single-transaction delete
+   confirmation is positioned directly over the transaction that opened it
+   and freezes the workspace until the user acts on that confirmation. */
 
 html[data-ficonter-native-app="true"] .app-main [role="alertdialog"] {
   position: fixed !important;
@@ -28,31 +28,44 @@ html[data-ficonter-native-app="true"]
   left: var(--ficonter-anchor-left, 50%) !important;
   right: auto !important;
   bottom: auto !important;
-  transform: none !important;
+  transform: translate(-50%, -50%) !important;
   width: min(420px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px) !important;
   max-height: min(68dvh, calc(100dvh - 116px)) !important;
   margin: 0 !important;
   border-radius: 22px !important;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  transition: top 90ms linear, left 90ms linear !important;
+  transition: none !important;
 }
 
-/* The single-transaction confirmation behaves like a contextual popover.
-   Allow swipe/scroll gestures to reach the transaction list behind the
-   visual veil, while the dialog itself remains fully interactive. */
+/* The whole page becomes modal while a transaction deletion is being
+   confirmed. The underlying list and page cannot scroll, so the confirmation
+   never drifts away from the transaction that triggered it. */
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"],
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"] body {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-transaction-delete-locked="true"]
+  .ficonter-scroll-region {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
 html[data-ficonter-native-app="true"]
   .app-main
   [class*="TransactionLedger_backdrop"]:has(
     > [role="alertdialog"][data-ficonter-transaction-anchor="true"]
   ) {
-  pointer-events: none !important;
-  background: rgba(25, 27, 28, 0.28) !important;
-  backdrop-filter: blur(2px) !important;
-  -webkit-backdrop-filter: blur(2px) !important;
+  pointer-events: auto !important;
+  background: rgba(25, 27, 28, 0.62) !important;
+  backdrop-filter: blur(7px) !important;
+  -webkit-backdrop-filter: blur(7px) !important;
+  overscroll-behavior: none !important;
 }
 
 html[data-ficonter-native-app="true"]

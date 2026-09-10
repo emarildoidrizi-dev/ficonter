@@ -91,14 +91,14 @@ export function KeyboardInteractionBridge() {
       const edgeGap = 12;
       const sectionGap = 10;
 
-      // New mobile rule: the single-transaction delete confirmation belongs
-      // directly below the Transaction Ledger header, never below Select all visible.
-      // When the header has already scrolled above the visible viewport, keep the
-      // confirmation at the top of the currently visible ledger area so the user
-      // never needs to scroll around to find it.
+      // The confirmation must remain below the Transaction Ledger header, but it
+      // must also live clearly inside the visible ledger body. The previous
+      // fallback pinned it near the top whenever the header had scrolled away.
+      // Keep a minimum landing line at 32% of the visible viewport instead.
+      const visibleLedgerFloor = Math.round(viewportHeight * 0.32);
       const targetViewportTop = Math.max(
         ledgerHeaderRect.bottom + sectionGap,
-        edgeGap,
+        visibleLedgerFloor,
       );
       const targetViewportCenterX =
         ledgerHeaderRect.left + ledgerHeaderRect.width / 2;
@@ -141,8 +141,8 @@ export function KeyboardInteractionBridge() {
       deleteDialog.style.setProperty("transition", "none", "important");
 
       // Verify the rendered result. If a transformed ancestor leaves the dialog
-      // above the requested ledger-header position, push it downward until the
-      // rule is satisfied. Never move it upward past the ledger-header anchor.
+      // above the requested ledger position, push it downward until the rule is
+      // satisfied. Never pull the confirmation back toward the top of the screen.
       for (let attempt = 0; attempt < 4; attempt += 1) {
         const renderedDialogRect = deleteDialog.getBoundingClientRect();
         const shortfall = targetViewportTop - renderedDialogRect.top;
@@ -180,8 +180,8 @@ export function KeyboardInteractionBridge() {
       singleDeletePending = true;
 
       // React opens the existing delete confirmation from this same click. The
-      // MutationObserver connects as soon as it mounts and places it directly
-      // below the Transaction Ledger header while the background stays locked.
+      // MutationObserver connects as soon as it mounts and places it in the
+      // lower visible Transaction Ledger area while the background stays locked.
       window.requestAnimationFrame(connectDeleteDialog);
       connectTimer = window.setTimeout(() => {
         connectTimer = 0;

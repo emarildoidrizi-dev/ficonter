@@ -29,6 +29,12 @@ function isValidPlan(
   );
 }
 
+function isPaidPlan(
+  value: SubscriptionPlanCode,
+): value is "personal_pro" | "business_pro" {
+  return value === "personal_pro" || value === "business_pro";
+}
+
 function isValidStatus(
   value: unknown,
 ): value is SubscriptionStatus {
@@ -39,6 +45,19 @@ function isValidStatus(
     value === "canceled" ||
     value === "unpaid"
   );
+}
+
+function cancellationPeriodHasExpired(
+  cancelAtPeriodEnd: boolean,
+  currentPeriodEnd: string | null,
+) {
+  if (!cancelAtPeriodEnd || !currentPeriodEnd) {
+    return false;
+  }
+
+  const paidThrough = Date.parse(currentPeriodEnd);
+
+  return Number.isFinite(paidThrough) && paidThrough <= Date.now();
 }
 
 function hasCancellationGraceAccess(
@@ -60,6 +79,28 @@ function hasCancellationGraceAccess(
     Number.isFinite(paidThrough) &&
     paidThrough > Date.now()
   );
+}
+
+async function persistFreeDowngrade(userId: string) {
+  const service = createServiceClient();
+
+  const { error } = await service
+    .from("subscriptions")
+    .update({
+      plan_code: "free",
+      status: "active",
+      billing_interval: null,
+      provider: "internal",
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export const getCurrentSubscriptionAccess = cache(
@@ -126,6 +167,48 @@ export const getCurrentSubscriptionAccess = cache(
         adminRole: null,
         planCode: "free" as SubscriptionPlanCode,
         status: "unpaid" as SubscriptionStatus,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null as string | null,
+        betaVerified: false,
+      };
+    }
+
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
+    const currentPeriodEnd =
+      typeof subscription.current_period_end === "string"
+        ? subscription.current_period_end
+        : null;
+
+    /*
+     * ABSOLUTE EXPIRY RULE:
+     * A paid subscription that was canceled at period end stops being a paid
+     * plan the instant its paid-through timestamp is reached. This check is
+     * independent of the stored PayPal status, so a delayed webhook or stale
+     * `active` status can never keep Personal Pro / Business Pro entitlements
+     * alive beyond current_period_end.
+     *
+     * Persist the account back to the normal Free row when possible, but fail
+     * closed to Free even if that persistence write is temporarily unavailable.
+     */
+    if (
+      isPaidPlan(subscription.plan_code) &&
+      cancellationPeriodHasExpired(cancelAtPeriodEnd, currentPeriodEnd)
+    ) {
+      try {
+        await persistFreeDowngrade(user.id);
+      } catch (downgradeError) {
+        console.error(
+          "Unable to persist expired subscription downgrade:",
+          downgradeError,
+        );
+      }
+
+      return {
+        authenticated: true,
+        isAdminExempt: false,
+        adminRole: null,
+        planCode: "free" as SubscriptionPlanCode,
+        status: "active" as SubscriptionStatus,
         cancelAtPeriodEnd: false,
         currentPeriodEnd: null as string | null,
         betaVerified: false,
@@ -217,13 +300,8 @@ export const getCurrentSubscriptionAccess = cache(
       adminRole: null,
       planCode: subscription.plan_code,
       status: subscription.status,
-      cancelAtPeriodEnd:
-        subscription.cancel_at_period_end === true,
-      currentPeriodEnd:
-        typeof subscription.current_period_end ===
-        "string"
-          ? subscription.current_period_end
-          : null,
+      cancelAtPeriodEnd,
+      currentPeriodEnd,
       betaVerified,
     };
   },
@@ -235,6 +313,15 @@ type SubscriptionAccessSnapshot =
 function paidSubscriptionIsUsable(
   access: SubscriptionAccessSnapshot,
 ) {
+  if (
+    cancellationPeriodHasExpired(
+      access.cancelAtPeriodEnd,
+      access.currentPeriodEnd,
+    )
+  ) {
+    return false;
+  }
+
   return (
     isSubscriptionAccessActive(access.status) ||
     hasCancellationGraceAccess(
@@ -249,11 +336,10 @@ function paidSubscriptionIsUsable(
  * A customer never loses the Free tier because a paid subscription is
  * past-due, canceled, unpaid, missing or invalid.
  *
- * Active/trialing paid plans use their paid tier even when renewal has been
- * canceled. If PayPal has already marked the subscription canceled, the paid
- * tier remains usable through current_period_end when cancel_at_period_end is
- * true. Inactive/expired paid plans fall back to Free. Admin roles remain
- * exempt.
+ * Active/trialing paid plans use their paid tier until current_period_end when
+ * renewal has been canceled. At that exact timestamp the effective plan is
+ * Free even if a provider webhook has not yet changed the stored status.
+ * Admin roles remain exempt.
  */
 export function getEffectiveSubscriptionPlanCode(
   access: SubscriptionAccessSnapshot,

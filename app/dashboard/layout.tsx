@@ -8,6 +8,7 @@ import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionP
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
 import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
+import { AuthenticatedThemeSync } from "@/components/AuthenticatedThemeSync";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
@@ -46,38 +47,21 @@ function readInterfacePreferences(metadata: unknown): StoredPreferences {
   if (!preferences || typeof preferences !== "object") return {};
   const value = preferences as Record<string, unknown>;
   return {
-    appearance:
-      typeof value.appearance === "string"
-        ? value.appearance
-        : undefined,
-    density:
-      typeof value.density === "string"
-        ? value.density
-        : undefined,
-    backgroundMotion:
-      typeof value.backgroundMotion === "string"
-        ? value.backgroundMotion
-        : undefined,
-    wallpaperScene:
-      typeof value.wallpaperScene === "string"
-        ? value.wallpaperScene
-        : undefined,
+    appearance: typeof value.appearance === "string" ? value.appearance : undefined,
+    density: typeof value.density === "string" ? value.density : undefined,
+    backgroundMotion: typeof value.backgroundMotion === "string" ? value.backgroundMotion : undefined,
+    wallpaperScene: typeof value.wallpaperScene === "string" ? value.wallpaperScene : undefined,
     surfaceOpacity:
       typeof value.surfaceOpacity === "number"
         ? value.surfaceOpacity
         : typeof value.surfaceOpacity === "string"
           ? Number(value.surfaceOpacity)
           : undefined,
-    language:
-      typeof value.language === "string" ? value.language : undefined,
+    language: typeof value.language === "string" ? value.language : undefined,
   };
 }
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [{ user, admin }, { supabase }] = await Promise.all([
     requireAdmin(),
     getCurrentUser(),
@@ -85,35 +69,27 @@ export default async function DashboardLayout({
   if (!user) redirect("/login?entry=app");
 
   const [{ data: profile }, subscriptionAccess] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("base_currency")
-      .eq("id", user.id)
-      .maybeSingle(),
+    supabase.from("profiles").select("base_currency").eq("id", user.id).maybeSingle(),
     getCurrentSubscriptionAccess(),
   ]);
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
-  const showCustomerVaultAccess = true;
   const askFiconterAvailable = hasSubscriptionFeature(
     subscriptionPlanCode,
     "advanced_financial_recommendations",
   );
-
-  const interfacePreferences = readInterfacePreferences(
-    user.user_metadata,
-  );
-
+  const interfacePreferences = readInterfacePreferences(user.user_metadata);
   const baseCurrency = profile?.base_currency ?? "EUR";
 
   return (
-    <CurrencyDisplayProvider
-      workspace="personal"
-      baseCurrency={baseCurrency}
-      reportingCurrency="EUR"
-    >
-      <div className={`app-shell ${layoutStyles.profileToolsRelocated}`}>
+    <CurrencyDisplayProvider workspace="personal" baseCurrency={baseCurrency} reportingCurrency="EUR">
+      <div
+        className={`app-shell ${layoutStyles.profileToolsRelocated}`}
+        data-auth-theme-pending="true"
+        style={{ visibility: "hidden" }}
+      >
+        <AuthenticatedThemeSync {...interfacePreferences} />
         <InterfacePreferencesBootstrap
           {...interfacePreferences}
           wallpaperAccessEnabled={canManageWallpapers}
@@ -147,7 +123,7 @@ export default async function DashboardLayout({
         />
         <AppMoreAskFiconter available={askFiconterAvailable} />
         <VaultProvider>
-          {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
+          <VaultInactivityGuard />
           <VaultLegacyMigrationBootstrap userId={user.id} />
           <VaultNavigationMount
             workspace="personal"
@@ -173,9 +149,7 @@ export default async function DashboardLayout({
           <main className="app-main">
             <EncryptedTransactionProvider>
               <EncryptedBillProvider>
-                <PersonalPlatformSearchPalette
-                  subscriptionPlanCode={subscriptionPlanCode}
-                />
+                <PersonalPlatformSearchPalette subscriptionPlanCode={subscriptionPlanCode} />
                 {children}
               </EncryptedBillProvider>
             </EncryptedTransactionProvider>

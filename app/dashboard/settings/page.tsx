@@ -7,7 +7,10 @@ import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
-import { getCurrentSubscriptionAccess } from "@/lib/subscriptionAccess";
+import {
+  getCurrentSubscriptionAccess,
+  getEffectiveSubscriptionPlanCode,
+} from "@/lib/subscriptionAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -114,11 +117,18 @@ export default async function SettingsPage({
     (subscription as SubscriptionSnapshot | null) ?? null;
 
   const verifiedAccess = await getCurrentSubscriptionAccess();
+  const effectivePlanCode = getEffectiveSubscriptionPlanCode(verifiedAccess);
 
+  /*
+   * The subscription row and this page query can race the server-side expiry
+   * normalizer by a few milliseconds. Always render the verified effective
+   * entitlement, so an expired canceled plan is shown as Free immediately even
+   * if this request started with the old paid database snapshot.
+   */
   const verifiedSubscriptionSnapshot =
     !isSubscriptionExempt &&
-    subscriptionSnapshot?.plan_code === "beta" &&
-    verifiedAccess.planCode !== "beta"
+    effectivePlanCode === "free" &&
+    subscriptionSnapshot?.plan_code !== "free"
       ? {
           ...subscriptionSnapshot,
           plan_code: "free",

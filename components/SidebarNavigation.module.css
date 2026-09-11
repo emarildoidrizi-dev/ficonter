@@ -1,4 +1,5 @@
 .shellHeader { position:relative;z-index:110;width:100%;padding:12px clamp(18px,2.5vw,38px) 0;color:var(--text-primary);background:transparent;overscroll-behavior:contain }
+.shellHeader:has(.accountMenu) { z-index:130 }
 .topRow { min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:18px }
 .brandArea,.headerActions { display:flex;align-items:center;gap:10px;min-width:0 }
 .brandCard,.workspacePill,.switchBusiness { min-height:54px;display:inline-flex;align-items:center;border:1px solid var(--border-subtle);border-radius:14px;background:color-mix(in srgb,var(--surface-raised) 94%,transparent);box-shadow:0 10px 30px rgba(47,81,72,.08) }

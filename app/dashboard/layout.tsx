@@ -14,6 +14,7 @@ import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
 import { BrowserPlatformSearchHeader } from "@/components/BrowserPlatformSearchHeader";
+import { BrowserHeaderLayerPolicy } from "@/components/BrowserHeaderLayerPolicy";
 import { PersonalPlatformSearchPalette } from "@/components/PersonalPlatformSearchPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
@@ -153,6 +154,7 @@ export default async function DashboardLayout({
             subscriptionPlanCode={subscriptionPlanCode}
             isPlatformOwner={isPlatformOwner}
           />
+          <BrowserHeaderLayerPolicy />
           <Sidebar
             isAdmin={Boolean(admin)}
             subscriptionPlanCode={subscriptionPlanCode}

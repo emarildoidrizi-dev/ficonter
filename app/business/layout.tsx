@@ -36,7 +36,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
     getCurrentSubscriptionAccess(),
   ]);
   const isPlatformOwner = isOwnerEmail(user.email);
-  const canManageWallpapers = admin?.role === "super_admin";
   const canManageBusiness = Boolean(
     business &&
       (business.owner_id === user.id ||

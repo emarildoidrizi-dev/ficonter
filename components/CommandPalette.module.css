@@ -103,10 +103,28 @@
   background: var(--surface-subtle);
   color: var(--gold);
 }
+.commandIcon[data-private="true"] {
+  background: color-mix(in srgb, var(--sage-soft) 78%, var(--surface-subtle));
+  color: var(--sage);
+}
 .empty { padding: 42px 20px; color: var(--text-secondary); text-align: center; }
+.privateNotice {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:10px;
+  padding:11px 12px;
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  background:var(--surface-subtle);
+  color:var(--text-secondary);
+  font-size:10px;
+  line-height:1.45;
+}
 .footer {
   display: flex;
   flex-wrap: wrap;
+  align-items:center;
   gap: 15px;
   padding: 11px 18px;
   border-top: 1px solid var(--border-subtle);
@@ -115,6 +133,7 @@
   font-size: 9px;
 }
 .footer span { display: inline-flex; align-items: center; gap: 5px; }
+.footer .scope{margin-right:auto;color:var(--text-secondary);font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .footer kbd {
   padding: 3px 5px;
   border: 1px solid var(--border-subtle);
@@ -127,6 +146,7 @@
 @keyframes paletteFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes paletteRise { from { opacity: 0; transform: translateY(-10px) scale(.985); } to { opacity: 1; transform: none; } }
 
+@media(max-width:560px){.footer .scope{width:100%;margin-right:0}}
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .palette { animation: none; }

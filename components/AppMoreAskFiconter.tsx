@@ -47,10 +47,9 @@ export function AppMoreAskFiconter({ available }: Props) {
     };
 
     synchronize();
+    const root = document.documentElement;
     const observer = new MutationObserver(synchronize);
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
+    observer.observe(root, {
       attributes: true,
       attributeFilter: ["data-ficonter-display-mode", "data-ficonter-native-app"],
     });

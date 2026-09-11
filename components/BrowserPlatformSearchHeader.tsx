@@ -86,7 +86,6 @@ export function BrowserPlatformSearchHeader() {
       <Search size={18} aria-hidden="true" />
       <span className={styles.searchCopy}>
         <strong>Search anything</strong>
-        <small>FICONTER only</small>
       </span>
       <span className={styles.shortcut} aria-hidden="true">Ctrl K</span>
     </button>,

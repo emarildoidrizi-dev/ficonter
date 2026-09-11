@@ -37,6 +37,28 @@ type Exchange = {
   answer: AskFiconterAnswer;
 };
 
+type IOSNavigator = Navigator & {
+  standalone?: boolean;
+};
+
+const APP_RETRACTED_SESSION_KEY = "ficonter:ask-ficonter-retracted";
+const APP_SWIPE_THRESHOLD = 34;
+
+function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as IOSNavigator).standalone);
+  const root = document.documentElement;
+
+  return (
+    standalone &&
+    root.dataset.ficonterNativeApp !== "false" &&
+    root.dataset.ficonterDevice !== "desktop"
+  );
+}
+
 function formatMoney(value: number, currency: string): string {
   try {
     return new Intl.NumberFormat("en-GB", {
@@ -86,12 +108,16 @@ export function AskFiconterLauncher({
     useBaseCurrencySourceData(userId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const pointerStartXRef = useRef<number | null>(null);
+  const suppressLauncherClickRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [inputs, setInputs] = useState<AiInsightsInputs | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [appRetracted, setAppRetracted] = useState(false);
+  const [appRetractReady, setAppRetractReady] = useState(false);
 
   const currency = baseCurrency.toUpperCase() || "EUR";
   const starterQuestions = useMemo(
@@ -110,6 +136,33 @@ export function AskFiconterLauncher({
         : null,
     [currencyContext, inputs, source],
   );
+
+  useEffect(() => {
+    if (!isStandaloneApp()) return;
+
+    try {
+      setAppRetracted(
+        window.sessionStorage.getItem(APP_RETRACTED_SESSION_KEY) === "1",
+      );
+    } catch {
+      // Session persistence is optional; the launcher still works without it.
+    } finally {
+      setAppRetractReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!appRetractReady || !isStandaloneApp()) return;
+
+    try {
+      window.sessionStorage.setItem(
+        APP_RETRACTED_SESSION_KEY,
+        appRetracted ? "1" : "0",
+      );
+    } catch {
+      // Ignore storage restrictions in hardened/private app sessions.
+    }
+  }, [appRetractReady, appRetracted]);
 
   const loadInputs = useCallback(async () => {
     if (!open || vaultStatus !== "unlocked" || !vaultKey || currencyLoading) {
@@ -210,6 +263,13 @@ export function AskFiconterLauncher({
     runQuestion(question);
   }
 
+  function suppressNextLauncherClick() {
+    suppressLauncherClickRef.current = true;
+    window.setTimeout(() => {
+      suppressLauncherClickRef.current = false;
+    }, 0);
+  }
+
   const latestExchange = exchanges.length
     ? exchanges[exchanges.length - 1]
     : null;
@@ -225,7 +285,33 @@ export function AskFiconterLauncher({
       <button
         type="button"
         className={styles.launcher}
-        onClick={() => setOpen(true)}
+        data-app-retracted={appRetracted ? "true" : "false"}
+        onPointerDown={(event) => {
+          if (!isStandaloneApp()) return;
+          pointerStartXRef.current = event.clientX;
+          suppressLauncherClickRef.current = false;
+        }}
+        onPointerUp={(event) => {
+          const startX = pointerStartXRef.current;
+          pointerStartXRef.current = null;
+          if (startX === null || !isStandaloneApp()) return;
+
+          const deltaX = event.clientX - startX;
+          if (deltaX <= -APP_SWIPE_THRESHOLD) {
+            setAppRetracted(true);
+            suppressNextLauncherClick();
+          } else if (deltaX >= APP_SWIPE_THRESHOLD) {
+            setAppRetracted(false);
+            suppressNextLauncherClick();
+          }
+        }}
+        onPointerCancel={() => {
+          pointerStartXRef.current = null;
+        }}
+        onClick={() => {
+          if (suppressLauncherClickRef.current) return;
+          setOpen(true);
+        }}
         aria-label="Ask FICONTER about your finances"
         aria-haspopup="dialog"
       >

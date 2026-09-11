@@ -7,7 +7,7 @@ import { VaultLegacyMigrationBootstrap } from "@/components/VaultLegacyMigration
 import { EncryptedTransactionProvider } from "@/components/EncryptedTransactionProvider";
 import { EncryptedBillProvider } from "@/components/EncryptedBillProvider";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
-import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
+import { AuthenticatedInterfaceBootstrap } from "@/components/AuthenticatedInterfaceBootstrap";
 import { AuthenticatedLanguageBootstrap } from "@/components/AuthenticatedLanguageBootstrap";
 import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
@@ -114,7 +114,7 @@ export default async function DashboardLayout({
       reportingCurrency="EUR"
     >
       <div className={`app-shell ${layoutStyles.profileToolsRelocated}`}>
-        <InterfacePreferencesBootstrap
+        <AuthenticatedInterfaceBootstrap
           {...interfacePreferences}
           wallpaperAccessEnabled={canManageWallpapers}
         />

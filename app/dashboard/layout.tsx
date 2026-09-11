@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AskFiconterLauncher } from "@/components/AskFiconterLauncher";
+import { AskFiconterAdaptiveEntry } from "@/components/AskFiconterAdaptiveEntry";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultNavigationMount } from "@/components/VaultNavigationMount";
@@ -159,7 +159,7 @@ export default async function DashboardLayout({
             <EncryptedTransactionProvider>
               <EncryptedBillProvider>
                 {askFiconterAvailable ? (
-                  <AskFiconterLauncher
+                  <AskFiconterAdaptiveEntry
                     userId={user.id}
                     baseCurrency={baseCurrency}
                   />

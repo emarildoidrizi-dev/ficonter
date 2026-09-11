@@ -1,0 +1,467 @@
+.page {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 6px 0 104px;
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(135deg, var(--surface-card), var(--surface-subtle));
+}
+
+.brandMark,
+.introIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--surface-sidebar);
+  color: var(--gold);
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.headerCopy > span {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--gold);
+  font-size: .57rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.headerCopy h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -.025em;
+}
+
+.headerCopy p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+.privacyBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 1px solid var(--border-subtle);
+  border-top: 0;
+  background: color-mix(in srgb, var(--sage) 8%, var(--surface-card));
+  color: var(--text-secondary);
+  font-size: .62rem;
+  line-height: 1.35;
+}
+
+.privacyDot {
+  opacity: .5;
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border-inline: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+}
+
+.stateCard,
+.introCard,
+.answerCard {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+}
+
+.stateCard {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 18px 0;
+  padding: 24px 18px;
+  border-radius: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.stateCard h2,
+.introCard h2,
+.answerCard h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.stateCard h2 {
+  font-size: .92rem;
+}
+
+.stateCard p {
+  max-width: 500px;
+  margin: 0;
+  font-size: .74rem;
+  line-height: 1.55;
+}
+
+.stateCard button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.errorState {
+  border-color: color-mix(in srgb, var(--burgundy) 35%, var(--border-subtle));
+}
+
+.loadingOrb {
+  width: 24px;
+  height: 24px;
+  border: 3px solid color-mix(in srgb, var(--gold) 20%, var(--border-subtle));
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+.introCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px;
+  border-radius: 15px;
+}
+
+.introIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.introCard h2 {
+  margin-bottom: 3px;
+  font-size: .86rem;
+}
+
+.introCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .71rem;
+  line-height: 1.48;
+}
+
+.exchange {
+  display: grid;
+  gap: 8px;
+}
+
+.questionBubble {
+  justify-self: end;
+  max-width: 86%;
+  padding: 9px 11px;
+  border-radius: 15px 15px 4px 15px;
+  background: var(--surface-sidebar);
+  color: var(--sidebar-text);
+}
+
+.questionBubble span,
+.answerTopline span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--gold);
+  font-size: .55rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.questionBubble p {
+  margin: 0;
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
+.answerCard {
+  position: relative;
+  overflow: hidden;
+  padding: 14px;
+  border-radius: 4px 17px 17px 17px;
+  box-shadow: 0 8px 24px rgba(31, 35, 38, .045);
+}
+
+.answerCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--gold);
+}
+
+.tone_positive::before {
+  background: var(--sage);
+}
+
+.tone_warning::before,
+.tone_critical::before {
+  background: var(--burgundy);
+}
+
+.answerTopline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.answerTopline small {
+  color: var(--text-secondary);
+  font-size: .58rem;
+}
+
+.answerCard h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.verdict {
+  display: block;
+  margin-top: 6px;
+  font-size: .82rem;
+}
+
+.summary,
+.detail {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: .72rem;
+  line-height: 1.55;
+}
+
+.detail {
+  color: var(--text-primary);
+}
+
+.evidencePanel {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.evidencePanel summary {
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.evidenceGrid,
+.scenarioGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.evidenceItem,
+.scenarioCard {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+}
+
+.evidenceItem span,
+.scenarioCard span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: .58rem;
+  font-weight: 800;
+}
+
+.evidenceItem strong,
+.scenarioCard strong {
+  display: block;
+  margin-top: 3px;
+  font-size: .71rem;
+}
+
+.evidenceItem small,
+.scenarioCard p {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: .59rem;
+  line-height: 1.4;
+}
+
+.disclaimer {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: .57rem;
+  line-height: 1.4;
+}
+
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.suggestions button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-size: .66rem;
+  font-weight: 750;
+  text-align: left;
+}
+
+.suggestions button span {
+  min-width: 0;
+}
+
+.suggestions button:disabled {
+  opacity: .5;
+}
+
+.composer {
+  position: sticky;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 7px;
+  align-items: end;
+  padding: 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0 0 18px 18px;
+  background: color-mix(in srgb, var(--surface-card) 96%, transparent);
+  box-shadow: 0 12px 30px rgba(20, 28, 27, .08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 40px;
+  max-height: 92px;
+  resize: none;
+  padding: 10px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .74rem;
+  line-height: 1.35;
+  outline: none;
+}
+
+.composer textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.composer textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.composer button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-sidebar);
+  color: var(--gold);
+}
+
+.composer button:disabled {
+  opacity: .42;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .header {
+    padding: 10px 11px 9px;
+    border-radius: 15px 15px 0 0;
+  }
+
+  .headerCopy h1 {
+    font-size: 1.1rem;
+  }
+
+  .headerCopy p {
+    font-size: .66rem;
+  }
+
+  .privacyBar {
+    overflow-x: auto;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  .privacyDot,
+  .privacyBar span:last-child {
+    display: none;
+  }
+
+  .body {
+    padding: 10px;
+  }
+
+  .evidenceGrid,
+  .scenarioGrid,
+  .suggestions {
+    grid-template-columns: 1fr;
+  }
+
+  .composer {
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    padding: 8px;
+    border-radius: 0 0 15px 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingOrb {
+    animation: none;
+  }
+}

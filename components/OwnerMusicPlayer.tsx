@@ -79,6 +79,7 @@ export function OwnerMusicPlayer() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const dockRef = useRef<HTMLElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const libraryLoadedRef = useRef(false);
   const supabase = useMemo(() => createClient(), []);
@@ -144,6 +145,30 @@ export function OwnerMusicPlayer() {
     return () => window.removeEventListener("ficonter:owner-music-open", openOwnerMusic);
   }, [loadLibrary, loading]);
 
+  useEffect(() => {
+    if (!expanded) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (dockRef.current?.contains(target)) return;
+      setExpanded(false);
+      setLibraryOpen(false);
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setExpanded(false);
+      setLibraryOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [expanded]);
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -227,7 +252,11 @@ export function OwnerMusicPlayer() {
   }
 
   return (
-    <aside className={`${styles.dock}${expanded ? ` ${styles.dockExpanded}` : ""}`} aria-label="Owner Music">
+    <aside
+      ref={dockRef}
+      className={`${styles.dock}${expanded ? ` ${styles.dockExpanded}` : ""}`}
+      aria-label="Owner Music"
+    >
       <input
         ref={fileInputRef}
         className={styles.fileInput}
@@ -237,7 +266,7 @@ export function OwnerMusicPlayer() {
       />
 
       {expanded ? (
-        <div className={styles.panel}>
+        <div className={styles.panel} id="owner-music-panel">
           <div className={styles.panelHeader}>
             <div className={styles.panelIdentity}>
               <span className={styles.panelIcon}><Headphones size={18} /></span>
@@ -247,7 +276,17 @@ export function OwnerMusicPlayer() {
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Add music" aria-label="Add music">
                 {uploading ? <LoaderCircle className={styles.spin} size={17} /> : <Plus size={17} />}
               </button>
-              <button type="button" onClick={() => setExpanded(false)} title="Minimize" aria-label="Minimize Owner Music"><ChevronDown size={18} /></button>
+              <button
+                type="button"
+                onClick={() => {
+                  setExpanded(false);
+                  setLibraryOpen(false);
+                }}
+                title="Minimize"
+                aria-label="Minimize Owner Music"
+              >
+                <ChevronDown size={18} />
+              </button>
             </div>
           </div>
 
@@ -337,16 +376,31 @@ export function OwnerMusicPlayer() {
           ) : null}
         </div>
       ) : (
-        <div className={styles.miniPlayer}>
-          <button type="button" className={styles.miniIdentity} onClick={openPlayer} title="Open Owner Music">
-            <span className={`${styles.miniIcon}${player.playing ? ` ${styles.miniIconPlaying}` : ""}`}><Music2 size={17} /></span>
-            <span className={styles.miniText}><small>OWNER MUSIC</small><strong>{currentTrack?.title ?? "Music"}</strong></span>
+        <>
+          <button
+            type="button"
+            className={`${styles.edgeLauncher}${player.playing ? ` ${styles.edgeLauncherPlaying}` : ""}`}
+            onClick={openPlayer}
+            aria-label={player.playing ? "Open Owner Music, currently playing" : "Open Owner Music"}
+            aria-expanded={false}
+            aria-controls="owner-music-panel"
+            title="Owner Music"
+          >
+            <Music2 size={20} />
+            {player.playing ? <span className={styles.playingDot} aria-hidden="true" /> : null}
           </button>
-          <button type="button" className={styles.miniPlay} onClick={() => player.playing ? pause() : void startCurrentTrack()} disabled={!player.tracks.length} aria-label={player.playing ? "Pause music" : "Play music"}>
-            {player.playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-          </button>
-          <button type="button" className={styles.miniClose} onClick={openPlayer} aria-label="Open music library"><ListMusic size={16} /></button>
-        </div>
+
+          <div className={styles.miniPlayer}>
+            <button type="button" className={styles.miniIdentity} onClick={openPlayer} title="Open Owner Music">
+              <span className={`${styles.miniIcon}${player.playing ? ` ${styles.miniIconPlaying}` : ""}`}><Music2 size={17} /></span>
+              <span className={styles.miniText}><small>OWNER MUSIC</small><strong>{currentTrack?.title ?? "Music"}</strong></span>
+            </button>
+            <button type="button" className={styles.miniPlay} onClick={() => player.playing ? pause() : void startCurrentTrack()} disabled={!player.tracks.length} aria-label={player.playing ? "Pause music" : "Play music"}>
+              {player.playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+            </button>
+            <button type="button" className={styles.miniClose} onClick={openPlayer} aria-label="Open music library"><ListMusic size={16} /></button>
+          </div>
+        </>
       )}
     </aside>
   );

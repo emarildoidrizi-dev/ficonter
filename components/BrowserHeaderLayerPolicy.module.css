@@ -1,0 +1,46 @@
+.policySentinel{display:none}
+
+@media (min-width:901px){
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [class*="NotificationCenter_root"]){
+    display:grid!important;
+    grid-template-columns:54px 54px!important;
+    gap:6px!important;
+    align-items:center!important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [data-vault-navigation-slot]){
+    display:none!important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [class*="NotificationCenter_root"]>button){
+    display:grid!important;
+    width:54px!important;
+    min-width:54px!important;
+    height:54px!important;
+    min-height:54px!important;
+    place-items:center!important;
+    opacity:1!important;
+    border:1px solid var(--border-subtle)!important;
+    border-radius:14px!important;
+    background:color-mix(in srgb,var(--surface-raised) 94%,transparent)!important;
+    box-shadow:0 10px 30px rgba(47,81,72,.08)!important;
+    color:var(--text-primary)!important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [class*="NotificationCenter_root"]>button svg){
+    opacity:1!important;
+    color:currentColor!important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [class*="NotificationCenter_root"]>button:hover),
+  :global(html[data-ficonter-display-mode="browser"] header[data-ficonter-browser-shell-header="true"] [class*="NotificationCenter_root"]>button[aria-expanded="true"]){
+    border-color:color-mix(in srgb,var(--sage) 28%,var(--border-subtle))!important;
+    background:color-mix(in srgb,var(--surface-raised) 100%,transparent)!important;
+    color:var(--text-primary)!important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"][data-ficonter-foreground-layer-open="true"] header[data-ficonter-browser-shell-header="true"]){
+    z-index:0!important;
+    pointer-events:none!important;
+  }
+}

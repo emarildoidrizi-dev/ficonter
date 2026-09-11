@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AskFiconterAdaptiveEntry } from "@/components/AskFiconterAdaptiveEntry";
 import { Sidebar } from "@/components/Sidebar";
 import { VaultProvider } from "@/components/VaultProvider";
 import { VaultNavigationMount } from "@/components/VaultNavigationMount";
@@ -23,7 +22,7 @@ import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNot
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
-import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import layoutStyles from "./DashboardLayout.module.css";
 
 type StoredPreferences = {
   appearance?: string;
@@ -92,10 +91,6 @@ export default async function DashboardLayout({
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
   const showCustomerVaultAccess = true;
-  const askFiconterAvailable = hasSubscriptionFeature(
-    subscriptionPlanCode,
-    "advanced_financial_recommendations",
-  );
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -109,7 +104,7 @@ export default async function DashboardLayout({
       baseCurrency={baseCurrency}
       reportingCurrency="EUR"
     >
-      <div className={`app-shell${isPlatformOwner ? " owner-music-player-active" : ""}`}>
+      <div className={`app-shell ${layoutStyles.profileToolsRelocated}`}>
         <InterfacePreferencesBootstrap
           {...interfacePreferences}
           wallpaperAccessEnabled={canManageWallpapers}
@@ -157,15 +152,7 @@ export default async function DashboardLayout({
           />
           <main className="app-main">
             <EncryptedTransactionProvider>
-              <EncryptedBillProvider>
-                {askFiconterAvailable ? (
-                  <AskFiconterAdaptiveEntry
-                    userId={user.id}
-                    baseCurrency={baseCurrency}
-                  />
-                ) : null}
-                {children}
-              </EncryptedBillProvider>
+              <EncryptedBillProvider>{children}</EncryptedBillProvider>
             </EncryptedTransactionProvider>
           </main>
         </VaultProvider>

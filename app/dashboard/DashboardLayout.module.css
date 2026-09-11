@@ -1,0 +1,2 @@
+.profileToolsRelocated :global(aside[aria-label="Owner Music"]:not(:has(#owner-music-panel)) > button[aria-controls="owner-music-panel"]),
+.profileToolsRelocated :global(aside[aria-label="Owner Music"]:not(:has(#owner-music-panel)) > div){display:none!important}

@@ -116,6 +116,7 @@ export function AskFiconterLauncher({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [standaloneApp, setStandaloneApp] = useState(false);
   const [appRetracted, setAppRetracted] = useState(false);
   const [appRetractReady, setAppRetractReady] = useState(false);
 
@@ -138,7 +139,9 @@ export function AskFiconterLauncher({
   );
 
   useEffect(() => {
-    if (!isStandaloneApp()) return;
+    const active = isStandaloneApp();
+    setStandaloneApp(active);
+    if (!active) return;
 
     try {
       setAppRetracted(
@@ -152,7 +155,7 @@ export function AskFiconterLauncher({
   }, []);
 
   useEffect(() => {
-    if (!appRetractReady || !isStandaloneApp()) return;
+    if (!appRetractReady || !standaloneApp) return;
 
     try {
       window.sessionStorage.setItem(
@@ -162,7 +165,7 @@ export function AskFiconterLauncher({
     } catch {
       // Ignore storage restrictions in hardened/private app sessions.
     }
-  }, [appRetractReady, appRetracted]);
+  }, [appRetractReady, appRetracted, standaloneApp]);
 
   const loadInputs = useCallback(async () => {
     if (!open || vaultStatus !== "unlocked" || !vaultKey || currencyLoading) {
@@ -286,15 +289,36 @@ export function AskFiconterLauncher({
         type="button"
         className={styles.launcher}
         data-app-retracted={appRetracted ? "true" : "false"}
+        style={
+          standaloneApp
+            ? {
+                left: 0,
+                right: "auto",
+                bottom: "calc(132px + env(safe-area-inset-bottom))",
+                width: "auto",
+                maxWidth: "min(220px, calc(100vw - 24px))",
+                minHeight: 52,
+                padding: "7px 8px 7px 14px",
+                flexDirection: "row-reverse",
+                borderRadius: "0 999px 999px 0",
+                touchAction: "pan-y",
+                transform: appRetracted
+                  ? "translateX(calc(-100% + 54px))"
+                  : "translateX(0)",
+                transition:
+                  "transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, border-color .18s ease",
+              }
+            : undefined
+        }
         onPointerDown={(event) => {
-          if (!isStandaloneApp()) return;
+          if (!standaloneApp) return;
           pointerStartXRef.current = event.clientX;
           suppressLauncherClickRef.current = false;
         }}
         onPointerUp={(event) => {
           const startX = pointerStartXRef.current;
           pointerStartXRef.current = null;
-          if (startX === null || !isStandaloneApp()) return;
+          if (startX === null || !standaloneApp) return;
 
           const deltaX = event.clientX - startX;
           if (deltaX <= -APP_SWIPE_THRESHOLD) {
@@ -318,7 +342,10 @@ export function AskFiconterLauncher({
         <span className={styles.launcherIcon} aria-hidden="true">
           <Sparkles size={19} />
         </span>
-        <span className={styles.launcherText}>
+        <span
+          className={styles.launcherText}
+          style={standaloneApp ? { display: "grid" } : undefined}
+        >
           <strong>Ask FICONTER</strong>
           <small>Use my financial data</small>
         </span>

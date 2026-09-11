@@ -1,7 +1,13 @@
 "use client";
 
 import { Music2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 
 import styles from "./OwnerMusicAppLauncher.module.css";
 
@@ -81,14 +87,26 @@ function persistPosition(position: Position) {
 export function OwnerMusicAppLauncher() {
   const [appMode, setAppMode] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
+  const positionRef = useRef<Position | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const commitPosition = useCallback((next: Position) => {
+    const clamped = clamp(next);
+    positionRef.current = clamped;
+    setPosition(clamped);
+    return clamped;
+  }, []);
 
   const synchronizeMode = useCallback(() => {
     const installed = isInstalledApp();
     setAppMode(installed);
     if (installed) {
-      setPosition((current) => clamp(current ?? readStoredPosition() ?? defaultPosition()));
+      const next = clamp(
+        positionRef.current ?? readStoredPosition() ?? defaultPosition(),
+      );
+      positionRef.current = next;
+      setPosition(next);
     }
   }, []);
 
@@ -98,7 +116,11 @@ export function OwnerMusicAppLauncher() {
     const observer = new MutationObserver(synchronizeMode);
     observer.observe(root, {
       attributes: true,
-      attributeFilter: ["data-ficonter-display-mode", "data-ficonter-native-app", "data-ficonter-device"],
+      attributeFilter: [
+        "data-ficonter-display-mode",
+        "data-ficonter-native-app",
+        "data-ficonter-device",
+      ],
     });
     window.addEventListener("resize", synchronizeMode);
     window.addEventListener("orientationchange", synchronizeMode);
@@ -115,20 +137,21 @@ export function OwnerMusicAppLauncher() {
     window.dispatchEvent(new Event("ficonter:owner-music-open"));
   }
 
-  function handlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
-    if (!position) return;
+  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    const current = positionRef.current ?? position;
+    if (!current) return;
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: position.x,
-      originY: position.y,
+      originX: current.x,
+      originY: current.y,
       moved: false,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
-  function handlePointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx = event.clientX - drag.startX;
@@ -136,10 +159,10 @@ export function OwnerMusicAppLauncher() {
     if (!drag.moved && Math.hypot(dx, dy) >= DRAG_THRESHOLD) drag.moved = true;
     if (!drag.moved) return;
     event.preventDefault();
-    setPosition(clamp({ x: drag.originX + dx, y: drag.originY + dy }));
+    commitPosition({ x: drag.originX + dx, y: drag.originY + dy });
   }
 
-  function finishPointer(event: React.PointerEvent<HTMLButtonElement>) {
+  function finishPointer(event: ReactPointerEvent<HTMLButtonElement>) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (buttonRef.current?.hasPointerCapture(event.pointerId)) {
@@ -147,7 +170,8 @@ export function OwnerMusicAppLauncher() {
     }
     dragRef.current = null;
     if (drag.moved) {
-      if (position) persistPosition(position);
+      const current = positionRef.current;
+      if (current) persistPosition(current);
       return;
     }
     openMusic();

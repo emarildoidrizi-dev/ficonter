@@ -18,10 +18,13 @@ import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
+import { OwnerMusicAppLauncher } from "@/components/OwnerMusicAppLauncher";
+import { AppMoreAskFiconter } from "@/components/AppMoreAskFiconter";
 import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
+import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
 import layoutStyles from "./DashboardLayout.module.css";
 
 type StoredPreferences = {
@@ -91,6 +94,10 @@ export default async function DashboardLayout({
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
   const showCustomerVaultAccess = true;
+  const askFiconterAvailable = hasSubscriptionFeature(
+    subscriptionPlanCode,
+    "advanced_financial_recommendations",
+  );
 
   const interfacePreferences = readInterfacePreferences(
     user.user_metadata,
@@ -118,7 +125,12 @@ export default async function DashboardLayout({
         <RuntimeStabilityBridge />
         <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />
         <CommandPalette />
-        {isPlatformOwner ? <OwnerMusicPlayer /> : null}
+        {isPlatformOwner ? (
+          <>
+            <OwnerMusicPlayer />
+            <OwnerMusicAppLauncher />
+          </>
+        ) : null}
         <FiconterNativeAppChrome
           workspace="personal"
           subscriptionPlanCode={subscriptionPlanCode}
@@ -132,10 +144,15 @@ export default async function DashboardLayout({
           email={user.email ?? ""}
           avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         />
+        <AppMoreAskFiconter available={askFiconterAvailable} />
         <VaultProvider>
           {showCustomerVaultAccess ? <VaultInactivityGuard /> : null}
           <VaultLegacyMigrationBootstrap userId={user.id} />
-          <VaultNavigationMount />
+          <VaultNavigationMount
+            workspace="personal"
+            subscriptionPlanCode={subscriptionPlanCode}
+            isPlatformOwner={isPlatformOwner}
+          />
           <Sidebar
             isAdmin={Boolean(admin)}
             subscriptionPlanCode={subscriptionPlanCode}

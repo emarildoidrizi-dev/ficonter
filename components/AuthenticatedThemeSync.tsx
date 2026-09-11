@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import {
+  FIXED_INTERFACE_PROFILE_VERSION,
   normalizeAppearance,
   normalizeBackgroundMotion,
   normalizeSurfaceOpacity,
@@ -45,14 +46,26 @@ export function AuthenticatedThemeSync(props: Props) {
       localStorage.setItem("ficonter-background-motion", backgroundMotion);
       localStorage.setItem("ficonter-wallpaper-scene", wallpaperScene);
       localStorage.setItem("ficonter-surface-opacity", String(surfaceOpacity));
+      localStorage.setItem(
+        "ficonter-interface-profile-version",
+        FIXED_INTERFACE_PROFILE_VERSION,
+      );
     } catch {}
 
-    const shell = document.querySelector<HTMLElement>(".app-shell[data-auth-theme-pending='true']");
+    const shell = document.querySelector<HTMLElement>(
+      ".app-shell[data-auth-theme-pending='true']",
+    );
     if (shell) {
       shell.dataset.authThemePending = "false";
       shell.style.visibility = "visible";
     }
-  }, [props.appearance, props.backgroundMotion, props.density, props.surfaceOpacity, props.wallpaperScene]);
+  }, [
+    props.appearance,
+    props.backgroundMotion,
+    props.density,
+    props.surfaceOpacity,
+    props.wallpaperScene,
+  ]);
 
   return null;
 }

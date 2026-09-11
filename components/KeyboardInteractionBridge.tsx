@@ -26,16 +26,24 @@ const TRANSACTION_SUMMARY_LABELS = new Map<string, string>([
 ]);
 
 function polishTransactionSummaryLabels() {
-  document
-    .querySelectorAll<HTMLElement>('[class*="TransactionLedger_summary"] > div > span')
-    .forEach((label) => {
-      const currentLabel = label.textContent?.trim() ?? "";
-      const professionalLabel = TRANSACTION_SUMMARY_LABELS.get(currentLabel);
-      if (!professionalLabel) return;
+  // Do not depend on CSS-module class names here. Production builds may shorten
+  // or transform those names. Match only the exact legacy labels and verify that
+  // the span belongs to a summary card by checking for its sibling icon/value.
+  document.querySelectorAll<HTMLElement>(".app-main span").forEach((label) => {
+    const currentLabel = label.textContent?.trim() ?? "";
+    const professionalLabel = TRANSACTION_SUMMARY_LABELS.get(currentLabel);
+    if (!professionalLabel) return;
 
-      label.textContent = professionalLabel;
-      label.setAttribute("data-ficonter-professional-summary", "true");
-    });
+    const card = label.parentElement;
+    if (!card) return;
+    const hasValue = Boolean(card.querySelector(":scope > strong"));
+    const hasIcon = Boolean(card.querySelector(":scope > svg"));
+    if (!hasValue || !hasIcon) return;
+
+    label.textContent = professionalLabel;
+    label.setAttribute("data-ficonter-professional-summary", "true");
+    card.setAttribute("data-ficonter-summary-card", "true");
+  });
 }
 
 export function KeyboardInteractionBridge() {

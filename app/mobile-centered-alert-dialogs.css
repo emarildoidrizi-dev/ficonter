@@ -106,23 +106,21 @@ html[data-ficonter-native-app="true"]
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
 }
 
-/* Professional transaction summary terminology must remain on one line in the
-   three-card mobile strip. Reduce only the label typography and card chrome;
-   monetary values keep their existing visual hierarchy. */
+/* Professional transaction summary terminology. Stable data attributes are
+   applied by KeyboardInteractionBridge so production CSS-module class naming
+   cannot prevent these mobile styles from taking effect. */
 html[data-ficonter-native-app="true"]
   .app-main
-  [class*="TransactionLedger_summary"] > div {
+  [data-ficonter-summary-card="true"] {
   padding-left: 10px !important;
   padding-right: 10px !important;
 }
 
 html[data-ficonter-native-app="true"]
   .app-main
-  [class*="TransactionLedger_summary"]
-  > div
-  > span[data-ficonter-professional-summary="true"] {
+  [data-ficonter-professional-summary="true"] {
   display: block !important;
-  max-width: 100% !important;
+  max-width: calc(100% - 16px) !important;
   padding-right: 0 !important;
   font-size: clamp(8px, 2.15vw, 10px) !important;
   line-height: 1.12 !important;
@@ -134,7 +132,7 @@ html[data-ficonter-native-app="true"]
 
 html[data-ficonter-native-app="true"]
   .app-main
-  [class*="TransactionLedger_summary"] > div > svg {
+  [data-ficonter-summary-card="true"] > svg {
   width: 14px !important;
   height: 14px !important;
   right: 8px !important;

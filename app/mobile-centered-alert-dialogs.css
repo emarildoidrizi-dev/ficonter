@@ -106,6 +106,41 @@ html[data-ficonter-native-app="true"]
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38) !important;
 }
 
+/* Professional transaction summary terminology must remain on one line in the
+   three-card mobile strip. Reduce only the label typography and card chrome;
+   monetary values keep their existing visual hierarchy. */
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_summary"] > div {
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_summary"]
+  > div
+  > span[data-ficonter-professional-summary="true"] {
+  display: block !important;
+  max-width: 100% !important;
+  padding-right: 0 !important;
+  font-size: clamp(8px, 2.15vw, 10px) !important;
+  line-height: 1.12 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+html[data-ficonter-native-app="true"]
+  .app-main
+  [class*="TransactionLedger_summary"] > div > svg {
+  width: 14px !important;
+  height: 14px !important;
+  right: 8px !important;
+  top: 10px !important;
+}
+
 @media (orientation: landscape) and (max-height: 620px) {
   html[data-ficonter-native-app="true"]
     .app-main

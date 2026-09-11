@@ -109,7 +109,7 @@ export default async function DashboardLayout({
       baseCurrency={baseCurrency}
       reportingCurrency="EUR"
     >
-      <div className="app-shell">
+      <div className={`app-shell${isPlatformOwner ? " owner-music-player-active" : ""}`}>
         <InterfacePreferencesBootstrap
           {...interfacePreferences}
           wallpaperAccessEnabled={canManageWallpapers}

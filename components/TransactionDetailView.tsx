@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   CircleDollarSign,
   FileText,
-  Landmark,
   Pencil,
   ReceiptText,
   RefreshCcw,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
-import { useEncryptedBills } from "@/components/EncryptedBillProvider";
+import { TransactionLinkedRecords } from "@/components/TransactionLinkedRecords";
 import { useVault } from "@/components/VaultProvider";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { encryptTransactionPayload } from "@/lib/e2ee/transactionPayload";
@@ -91,18 +90,12 @@ export function TransactionDetailView({ transactionId, userId, allowMultiCurrenc
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { transactions, loading, error: providerError, refresh } = useEncryptedTransactions();
-  const { bills } = useEncryptedBills();
   const { status: vaultStatus, vaultKey } = useVault();
   const { baseCurrency } = useCurrencyDisplay();
 
   const transaction = useMemo(
     () => transactions.find((item) => item.id === transactionId) ?? null,
     [transactions, transactionId],
-  );
-
-  const linkedBill = useMemo(
-    () => bills.find((bill) => bill.transaction_id === transactionId) ?? null,
-    [bills, transactionId],
   );
 
   const { rateForDate } = useHistoricalReportingRates(
@@ -370,19 +363,7 @@ export function TransactionDetailView({ transactionId, userId, allowMultiCurrenc
 
         <section className={styles.infoCard}>
           <div className={styles.cardTitle}><ReceiptText size={18} /><h2>Linked records</h2></div>
-          {linkedBill ? (
-            <dl>
-              <div><dt>Linked Bill</dt><dd>{linkedBill.name}</dd></div>
-              <div><dt>Bill company</dt><dd>{linkedBill.company || "Not specified"}</dd></div>
-              <div><dt>Bill status</dt><dd>{linkedBill.status}</dd></div>
-              <div><dt>Bill due date</dt><dd>{linkedBill.due_date}</dd></div>
-            </dl>
-          ) : (
-            <p className={styles.cardMessage}>No linked Bill is attached to this transaction.</p>
-          )}
-          {transaction.type.toLowerCase().includes("debt") ? (
-            <div className={styles.relationshipNote}><Landmark size={17} />This transaction is classified as a debt-related movement. Deleting it will automatically restore linked debt balances where applicable.</div>
-          ) : null}
+          <TransactionLinkedRecords transactionId={transaction.id} userId={userId} />
         </section>
 
         <section className={styles.infoCard}>

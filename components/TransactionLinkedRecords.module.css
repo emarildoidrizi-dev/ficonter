@@ -1,0 +1,119 @@
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.recordCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--border, #cbd5e1) 78%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card, #ffffff) 86%, transparent);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent, #b89a63) 18%, transparent);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.moduleLabel {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  opacity: .7;
+}
+
+.copy > strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.copy > p {
+  margin: 3px 0 10px;
+  font-size: 13px;
+  opacity: .74;
+}
+
+.copy dl {
+  margin: 0;
+}
+
+.copy dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border, #cbd5e1) 62%, transparent);
+}
+
+.copy dt,
+.copy dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.copy dt {
+  opacity: .68;
+}
+
+.copy dd {
+  max-width: 58%;
+  text-align: right;
+  font-weight: 700;
+}
+
+.openLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: center;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.message,
+.error {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.message {
+  opacity: .72;
+}
+
+.error {
+  color: var(--danger, #b42318);
+}
+
+@media (max-width: 620px) {
+  .recordCard {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .openLink {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 2px;
+  }
+
+  .copy dl > div {
+    align-items: flex-start;
+  }
+}

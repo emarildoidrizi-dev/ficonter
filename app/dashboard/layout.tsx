@@ -28,6 +28,7 @@ import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getCurrentSubscriptionAccess, getEffectiveSubscriptionPlanCode } from "@/lib/subscriptionAccess";
 import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import { hasBackgroundWallpaperAccess } from "@/lib/wallpaperAccess";
 import layoutStyles from "./DashboardLayout.module.css";
 
 type StoredPreferences = {
@@ -75,6 +76,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
   const canManageWallpapers = admin?.role === "super_admin";
   const isPlatformOwner = isOwnerEmail(user.email);
+  const wallpaperAccessEnabled = hasBackgroundWallpaperAccess(
+    subscriptionPlanCode,
+    Boolean(admin) || isPlatformOwner,
+  );
   const askFiconterAvailable = hasSubscriptionFeature(
     subscriptionPlanCode,
     "advanced_financial_recommendations",
@@ -92,13 +97,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <AuthenticatedThemeSync {...interfacePreferences} />
         <InterfacePreferencesBootstrap
           {...interfacePreferences}
-          wallpaperAccessEnabled={canManageWallpapers}
+          wallpaperAccessEnabled={wallpaperAccessEnabled}
         />
-        <TimeAwareWallpaperBootstrap enabled={canManageWallpapers} />
+        <TimeAwareWallpaperBootstrap
+          enabled={canManageWallpapers && wallpaperAccessEnabled}
+          accessEnabled={wallpaperAccessEnabled}
+        />
         <AuthenticatedLanguageBootstrap language={interfacePreferences.language} />
         <PlatformTransparencyNotice scope="app" />
         <BaseCurrencyBootstrap workspace="personal" currency={baseCurrency} />
-        <LivingThemeBackdrop />
+        <LivingThemeBackdrop enabled={wallpaperAccessEnabled} />
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />
         <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />

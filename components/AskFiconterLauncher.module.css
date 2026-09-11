@@ -64,6 +64,14 @@
   font-size: .68rem;
 }
 
+/* The dashboard main area is an isolated stacking context. Raise that context
+   only while Ask FICONTER is open so the dashboard header cannot sit above
+   the modal or intercept its controls. */
+:global(.app-main):has(.backdrop) {
+  z-index: 10000;
+  overflow: visible;
+}
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -73,9 +81,12 @@
   padding: 24px;
   background: rgba(14, 19, 19, .48);
   backdrop-filter: blur(10px);
+  pointer-events: auto;
 }
 
 .dialog {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   width: min(900px, calc(100vw - 48px));
@@ -86,6 +97,7 @@
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: 0 34px 100px rgba(12, 18, 18, .28);
+  pointer-events: auto;
 }
 
 .header {
@@ -133,6 +145,8 @@
 }
 
 .closeButton {
+  position: relative;
+  z-index: 4;
   display: grid;
   place-items: center;
   width: 39px;
@@ -142,6 +156,8 @@
   background: var(--surface-raised);
   color: var(--text-secondary);
   cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .privacyBar {

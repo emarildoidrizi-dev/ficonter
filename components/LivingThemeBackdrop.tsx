@@ -36,14 +36,20 @@ html[data-theme] .app-shell :where([class*="subtitle" i],[class*="description" i
 }
 `;
 
-export function LivingThemeBackdrop() {
+type Props = {
+  enabled?: boolean;
+};
+
+export function LivingThemeBackdrop({ enabled = true }: Props) {
   return (
     <>
       <style>{themeTypographyIntegrity}</style>
-      <div className="living-theme-backdrop" aria-hidden="true">
-        <span className="living-theme-scene" />
-        <span className="living-theme-readability" />
-      </div>
+      {enabled ? (
+        <div className="living-theme-backdrop" aria-hidden="true">
+          <span className="living-theme-scene" />
+          <span className="living-theme-readability" />
+        </div>
+      ) : null}
     </>
   );
 }

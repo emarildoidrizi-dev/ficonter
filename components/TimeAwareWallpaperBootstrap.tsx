@@ -8,23 +8,34 @@ import {
 
 type Props = {
   enabled: boolean;
+  accessEnabled?: boolean;
 };
 
 /**
  * Keeps the photographic background on the same local-time boundaries as the
- * dashboard greeting. Paid plans receive the automatic day cycle; Free is
- * deliberately pinned to one lightweight coastal photograph.
+ * dashboard greeting. Paid plans can receive the fixed/automatic wallpaper;
+ * Free receives no photographic wallpaper at all.
  */
-export function TimeAwareWallpaperBootstrap({ enabled }: Props) {
+export function TimeAwareWallpaperBootstrap({
+  enabled,
+  accessEnabled = true,
+}: Props) {
   useLayoutEffect(() => {
     const root = document.documentElement;
     let timer: number | null = null;
 
     const apply = () => {
       const daypart = daypartForDate();
-      root.dataset.wallpaperSchedule = enabled ? "automatic" : "fixed";
-      root.dataset.wallpaperDaypart = enabled ? daypart : "fixed";
-      root.dataset.backgroundMotion = "static";
+
+      if (!accessEnabled) {
+        delete root.dataset.wallpaperSchedule;
+        delete root.dataset.wallpaperDaypart;
+        root.dataset.backgroundMotion = "off";
+      } else {
+        root.dataset.wallpaperSchedule = enabled ? "automatic" : "fixed";
+        root.dataset.wallpaperDaypart = enabled ? daypart : "fixed";
+        root.dataset.backgroundMotion = "static";
+      }
 
       window.dispatchEvent(
         new CustomEvent("ficonter:daypart-updated", {
@@ -54,7 +65,7 @@ export function TimeAwareWallpaperBootstrap({ enabled }: Props) {
         handlePreferencesUpdated,
       );
     };
-  }, [enabled]);
+  }, [accessEnabled, enabled]);
 
   return null;
 }

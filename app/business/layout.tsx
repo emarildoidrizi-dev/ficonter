@@ -22,6 +22,7 @@ import {
   getCurrentSubscriptionAccess,
   getEffectiveSubscriptionPlanCode,
 } from "@/lib/subscriptionAccess";
+import { hasBackgroundWallpaperAccess } from "@/lib/wallpaperAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,7 +36,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
     getCurrentSubscriptionAccess(),
   ]);
   const isPlatformOwner = isOwnerEmail(user.email);
-  const canManageWallpapers = admin?.role === "super_admin";
   const canManageBusiness = Boolean(
     business &&
       (business.owner_id === user.id ||
@@ -50,6 +50,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         membership?.role === "member"),
   );
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const wallpaperAccessEnabled = hasBackgroundWallpaperAccess(
+    subscriptionPlanCode,
+    Boolean(admin) || isPlatformOwner,
+  );
   const stored =
     user.user_metadata?.ficonter_preferences &&
     typeof user.user_metadata.ficonter_preferences === "object"
@@ -81,10 +85,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         <AuthenticatedThemeSync {...interfacePreferences} />
         <InterfacePreferencesBootstrap
           {...interfacePreferences}
-          wallpaperAccessEnabled={canManageWallpapers}
+          wallpaperAccessEnabled={wallpaperAccessEnabled}
         />
         <PlatformTransparencyNotice scope="app" />
-        <LivingThemeBackdrop />
+        <LivingThemeBackdrop enabled={wallpaperAccessEnabled} />
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />
         <UsageHeartbeat workspace="business" />

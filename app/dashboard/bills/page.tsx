@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { BillsManager } from "@/components/BillsManager";
+import { BillsLinkedRecords } from "@/components/BillsLinkedRecords";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -27,6 +28,7 @@ export default async function BillsPage() {
         initialBills={[]}
         initialError=""
       />
+      <BillsLinkedRecords userId={user.id} />
     </section>
   );
 }

@@ -4,11 +4,52 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
-import { ArrowRight, Command, Search, X } from "lucide-react";
+import { ArrowRight, Command, LockKeyhole, Search, X } from "lucide-react";
 import { FICONTER_COMMANDS } from "@/lib/commandPalette";
+import {
+  getSubscriptionUpgradeHref,
+  subscriptionFeatureForPersonalRoute,
+} from "@/lib/subscriptionNavigation";
+import {
+  hasSubscriptionFeature,
+  type SubscriptionPlanCode,
+} from "@/lib/subscriptionPlans";
 import styles from "./CommandPalette.module.css";
 
-export function CommandPalette() {
+export type CommandPaletteSearchResult = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  group: string;
+  keywords: string[];
+};
+
+type Props = {
+  subscriptionPlanCode?: SubscriptionPlanCode;
+  privateResults?: CommandPaletteSearchResult[];
+  privateSearchStatus?: "available" | "locked" | "loading";
+  browserOnly?: boolean;
+};
+
+function isBrowserPlatform() {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.ficonterDisplayMode === "browser";
+}
+
+function matchesQuery(result: CommandPaletteSearchResult, normalized: string) {
+  return [result.label, result.description, result.group, ...result.keywords]
+    .join(" ")
+    .toLowerCase()
+    .includes(normalized);
+}
+
+export function CommandPalette({
+  subscriptionPlanCode,
+  privateResults = [],
+  privateSearchStatus = "available",
+  browserOnly = false,
+}: Props = {}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -17,22 +58,36 @@ export function CommandPalette() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return FICONTER_COMMANDS;
-    return FICONTER_COMMANDS.filter((command) =>
-      [command.label, command.description, command.group, ...command.keywords]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized),
+    const commands: CommandPaletteSearchResult[] = FICONTER_COMMANDS;
+
+    if (!normalized) return commands;
+
+    const matchingCommands = commands.filter((command) =>
+      matchesQuery(command, normalized),
     );
-  }, [query]);
+
+    if (normalized.length < 2) return matchingCommands;
+
+    const matchingPrivate = privateResults
+      .filter((result) => matchesQuery(result, normalized))
+      .slice(0, 14);
+
+    return [...matchingCommands, ...matchingPrivate];
+  }, [privateResults, query]);
 
   useEffect(() => {
+    function canOpen() {
+      return !browserOnly || isBrowserPlatform();
+    }
+
     function openPalette() {
+      if (!canOpen()) return;
       setOpen(true);
     }
 
     function handleKeydown(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        if (!canOpen()) return;
         event.preventDefault();
         setOpen((current) => !current);
         return;
@@ -46,7 +101,7 @@ export function CommandPalette() {
       window.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("ficonter:open-command-palette", openPalette);
     };
-  }, []);
+  }, [browserOnly]);
 
   useEffect(() => {
     if (!open) return;
@@ -60,11 +115,24 @@ export function CommandPalette() {
     if (activeIndex >= filtered.length) setActiveIndex(0);
   }, [activeIndex, filtered.length]);
 
-  function select(href: string) {
+  function resolveTarget(result: CommandPaletteSearchResult) {
+    if (!subscriptionPlanCode) return { href: result.href, locked: false };
+    const feature = subscriptionFeatureForPersonalRoute(result.href);
+    const locked = Boolean(
+      feature && !hasSubscriptionFeature(subscriptionPlanCode, feature),
+    );
+    return {
+      href: locked && feature ? getSubscriptionUpgradeHref(feature) : result.href,
+      locked,
+    };
+  }
+
+  function select(result: CommandPaletteSearchResult) {
     setOpen(false);
+    const target = resolveTarget(result);
     const current = `${window.location.pathname}${window.location.search}`;
-    if (!requestFiconterNavigationIntent(href, current)) return;
-    router.push(href);
+    if (!requestFiconterNavigationIntent(target.href, current)) return;
+    router.push(target.href, { scroll: false });
   }
 
   function handleListKeydown(event: ReactKeyboardEvent<HTMLElement>) {
@@ -79,11 +147,15 @@ export function CommandPalette() {
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      select(filtered[activeIndex]?.href ?? "/dashboard");
+      const result = filtered[activeIndex];
+      if (result) select(result);
     }
   }
 
   if (!open) return null;
+
+  const normalizedQuery = query.trim();
+  const showPrivateStatus = Boolean(normalizedQuery.length >= 2 && privateResults.length === 0);
 
   return (
     <div className={styles.overlay} role="presentation" onMouseDown={() => setOpen(false)}>
@@ -91,7 +163,7 @@ export function CommandPalette() {
         className={styles.palette}
         role="dialog"
         aria-modal="true"
-        aria-label="FICONTER command search"
+        aria-label="Search anything in FICONTER"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className={styles.header}>
@@ -104,42 +176,61 @@ export function CommandPalette() {
               setActiveIndex(0);
             }}
             onKeyDown={handleListKeydown}
-            placeholder="Search FICONTER or choose an action"
-            aria-label="Search commands"
+            placeholder="Search anything in FICONTER"
+            aria-label="Search FICONTER"
           />
-          <button type="button" onClick={() => setOpen(false)} aria-label="Close command palette">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close search">
             <X size={18} />
           </button>
         </header>
 
         <div className={styles.results} onKeyDown={handleListKeydown}>
-          {filtered.length ? filtered.map((command, index) => {
+          {filtered.length ? filtered.map((result, index) => {
             const previousGroup = index > 0 ? filtered[index - 1]?.group : null;
-            const showGroup = command.group !== previousGroup;
+            const showGroup = result.group !== previousGroup;
+            const target = resolveTarget(result);
+            const isPrivateRecord = result.id.startsWith("transaction:") || result.id.startsWith("bill:");
             return (
-              <div key={command.id}>
-                {showGroup ? <p className={styles.group}>{command.group}</p> : null}
+              <div key={result.id}>
+                {showGroup ? <p className={styles.group}>{result.group}</p> : null}
                 <button
                   type="button"
                   className={`${styles.result} ${index === activeIndex ? styles.active : ""}`}
                   onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => select(command.href)}
+                  onClick={() => select(result)}
+                  aria-label={target.locked ? `${result.label} — upgrade required` : undefined}
                 >
-                  <span className={styles.commandIcon}><Command size={15} /></span>
-                  <span>
-                    <strong>{command.label}</strong>
-                    <small>{command.description}</small>
+                  <span className={styles.commandIcon} data-private={isPrivateRecord ? "true" : "false"}>
+                    {target.locked ? <LockKeyhole size={15} /> : <Command size={15} />}
                   </span>
-                  <ArrowRight size={16} aria-hidden="true" />
+                  <span>
+                    <strong>{result.label}</strong>
+                    <small>{result.description}</small>
+                  </span>
+                  {target.locked ? <LockKeyhole size={15} aria-hidden="true" /> : <ArrowRight size={16} aria-hidden="true" />}
                 </button>
               </div>
             );
           }) : (
-            <div className={styles.empty}>No matching FICONTER action was found.</div>
+            <div className={styles.empty}>No matching FICONTER result was found.</div>
           )}
+
+          {showPrivateStatus && privateSearchStatus === "locked" ? (
+            <div className={styles.privateNotice}>
+              <LockKeyhole size={14} aria-hidden="true" />
+              Unlock your Financial Vault to include private Transactions and Bills in this search.
+            </div>
+          ) : null}
+          {showPrivateStatus && privateSearchStatus === "loading" ? (
+            <div className={styles.privateNotice}>
+              <Search size={14} aria-hidden="true" />
+              Loading encrypted financial records for private search…
+            </div>
+          ) : null}
         </div>
 
         <footer className={styles.footer}>
+          <span className={styles.scope}>FICONTER only · no web search</span>
           <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
           <span><kbd>Enter</kbd> Open</span>
           <span><kbd>Esc</kbd> Close</span>

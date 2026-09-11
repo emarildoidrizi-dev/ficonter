@@ -22,6 +22,7 @@ const PERSONAL_ROUTE_FEATURES: Readonly<Record<string, SubscriptionFeature>> = {
   "/dashboard/net-worth": "net_worth_growth",
   "/dashboard/gps": "financial_gps",
   "/dashboard/financial-independence": "financial_independence",
+  "/dashboard/insights/ask-ficonter": "advanced_financial_recommendations",
   "/dashboard/insights": "smart_insights",
   "/dashboard/documents": "financial_documents",
 };
@@ -29,7 +30,16 @@ const PERSONAL_ROUTE_FEATURES: Readonly<Record<string, SubscriptionFeature>> = {
 export function subscriptionFeatureForPersonalRoute(
   href: string,
 ): SubscriptionFeature | null {
-  return PERSONAL_ROUTE_FEATURES[href] ?? null;
+  const pathname = href.split("?")[0]?.split("#")[0] ?? href;
+  const exact = PERSONAL_ROUTE_FEATURES[pathname];
+  if (exact) return exact;
+
+  const nestedRoute = Object.keys(PERSONAL_ROUTE_FEATURES)
+    .filter((route) => route !== "/dashboard")
+    .sort((left, right) => right.length - left.length)
+    .find((route) => pathname.startsWith(`${route}/`));
+
+  return nestedRoute ? PERSONAL_ROUTE_FEATURES[nestedRoute] ?? null : null;
 }
 
 export function isSubscriptionFeatureKey(

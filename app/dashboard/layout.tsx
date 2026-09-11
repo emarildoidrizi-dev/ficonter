@@ -13,7 +13,8 @@ import { BaseCurrencyBootstrap } from "@/components/BaseCurrencyBootstrap";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
 import { TimeAwareWallpaperBootstrap } from "@/components/TimeAwareWallpaperBootstrap";
-import { CommandPalette } from "@/components/CommandPalette";
+import { BrowserPlatformSearchHeader } from "@/components/BrowserPlatformSearchHeader";
+import { PersonalPlatformSearchPalette } from "@/components/PersonalPlatformSearchPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
@@ -124,7 +125,6 @@ export default async function DashboardLayout({
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />
         <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />
-        <CommandPalette />
         {isPlatformOwner ? (
           <>
             <OwnerMusicPlayer />
@@ -167,9 +167,15 @@ export default async function DashboardLayout({
               avatarPath: String(user.user_metadata?.avatar_path ?? ""),
             }}
           />
+          <BrowserPlatformSearchHeader />
           <main className="app-main">
             <EncryptedTransactionProvider>
-              <EncryptedBillProvider>{children}</EncryptedBillProvider>
+              <EncryptedBillProvider>
+                <PersonalPlatformSearchPalette
+                  subscriptionPlanCode={subscriptionPlanCode}
+                />
+                {children}
+              </EncryptedBillProvider>
             </EncryptedTransactionProvider>
           </main>
         </VaultProvider>

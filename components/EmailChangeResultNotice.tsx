@@ -17,6 +17,31 @@ export function EmailChangeResultNotice() {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const errorCode = params.get("error_code");
     const description = params.get("error_description");
+    const authMessage = params.get("message")?.trim() ?? "";
+    const normalizedMessage = authMessage.toLowerCase();
+
+    if (
+      normalizedMessage.includes("confirmation link accepted") &&
+      normalizedMessage.includes("other email")
+    ) {
+      setNotice({
+        tone: "success",
+        title: "First email confirmation accepted",
+        body:
+          "Your email change is not complete yet. For security, FICONTER requires confirmation from both email addresses. Open the confirmation email sent to the other address and approve that link as well. Until both confirmations are accepted, continue signing in with your current email address.",
+      });
+      return;
+    }
+
+    if (normalizedMessage.includes("confirmation link accepted")) {
+      setNotice({
+        tone: "success",
+        title: "Email confirmation accepted",
+        body:
+          "This confirmation was accepted. If FICONTER asked you to confirm both your current and new email addresses, complete the confirmation from the other inbox before the login email changes.",
+      });
+      return;
+    }
 
     if (errorCode === "otp_expired" || description?.toLowerCase().includes("expired")) {
       setNotice({

@@ -1243,14 +1243,14 @@ export function FiconterNativeAppChrome({
                       aria-current={active ? "page" : undefined}
                       aria-label={
                         locked
-                          ? `${item.label} — upgrade required`
+                          ? `${item.title} — upgrade required`
                           : undefined
                       }
                     >
                       <span className={styles.drawerIcon}>
                         <Icon size={18} aria-hidden={true} />
                       </span>
-                      <span className={styles.drawerLinkLabel}>{item.label}</span>
+                      <span className={styles.drawerLinkLabel}>{item.title}</span>
                       <span className={styles.drawerLinkStatus}>
                         {locked ? (
                           <LockKeyhole size={13} aria-hidden={true} />
@@ -1306,7 +1306,7 @@ export function FiconterNativeAppChrome({
             }}
             aria-label="Close profile menu"
           >
-            <X size={21} aria-hidden="true" />
+            <X size={21} aria-hidden={true} />
           </button>
         </div>
 

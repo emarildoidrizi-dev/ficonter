@@ -17,6 +17,10 @@
   transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 
+:global(.owner-music-player-active) .launcher {
+  bottom: 96px;
+}
+
 .launcher:hover {
   transform: translateY(-2px);
   border-color: var(--gold);
@@ -456,6 +460,10 @@
     right: 15px;
     bottom: calc(82px + env(safe-area-inset-bottom));
     min-height: 50px;
+  }
+
+  :global(.owner-music-player-active) .launcher {
+    bottom: calc(152px + env(safe-area-inset-bottom));
   }
 
   .backdrop { padding: 0; align-items: stretch; }

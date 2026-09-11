@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import {
-  BusinessSidebar,
-} from "@/components/BusinessSidebar";
+import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
@@ -16,6 +14,8 @@ import { VaultProvider } from "@/components/VaultProvider";
 import { BusinessVaultProvider } from "@/components/BusinessVaultProvider";
 import { CurrencyDisplayProvider } from "@/components/CurrencyDisplayProvider";
 import { LivingThemeBackdrop } from "@/components/LivingThemeBackdrop";
+import { AuthenticatedThemeSync } from "@/components/AuthenticatedThemeSync";
+import { InterfacePreferencesBootstrap } from "@/components/InterfacePreferencesBootstrap";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getBusinessContext } from "@/lib/business/server";
 import {
@@ -35,6 +35,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
     getCurrentSubscriptionAccess(),
   ]);
   const isPlatformOwner = isOwnerEmail(user.email);
+  const canManageWallpapers = admin?.role === "super_admin";
   const canManageBusiness = Boolean(
     business &&
       (business.owner_id === user.id ||
@@ -49,13 +50,39 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         membership?.role === "member"),
   );
   const subscriptionPlanCode = getEffectiveSubscriptionPlanCode(subscriptionAccess);
+  const stored =
+    user.user_metadata?.ficonter_preferences &&
+    typeof user.user_metadata.ficonter_preferences === "object"
+      ? (user.user_metadata.ficonter_preferences as Record<string, unknown>)
+      : {};
+  const interfacePreferences = {
+    appearance: typeof stored.appearance === "string" ? stored.appearance : undefined,
+    density: typeof stored.density === "string" ? stored.density : undefined,
+    backgroundMotion:
+      typeof stored.backgroundMotion === "string" ? stored.backgroundMotion : undefined,
+    wallpaperScene:
+      typeof stored.wallpaperScene === "string" ? stored.wallpaperScene : undefined,
+    surfaceOpacity:
+      typeof stored.surfaceOpacity === "number" || typeof stored.surfaceOpacity === "string"
+        ? stored.surfaceOpacity
+        : undefined,
+  };
 
   return (
     <CurrencyDisplayProvider
       workspace="business"
       baseCurrency={business?.base_currency ?? "EUR"}
     >
-      <div className="app-shell business-shell">
+      <div
+        className="app-shell business-shell"
+        data-auth-theme-pending="true"
+        style={{ visibility: "hidden" }}
+      >
+        <AuthenticatedThemeSync {...interfacePreferences} />
+        <InterfacePreferencesBootstrap
+          {...interfacePreferences}
+          wallpaperAccessEnabled={canManageWallpapers}
+        />
         <PlatformTransparencyNotice scope="app" />
         <LivingThemeBackdrop />
         <RealtimeRefreshBridge />

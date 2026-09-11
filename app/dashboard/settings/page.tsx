@@ -3,16 +3,11 @@ import { redirect } from "next/navigation";
 import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
-import { ProfilePrivateTools } from "@/components/ProfilePrivateTools";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
-import {
-  getCurrentSubscriptionAccess,
-  getEffectiveSubscriptionPlanCode,
-} from "@/lib/subscriptionAccess";
-import { hasSubscriptionFeature } from "@/lib/subscriptionPlans";
+import { getCurrentSubscriptionAccess } from "@/lib/subscriptionAccess";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -70,8 +65,7 @@ export default async function SettingsPage({
   const { admin } = await requireAdmin();
   const isSubscriptionExempt = Boolean(admin);
   const canManageWallpapers = admin?.role === "super_admin";
-  const isPlatformOwner = isOwnerEmail(user.email);
-  const canAccessBackupRecovery = isPlatformOwner;
+  const canAccessBackupRecovery = isOwnerEmail(user.email);
 
   const query = await searchParams;
   const section = Array.isArray(query?.section)
@@ -120,10 +114,6 @@ export default async function SettingsPage({
     (subscription as SubscriptionSnapshot | null) ?? null;
 
   const verifiedAccess = await getCurrentSubscriptionAccess();
-  const askFiconterAvailable = hasSubscriptionFeature(
-    getEffectiveSubscriptionPlanCode(verifiedAccess),
-    "advanced_financial_recommendations",
-  );
 
   const verifiedSubscriptionSnapshot =
     !isSubscriptionExempt &&
@@ -208,11 +198,6 @@ export default async function SettingsPage({
             addressLine2: profileSnapshot?.address_line2 ?? "",
             postalCode: profileSnapshot?.postal_code ?? "",
           }}
-        />
-
-        <ProfilePrivateTools
-          askFiconterAvailable={askFiconterAvailable}
-          isPlatformOwner={isPlatformOwner}
         />
       </div>
     </section>

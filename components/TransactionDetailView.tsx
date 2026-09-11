@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  CalendarDays,
   CircleDollarSign,
   FileText,
   Landmark,
@@ -13,7 +12,6 @@ import {
   ReceiptText,
   RefreshCcw,
   ShieldCheck,
-  Tag,
   Trash2,
   WalletCards,
   X,
@@ -289,16 +287,17 @@ export function TransactionDetailView({ transactionId, userId, allowMultiCurrenc
   }
 
   async function deleteTransaction() {
-    if (deleting) return;
+    if (!transaction || deleting) return;
+    const targetId = transaction.id;
     setDeleting(true);
     setError("");
     try {
       const { error: deleteError } = await supabase.rpc("delete_transactions_with_linked_bills", {
-        p_transaction_ids: [transaction.id],
+        p_transaction_ids: [targetId],
       });
       if (deleteError) throw deleteError;
       notifyFiconterDataChange("all");
-      window.dispatchEvent(new CustomEvent("ficonter:transaction-deleted", { detail: { id: transaction.id } }));
+      window.dispatchEvent(new CustomEvent("ficonter:transaction-deleted", { detail: { id: targetId } }));
       await refresh();
       router.replace("/dashboard/transactions");
     } catch (caughtError) {
@@ -470,8 +469,14 @@ export function TransactionDetailView({ transactionId, userId, allowMultiCurrenc
       ) : null}
 
       {deleteOpen ? (
-        <div className={styles.backdrop} onMouseDown={() => !deleting && setDeleteOpen(false)}>
-          <div className={styles.deleteSheet} role="alertdialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <div className={styles.backdrop} data-ficonter-transaction-detail-backdrop="true" onMouseDown={() => !deleting && setDeleteOpen(false)}>
+          <div
+            className={styles.deleteSheet}
+            role="alertdialog"
+            aria-modal="true"
+            data-ficonter-transaction-detail-delete="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <button type="button" className={styles.sheetClose} onClick={() => setDeleteOpen(false)} aria-label="Close"><X size={18} /></button>
             <small>PERMANENT ACTION</small>
             <h2>Delete transaction?</h2>

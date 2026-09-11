@@ -19,6 +19,25 @@ function topmostDialog(): HTMLElement | null {
   return dialogs.at(-1) ?? null;
 }
 
+const TRANSACTION_SUMMARY_LABELS = new Map<string, string>([
+  ["Money received", "Total Cash Inflows"],
+  ["Money spent", "Total Cash Outflows"],
+  ["Net movement by currency", "Net Cash Flow"],
+]);
+
+function polishTransactionSummaryLabels() {
+  document
+    .querySelectorAll<HTMLElement>('[class*="TransactionLedger_summary"] > div > span')
+    .forEach((label) => {
+      const currentLabel = label.textContent?.trim() ?? "";
+      const professionalLabel = TRANSACTION_SUMMARY_LABELS.get(currentLabel);
+      if (!professionalLabel) return;
+
+      label.textContent = professionalLabel;
+      label.setAttribute("data-ficonter-professional-summary", "true");
+    });
+}
+
 export function KeyboardInteractionBridge() {
   useEffect(() => {
     let deleteDialog: HTMLElement | null = null;
@@ -96,7 +115,10 @@ export function KeyboardInteractionBridge() {
       event.preventDefault();
     }
 
+    polishTransactionSummaryLabels();
+
     const observer = new MutationObserver(() => {
+      polishTransactionSummaryLabels();
       if (deleteDialog && !deleteDialog.isConnected) {
         clearSingleDeleteConnection();
       }

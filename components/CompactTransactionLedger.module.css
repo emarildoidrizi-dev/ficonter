@@ -221,8 +221,28 @@
   list-style: none;
   display: grid;
   gap: 8px;
+  max-height: calc((72px * 10) + (8px * 9));
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted, #77736d) 42%, transparent) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted, #77736d) 42%, transparent);
 }
 
 .row {
@@ -499,6 +519,10 @@
 
   .selectionActions button {
     flex: 1 1 auto;
+  }
+
+  .list {
+    max-height: calc((70px * 10) + (8px * 9));
   }
 
   .row {

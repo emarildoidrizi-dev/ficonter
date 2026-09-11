@@ -3,7 +3,6 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Banknote,
   BriefcaseBusiness,
   Car,
   ChevronRight,
@@ -172,7 +171,6 @@ export function CompactTransactionLedger({
       });
   }, [transactions, deferredSearch, directionFilter, categoryFilter, currencyFilter, monthFilter, sortMode]);
 
-  const visibleIds = useMemo(() => new Set(visible.map((item) => item.id)), [visible]);
   const selectedTransactions = useMemo(
     () => visible.filter((item) => selectedIds.has(item.id)),
     [visible, selectedIds],
@@ -391,7 +389,7 @@ export function CompactTransactionLedger({
         {allowMultiCurrency ? (
           <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)}>
             <option value="all">All currencies</option>
-            {currencies.filter((code) => CURRENCY_CODES.includes(code)).map((code) => (
+            {currencies.filter((code) => CURRENCY_CODES.some((candidate) => candidate === code)).map((code) => (
               <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>
             ))}
           </select>

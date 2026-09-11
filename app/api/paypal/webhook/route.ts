@@ -1,4 +1,3 @@
-
 import { createServiceClient } from "@/lib/supabase/admin";
 
 import { noStoreJson } from "@/lib/security/request";
@@ -148,10 +147,6 @@ async function verifyPayPalWebhook(
     return false;
   }
 
-  /*
-   * Keep the original webhook JSON intact when sending it
-   * back to PayPal for verification.
-   */
   const verificationBody =
     `{"transmission_id":${JSON.stringify(transmissionId)},` +
     `"transmission_time":${JSON.stringify(transmissionTime)},` +
@@ -251,6 +246,14 @@ function determineFiconterStatus(
   }
 }
 
+function timestampHasPassed(value: string | null) {
+  if (!value) return false;
+
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) && timestamp <= Date.now();
+}
+
 const SUPPORTED_EVENTS = new Set([
   "BILLING.SUBSCRIPTION.ACTIVATED",
   "BILLING.SUBSCRIPTION.UPDATED",
@@ -263,10 +266,6 @@ const SUPPORTED_EVENTS = new Set([
 
 export async function POST(request: Request) {
   try {
-    /*
-     * Read the raw body first. PayPal webhook verification
-     * depends on the original message.
-     */
     const rawBody = await request.text();
 
     let event: PayPalWebhookEvent;
@@ -296,9 +295,6 @@ export async function POST(request: Request) {
 
     const eventType = event.event_type ?? "";
 
-    /*
-     * Acknowledge PayPal events that FICONTER does not need.
-     */
     if (!SUPPORTED_EVENTS.has(eventType)) {
       return noStoreJson({
         received: true,
@@ -315,10 +311,6 @@ export async function POST(request: Request) {
       });
     }
 
-    /*
-     * Do not trust the webhook payload alone.
-     * Retrieve the subscription directly from PayPal.
-     */
     const subscription = await getPayPalSubscription(
       subscriptionId,
       accessToken,
@@ -332,10 +324,6 @@ export async function POST(request: Request) {
       (plan) => plan.planId === subscription.plan_id,
     );
 
-    /*
-     * Ignore PayPal subscriptions that are not one of
-     * FICONTER's four configured subscription plans.
-     */
     if (!configuredPlan) {
       return noStoreJson({
         received: true,
@@ -350,10 +338,6 @@ export async function POST(request: Request) {
 
     const admin = createServiceClient();
 
-    /*
-     * Only update an existing subscription that has already
-     * been linked to a FICONTER customer.
-     */
     const {
       data: existingSubscription,
       error: existingError,
@@ -376,20 +360,58 @@ export async function POST(request: Request) {
     }
 
     /*
-     * PayPal may stop returning next_billing_time once a
-     * subscription is cancelled. Preserve the customer's
-     * already-paid-through date so FICONTER can keep access
-     * available until that date instead of erasing it.
+     * Preserve the already-paid-through date when PayPal stops returning
+     * next_billing_time after cancellation/expiry. Cancellation keeps the paid
+     * tier only until that timestamp. An explicit PayPal EXPIRED state always
+     * means the customer belongs on Free immediately.
      */
     const isCancellation =
       eventType === "BILLING.SUBSCRIPTION.CANCELLED" ||
       subscription.status === "CANCELLED";
+    const isExpired =
+      eventType === "BILLING.SUBSCRIPTION.EXPIRED" ||
+      subscription.status === "EXPIRED";
+    const isTerminated = isCancellation || isExpired;
 
     const currentPeriodEnd =
       subscription.billing_info?.next_billing_time ??
-      (isCancellation
+      (isTerminated
         ? existingSubscription.current_period_end
         : null);
+
+    const paidAccessHasExpired =
+      isExpired ||
+      (isCancellation && timestampHasPassed(currentPeriodEnd));
+
+    if (paidAccessHasExpired) {
+      const { error: downgradeError } = await admin
+        .from("subscriptions")
+        .update({
+          plan_code: "free",
+          status: "active",
+          billing_interval: null,
+          provider: "internal",
+          paypal_payer_id: subscription.subscriber?.payer_id ?? null,
+          paypal_plan_id: subscription.plan_id ?? null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("paypal_subscription_id", subscriptionId);
+
+      if (downgradeError) {
+        throw downgradeError;
+      }
+
+      return noStoreJson({
+        received: true,
+        updated: true,
+        eventType,
+        subscriptionId,
+        status: "active",
+        planCode: "free",
+      });
+    }
 
     const { error: updateError } = await admin
       .from("subscriptions")
@@ -416,14 +438,11 @@ export async function POST(request: Request) {
       eventType,
       subscriptionId,
       status,
+      planCode: configuredPlan.planCode,
     });
   } catch (error) {
     console.error("PayPal webhook processing failed:", error);
 
-    /*
-     * A non-2xx response tells PayPal the event was not
-     * successfully processed and allows delivery retries.
-     */
     return noStoreJson(
       { error: "Unable to process PayPal webhook." },
       { status: 500 },

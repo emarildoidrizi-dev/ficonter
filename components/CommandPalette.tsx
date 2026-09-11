@@ -33,8 +33,8 @@ type Props = {
 };
 
 function isBrowserPlatform() {
-  if (typeof document === "undefined") return true;
-  return document.documentElement.dataset.ficonterDisplayMode !== "standalone";
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.ficonterDisplayMode === "browser";
 }
 
 function matchesQuery(result: CommandPaletteSearchResult, normalized: string) {

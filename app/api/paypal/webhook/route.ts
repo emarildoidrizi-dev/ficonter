@@ -383,10 +383,12 @@ export async function POST(request: Request) {
       isExpired ||
       (isCancellation && timestampHasPassed(currentPeriodEnd));
 
-    const updatePayload = paidAccessHasExpired
-      ? {
-          plan_code: "free" as const,
-          status: "active" as const,
+    if (paidAccessHasExpired) {
+      const { error: downgradeError } = await admin
+        .from("subscriptions")
+        .update({
+          plan_code: "free",
+          status: "active",
           billing_interval: null,
           provider: "internal",
           paypal_payer_id: subscription.subscriber?.payer_id ?? null,
@@ -394,22 +396,36 @@ export async function POST(request: Request) {
           current_period_end: null,
           cancel_at_period_end: false,
           updated_at: new Date().toISOString(),
-        }
-      : {
-          plan_code: configuredPlan.planCode,
-          status,
-          billing_interval: configuredPlan.billingInterval,
-          provider: "paypal",
-          paypal_payer_id: subscription.subscriber?.payer_id ?? null,
-          paypal_plan_id: subscription.plan_id ?? null,
-          current_period_end: currentPeriodEnd,
-          cancel_at_period_end: isCancellation,
-          updated_at: new Date().toISOString(),
-        };
+        })
+        .eq("paypal_subscription_id", subscriptionId);
+
+      if (downgradeError) {
+        throw downgradeError;
+      }
+
+      return noStoreJson({
+        received: true,
+        updated: true,
+        eventType,
+        subscriptionId,
+        status: "active",
+        planCode: "free",
+      });
+    }
 
     const { error: updateError } = await admin
       .from("subscriptions")
-      .update(updatePayload)
+      .update({
+        plan_code: configuredPlan.planCode,
+        status,
+        billing_interval: configuredPlan.billingInterval,
+        provider: "paypal",
+        paypal_payer_id: subscription.subscriber?.payer_id ?? null,
+        paypal_plan_id: subscription.plan_id ?? null,
+        current_period_end: currentPeriodEnd,
+        cancel_at_period_end: isCancellation,
+        updated_at: new Date().toISOString(),
+      })
       .eq("paypal_subscription_id", subscriptionId);
 
     if (updateError) {
@@ -421,8 +437,8 @@ export async function POST(request: Request) {
       updated: true,
       eventType,
       subscriptionId,
-      status: paidAccessHasExpired ? "active" : status,
-      planCode: paidAccessHasExpired ? "free" : configuredPlan.planCode,
+      status,
+      planCode: configuredPlan.planCode,
     });
   } catch (error) {
     console.error("PayPal webhook processing failed:", error);

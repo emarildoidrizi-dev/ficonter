@@ -155,15 +155,15 @@ export default async function DashboardLayout({
               avatarPath: String(user.user_metadata?.avatar_path ?? ""),
             }}
           />
-          {askFiconterAvailable ? (
-            <AskFiconterLauncher
-              userId={user.id}
-              baseCurrency={baseCurrency}
-            />
-          ) : null}
           <main className="app-main">
             <EncryptedTransactionProvider>
               <EncryptedBillProvider>
+                {askFiconterAvailable ? (
+                  <AskFiconterLauncher
+                    userId={user.id}
+                    baseCurrency={baseCurrency}
+                  />
+                ) : null}
                 {children}
               </EncryptedBillProvider>
             </EncryptedTransactionProvider>

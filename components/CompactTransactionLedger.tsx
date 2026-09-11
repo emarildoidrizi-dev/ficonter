@@ -3,34 +3,23 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BriefcaseBusiness,
-  Car,
   ChevronRight,
-  CircleDollarSign,
   Download,
   FileText,
-  HeartPulse,
-  Home,
-  Landmark,
   LockKeyhole,
-  PiggyBank,
-  ReceiptText,
   Search,
-  ShoppingBag,
-  Train,
   Trash2,
   TrendingDown,
   TrendingUp,
-  Utensils,
   WalletCards,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyFiconterDataChange } from "@/lib/ficonterRealtime";
 import { useCurrencyDisplay, useHistoricalReportingRates } from "@/components/CurrencyDisplayProvider";
 import { originalAmountInBaseCurrency } from "@/lib/finance/baseCurrencyActuals";
 import { finiteNumber, sumMoney } from "@/lib/finance/money";
+import { transactionIconFor } from "@/lib/finance/transactionIconRegistry";
 import {
   CURRENCY_CODES,
   TYPE_BY_VALUE,
@@ -72,24 +61,6 @@ function transactionDate(transaction: DecryptedTransaction) {
     ? new Date(transaction.occurred_at)
     : new Date(`${transaction.transaction_date}T12:00:00`);
   return rowDateFormatter.format(value);
-}
-
-function categoryIcon(transaction: DecryptedTransaction): LucideIcon {
-  const category = transaction.category.toLowerCase();
-  const type = transaction.type.toLowerCase();
-
-  if (category.includes("housing") || category.includes("rent") || category.includes("home")) return Home;
-  if (category.includes("transport") || category.includes("train") || category.includes("public transportation")) return Train;
-  if (category.includes("car") || category.includes("vehicle")) return Car;
-  if (category.includes("food") || category.includes("restaurant") || category.includes("grocer")) return Utensils;
-  if (category.includes("shopping") || category.includes("clothing")) return ShoppingBag;
-  if (category.includes("health") || category.includes("medical")) return HeartPulse;
-  if (category.includes("subscription") || category.includes("utilities") || category.includes("bill")) return ReceiptText;
-  if (category.includes("saving") || type.includes("saving")) return PiggyBank;
-  if (category.includes("salary") || category.includes("income") || directionOf(transaction.type) === "inflow") return BriefcaseBusiness;
-  if (type.includes("debt") || category.includes("debt") || category.includes("loan")) return Landmark;
-  if (type.includes("transfer") || directionOf(transaction.type) === "neutral") return WalletCards;
-  return CircleDollarSign;
 }
 
 export function CompactTransactionLedger({
@@ -476,7 +447,7 @@ export function CompactTransactionLedger({
         {visible.map((transaction) => {
           const direction = directionOf(transaction.type);
           const displayedAmount = displayedAmountFor(transaction);
-          const Icon = categoryIcon(transaction);
+          const Icon = transactionIconFor(transaction);
           const selected = selectedIds.has(transaction.id);
           return (
             <li key={transaction.id} className={`${styles.row} ${selected ? styles.selectedRow : ""}`}>

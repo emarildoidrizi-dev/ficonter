@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { EffortlessEntryWorkspace } from "@/components/EffortlessEntryWorkspace";
-import { TransactionLedger } from "@/components/TransactionLedger";
+import { CompactTransactionLedger } from "@/components/CompactTransactionLedger";
 import { MobileTransactionsLayout } from "@/components/MobileTransactionsLayout";
 import { useEncryptedTransactions } from "@/components/EncryptedTransactionProvider";
 import { useVault } from "@/components/VaultProvider";
@@ -53,7 +53,7 @@ export function EncryptedTransactionsWorkspace({
             <div>
               <h3>Transactions</h3>
               <p className="muted transaction-intro">
-                Search, filter and manage your financial activity.
+                A compact ledger for scanning activity. Open any transaction for its complete record and actions.
               </p>
             </div>
           </div>
@@ -63,7 +63,7 @@ export function EncryptedTransactionsWorkspace({
           ) : error ? (
             <div className="alert alert-error">{error}</div>
           ) : (
-            <TransactionLedger
+            <CompactTransactionLedger
               transactions={transactions}
               allowMultiCurrency={allowMultiCurrency}
               allowPdfExport={allowPdfExport}

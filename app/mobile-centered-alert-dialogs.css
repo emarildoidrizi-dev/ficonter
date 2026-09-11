@@ -139,11 +139,61 @@ html[data-ficonter-native-app="true"]
   top: 10px !important;
 }
 
+/* The dedicated Transaction Details page owns its single-delete confirmation.
+   Keep the native-app behavior consistent with the ledger: a real bottom sheet,
+   never the generic centered alert dialog. */
+html[data-ficonter-native-app="true"]
+  .app-main
+  [data-ficonter-transaction-detail-backdrop="true"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1500 !important;
+  display: grid !important;
+  align-items: end !important;
+  justify-items: stretch !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+  background: rgba(20, 22, 23, 0.62) !important;
+}
+
+html[data-ficonter-native-app="true"]
+  .app-main
+  [role="alertdialog"][data-ficonter-transaction-detail-delete="true"] {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: min(72dvh, 680px) !important;
+  margin: 0 !important;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  border-radius: 26px 26px 0 0 !important;
+  z-index: 1501 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  touch-action: pan-y !important;
+  transition: none !important;
+  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.38) !important;
+}
+
 @media (orientation: landscape) and (max-height: 620px) {
   html[data-ficonter-native-app="true"]
     .app-main
     [class*="TransactionLedger_backdrop"]
-    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"]) {
+    > [role="alertdialog"]:not([aria-labelledby="bulk-delete-title"]),
+  html[data-ficonter-native-app="true"]
+    .app-main
+    [role="alertdialog"][data-ficonter-transaction-detail-delete="true"] {
     max-height: 82dvh !important;
   }
 }

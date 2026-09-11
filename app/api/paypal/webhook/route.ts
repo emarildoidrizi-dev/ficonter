@@ -106,9 +106,7 @@ async function getPayPalAccessToken() {
   const response = await fetch(`${apiBase}/v1/oauth2/token`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${Buffer.from(
-        `${clientId}:${clientSecret}`,
-      ).toString("base64")}`,
+      Authorization: `Basic ${credentials}`,
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
     },

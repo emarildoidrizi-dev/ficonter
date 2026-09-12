@@ -74,3 +74,175 @@
     grid-row: 1;
   }
 }
+
+/*
+ * Installed-app viewport safety contract.
+ * The transaction workspace may shrink to any supported device width, but it
+ * must never make the app canvas wider than the visual viewport. Horizontal
+ * scrolling is reserved for explicitly scrollable shortcut/chip rails.
+ */
+@media (max-width: 900px) {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .workspace,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .ledger,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .workspace,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .ledger,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry {
+    overflow-x: clip;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .workspace *,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .workspace *::before,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .workspace *::after {
+    box-sizing: border-box;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: clamp(4px, 1.6vw, 7px);
+    padding-inline: clamp(5px, 2.2vw, 10px);
+    font-size: clamp(11.5px, 3.35vw, 13px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry > *,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .ledger > *,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.panel),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .ledger :global(.panel),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.form),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.field),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-form-grid),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-type-buttons),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-category-chips),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-field-heading),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-simple-amount),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-simple-amount) > div,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-reuse-panel),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-guided-actions),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-guided-summary) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(input),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(select),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(textarea),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(button) {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(input),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(select),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(textarea) {
+    width: 100%;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-simple-amount) > div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-simple-amount) input {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-type-buttons),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-category-chips) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-type-buttons) button,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-category-chips) button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-field-heading) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-field-heading) > * {
+    min-width: 0;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-field-heading) button {
+    flex: 0 1 auto;
+    white-space: normal;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-guided-actions) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-guided-actions) button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher {
+    gap: 3px;
+    padding: 3px;
+    border-radius: 14px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher button {
+    min-height: 42px;
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 11px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .switcher button svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-type-buttons) {
+    gap: 5px !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.transaction-type-buttons) button {
+    padding-inline: 4px !important;
+    font-size: 11px;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-category-chips) {
+    grid-template-columns: 1fr !important;
+  }
+
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .entry :global(.effortless-guided-actions) {
+    grid-template-columns: 1fr;
+  }
+}

@@ -84,7 +84,7 @@ export function BrowserPlatformSearchHeader() {
       title="Search anything in FICONTER"
     >
       <Search size={18} aria-hidden="true" />
-      {/* The search scope is implicit from the FICONTER workspace context. */}
+      {/* Search scope remains intentionally implicit within the FICONTER workspace. */}
       <span className={styles.searchCopy}>
         <strong>Search anything</strong>
       </span>

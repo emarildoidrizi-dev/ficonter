@@ -6,8 +6,12 @@ import {
   ChevronRight,
   Download,
   FileText,
+  ListChecks,
   LockKeyhole,
+  MoreHorizontal,
+  RotateCcw,
   Search,
+  SlidersHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -89,6 +93,8 @@ export function CompactTransactionLedger({
   const [exportingPdf, setExportingPdf] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [appRefineOpen, setAppRefineOpen] = useState(false);
+  const [appActionsOpen, setAppActionsOpen] = useState(false);
 
   const displayedAmountFor = useCallback(
     (transaction: DecryptedTransaction) =>
@@ -169,6 +175,14 @@ export function CompactTransactionLedger({
     };
   }, [displayedAmountFor, visible]);
 
+  const activeRefinementCount = [
+    directionFilter !== "all",
+    categoryFilter !== "all",
+    allowMultiCurrency && currencyFilter !== "all",
+    monthFilter !== "all",
+    sortMode !== "newest",
+  ].filter(Boolean).length;
+
   function resetFilters() {
     setSearch("");
     setDirectionFilter("all");
@@ -178,6 +192,8 @@ export function CompactTransactionLedger({
     setSortMode("newest");
     setSelectedIds(new Set());
     setError("");
+    setAppRefineOpen(false);
+    setAppActionsOpen(false);
   }
 
   function toggleSelectionMode() {
@@ -315,6 +331,183 @@ export function CompactTransactionLedger({
 
   return (
     <>
+      <div className={styles.appExperience} aria-label="App transaction controls">
+        <div className={styles.appCommandBar}>
+          <label className={styles.appSearchBox}>
+            <Search size={17} aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search transactions"
+              aria-label="Search transactions"
+            />
+          </label>
+          <button
+            type="button"
+            className={`${styles.appIconButton} ${appRefineOpen ? styles.appIconButtonActive : ""}`}
+            onClick={() => {
+              setAppRefineOpen((current) => !current);
+              setAppActionsOpen(false);
+            }}
+            aria-label="Refine transactions"
+            aria-expanded={appRefineOpen}
+          >
+            <SlidersHorizontal size={18} aria-hidden="true" />
+            {activeRefinementCount > 0 ? (
+              <span className={styles.appFilterBadge}>{activeRefinementCount}</span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            className={`${styles.appIconButton} ${appActionsOpen ? styles.appIconButtonActive : ""}`}
+            onClick={() => {
+              setAppActionsOpen((current) => !current);
+              setAppRefineOpen(false);
+            }}
+            aria-label="Transaction actions"
+            aria-expanded={appActionsOpen}
+          >
+            <MoreHorizontal size={20} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className={styles.appQuickFilters} role="group" aria-label="Quick transaction filters">
+          {[
+            ["all", "All"],
+            ["inflow", "Income"],
+            ["outflow", "Expenses"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={directionFilter === value ? styles.appQuickFilterActive : undefined}
+              onClick={() => setDirectionFilter(value as DirectionFilter)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {appRefineOpen ? (
+          <section className={styles.appPanel} aria-label="Refine transaction list">
+            <div className={styles.appPanelHeading}>
+              <div>
+                <strong>Refine transactions</strong>
+                <span>Only show what you need</span>
+              </div>
+              {activeRefinementCount > 0 ? <b>{activeRefinementCount} active</b> : null}
+            </div>
+            <div className={styles.appFilterGrid}>
+              <label>
+                <span>Movement</span>
+                <select value={directionFilter} onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)}>
+                  <option value="all">All movements</option>
+                  <option value="inflow">Cash inflows</option>
+                  <option value="outflow">Cash outflows</option>
+                  <option value="neutral">Transfers / adjustments</option>
+                </select>
+              </label>
+              <label>
+                <span>Category</span>
+                <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                  <option value="all">All categories</option>
+                  {categories.map((category) => <option key={category}>{category}</option>)}
+                </select>
+              </label>
+              {allowMultiCurrency ? (
+                <label>
+                  <span>Currency</span>
+                  <select value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)}>
+                    <option value="all">All currencies</option>
+                    {currencies.filter((code) => CURRENCY_CODES.some((candidate) => candidate === code)).map((code) => (
+                      <option key={code} value={code}>{currencySymbol(code)} {code} — {currencyName(code)}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <label>
+                <span>Month</span>
+                <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
+                  <option value="all">All months</option>
+                  {months.map((month) => (
+                    <option key={month} value={month}>
+                      {new Date(`${month}-01T12:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Sort</span>
+                <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="highest">Highest amount</option>
+                  <option value="lowest">Lowest amount</option>
+                  <option value="description">Description A–Z</option>
+                </select>
+              </label>
+            </div>
+            <button type="button" className={styles.appResetButton} onClick={resetFilters}>
+              <RotateCcw size={15} aria-hidden="true" /> Reset view
+            </button>
+          </section>
+        ) : null}
+
+        {appActionsOpen ? (
+          <section className={styles.appPanel} aria-label="Transaction actions">
+            <div className={styles.appPanelHeading}>
+              <div>
+                <strong>More actions</strong>
+                <span>Tools stay available without crowding the ledger</span>
+              </div>
+            </div>
+            <div className={styles.appActionGrid}>
+              <button type="button" onClick={() => exportCsv(visible, "view")} disabled={!visible.length}>
+                <Download size={18} aria-hidden="true" />
+                <span><strong>CSV</strong><small>Export current view</small></span>
+              </button>
+              <button
+                type="button"
+                disabled={!visible.length || exportingPdf}
+                onClick={() => {
+                  if (!allowPdfExport) {
+                    router.push("/dashboard/settings?section=subscription&required=private_pdf_export");
+                    return;
+                  }
+                  void exportPdf(visible, "view");
+                }}
+              >
+                {allowPdfExport ? <FileText size={18} aria-hidden="true" /> : <LockKeyhole size={18} aria-hidden="true" />}
+                <span><strong>{exportingPdf ? "Preparing…" : "PDF"}</strong><small>Private export</small></span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  toggleSelectionMode();
+                  setAppActionsOpen(false);
+                }}
+              >
+                <ListChecks size={18} aria-hidden="true" />
+                <span><strong>{selectionMode ? "Done selecting" : "Select transactions"}</strong><small>Bulk export or delete</small></span>
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        <div className={styles.appSummaryStrip} aria-label="Transaction cash flow summary">
+          <div className={styles.appSummaryPrimary}>
+            <span>Net cash flow</span>
+            <strong className={totals.net > 0 ? styles.positive : totals.net < 0 ? styles.negative : undefined}>
+              {formatCurrency(totals.net, baseCurrency)}
+            </strong>
+          </div>
+          <div className={styles.appSummaryMeta}>
+            <span>In <b className={styles.positive}>{formatCurrency(totals.inflow, baseCurrency)}</b></span>
+            <span>Out <b className={styles.negative}>{formatCurrency(totals.outflow, baseCurrency)}</b></span>
+          </div>
+        </div>
+      </div>
+
       <div className={styles.commandBar}>
         <label className={styles.searchBox}>
           <Search size={17} aria-hidden="true" />
@@ -402,6 +595,16 @@ export function CompactTransactionLedger({
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
       {error ? <div className={styles.error}>{error}</div> : null}
+
+      <div className={styles.appListHeader}>
+        <div>
+          <strong>Activity</strong>
+          <span>{visible.length} {visible.length === 1 ? "transaction" : "transactions"}</span>
+        </div>
+        {selectionMode ? (
+          <button type="button" className={styles.appDoneButton} onClick={toggleSelectionMode}>Done</button>
+        ) : null}
+      </div>
 
       <div className={styles.listHeader}>
         <div>

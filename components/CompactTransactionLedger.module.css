@@ -576,30 +576,30 @@
   }
 }
 
-/* Installed app: calm, search-first ledger. Browser/tablet web keeps the full desktop controls. */
-@media (max-width: 900px) {
-  :global(html[data-ficonter-native-app="true"]) :global(.transaction-ledger-panel .panel-head),
-  :global(html[data-ficonter-native-app="true"]) .commandBar,
-  :global(html[data-ficonter-native-app="true"]) .filters,
-  :global(html[data-ficonter-native-app="true"]) .summary,
-  :global(html[data-ficonter-native-app="true"]) .listHeader {
+/* Installed app only: require both compact native chrome and standalone display mode. */
+@media (max-width: 1180px) {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) :global(.transaction-ledger-panel .panel-head),
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .commandBar,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .filters,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .summary,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .listHeader {
     display: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appExperience {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appExperience {
     display: grid;
     gap: 10px;
     margin-bottom: 12px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appCommandBar {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appCommandBar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 44px 44px;
     gap: 8px;
     align-items: center;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSearchBox {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSearchBox {
     min-width: 0;
     min-height: 46px;
     display: flex;
@@ -612,7 +612,7 @@
     box-shadow: 0 5px 18px rgba(29, 45, 41, .045);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSearchBox input {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSearchBox input {
     min-width: 0;
     width: 100%;
     border: 0;
@@ -623,7 +623,7 @@
     font-size: 14px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appIconButton {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appIconButton {
     position: relative;
     width: 44px;
     height: 44px;
@@ -637,13 +637,13 @@
     cursor: pointer;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appIconButtonActive {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appIconButtonActive {
     border-color: color-mix(in srgb, var(--fui-accent, #174f47) 42%, var(--fui-border, #ded8cf));
     background: color-mix(in srgb, var(--fui-accent, #174f47) 9%, var(--fui-surface, #fff));
     color: var(--fui-accent, #174f47);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appFilterBadge {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appFilterBadge {
     position: absolute;
     top: -5px;
     right: -4px;
@@ -661,7 +661,7 @@
     line-height: 1;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appQuickFilters {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appQuickFilters {
     display: flex;
     gap: 7px;
     overflow-x: auto;
@@ -669,11 +669,11 @@
     scrollbar-width: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appQuickFilters::-webkit-scrollbar {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appQuickFilters::-webkit-scrollbar {
     display: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appQuickFilters button {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appQuickFilters button {
     min-height: 36px;
     flex: 0 0 auto;
     padding: 0 14px;
@@ -686,13 +686,13 @@
     font-weight: 760;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appQuickFilters .appQuickFilterActive {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appQuickFilters .appQuickFilterActive {
     border-color: transparent;
     background: var(--fui-accent, #174f47);
     color: var(--fui-on-accent, #fff);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appPanel {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanel {
     display: grid;
     gap: 12px;
     padding: 13px;
@@ -702,50 +702,50 @@
     box-shadow: 0 10px 26px rgba(29, 45, 41, .055);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appPanelHeading {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanelHeading {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appPanelHeading > div {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanelHeading > div {
     min-width: 0;
     display: grid;
     gap: 2px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appPanelHeading strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanelHeading strong {
     font-size: 13px;
     line-height: 1.2;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appPanelHeading span,
-  :global(html[data-ficonter-native-app="true"]) .appPanelHeading b {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanelHeading span,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appPanelHeading b {
     color: var(--fui-muted, var(--muted, #77736d));
     font-size: 10px;
     font-weight: 650;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appFilterGrid {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appFilterGrid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 9px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appFilterGrid label {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appFilterGrid label {
     min-width: 0;
     display: grid;
     gap: 5px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appFilterGrid label > span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appFilterGrid label > span {
     color: var(--fui-muted, var(--muted, #77736d));
     font-size: 10px;
     font-weight: 760;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appFilterGrid select {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appFilterGrid select {
     width: 100%;
     min-width: 0;
     min-height: 43px;
@@ -758,7 +758,7 @@
     font-size: 12px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appResetButton {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appResetButton {
     min-height: 39px;
     display: inline-flex;
     align-items: center;
@@ -773,13 +773,13 @@
     font-weight: 760;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid button {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid button {
     min-width: 0;
     min-height: 56px;
     display: flex;
@@ -794,31 +794,31 @@
     font: inherit;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid button:last-child {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid button:last-child {
     grid-column: 1 / -1;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid button:disabled {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid button:disabled {
     opacity: .46;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid button > span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid button > span {
     min-width: 0;
     display: grid;
     gap: 2px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid strong {
     font-size: 12px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appActionGrid small {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appActionGrid small {
     color: var(--fui-muted, var(--muted, #77736d));
     font-size: 9px;
     line-height: 1.2;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryStrip {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryStrip {
     min-width: 0;
     display: flex;
     align-items: center;
@@ -830,19 +830,19 @@
     background: color-mix(in srgb, var(--fui-surface, var(--paper, #fff)) 94%, transparent);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryPrimary {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryPrimary {
     min-width: 0;
     display: grid;
     gap: 3px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryPrimary > span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryPrimary > span {
     color: var(--fui-muted, var(--muted, #77736d));
     font-size: 10px;
     font-weight: 700;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryPrimary > strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryPrimary > strong {
     max-width: 47vw;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -852,7 +852,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryMeta {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryMeta {
     min-width: 0;
     display: grid;
     justify-items: end;
@@ -862,12 +862,12 @@
     font-variant-numeric: tabular-nums;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appSummaryMeta span,
-  :global(html[data-ficonter-native-app="true"]) .appSummaryMeta b {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryMeta span,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appSummaryMeta b {
     white-space: nowrap;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appListHeader {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appListHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -875,23 +875,23 @@
     margin: 14px 2px 8px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appListHeader > div {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appListHeader > div {
     min-width: 0;
     display: flex;
     align-items: baseline;
     gap: 8px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appListHeader strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appListHeader strong {
     font-size: 15px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appListHeader span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appListHeader span {
     color: var(--fui-muted, var(--muted, #77736d));
     font-size: 10px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .appDoneButton {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .appDoneButton {
     min-height: 34px;
     padding: 0 12px;
     border: 1px solid var(--fui-border, var(--line, #ded8cf));
@@ -903,91 +903,93 @@
     font-weight: 780;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .selectionBar {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .selectionBar {
     gap: 8px 10px;
     padding: 9px 10px;
     border-radius: 13px;
     font-size: 11px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .selectionBar input,
-  :global(html[data-ficonter-native-app="true"]) .rowCheckbox input {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .selectionBar input,
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowCheckbox input {
     width: 18px;
     height: 18px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .list {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .list {
     gap: 6px;
     max-height: calc((64px * 10) + (6px * 9));
     padding-right: 2px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .row {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .row {
     border-radius: 14px;
     box-shadow: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .row:hover {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .row:hover {
     border-color: var(--fui-border, var(--line, #ded8cf));
     box-shadow: none;
     transform: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowButton {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowButton {
     min-height: 64px;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 8px;
     padding: 8px 9px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .iconChip {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .iconChip {
     width: 36px;
     height: 36px;
     border-radius: 11px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowCopy {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowCopy {
     gap: 3px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowCopy strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowCopy strong {
     font-size: 13px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowCopy span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowCopy span {
     font-size: 9.5px;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowAmount {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowAmount {
     gap: 0;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowAmount > span {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowAmount > span {
     display: none;
   }
 
-  :global(html[data-ficonter-native-app="true"]) .rowAmount strong {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .rowAmount strong {
     max-width: 31vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: clamp(11px, 3.25vw, 14px);
   }
 
-  :global(html[data-ficonter-native-app="true"]) .chevron {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]) .chevron {
     width: 16px;
     height: 16px;
     opacity: .42;
   }
 }
 
-@media (min-width: 641px) and (max-width: 900px) {
-  :global(html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]) .appFilterGrid {
+@media (min-width: 641px) and (max-width: 1180px) {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"][data-ficonter-device="tablet"]) .appFilterGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  :global(html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]) .appActionGrid {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"][data-ficonter-device="tablet"]) .appActionGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  :global(html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]) .appActionGrid button:last-child {
+  :global(html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"][data-ficonter-device="tablet"]) .appActionGrid button:last-child {
     grid-column: auto;
   }
 }

@@ -33,3 +33,58 @@ html[data-ficonter-native-app="true"] nav[aria-label="All app sections"] a > spa
     font-size: 11.5px;
   }
 }
+
+/* Installed phone app — keep the three Transaction summary values compact and
+   financial-grade. Browser layouts are deliberately untouched. */
+@media (max-width: 650px) {
+  html[data-ficonter-display-mode="standalone"][data-ficonter-device="phone"]
+    [class*="TransactionLedger_summary"] {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-inline: 0 !important;
+    padding: 0 0 8px !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+  }
+
+  html[data-ficonter-display-mode="standalone"][data-ficonter-device="phone"]
+    [class*="TransactionLedger_summary"] > div {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
+    min-height: 116px !important;
+    padding: 12px 8px !important;
+  }
+
+  html[data-ficonter-display-mode="standalone"][data-ficonter-device="phone"]
+    [class*="TransactionLedger_summary"] > div > span {
+    padding-right: 16px !important;
+    font-size: 10.5px !important;
+    line-height: 1.2 !important;
+  }
+
+  html[data-ficonter-display-mode="standalone"][data-ficonter-device="phone"]
+    [class*="TransactionLedger_summary"] > div > strong {
+    display: block !important;
+    min-width: 0 !important;
+    margin-top: 10px !important;
+    padding-right: 0 !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    font-size: clamp(14px, 4.15vw, 17px) !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.035em !important;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  html[data-ficonter-display-mode="standalone"][data-ficonter-device="phone"]
+    [class*="TransactionLedger_summary"] svg {
+    top: 10px !important;
+    right: 8px !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+}

@@ -74,3 +74,259 @@
     grid-row: 1;
   }
 }
+
+/* Browser Add Transaction: action-first, compact and visibly distinct on ficonter.com. */
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) {
+  padding: 14px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-card) 96%, transparent);
+  box-shadow: 0 12px 36px rgba(29, 45, 41, 0.06);
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div {
+  display: grid;
+  gap: 10px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) {
+  order: -4;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 26%, var(--line));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-card) 98%, transparent);
+  box-shadow: 0 8px 24px rgba(29, 45, 41, 0.045);
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) > div:first-child {
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) h3 {
+  font-size: 20px;
+  letter-spacing: -0.025em;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) > div:first-child p {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) > div:first-child > span {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child {
+  order: -3;
+  padding: 7px;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--surface-subtle) 88%, transparent);
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:first-child {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 6px 5px;
+  border-radius: 11px;
+  text-align: center;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button > div {
+  display: block;
+  padding: 0;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button strong {
+  font-size: 11.5px;
+  line-height: 1.1;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button small,
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button > span,
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button > em,
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(2) > button > svg {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(3) {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(3) > span {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(3) button {
+  width: 100%;
+  min-height: 38px;
+  justify-content: center;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child > div:nth-child(3):has(button:disabled) {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-simple-form),
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-form),
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-detailed-form) {
+  gap: 12px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-simple-intro) {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-type-buttons) {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-type-buttons button) {
+  min-width: 0;
+  min-height: 43px;
+  padding: 0 6px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-simple-amount > div) {
+  min-height: 76px;
+  padding: 0 15px;
+  border-radius: 16px;
+  border-color: color-mix(in srgb, var(--gold) 38%, var(--line));
+  background: var(--surface-raised, var(--control-bg));
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-simple-amount input) {
+  font-size: clamp(30px, 3vw, 38px);
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-category-chips) {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-category-chips button) {
+  min-height: 43px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 11.5px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.input),
+:global(html[data-ficonter-display-mode="browser"]) .entry select {
+  min-height: 48px;
+  border-radius: 13px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-simple-defaults) {
+  padding: 8px 10px;
+  border-radius: 11px;
+  font-size: 10.5px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-mode-footnote) {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-primary-action) {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-step) {
+  padding: 14px;
+  border-radius: 15px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-heading) {
+  margin-bottom: 11px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-heading h4) {
+  margin-top: 3px;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-heading p) {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-type-cards) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-guided-type-cards button) {
+  min-width: 0;
+  min-height: 78px;
+  padding: 10px 6px;
+  border-radius: 13px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-detailed-header) {
+  margin-bottom: 2px;
+  padding: 12px 13px;
+  border-radius: 14px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-detailed-header p) {
+  display: none;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-reuse-panel) {
+  padding: 12px;
+  border-radius: 14px;
+}
+
+:global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-reuse-options) {
+  gap: 7px;
+}
+
+@media (max-width: 720px) {
+  :global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"]) .entry :global(#ficonter-quick-add) {
+    padding: 14px;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-entry-panel.transaction-effortless-panel) > div > section:first-child {
+    padding: 6px;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"]) .entry :global(.transaction-type-buttons) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  :global(html[data-ficonter-display-mode="browser"]) .entry :global(.effortless-category-chips) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

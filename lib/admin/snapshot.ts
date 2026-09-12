@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/lib/admin/access";
+import { isSubscriptionAccessActive } from "@/lib/subscriptionPlans";
 
 export type AdminRole = "admin" | "super_admin";
 export type SubscriptionPlanCode =
@@ -114,6 +115,109 @@ function toSafeCount(value: unknown): number {
   return Number.isFinite(count) && count >= 0 ? Math.trunc(count) : 0;
 }
 
+function isPaidPlan(planCode: SubscriptionPlanCode) {
+  return planCode === "personal_pro" || planCode === "business_pro";
+}
+
+function validPeriodEnd(value: string | null) {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function paidPlanIsEffective(subscription: SubscriptionRow, now: number) {
+  const periodEnd = validPeriodEnd(subscription.current_period_end);
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
+
+  if (cancelAtPeriodEnd && periodEnd !== null && periodEnd <= now) {
+    return false;
+  }
+
+  if (isSubscriptionAccessActive(subscription.status)) {
+    return true;
+  }
+
+  return (
+    subscription.status === "canceled" &&
+    cancelAtPeriodEnd &&
+    periodEnd !== null &&
+    periodEnd > now
+  );
+}
+
+function shouldPersistTerminalFree(
+  subscription: SubscriptionRow,
+  now: number,
+) {
+  if (!isPaidPlan(subscription.plan_code)) return false;
+
+  const periodEnd = validPeriodEnd(subscription.current_period_end);
+  const cancellationExpired =
+    subscription.cancel_at_period_end === true &&
+    periodEnd !== null &&
+    periodEnd <= now;
+  const immediateCancellation =
+    subscription.status === "canceled" &&
+    !(
+      subscription.cancel_at_period_end === true &&
+      periodEnd !== null &&
+      periodEnd > now
+    );
+
+  return cancellationExpired || immediateCancellation;
+}
+
+function effectiveSubscriptionState(
+  subscription: SubscriptionRow,
+  betaVerified: boolean,
+  now: number,
+): Omit<AdminUserRow, "id" | "email" | "createdAt" | "lastSignInAt" | "bannedUntil" | "displayName" | "role" | "isOwner"> {
+  if (subscription.plan_code === "beta" && !betaVerified) {
+    return {
+      planCode: "free",
+      subscriptionStatus: "active",
+      provider: "internal",
+      billingInterval: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      betaVerified: false,
+    };
+  }
+
+  if (
+    isPaidPlan(subscription.plan_code) &&
+    !paidPlanIsEffective(subscription, now)
+  ) {
+    return {
+      planCode: "free",
+      subscriptionStatus: shouldPersistTerminalFree(subscription, now)
+        ? "active"
+        : subscription.status,
+      provider: shouldPersistTerminalFree(subscription, now)
+        ? "internal"
+        : subscription.provider,
+      billingInterval: shouldPersistTerminalFree(subscription, now)
+        ? null
+        : subscription.billing_interval,
+      currentPeriodEnd: shouldPersistTerminalFree(subscription, now)
+        ? null
+        : subscription.current_period_end,
+      cancelAtPeriodEnd: false,
+      betaVerified: false,
+    };
+  }
+
+  return {
+    planCode: subscription.plan_code,
+    subscriptionStatus: subscription.status,
+    provider: subscription.provider,
+    billingInterval: subscription.billing_interval,
+    currentPeriodEnd: subscription.current_period_end,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
+    betaVerified,
+  };
+}
+
 export function normalizeAdminDirectory(
   rows: DirectoryRpcRow[] | null | undefined,
 ): AdminUserRow[] {
@@ -194,15 +298,40 @@ async function enrichSubscriptionState(users: AdminUserRow[]) {
       });
     }
 
+    const subscriptions = (subscriptionsResult.data ?? []) as SubscriptionRow[];
     const subscriptionMap = new Map<string, SubscriptionRow>(
-      ((subscriptionsResult.data ?? []) as SubscriptionRow[]).map((row) => [
-        row.user_id,
-        row,
-      ]),
+      subscriptions.map((row) => [row.user_id, row]),
     );
-    const betaVerified = new Set(
+    const verifiedBetaUsers = new Set(
       ((betaResult.data ?? []) as BetaEntitlementRow[]).map((row) => row.user_id),
     );
+    const now = Date.now();
+
+    const terminalFreeUserIds = subscriptions
+      .filter((subscription) => shouldPersistTerminalFree(subscription, now))
+      .map((subscription) => subscription.user_id);
+
+    if (terminalFreeUserIds.length) {
+      const { error: downgradeError } = await service
+        .from("subscriptions")
+        .update({
+          plan_code: "free",
+          status: "active",
+          billing_interval: null,
+          provider: "internal",
+          current_period_start: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          updated_at: new Date(now).toISOString(),
+        })
+        .in("user_id", terminalFreeUserIds);
+
+      if (downgradeError) {
+        console.error("Admin expired subscription normalization failed", {
+          code: downgradeError.code,
+        });
+      }
+    }
 
     return users.map((user) => {
       const subscription = subscriptionMap.get(user.id);
@@ -210,13 +339,11 @@ async function enrichSubscriptionState(users: AdminUserRow[]) {
 
       return {
         ...user,
-        planCode: subscription.plan_code,
-        subscriptionStatus: subscription.status,
-        provider: subscription.provider,
-        billingInterval: subscription.billing_interval,
-        currentPeriodEnd: subscription.current_period_end,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
-        betaVerified: betaVerified.has(user.id),
+        ...effectiveSubscriptionState(
+          subscription,
+          verifiedBetaUsers.has(user.id),
+          now,
+        ),
       };
     });
   } catch (error) {

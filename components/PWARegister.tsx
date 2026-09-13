@@ -2,8 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
+import { isInstalledStandaloneApp } from "@/lib/pwaRuntimeRecovery";
 
-const SERVICE_WORKER_UPDATE_INTERVAL_MS = 30 * 60 * 1000;
+const SERVICE_WORKER_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+const CONTROLLER_REFRESH_KEY = "ficonter:pwa-controller-refresh";
+const CONTROLLER_REFRESH_TTL_MS = 60 * 1000;
 
 export function PWARegister() {
   const lastUpdateRef = useRef(0);
@@ -12,6 +15,9 @@ export function PWARegister() {
     if (!("serviceWorker" in navigator)) return;
 
     let cancelled = false;
+    let controllerReloadScheduled = false;
+    let controllerRetryTimer: number | null = null;
+    const hadControllerAtMount = Boolean(navigator.serviceWorker.controller);
 
     const updateRegistration = async (force = false) => {
       if (cancelled || document.visibilityState !== "visible") return;
@@ -36,6 +42,47 @@ export function PWARegister() {
       }
     };
 
+    const refreshForNewController = () => {
+      if (
+        cancelled ||
+        controllerReloadScheduled ||
+        !hadControllerAtMount ||
+        !isInstalledStandaloneApp() ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+
+      if (isFiconterNavigationPending()) {
+        if (controllerRetryTimer === null) {
+          controllerRetryTimer = window.setTimeout(() => {
+            controllerRetryTimer = null;
+            refreshForNewController();
+          }, 750);
+        }
+        return;
+      }
+
+      const now = Date.now();
+      try {
+        const previousRefresh = Number(
+          window.sessionStorage.getItem(CONTROLLER_REFRESH_KEY) || "0",
+        );
+        if (
+          Number.isFinite(previousRefresh) &&
+          now - previousRefresh < CONTROLLER_REFRESH_TTL_MS
+        ) {
+          return;
+        }
+        window.sessionStorage.setItem(CONTROLLER_REFRESH_KEY, String(now));
+      } catch {
+        // Session storage is an optimization only; the refresh is still safe.
+      }
+
+      controllerReloadScheduled = true;
+      window.location.reload();
+    };
+
     const register = async () => {
       try {
         await navigator.serviceWorker.register("/sw.js", {
@@ -56,22 +103,40 @@ export function PWARegister() {
 
     const refreshRegistration = () => {
       if (document.visibilityState === "visible") {
-        void updateRegistration(false);
+        // A home-screen app can stay suspended on iOS for hours or days.
+        // Always check the service worker when the app becomes foregrounded.
+        void updateRegistration(true);
       }
     };
 
     const handleOnline = () => {
-      void updateRegistration(false);
+      void updateRegistration(true);
     };
 
+    const updateTimer = window.setInterval(() => {
+      void updateRegistration(false);
+    }, SERVICE_WORKER_UPDATE_INTERVAL_MS);
+
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      refreshForNewController,
+    );
     document.addEventListener("visibilitychange", refreshRegistration);
     window.addEventListener("online", handleOnline);
 
     return () => {
       cancelled = true;
+      window.clearInterval(updateTimer);
+      if (controllerRetryTimer !== null) {
+        window.clearTimeout(controllerRetryTimer);
+      }
       window.removeEventListener("load", register);
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", refreshRegistration);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        refreshForNewController,
+      );
     };
   }, []);
 

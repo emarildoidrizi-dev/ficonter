@@ -1,17 +1,26 @@
 const FICONTER_PWA_STATIC_CACHE_PREFIX = "ficonter-pwa-static-";
 
+export function isStandaloneDisplayMode() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return false;
+  }
+
+  return (
+    document.documentElement.dataset.ficonterDisplayMode === "standalone" ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export function isInstalledStandaloneApp() {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return false;
   }
 
-  const root = document.documentElement;
-  const standalone =
-    root.dataset.ficonterDisplayMode === "standalone" ||
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-  return standalone && root.dataset.ficonterNativeApp === "true";
+  return (
+    isStandaloneDisplayMode() &&
+    document.documentElement.dataset.ficonterNativeApp === "true"
+  );
 }
 
 export async function clearFiconterPwaStaticCaches() {

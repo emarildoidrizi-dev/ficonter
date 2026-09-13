@@ -162,16 +162,16 @@ export function InstalledAppSettingsSelectionSync() {
   }, []);
 
   return <style>{`
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-row="true"] { background:transparent!important;color:var(--ink)!important;transition:none!important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-row="true"] { background: transparent !important; color: var(--ink) !important; transition: none !important; }
     html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-row="true"] small,
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-row="true"] > svg { color:var(--text-secondary)!important; }
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] { background:var(--solid-bg)!important;color:var(--solid-text)!important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-row="true"] > svg { color: var(--text-secondary) !important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] { background: var(--solid-bg) !important; color: var(--solid-text) !important; }
     html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] strong,
     html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] small,
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] > svg { color:var(--solid-text)!important; }
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] > span:first-of-type { border-color:rgba(255,255,255,.12)!important;background:rgba(255,255,255,.08)!important;color:var(--gold)!important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] > svg { color: var(--solid-text) !important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"] aside[aria-label="Settings sections"] button[data-ficonter-settings-selected="true"] > span:first-of-type { border-color: rgba(255,255,255,.12) !important; background: rgba(255,255,255,.08) !important; color: var(--gold) !important; }
     html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-settings-back-sync="true"],
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-settings-back-sync="true"] * { transition-duration:0ms!important;transition-delay:0ms!important; }
-    html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"] .app-main > .ficonter-settings-page { animation:none!important;opacity:1!important;transform:none!important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-settings-back-sync="true"] * { transition-duration: 0ms !important; transition-delay: 0ms !important; }
+    html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-nav-transition="active"] .app-main > .ficonter-settings-page { animation: none !important; opacity: 1 !important; transform: none !important; }
   `}</style>;
 }

@@ -37,7 +37,8 @@ check(navigation.includes("allowsBackgroundPrefetch() && document.visibilityStat
 check(realtime.includes("POST_NAVIGATION_SETTLE_GRACE_MS") && realtime.includes("pendingNavigationChangeAtRef"), "Realtime reconciliation no longer immediately fights a route transition");
 check(realtime.includes("pendingChangeAt <= navigationStartedAt"), "Pre-navigation data changes do not trigger redundant destination refreshes");
 check(pwa.includes("SERVICE_WORKER_UPDATE_INTERVAL_MS") && pwa.includes("isFiconterNavigationPending()"), "Service-worker update checks are throttled and yield to navigation");
-check(sw.includes("ficonter-pwa-static-v15-ios-clarity-refresh"), "PWA static cache generation is advanced for the iOS clarity refresh");
+check(sw.includes("ficonter-pwa-static-v16-deployment-recovery"), "PWA static cache generation is advanced for deployment recovery");
+check(!sw.includes('url.pathname.startsWith("/_next/static/")'), "Service worker does not pin Next.js runtime chunks across deployments");
 check(sourceData.includes("inFlightRef") && sourceData.includes("queuedRef"), "Shared financial source refreshes are coalesced while a request is in flight");
 check(sourceData.includes("eventTimerRef") && sourceData.includes("180"), "Financial source events are debounced instead of refetching seven tables per event");
 check(sourceData.includes("!isFinancialDataScope(change.scope)"), "Profile/settings events no longer trigger full financial-source refetches");

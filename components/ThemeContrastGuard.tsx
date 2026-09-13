@@ -34,6 +34,11 @@ const TEXT_SELECTOR = [
 // readable at every responsive size.
 const MIN_CONTRAST = 4.5;
 
+// Installed app theme colours transition for 140ms. Run the authoritative
+// contrast pass only after that transition has fully settled so a one-tap
+// theme change can never leave stale foreground overrides behind.
+const APP_THEME_SETTLE_AUDIT_DELAY_MS = 190;
+
 function parseColor(value: string): Rgba | null {
   if (!value || value === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
 
@@ -261,6 +266,7 @@ export function ThemeContrastGuard() {
     const root = document.documentElement;
     let fullAuditFrame = 0;
     let fullAuditTimer = 0;
+    let appSettleAuditTimer = 0;
     let incrementalFrame = 0;
     const adjusted = new Set<HTMLElement>();
     const pendingScopes = new Set<Element>();
@@ -330,6 +336,43 @@ export function ThemeContrastGuard() {
       }, delay);
     }
 
+    function isInstalledApp() {
+      return (
+        root.dataset.ficonterNativeApp === "true" &&
+        root.dataset.ficonterDisplayMode === "standalone"
+      );
+    }
+
+    function scheduleAppSettledAudit() {
+      if (!isInstalledApp()) return false;
+
+      // Any correction from the previous theme is now stale. Remove it before
+      // the new palette animates so old foregrounds cannot contaminate the new
+      // app theme while it is settling.
+      clearAdjustments();
+
+      if (fullAuditTimer) {
+        window.clearTimeout(fullAuditTimer);
+        fullAuditTimer = 0;
+      }
+      if (fullAuditFrame) {
+        window.cancelAnimationFrame(fullAuditFrame);
+        fullAuditFrame = 0;
+      }
+      if (appSettleAuditTimer) {
+        window.clearTimeout(appSettleAuditTimer);
+      }
+
+      appSettleAuditTimer = window.setTimeout(() => {
+        appSettleAuditTimer = 0;
+        if (!isInstalledApp()) return;
+
+        fullAuditFrame = window.requestAnimationFrame(runFullAudit);
+      }, APP_THEME_SETTLE_AUDIT_DELAY_MS);
+
+      return true;
+    }
+
     function runIncrementalAudit() {
       incrementalFrame = 0;
       const scopes = [...pendingScopes];
@@ -343,7 +386,11 @@ export function ThemeContrastGuard() {
       incrementalFrame = window.requestAnimationFrame(runIncrementalAudit);
     }
 
-    const rootObserver = new MutationObserver(() => scheduleFullAudit());
+    const rootObserver = new MutationObserver(() => {
+      // Installed PWA/app gets a post-transition audit. Browser behavior stays
+      // exactly as before and continues to use the existing immediate audit.
+      if (!scheduleAppSettledAudit()) scheduleFullAudit();
+    });
     rootObserver.observe(root, {
       attributes: true,
       attributeFilter: [
@@ -353,6 +400,7 @@ export function ThemeContrastGuard() {
         "data-wallpaper-daypart",
         "data-background-motion",
         "data-ficonter-native-app",
+        "data-ficonter-display-mode",
       ],
     });
 
@@ -371,7 +419,9 @@ export function ThemeContrastGuard() {
     });
 
     const handleResize = () => scheduleFullAudit(90);
-    const handlePreferences = () => scheduleFullAudit();
+    const handlePreferences = () => {
+      if (!scheduleAppSettledAudit()) scheduleFullAudit();
+    };
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("ficonter:preferences-updated", handlePreferences);
 
@@ -385,6 +435,7 @@ export function ThemeContrastGuard() {
       if (fullAuditFrame) window.cancelAnimationFrame(fullAuditFrame);
       if (incrementalFrame) window.cancelAnimationFrame(incrementalFrame);
       if (fullAuditTimer) window.clearTimeout(fullAuditTimer);
+      if (appSettleAuditTimer) window.clearTimeout(appSettleAuditTimer);
       pendingScopes.clear();
       clearAdjustments();
     };

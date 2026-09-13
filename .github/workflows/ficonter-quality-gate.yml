@@ -44,6 +44,9 @@ jobs:
       - name: Verify current production architecture
         run: npm run verify:production-core
 
+      - name: Verify installed app theme settling
+        run: npm run verify:app-theme-settle
+
       - name: Run legacy compatibility audit
         continue-on-error: true
         run: npm run verify:hardening

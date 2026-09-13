@@ -19,6 +19,7 @@ export function PublicSiteFooter() {
             <Link href="/personal-business">Personal & Business</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/about">About</Link>
+            <Link href="/faq">FAQ</Link>
           </div>
           <div>
             <span>Access</span>

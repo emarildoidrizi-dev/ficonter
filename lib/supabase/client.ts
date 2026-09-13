@@ -33,11 +33,20 @@ export function saveTrustedDevicePreference(keepSignedIn: boolean): void {
       `${TRUST_COOKIE}=1; Path=/; Max-Age=${ONE_YEAR_SECONDS}; ` +
       `SameSite=Lax${secure}`;
   } else {
+    // A cookie without Max-Age or Expires is a browser-session cookie.
     document.cookie =
       `${TRUST_COOKIE}=0; Path=/; SameSite=Lax${secure}`;
   }
 }
 
+/**
+ * Keep the concrete Supabase return type intact.
+ *
+ * Taking ReturnType directly from the generic createBrowserClient function
+ * widens parts of the realtime API and removes contextual typing from channel
+ * callbacks. Inferring the type from this concrete wrapper preserves the
+ * Postgres changes payload type used across the dashboard.
+ */
 function createConfiguredBrowserClient(
   url: string,
   key: string,
@@ -123,6 +132,15 @@ function addBillCiphertextWriteBoundary(client: BrowserClient): BrowserClient {
   return client;
 }
 
+/**
+ * Portable Backup is currently an Owner-only operational feature. The database
+ * no longer permits direct authenticated execution of the original restore RPC.
+ * Before that exact RPC is invoked, obtain a short-lived one-time authorization
+ * ticket from the trusted FICONTER server and transparently call the guarded RPC.
+ *
+ * This keeps the existing Backup UI stable while enforcing the permission at
+ * the UI, server and database layers.
+ */
 function addOwnerBackupRestoreBoundary(client: BrowserClient): BrowserClient {
   const rawClient = client as BrowserClient & {
     rpc: (fn: string, args?: Record<string, unknown>, options?: unknown) => any;
@@ -178,6 +196,17 @@ function addOwnerBackupRestoreBoundary(client: BrowserClient): BrowserClient {
   return client;
 }
 
+/**
+ * Returns one shared browser client per session-persistence mode.
+ *
+ * Several dashboard widgets mount together. Reusing the client prevents each
+ * widget from creating duplicate auth listeners, refresh timers and realtime
+ * transports while preserving the trusted-device cookie behaviour.
+ *
+ * The returned browser client also enforces the Bills E2EE write boundary:
+ * once an encrypted Bill payload is present, readable private Bill fields are
+ * replaced with NULL before the request leaves the browser.
+ */
 export function createClient(keepSignedInOverride?: boolean): BrowserClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

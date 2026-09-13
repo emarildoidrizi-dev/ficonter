@@ -29,6 +29,13 @@ function sectionFromLocation() {
   return Array.from(sectionByLabel.values()).includes(value as SectionId) ? (value as SectionId) : null;
 }
 
+function sectionFromReactState() {
+  const activeButton = buttons().find((button) =>
+    Array.from(button.classList).some((name) => name.includes("sectionActive")),
+  );
+  return activeButton ? sectionFor(activeButton) : null;
+}
+
 function setDetail(open: boolean) {
   document.querySelector<HTMLElement>('[class*="SettingsWorkspace_workspace"]')?.setAttribute("data-mobile-detail", open ? "true" : "false");
 }
@@ -89,24 +96,31 @@ export function InstalledAppSettingsSelectionSync() {
     const root = document.documentElement;
     if (!isInstalledStandaloneApp() || root.dataset.ficonterDevice !== "phone") return;
 
-    let backPending = false;
+    let parentListOpen = sectionFromLocation() === null;
+    let lastSelected: SectionId =
+      sectionFromLocation() ?? sectionFromReactState() ?? "security";
     let optimistic: SectionId | null = null;
     let intentTimer = 0;
 
     const sync = () => {
-      if (backPending) {
-        setSelection(null);
+      const locationSection = sectionFromLocation();
+      if (locationSection) lastSelected = locationSection;
+
+      if (parentListOpen) {
+        setSelection(lastSelected);
         setDetail(false);
         return;
       }
-      const section = optimistic ?? sectionFromLocation();
+
+      const section = optimistic ?? locationSection ?? lastSelected;
       setSelection(section);
-      setDetail(Boolean(section));
+      setDetail(true);
     };
 
     const forward = (section: SectionId) => {
-      backPending = false;
+      parentListOpen = false;
       optimistic = section;
+      lastSelected = section;
       restoreCommittedTheme();
       setSelection(section);
       setDetail(true);
@@ -118,11 +132,13 @@ export function InstalledAppSettingsSelectionSync() {
     };
 
     const back = () => {
-      backPending = true;
+      const currentSection = optimistic ?? sectionFromLocation() ?? lastSelected;
+      if (currentSection) lastSelected = currentSection;
+      parentListOpen = true;
       optimistic = null;
       if (intentTimer) window.clearTimeout(intentTimer);
       restoreCommittedTheme();
-      setSelection(null);
+      setSelection(lastSelected);
       setDetail(false);
     };
 
@@ -140,10 +156,21 @@ export function InstalledAppSettingsSelectionSync() {
     };
 
     const onPopState = () => {
-      backPending = false;
       optimistic = null;
       restoreCommittedTheme();
-      sync();
+
+      const locationSection = sectionFromLocation();
+      if (locationSection) {
+        lastSelected = locationSection;
+        parentListOpen = false;
+        setSelection(locationSection);
+        setDetail(true);
+        return;
+      }
+
+      parentListOpen = true;
+      setSelection(lastSelected);
+      setDetail(false);
     };
 
     const observer = new MutationObserver(sync);

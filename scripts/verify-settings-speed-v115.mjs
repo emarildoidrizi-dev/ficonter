@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 const settings = fs.readFileSync('components/SettingsWorkspace.tsx', 'utf8');
+const instantSync = fs.readFileSync('components/InstalledAppSettingsSelectionSync.tsx', 'utf8');
 const sidebar = fs.readFileSync('components/Sidebar.tsx', 'utf8');
 const stack = fs.readFileSync('app/mobile-page-stack.css', 'utf8');
 
@@ -11,10 +12,15 @@ const checks = [
   ['Settings no longer calls router.push for section changes', !settings.includes('router.push(target, { scroll: false });')],
   ['Settings synchronizes Back/history URL into local state', settings.includes('const sectionFromUrl = searchParams.get("section")')],
   ['Settings parent restores when section query disappears', settings.includes('setMobileDetailOpen(false);')],
+  ['Installed app handles Settings Back on pointer-down', instantSync.includes('button[aria-label="Go back"]') && instantSync.includes('back();')],
+  ['Installed app clears stale selected row before history reconciliation', instantSync.includes('setSelection(null);') && instantSync.includes('setDetail(false);')],
+  ['Installed app synchronizes popstate without requestAnimationFrame delay', instantSync.includes('window.addEventListener("popstate", onPopState)') && !instantSync.includes('requestAnimationFrame')],
+  ['Settings selected-row visual transitions are disabled in phone app', instantSync.includes('transition:none!important')],
+  ['Settings page-stack animation is bypassed in phone app', instantSync.includes('.app-main > .ficonter-settings-page') && instantSync.includes('animation:none!important')],
   ['Same-path Back uses browser history', sidebar.includes('window.history.back();')],
   ['Cross-path Back still uses client router', sidebar.includes('router.push(target, { scroll: false });')],
-  ['Phone forward transition is 220ms', stack.includes('ficonter-mobile-page-forward 220ms')],
-  ['Phone back transition is 200ms', stack.includes('ficonter-mobile-page-back 200ms')],
+  ['Global phone forward transition remains available', stack.includes('ficonter-mobile-page-forward 220ms')],
+  ['Global phone back transition remains available', stack.includes('ficonter-mobile-page-back 200ms')],
   ['Phone Settings taps use manipulation touch action', stack.includes('touch-action: manipulation;')],
   ['Tablet Settings contract remains present', stack.includes('V1.13 — Tablet/iPad contract.')],
 ];

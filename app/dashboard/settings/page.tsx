@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
+import { PasskeySecuritySettings } from "@/components/PasskeySecuritySettings";
 import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
@@ -187,6 +188,8 @@ export default async function SettingsPage({
           isSubscriptionExempt={isSubscriptionExempt}
           canManageWallpapers={canManageWallpapers}
         />
+
+        {section === "security" ? <PasskeySecuritySettings /> : null}
 
         {canAccessBackupRecovery ? (
           <BackupRecoverySettingsGate

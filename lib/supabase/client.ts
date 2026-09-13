@@ -53,6 +53,11 @@ function createConfiguredBrowserClient(
   keepSignedIn: boolean,
 ) {
   return createBrowserClient<Database>(url, key, {
+    auth: {
+      experimental: {
+        passkey: true,
+      },
+    },
     cookieOptions: {
       path: "/",
       sameSite: "lax",

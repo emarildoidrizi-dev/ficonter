@@ -25,6 +25,7 @@ type AuthFormProps = {
 export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProps) {
   const { language, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>("EUR");
   const currencyOptions = useMemo(
@@ -62,6 +63,29 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
       throw new Error(
         payload.error || "A valid Beta invitation code is required.",
       );
+    }
+  }
+
+  async function signInWithPasskey() {
+    if (mode !== "login" || betaEntry || loading || passkeyLoading) return;
+
+    setPasskeyLoading(true);
+    setMessage(null);
+
+    try {
+      saveTrustedDevicePreference(keepSignedIn);
+      const supabase = createClient(keepSignedIn);
+      const { error } = await supabase.auth.signInWithPasskey();
+      if (error) throw error;
+      window.location.assign("/dashboard");
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error
+          ? error.message
+          : "Passkey sign-in could not be completed.",
+      });
+      setPasskeyLoading(false);
     }
   }
 
@@ -444,7 +468,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
         <>
           <button
             className="btn btn-primary"
-            disabled={loading}
+            disabled={loading || passkeyLoading}
             type="submit"
             name="entryMode"
             value="beta"
@@ -457,7 +481,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
           </button>
           <button
             className="btn"
-            disabled={loading}
+            disabled={loading || passkeyLoading}
             type="submit"
             name="entryMode"
             value="free"
@@ -475,13 +499,36 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
           </button>
         </>
       ) : (
-        <button className="btn btn-primary" disabled={loading} type="submit">
-          {loading
-            ? "Please wait…"
-            : mode === "login"
-              ? "Log in"
-              : "Create account"}
-        </button>
+        <>
+          <button className="btn btn-primary" disabled={loading || passkeyLoading} type="submit">
+            {loading
+              ? "Please wait…"
+              : mode === "login"
+                ? "Log in"
+                : "Create account"}
+          </button>
+
+          {mode === "login" ? (
+            <>
+              <p className="center muted" style={{ margin: "2px 0", fontSize: 12 }}>
+                or
+              </p>
+              <button
+                className="btn"
+                disabled={loading || passkeyLoading}
+                type="button"
+                onClick={() => void signInWithPasskey()}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(120,110,90,.35)",
+                  color: "var(--ink, #1f2326)",
+                }}
+              >
+                {passkeyLoading ? "Verifying passkey…" : "Continue with Face ID / passkey"}
+              </button>
+            </>
+          ) : null}
+        </>
       )}
 
       <p className="center muted">

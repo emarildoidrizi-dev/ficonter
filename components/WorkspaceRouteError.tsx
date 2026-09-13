@@ -4,42 +4,7 @@ import { useEffect, useState } from "react";
 import { House, RefreshCw, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { requestFiconterNavigationIntent } from "@/lib/navigationRuntime";
-import {
-  isInstalledStandaloneApp,
-  recoverInstalledAppRuntime,
-} from "@/lib/pwaRuntimeRecovery";
 import styles from "./WorkspaceRouteError.module.css";
-
-const AUTO_RECOVERY_PREFIX = "ficonter:route-auto-recovery:";
-const AUTO_RECOVERY_TTL_MS = 90 * 1000;
-
-function autoRecoveryKey() {
-  return `${AUTO_RECOVERY_PREFIX}${window.location.pathname}`;
-}
-
-function shouldAttemptAutomaticRecovery() {
-  if (!isInstalledStandaloneApp() || !navigator.onLine) return false;
-
-  try {
-    const previousAttempt = Number(
-      window.sessionStorage.getItem(autoRecoveryKey()) || "0",
-    );
-    return (
-      !Number.isFinite(previousAttempt) ||
-      Date.now() - previousAttempt >= AUTO_RECOVERY_TTL_MS
-    );
-  } catch {
-    return true;
-  }
-}
-
-function markAutomaticRecoveryAttempt() {
-  try {
-    window.sessionStorage.setItem(autoRecoveryKey(), String(Date.now()));
-  } catch {
-    // The recovery still works when session storage is unavailable.
-  }
-}
 
 export function WorkspaceRouteError({
   error,
@@ -57,29 +22,11 @@ export function WorkspaceRouteError({
     // Keep the technical detail in the console while presenting a clean,
     // recoverable state to the user.
     console.error("FICONTER route boundary", error);
-
-    if (!shouldAttemptAutomaticRecovery()) return;
-
-    markAutomaticRecoveryAttempt();
-    setRetrying(true);
-
-    const timer = window.setTimeout(() => {
-      void recoverInstalledAppRuntime();
-    }, 80);
-
-    return () => window.clearTimeout(timer);
   }, [error]);
 
   function retry() {
     if (retrying) return;
     setRetrying(true);
-
-    if (isInstalledStandaloneApp() && navigator.onLine) {
-      markAutomaticRecoveryAttempt();
-      void recoverInstalledAppRuntime();
-      return;
-    }
-
     reset();
     window.setTimeout(() => setRetrying(false), 1200);
   }
@@ -103,7 +50,7 @@ export function WorkspaceRouteError({
       <div className={styles.actions}>
         <button type="button" onClick={retry} disabled={retrying}>
           <RefreshCw size={16} aria-hidden="true" />
-          {retrying ? "Refreshing app…" : "Retry"}
+          {retrying ? "Retrying…" : "Retry"}
         </button>
         <button type="button" className={styles.secondary} onClick={openOverview}>
           <House size={16} aria-hidden="true" />

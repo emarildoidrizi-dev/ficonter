@@ -12,14 +12,6 @@ type Props = {
   initialView?: View;
 };
 
-function isInstalledFiconterApp() {
-  const root = document.documentElement;
-  return (
-    root.dataset.ficonterNativeApp === "true" &&
-    root.dataset.ficonterDisplayMode === "standalone"
-  );
-}
-
 export function MobileTransactionsLayout({
   ledger,
   entry,
@@ -43,16 +35,6 @@ export function MobileTransactionsLayout({
     };
   }, []);
 
-  function openAddFromSwitcher() {
-    setView("add");
-
-    if (!isInstalledFiconterApp()) return;
-
-    window.requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("ficonter:quick-add-transaction"));
-    });
-  }
-
   return (
     <section className={styles.workspace} data-mobile-transaction-view={view}>
       <div className={styles.switcher} role="tablist" aria-label="Transactions view">
@@ -71,7 +53,7 @@ export function MobileTransactionsLayout({
           role="tab"
           aria-selected={view === "add"}
           className={view === "add" ? styles.active : undefined}
-          onClick={openAddFromSwitcher}
+          onClick={() => setView("add")}
         >
           <Plus size={18} aria-hidden="true" />
           Add transaction

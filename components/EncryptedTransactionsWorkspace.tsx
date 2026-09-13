@@ -18,59 +18,82 @@ type Props = {
   setupRequested: boolean;
 };
 
-export function EncryptedTransactionsWorkspace({
+export function EncryptedTransactionsWorkspace(props: Props) {
+  const { status: vaultStatus, vaultKey } = useVault();
+
+  if (vaultStatus !== "unlocked" || !vaultKey) {
+    return (
+      <div className="panel">
+        <div className="alert">
+          Unlock your Financial Vault to open Transactions.
+        </div>
+      </div>
+    );
+  }
+
+  return <UnlockedTransactionsWorkspace {...props} vaultKey={vaultKey} />;
+}
+
+function UnlockedTransactionsWorkspace({
   userId,
   initialType,
   allowMultiCurrency,
   allowPdfExport,
   directAdd,
   setupRequested,
-}: Props) {
+  vaultKey,
+}: Props & { vaultKey: CryptoKey }) {
   const supabase = useMemo(() => createClient(), []);
-  const { status: vaultStatus, vaultKey } = useVault();
   const { transactions, loading, error } = useEncryptedTransactions();
 
-  if (vaultStatus === "unlocked" && vaultKey) {
-    installTransactionTemplateE2eeBoundary(supabase, vaultKey, userId);
-  }
+  installTransactionTemplateE2eeBoundary(supabase, vaultKey, userId);
 
   return (
-    <MobileTransactionsLayout
-      initialView={directAdd || setupRequested ? "add" : "ledger"}
-      entry={
-        <div className="panel transaction-entry-panel transaction-effortless-panel">
-          <EffortlessEntryWorkspace
-            initialTransactions={transactions}
-            initialType={initialType}
-            allowMultiCurrency={allowMultiCurrency}
-            directAdd={directAdd}
-          />
+    <>
+      <header className="topbar">
+        <div className="page-title">
+          <h1>Transactions</h1>
+          <p>Review activity or add a transaction without leaving this screen.</p>
         </div>
-      }
-      ledger={
-        <div className="panel transaction-ledger-panel">
-          <div className="panel-head">
-            <div>
-              <h3>Transactions</h3>
-              <p className="muted transaction-intro">
-                A compact ledger for scanning activity. Open any transaction for its complete record and actions.
-              </p>
-            </div>
-          </div>
+      </header>
 
-          {loading ? (
-            <div className="alert">Opening encrypted transactions…</div>
-          ) : error ? (
-            <div className="alert alert-error">{error}</div>
-          ) : (
-            <CompactTransactionLedger
-              transactions={transactions}
+      <MobileTransactionsLayout
+        initialView={directAdd || setupRequested ? "add" : "ledger"}
+        entry={
+          <div className="panel transaction-entry-panel transaction-effortless-panel">
+            <EffortlessEntryWorkspace
+              initialTransactions={transactions}
+              initialType={initialType}
               allowMultiCurrency={allowMultiCurrency}
-              allowPdfExport={allowPdfExport}
+              directAdd={directAdd}
             />
-          )}
-        </div>
-      }
-    />
+          </div>
+        }
+        ledger={
+          <div className="panel transaction-ledger-panel">
+            <div className="panel-head">
+              <div>
+                <h3>Transactions</h3>
+                <p className="muted transaction-intro">
+                  A compact ledger for scanning activity. Open any transaction for its complete record and actions.
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="alert">Opening encrypted transactions…</div>
+            ) : error ? (
+              <div className="alert alert-error">{error}</div>
+            ) : (
+              <CompactTransactionLedger
+                transactions={transactions}
+                allowMultiCurrency={allowMultiCurrency}
+                allowPdfExport={allowPdfExport}
+              />
+            )}
+          </div>
+        }
+      />
+    </>
   );
 }

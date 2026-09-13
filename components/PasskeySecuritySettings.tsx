@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Fingerprint, KeyRound, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
+import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./PasskeySecuritySettings.module.css";
 
@@ -35,6 +36,8 @@ function formatDate(value: string | null | undefined): string {
 
 export function PasskeySecuritySettings() {
   const supabase = useMemo(() => createClient(), []);
+  const [appMode, setAppMode] = useState(false);
+  const [modeResolved, setModeResolved] = useState(false);
   const [supported, setSupported] = useState(false);
   const [passkeys, setPasskeys] = useState<PasskeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +64,16 @@ export function PasskeySecuritySettings() {
   }, [supabase]);
 
   useEffect(() => {
-    setSupported(passkeysSupportedInBrowser());
-    void loadPasskeys();
+    const installedApp = isStandaloneDisplayMode();
+    setAppMode(installedApp);
+    setSupported(installedApp && passkeysSupportedInBrowser());
+    setModeResolved(true);
+
+    if (installedApp) {
+      void loadPasskeys();
+    } else {
+      setLoading(false);
+    }
   }, [loadPasskeys]);
 
   async function registerPasskey() {
@@ -141,23 +152,25 @@ export function PasskeySecuritySettings() {
     }
   }
 
+  if (!modeResolved || !appMode) return null;
+
   return (
     <section className={styles.card} aria-labelledby="ficonter-passkeys-title">
       <div className={styles.heading}>
         <div className={styles.icon}><Fingerprint size={22} aria-hidden="true" /></div>
         <div>
-          <div className={styles.eyebrow}>Passwordless security</div>
+          <div className={styles.eyebrow}>App security</div>
           <h3 id="ficonter-passkeys-title">Face ID & passkeys</h3>
           <p>
-            Add a passkey to sign in with Face ID, Touch ID, Windows Hello, a device PIN,
-            or a compatible security key. FICONTER never receives your biometric data.
+            Add a passkey for the installed FICONTER app. On supported devices you can use
+            Face ID, Touch ID, or the device authenticator without exposing biometric data to FICONTER.
           </p>
         </div>
       </div>
 
       {!supported ? (
         <div className={styles.notice}>
-          This browser does not currently expose secure passkey authentication. Your password login remains available.
+          This device does not currently expose secure passkey authentication. Your password login remains available.
         </div>
       ) : null}
 
@@ -182,12 +195,12 @@ export function PasskeySecuritySettings() {
         {!loading && passkeys.length === 0 ? (
           <div className={styles.empty}>
             <KeyRound size={18} aria-hidden="true" />
-            No passkeys are registered yet. Your password continues to work normally.
+            No app passkeys are registered yet. Your password continues to work normally.
           </div>
         ) : null}
 
         {passkeys.map((passkey) => {
-          const name = passkey.friendly_name?.trim() || "FICONTER passkey";
+          const name = passkey.friendly_name?.trim() || "FICONTER app passkey";
           const created = formatDate(passkey.created_at);
           const lastUsed = formatDate(passkey.last_used_at);
           const isBusy = busyId === passkey.id;

@@ -6,6 +6,7 @@ import { Check, Copy, Fingerprint, Lock, ShieldCheck, Unlock, X } from "lucide-r
 
 import { useVault } from "@/components/VaultProvider";
 import { createClient } from "@/lib/supabase/client";
+import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
 import {
   clearVaultQuickUnlock,
   hasVaultQuickUnlock,
@@ -37,14 +38,18 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   const [quickUnlockEnabled, setQuickUnlockEnabled] = useState(false);
   const [passkeyUnlockEnabled, setPasskeyUnlockEnabled] = useState(false);
   const [passkeyCapable, setPasskeyCapable] = useState(false);
+  const [appMode, setAppMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    const installedApp = isStandaloneDisplayMode();
+    setAppMode(installedApp);
     setPasskeyCapable(
       Boolean(
-        typeof window !== "undefined" &&
+        installedApp &&
+          typeof window !== "undefined" &&
           window.isSecureContext &&
           typeof PublicKeyCredential !== "undefined" &&
           navigator.credentials,
@@ -57,7 +62,9 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       const id = data.user?.id ?? "";
       setUserId(id);
       setQuickUnlockEnabled(Boolean(id && hasVaultQuickUnlock(id)));
-      setPasskeyUnlockEnabled(Boolean(id && hasVaultPasskeyUnlock(id)));
+      setPasskeyUnlockEnabled(
+        Boolean(installedApp && id && hasVaultPasskeyUnlock(id)),
+      );
     });
     return () => { active = false; };
   }, [supabase]);
@@ -132,7 +139,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   }
 
   async function handlePasskeyUnlock() {
-    if (!userId || busy) return;
+    if (!appMode || !userId || busy) return;
     setBusy(true);
     setLocalError("");
     try {
@@ -169,7 +176,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   }
 
   async function handleEnablePasskeyUnlock() {
-    if (!userId || !pendingRecoveryCode || busy) return;
+    if (!appMode || !userId || !pendingRecoveryCode || busy) return;
     setBusy(true);
     setLocalError("");
     try {
@@ -177,7 +184,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       if (passkeyError) throw passkeyError;
       if (!passkeys?.length) {
         throw new Error(
-          "Add a passkey in Settings → Account & security first, then return here to enable Face ID / passkey vault unlock.",
+          "Add a passkey in Settings → Account & security inside the FICONTER app first, then return here to enable Face ID / passkey vault unlock.",
         );
       }
 
@@ -230,7 +237,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   }
 
   async function handleDisablePasskeyUnlock() {
-    if (!userId || busy) return;
+    if (!appMode || !userId || busy) return;
     setBusy(true);
     setLocalError("");
     try {
@@ -252,6 +259,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   }
 
   function handleStartPasskeySetup() {
+    if (!appMode) return;
     setSetupTarget("passkey");
     lockVault();
     setShowRecovery(true);
@@ -312,7 +320,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
             <div className={styles.biometricIcon}><Fingerprint size={26} aria-hidden="true" /></div>
             <div className={styles.pinLabel}>Unlock with Face ID / passkey</div>
             <p className={styles.unlockedText}>
-              Your device verifies you. FICONTER never receives your fingerprint or face data.
+              Your device verifies you inside the installed FICONTER app. FICONTER never receives your fingerprint or face data.
             </p>
             <button type="button" className={styles.primary} disabled={busy} onClick={() => void handlePasskeyUnlock()}>
               <Fingerprint size={16} aria-hidden="true" />
@@ -414,7 +422,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                 {pendingRecoveryCode && setupTarget !== "pin" ? (
                   <>
                     <p className={styles.unlockedText}>
-                      Protect a device-only Vault shortcut behind your registered FICONTER passkey. Your recovery code is encrypted locally and never sent to FICONTER.
+                      Protect an app-only Vault shortcut behind your registered FICONTER passkey. Your recovery code is encrypted locally and never sent to FICONTER.
                     </p>
                     <button type="button" className={styles.primary} disabled={busy} onClick={() => void handleEnablePasskeyUnlock()}>
                       <Fingerprint size={16} aria-hidden="true" />
@@ -424,7 +432,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
                 ) : (
                   <>
                     <p className={styles.unlockedText}>
-                      Verify your recovery code once to authorize passkey-protected Vault unlock on this device.
+                      Verify your recovery code once to authorize passkey-protected Vault unlock in this installed app.
                     </p>
                     <button type="button" className={styles.primary} onClick={handleStartPasskeySetup}>
                       Set up Face ID / passkey unlock
@@ -434,7 +442,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
               </div>
             ) : passkeyUnlockEnabled ? (
               <button type="button" className={styles.secondary} disabled={busy} onClick={() => void handleDisablePasskeyUnlock()}>
-                Remove Face ID / passkey Vault Unlock from this device
+                Remove Face ID / passkey Vault Unlock from this app
               </button>
             ) : null}
 

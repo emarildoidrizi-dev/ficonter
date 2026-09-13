@@ -1,7 +1,7 @@
 "use client";
 
 import { PasswordInput } from "./PasswordInput";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CURRENCY_CODES,
@@ -11,6 +11,7 @@ import {
 import { normalizeCurrency } from "@/lib/finance/currencyEngine";
 import { useLanguage } from "./LanguageProvider";
 import { type AuthEntry, withAuthEntry } from "@/lib/auth/recovery";
+import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
 import {
   createClient,
   saveTrustedDevicePreference,
@@ -26,6 +27,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
   const { language, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [appMode, setAppMode] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>("EUR");
   const currencyOptions = useMemo(
@@ -43,6 +45,10 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
     type: "error" | "success";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    setAppMode(isStandaloneDisplayMode());
+  }, []);
 
   async function authorizeCurrentBetaLogin(code: string) {
     const response = await fetch("/api/beta/login-authorize", {
@@ -67,7 +73,15 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
   }
 
   async function signInWithPasskey() {
-    if (mode !== "login" || betaEntry || loading || passkeyLoading) return;
+    if (
+      mode !== "login" ||
+      betaEntry ||
+      !appMode ||
+      loading ||
+      passkeyLoading
+    ) {
+      return;
+    }
 
     setPasskeyLoading(true);
     setMessage(null);
@@ -508,7 +522,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
                 : "Create account"}
           </button>
 
-          {mode === "login" ? (
+          {mode === "login" && appMode ? (
             <>
               <p className="center muted" style={{ margin: "2px 0", fontSize: 12 }}>
                 or
@@ -524,7 +538,7 @@ export function AuthForm({ mode, betaEntry = false, entry = null }: AuthFormProp
                   color: "var(--ink, #1f2326)",
                 }}
               >
-                {passkeyLoading ? "Verifying passkey…" : "Continue with Face ID / passkey"}
+                {passkeyLoading ? "Verifying Face ID / passkey…" : "Continue with Face ID / passkey"}
               </button>
             </>
           ) : null}

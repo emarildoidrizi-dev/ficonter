@@ -1,4 +1,4 @@
-const CACHE_NAME = "ficonter-pwa-static-v15-ios-clarity-refresh";
+const CACHE_NAME = "ficonter-pwa-static-v16-deployment-recovery";
 
 const PRECACHE_URLS = [
   "/offline.html",
@@ -60,8 +60,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Next.js runtime chunks are intentionally left to the browser/CDN cache.
+  // Keeping them in a long-lived service-worker cache can mix an old app shell
+  // with a newer deployment after an iOS home-screen app resumes.
   const isSafeStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/wallpapers/") ||
     url.pathname === "/icon.svg" ||

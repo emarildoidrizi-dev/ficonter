@@ -34,11 +34,6 @@ const TEXT_SELECTOR = [
 // readable at every responsive size.
 const MIN_CONTRAST = 4.5;
 
-// Installed app controls use colour transitions of up to 180ms. Run contrast
-// correction only after those surfaces have fully settled. This prevents a
-// temporary in-between colour from being mistaken for the final app state.
-const APP_VISUAL_SETTLE_AUDIT_DELAY_MS = 220;
-
 function parseColor(value: string): Rgba | null {
   if (!value || value === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
 
@@ -169,9 +164,6 @@ function effectiveBackground(element: Element): Rgba {
     const background = parseColor(style.backgroundColor);
     if (background && background.a > 0) result = composite(background, result);
 
-    // CSS gradients sit above background-color. Sampling their declared color
-    // stops is a stable approximation and prevents a transparent element from
-    // incorrectly inheriting the wallpaper's light/dark tone.
     const gradientColors = backgroundImageColors(style.backgroundImage);
     if (gradientColors.length) {
       result = averageColors(
@@ -261,18 +253,36 @@ function rgbaToCss(color: Rgba) {
   return `rgb(${Math.round(color.r)} ${Math.round(color.g)} ${Math.round(color.b)})`;
 }
 
+function clearExistingAutoContrastOverrides() {
+  for (const element of document.querySelectorAll<HTMLElement>(
+    ".ficonter-auto-contrast, [style*='--ficonter-auto-text']",
+  )) {
+    element.classList.remove("ficonter-auto-contrast");
+    element.style.removeProperty("--ficonter-auto-text");
+  }
+}
+
 export function ThemeContrastGuard() {
   useEffect(() => {
     const root = document.documentElement;
+    const installedApp =
+      root.dataset.ficonterNativeApp === "true" &&
+      root.dataset.ficonterDisplayMode === "standalone";
+
+    // The installed app uses semantic CSS theme tokens as the single source of
+    // truth for text and surface colours. Never recolour app text after render:
+    // doing so creates a race between navigation/theme paint and this observer.
+    // Browser sessions retain the legacy safety audit below.
+    if (installedApp) {
+      clearExistingAutoContrastOverrides();
+      return;
+    }
+
     let fullAuditFrame = 0;
     let fullAuditTimer = 0;
-    let appSettleAuditTimer = 0;
-    let appScopeAuditTimer = 0;
-    let appScopeAuditFrame = 0;
     let incrementalFrame = 0;
     const adjusted = new Set<HTMLElement>();
     const pendingScopes = new Set<Element>();
-    const pendingAppScopes = new Set<Element>();
 
     function removeAdjustment(element: HTMLElement) {
       element.classList.remove("ficonter-auto-contrast");
@@ -319,18 +329,6 @@ export function ThemeContrastGuard() {
       return elements;
     }
 
-    function clearScopeAdjustments(scope: ParentNode) {
-      for (const element of collectTextElements(scope)) {
-        if (
-          adjusted.has(element) ||
-          element.classList.contains("ficonter-auto-contrast") ||
-          element.style.getPropertyValue("--ficonter-auto-text")
-        ) {
-          removeAdjustment(element);
-        }
-      }
-    }
-
     function auditScope(scope: ParentNode) {
       for (const element of collectTextElements(scope)) auditElement(element);
     }
@@ -351,56 +349,6 @@ export function ThemeContrastGuard() {
       }, delay);
     }
 
-    function isInstalledApp() {
-      return (
-        root.dataset.ficonterNativeApp === "true" &&
-        root.dataset.ficonterDisplayMode === "standalone"
-      );
-    }
-
-    function cancelAppScopeAudit() {
-      if (appScopeAuditTimer) {
-        window.clearTimeout(appScopeAuditTimer);
-        appScopeAuditTimer = 0;
-      }
-      if (appScopeAuditFrame) {
-        window.cancelAnimationFrame(appScopeAuditFrame);
-        appScopeAuditFrame = 0;
-      }
-      pendingAppScopes.clear();
-    }
-
-    function scheduleAppSettledAudit() {
-      if (!isInstalledApp()) return false;
-
-      // Any correction from the previous visual state is now stale. Remove it
-      // before the new palette/surface animates so transient colours cannot be
-      // locked in as permanent text overrides.
-      clearAdjustments();
-      cancelAppScopeAudit();
-
-      if (fullAuditTimer) {
-        window.clearTimeout(fullAuditTimer);
-        fullAuditTimer = 0;
-      }
-      if (fullAuditFrame) {
-        window.cancelAnimationFrame(fullAuditFrame);
-        fullAuditFrame = 0;
-      }
-      if (appSettleAuditTimer) {
-        window.clearTimeout(appSettleAuditTimer);
-      }
-
-      appSettleAuditTimer = window.setTimeout(() => {
-        appSettleAuditTimer = 0;
-        if (!isInstalledApp()) return;
-
-        fullAuditFrame = window.requestAnimationFrame(runFullAudit);
-      }, APP_VISUAL_SETTLE_AUDIT_DELAY_MS);
-
-      return true;
-    }
-
     function runIncrementalAudit() {
       incrementalFrame = 0;
       const scopes = [...pendingScopes];
@@ -414,71 +362,7 @@ export function ThemeContrastGuard() {
       incrementalFrame = window.requestAnimationFrame(runIncrementalAudit);
     }
 
-    function runAppSettledScopeAudit() {
-      appScopeAuditFrame = 0;
-      if (!isInstalledApp()) {
-        pendingAppScopes.clear();
-        return;
-      }
-
-      const scopes = [...pendingAppScopes];
-      pendingAppScopes.clear();
-      for (const scope of scopes) {
-        if (scope.isConnected) auditScope(scope);
-      }
-    }
-
-    function scheduleAppSettledScopeAudit(scope: Element) {
-      if (!isInstalledApp()) return false;
-
-      // Class changes can flip a card/button from a light to a dark surface.
-      // Remove any correction calculated for the old surface immediately, then
-      // recalculate after the transition is complete.
-      clearScopeAdjustments(scope);
-      pendingAppScopes.add(scope);
-
-      // A pending full app audit is already authoritative for this scope.
-      if (appSettleAuditTimer) return true;
-
-      if (appScopeAuditTimer) window.clearTimeout(appScopeAuditTimer);
-      if (appScopeAuditFrame) {
-        window.cancelAnimationFrame(appScopeAuditFrame);
-        appScopeAuditFrame = 0;
-      }
-
-      appScopeAuditTimer = window.setTimeout(() => {
-        appScopeAuditTimer = 0;
-        if (!isInstalledApp()) {
-          pendingAppScopes.clear();
-          return;
-        }
-        appScopeAuditFrame = window.requestAnimationFrame(runAppSettledScopeAudit);
-      }, APP_VISUAL_SETTLE_AUDIT_DELAY_MS);
-
-      return true;
-    }
-
-    function normalizedClassWithoutAutoContrast(value: string | null) {
-      return (value ?? "")
-        .split(/\s+/)
-        .filter((className) => className && className !== "ficonter-auto-contrast")
-        .sort()
-        .join(" ");
-    }
-
-    function isMeaningfulClassMutation(record: MutationRecord) {
-      if (!(record.target instanceof Element)) return false;
-      return (
-        normalizedClassWithoutAutoContrast(record.oldValue) !==
-        normalizedClassWithoutAutoContrast(record.target.getAttribute("class"))
-      );
-    }
-
-    const rootObserver = new MutationObserver(() => {
-      // Installed PWA/app gets a post-transition audit. Browser behavior stays
-      // exactly as before and continues to use the existing immediate audit.
-      if (!scheduleAppSettledAudit()) scheduleFullAudit();
-    });
+    const rootObserver = new MutationObserver(() => scheduleFullAudit());
     rootObserver.observe(root, {
       attributes: true,
       attributeFilter: [
@@ -487,53 +371,28 @@ export function ThemeContrastGuard() {
         "data-wallpaper-scene",
         "data-wallpaper-daypart",
         "data-background-motion",
-        "data-ficonter-native-app",
-        "data-ficonter-display-mode",
       ],
     });
 
-    // Installed app route mounts and active-state class changes can happen
-    // while colours are transitioning. Delay only those app audits; browser
-    // sessions retain the original immediate added-node behavior.
     const contentObserver = new MutationObserver((records) => {
       for (const record of records) {
-        if (record.type === "childList") {
-          for (const node of record.addedNodes) {
-            if (!(node instanceof Element)) continue;
-            if (!scheduleAppSettledScopeAudit(node)) scheduleIncrementalAudit(node);
-          }
-          continue;
-        }
-
-        if (
-          record.type === "attributes" &&
-          record.attributeName === "class" &&
-          isInstalledApp() &&
-          isMeaningfulClassMutation(record) &&
-          record.target instanceof Element
-        ) {
-          scheduleAppSettledScopeAudit(record.target);
+        if (record.type !== "childList") continue;
+        for (const node of record.addedNodes) {
+          if (node instanceof Element) scheduleIncrementalAudit(node);
         }
       }
     });
     contentObserver.observe(document.body, {
       childList: true,
       subtree: true,
-      attributes: true,
-      attributeFilter: ["class"],
-      attributeOldValue: true,
     });
 
     const handleResize = () => scheduleFullAudit(90);
-    const handlePreferences = () => {
-      if (!scheduleAppSettledAudit()) scheduleFullAudit();
-    };
+    const handlePreferences = () => scheduleFullAudit();
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("ficonter:preferences-updated", handlePreferences);
 
-    // The installed app can mount controls already in their active state. Its
-    // first audit must therefore wait for the same colour transition boundary.
-    if (!scheduleAppSettledAudit()) scheduleFullAudit(0);
+    scheduleFullAudit(0);
 
     return () => {
       rootObserver.disconnect();
@@ -543,11 +402,7 @@ export function ThemeContrastGuard() {
       if (fullAuditFrame) window.cancelAnimationFrame(fullAuditFrame);
       if (incrementalFrame) window.cancelAnimationFrame(incrementalFrame);
       if (fullAuditTimer) window.clearTimeout(fullAuditTimer);
-      if (appSettleAuditTimer) window.clearTimeout(appSettleAuditTimer);
-      if (appScopeAuditTimer) window.clearTimeout(appScopeAuditTimer);
-      if (appScopeAuditFrame) window.cancelAnimationFrame(appScopeAuditFrame);
       pendingScopes.clear();
-      pendingAppScopes.clear();
       clearAdjustments();
     };
   }, []);

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Copy, Lock, ShieldCheck, Unlock, X } from "lucide-react";
+import { Check, Copy, Fingerprint, Lock, ShieldCheck, Unlock, X } from "lucide-react";
 
 import { useVault } from "@/components/VaultProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +12,15 @@ import {
   recoverCodeWithVaultPin,
   saveVaultQuickUnlock,
 } from "@/lib/e2ee/vaultQuickUnlock";
+import {
+  clearVaultPasskeyUnlock,
+  hasVaultPasskeyUnlock,
+  recoverCodeWithVaultPasskey,
+  saveVaultPasskeyUnlock,
+} from "@/lib/e2ee/vaultPasskeyUnlock";
 import styles from "./VaultHeaderControl.module.css";
+
+type SetupTarget = "pin" | "passkey" | null;
 
 export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   const supabase = useMemo(() => createClient(), []);
@@ -24,18 +32,32 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
   const [newRecoveryCode, setNewRecoveryCode] = useState<string | null>(null);
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showPinFallback, setShowPinFallback] = useState(false);
+  const [setupTarget, setSetupTarget] = useState<SetupTarget>(null);
   const [quickUnlockEnabled, setQuickUnlockEnabled] = useState(false);
+  const [passkeyUnlockEnabled, setPasskeyUnlockEnabled] = useState(false);
+  const [passkeyCapable, setPasskeyCapable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    setPasskeyCapable(
+      Boolean(
+        typeof window !== "undefined" &&
+          window.isSecureContext &&
+          typeof PublicKeyCredential !== "undefined" &&
+          navigator.credentials,
+      ),
+    );
+
     let active = true;
     void supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
       const id = data.user?.id ?? "";
       setUserId(id);
       setQuickUnlockEnabled(Boolean(id && hasVaultQuickUnlock(id)));
+      setPasskeyUnlockEnabled(Boolean(id && hasVaultPasskeyUnlock(id)));
     });
     return () => { active = false; };
   }, [supabase]);
@@ -45,6 +67,8 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       setPin("");
       setRecoveryInput("");
       setShowRecovery(false);
+      setShowPinFallback(false);
+      setSetupTarget(null);
       setLocalError("");
       setPendingRecoveryCode(null);
     }
@@ -78,6 +102,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       const recoveryCode = await createVault();
       setNewRecoveryCode(recoveryCode);
       setPendingRecoveryCode(recoveryCode);
+      setSetupTarget(null);
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "The vault could not be created.");
     } finally {
@@ -93,14 +118,35 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     try {
       await unlockVault(code);
       setRecoveryInput("");
-      if (quickUnlockEnabled) {
+      setPendingRecoveryCode(code);
+      setPin("");
+
+      if (!setupTarget && (quickUnlockEnabled || passkeyUnlockEnabled)) {
         setOpen(false);
-      } else {
-        setPendingRecoveryCode(code);
-        setPin("");
       }
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "The vault could not be unlocked.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePasskeyUnlock() {
+    if (!userId || busy) return;
+    setBusy(true);
+    setLocalError("");
+    try {
+      const { data, error: passkeyError } = await supabase.auth.signInWithPasskey();
+      if (passkeyError) throw passkeyError;
+      if (!data.user || data.user.id !== userId) {
+        throw new Error("The verified passkey belongs to a different FICONTER account.");
+      }
+
+      const recoveryCode = await recoverCodeWithVaultPasskey(userId);
+      await unlockVault(recoveryCode);
+      setOpen(false);
+    } catch (caught) {
+      setLocalError(caught instanceof Error ? caught.message : "Passkey vault unlock failed.");
     } finally {
       setBusy(false);
     }
@@ -122,6 +168,31 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     }
   }
 
+  async function handleEnablePasskeyUnlock() {
+    if (!userId || !pendingRecoveryCode || busy) return;
+    setBusy(true);
+    setLocalError("");
+    try {
+      const { data: passkeys, error: passkeyError } = await supabase.auth.passkey.list();
+      if (passkeyError) throw passkeyError;
+      if (!passkeys?.length) {
+        throw new Error(
+          "Add a passkey in Settings → Account & security first, then return here to enable Face ID / passkey vault unlock.",
+        );
+      }
+
+      await saveVaultPasskeyUnlock(userId, pendingRecoveryCode);
+      setPasskeyUnlockEnabled(true);
+      setPendingRecoveryCode(null);
+      setSetupTarget(null);
+      setOpen(false);
+    } catch (caught) {
+      setLocalError(caught instanceof Error ? caught.message : "Passkey vault unlock could not be enabled.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleEnablePin() {
     if (!userId || pin.length !== 6 || !pendingRecoveryCode || busy) return;
     setBusy(true);
@@ -131,6 +202,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
       setQuickUnlockEnabled(true);
       setPin("");
       setPendingRecoveryCode(null);
+      setSetupTarget(null);
       setOpen(false);
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : "Quick unlock could not be enabled.");
@@ -157,9 +229,33 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
     setPin("");
   }
 
+  async function handleDisablePasskeyUnlock() {
+    if (!userId || busy) return;
+    setBusy(true);
+    setLocalError("");
+    try {
+      await clearVaultPasskeyUnlock(userId);
+      setPasskeyUnlockEnabled(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function handleStartPinSetup() {
+    setSetupTarget("pin");
     lockVault();
     setShowRecovery(true);
+    setShowPinFallback(false);
+    setLocalError("");
+    setPin("");
+    setRecoveryInput("");
+  }
+
+  function handleStartPasskeySetup() {
+    setSetupTarget("passkey");
+    lockVault();
+    setShowRecovery(true);
+    setShowPinFallback(false);
     setLocalError("");
     setPin("");
     setRecoveryInput("");
@@ -211,7 +307,29 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
           </>
         ) : null}
 
-        {status === "locked" && quickUnlockEnabled && !showRecovery ? (
+        {status === "locked" && passkeyUnlockEnabled && !showRecovery && !showPinFallback ? (
+          <div className={styles.pinWrap}>
+            <div className={styles.biometricIcon}><Fingerprint size={26} aria-hidden="true" /></div>
+            <div className={styles.pinLabel}>Unlock with Face ID / passkey</div>
+            <p className={styles.unlockedText}>
+              Your device verifies you. FICONTER never receives your fingerprint or face data.
+            </p>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => void handlePasskeyUnlock()}>
+              <Fingerprint size={16} aria-hidden="true" />
+              {busy ? "Verifying…" : "Unlock with Face ID / passkey"}
+            </button>
+            {quickUnlockEnabled ? (
+              <button type="button" className={styles.textButton} onClick={() => { setShowPinFallback(true); setLocalError(""); }}>
+                Use 6-digit PIN instead
+              </button>
+            ) : null}
+            <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(true); setLocalError(""); }}>
+              Use recovery code
+            </button>
+          </div>
+        ) : null}
+
+        {status === "locked" && quickUnlockEnabled && !showRecovery && (!passkeyUnlockEnabled || showPinFallback) ? (
           <div className={styles.pinWrap}>
             <div className={styles.pinLabel}>Enter your 6-digit FICONTER PIN</div>
             <input
@@ -228,16 +346,21 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
             <button type="button" className={styles.primary} disabled={busy || pin.length !== 6} onClick={handlePinUnlock}>
               {busy ? "Unlocking…" : "Unlock vault"}
             </button>
+            {passkeyUnlockEnabled ? (
+              <button type="button" className={styles.textButton} onClick={() => { setShowPinFallback(false); setPin(""); setLocalError(""); }}>
+                Back to Face ID / passkey
+              </button>
+            ) : null}
             <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(true); setPin(""); setLocalError(""); }}>
               Forgot PIN? Use recovery code
             </button>
           </div>
         ) : null}
 
-        {status === "locked" && (!quickUnlockEnabled || showRecovery) ? (
+        {status === "locked" && (showRecovery || (!quickUnlockEnabled && !passkeyUnlockEnabled)) ? (
           <>
             <div className={styles.notice}>
-              <strong>Your recovery code stays exactly the same.</strong> Enter it once to verify this device and, if Quick Unlock is not enabled yet, create your 6-digit PIN next.
+              <strong>Your recovery code stays exactly the same.</strong> Enter it to unlock the Vault or to authorize a secure shortcut on this device.
             </div>
             <input
               className={styles.field}
@@ -250,9 +373,13 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
               spellCheck={false}
             />
             <button type="button" className={styles.primary} disabled={busy || !recoveryInput.trim()} onClick={handleRecoveryUnlock}>
-              {busy ? "Verifying…" : quickUnlockEnabled ? "Unlock with recovery code" : "Verify recovery code"}
+              {busy ? "Verifying…" : "Verify recovery code"}
             </button>
-            {quickUnlockEnabled ? (
+            {passkeyUnlockEnabled ? (
+              <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(false); setShowPinFallback(false); setLocalError(""); }}>
+                Back to Face ID / passkey
+              </button>
+            ) : quickUnlockEnabled ? (
               <button type="button" className={styles.textButton} onClick={() => { setShowRecovery(false); setLocalError(""); }}>
                 Back to PIN
               </button>
@@ -269,7 +396,7 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
 
             {newRecoveryCode ? (
               <div className={styles.notice}>
-                <strong>Save your recovery code now.</strong> You may need it on another device or if Quick Unlock is unavailable.
+                <strong>Save your recovery code now.</strong> You may need it on another device or whenever passkey/PIN unlock is unavailable.
                 <div className={styles.recoveryCode}>{newRecoveryCode}</div>
                 <div className={styles.actions}>
                   <button type="button" className={styles.secondary} onClick={handleCopyRecoveryCode}>
@@ -280,10 +407,41 @@ export function VaultHeaderControl({ hidden = false }: { hidden?: boolean }) {
               </div>
             ) : null}
 
+            {passkeyCapable && !passkeyUnlockEnabled ? (
+              <div className={styles.pinWrap}>
+                <div className={styles.biometricIcon}><Fingerprint size={24} aria-hidden="true" /></div>
+                <div className={styles.pinLabel}>Face ID / passkey Vault Unlock</div>
+                {pendingRecoveryCode && setupTarget !== "pin" ? (
+                  <>
+                    <p className={styles.unlockedText}>
+                      Protect a device-only Vault shortcut behind your registered FICONTER passkey. Your recovery code is encrypted locally and never sent to FICONTER.
+                    </p>
+                    <button type="button" className={styles.primary} disabled={busy} onClick={() => void handleEnablePasskeyUnlock()}>
+                      <Fingerprint size={16} aria-hidden="true" />
+                      {busy ? "Enabling…" : "Enable Face ID / passkey unlock"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.unlockedText}>
+                      Verify your recovery code once to authorize passkey-protected Vault unlock on this device.
+                    </p>
+                    <button type="button" className={styles.primary} onClick={handleStartPasskeySetup}>
+                      Set up Face ID / passkey unlock
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : passkeyUnlockEnabled ? (
+              <button type="button" className={styles.secondary} disabled={busy} onClick={() => void handleDisablePasskeyUnlock()}>
+                Remove Face ID / passkey Vault Unlock from this device
+              </button>
+            ) : null}
+
             {!quickUnlockEnabled ? (
               <div className={styles.pinWrap}>
                 <div className={styles.pinLabel}>Set a 6-digit Quick Unlock PIN for this device</div>
-                {pendingRecoveryCode ? (
+                {pendingRecoveryCode && setupTarget !== "passkey" ? (
                   <>
                     <p className={styles.unlockedText}>This PIN is an extra device shortcut. It does not replace, reset, or modify your recovery code.</p>
                     <input

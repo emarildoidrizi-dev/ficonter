@@ -189,7 +189,7 @@ export default async function SettingsPage({
           canManageWallpapers={canManageWallpapers}
         />
 
-        {section === "security" ? <PasskeySecuritySettings /> : null}
+        <PasskeySecuritySettings />
 
         {canAccessBackupRecovery ? (
           <BackupRecoverySettingsGate

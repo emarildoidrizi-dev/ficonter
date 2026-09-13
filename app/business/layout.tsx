@@ -4,6 +4,7 @@ import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
+import { InstalledAppPerformanceBoost } from "@/components/InstalledAppPerformanceBoost";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
 import { RealtimeRefreshBridge } from "@/components/RealtimeRefreshBridge";
@@ -93,6 +94,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         <RuntimeStabilityBridge />
         <UsageHeartbeat workspace="business" />
         <NavigationSpeedBoost
+          workspace="business"
+          cacheKey={business?.id ?? "none"}
+        />
+        <InstalledAppPerformanceBoost
           workspace="business"
           cacheKey={business?.id ?? "none"}
         />

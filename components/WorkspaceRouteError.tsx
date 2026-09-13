@@ -55,44 +55,34 @@ export function WorkspaceRouteError({
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
-    // Keep technical detail in the console. Installed apps recover silently;
-    // the manual recovery card remains available only to browser sessions.
     console.error("FICONTER route boundary", error);
 
     if (!isInstalledStandaloneApp()) {
+      setRetrying(false);
+      setShowFallback(true);
+      return;
+    }
+
+    // Never silently replace the route the user requested with Overview.
+    // If the installed runtime is stale, refresh that exact route once. If it
+    // still fails, keep the user on the route and expose explicit recovery
+    // controls instead of changing sections behind their back.
+    if (!navigator.onLine || !shouldAttemptAutomaticRecovery()) {
+      setRetrying(false);
       setShowFallback(true);
       return;
     }
 
     setShowFallback(false);
     setRetrying(true);
+    markAutomaticRecoveryAttempt();
 
-    const currentPath = window.location.pathname;
     const timer = window.setTimeout(() => {
-      if (!navigator.onLine) {
-        window.location.replace(
-          currentPath === overviewHref ? "/offline.html" : overviewHref,
-        );
-        return;
-      }
-
-      if (shouldAttemptAutomaticRecovery()) {
-        markAutomaticRecoveryAttempt();
-        void recoverInstalledAppRuntime();
-        return;
-      }
-
-      // If the same route fails again immediately after a runtime refresh,
-      // leave the broken route automatically instead of exposing an error UI.
-      // Overview is the safe in-app fallback; if Overview itself is the route
-      // that failed, leave the workspace shell rather than entering a reload loop.
-      void recoverInstalledAppRuntime(
-        currentPath === overviewHref ? "/" : overviewHref,
-      );
+      void recoverInstalledAppRuntime();
     }, 60);
 
     return () => window.clearTimeout(timer);
-  }, [error, overviewHref]);
+  }, [error]);
 
   function retry() {
     if (retrying) return;
@@ -121,11 +111,11 @@ export function WorkspaceRouteError({
       </div>
       <div className={styles.actions}>
         <button type="button" onClick={retry} disabled={retrying}>
-          <RefreshCw size={16} aria-hidden="true" />
+          <RefreshCw size={16} aria-hidden={true} />
           {retrying ? "Retrying…" : "Retry"}
         </button>
         <button type="button" className={styles.secondary} onClick={openOverview}>
-          <House size={16} aria-hidden="true" />
+          <House size={16} aria-hidden={true} />
           Overview
         </button>
       </div>

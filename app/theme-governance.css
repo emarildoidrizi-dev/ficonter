@@ -203,4 +203,26 @@ html[data-ficonter-native-app="true"] [class*="FiconterNativeAppChrome_drawer"] 
   --mobile-chrome-accent-text: var(--gold);
   --mobile-chrome-on-accent: var(--solid-text);
   --mobile-chrome-focus: var(--gold);
+  --mobile-chrome-danger-text: var(--burgundy);
+  --mobile-chrome-danger-icon: var(--burgundy);
+}
+
+/* Installed-app Settings navigation must paint its selected state atomically.
+   The active row owns a dark/solid surface, so every foreground inside that row
+   is bound directly to the on-solid token instead of waiting for a later
+   contrast audit. Browser sessions are intentionally excluded. */
+html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]
+  .app-main [class*="SettingsWorkspace_sectionActive"] {
+  color: var(--solid-text) !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]
+  .app-main [class*="SettingsWorkspace_sectionActive"] :where(strong, small) {
+  color: var(--solid-text) !important;
+  -webkit-text-fill-color: var(--solid-text) !important;
+}
+
+html[data-ficonter-native-app="true"][data-ficonter-display-mode="standalone"]
+  .app-main [class*="SettingsWorkspace_sectionActive"] > svg {
+  color: var(--solid-text) !important;
 }

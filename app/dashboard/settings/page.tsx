@@ -120,6 +120,12 @@ export default async function SettingsPage({
   const verifiedAccess = await getCurrentSubscriptionAccess();
   const effectivePlanCode = getEffectiveSubscriptionPlanCode(verifiedAccess);
 
+  /*
+   * The subscription row and this page query can race the server-side expiry
+   * normalizer by a few milliseconds. Always render the verified effective
+   * entitlement, so an expired canceled plan is shown as Free immediately even
+   * if this request started with the old paid database snapshot.
+   */
   const verifiedSubscriptionSnapshot =
     !isSubscriptionExempt &&
     effectivePlanCode === "free" &&

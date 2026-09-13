@@ -42,22 +42,13 @@ export default async function TransactionsPage({
   ]);
 
   return (
-    <>
-      <header className="topbar">
-        <div className="page-title">
-          <h1>Transactions</h1>
-          <p>Review activity or add a transaction without leaving this screen.</p>
-        </div>
-      </header>
-
-      <EncryptedTransactionsWorkspace
-        userId={user.id}
-        initialType={initialType}
-        allowMultiCurrency={allowMultiCurrency}
-        allowPdfExport={allowPdfExport}
-        directAdd={directAdd}
-        setupRequested={Boolean(setupValue)}
-      />
-    </>
+    <EncryptedTransactionsWorkspace
+      userId={user.id}
+      initialType={initialType}
+      allowMultiCurrency={allowMultiCurrency}
+      allowPdfExport={allowPdfExport}
+      directAdd={directAdd}
+      setupRequested={Boolean(setupValue)}
+    />
   );
 }

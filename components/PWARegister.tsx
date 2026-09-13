@@ -4,9 +4,19 @@ import { useEffect, useRef } from "react";
 import { isFiconterNavigationPending } from "@/lib/navigationRuntime";
 import { isInstalledStandaloneApp } from "@/lib/pwaRuntimeRecovery";
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (
+    callback: () => void,
+    options?: { timeout?: number },
+  ) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 const SERVICE_WORKER_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 const CONTROLLER_REFRESH_KEY = "ficonter:pwa-controller-refresh";
 const CONTROLLER_REFRESH_TTL_MS = 60 * 1000;
+const APP_UPDATE_IDLE_TIMEOUT_MS = 2400;
+const APP_UPDATE_FALLBACK_MS = 1600;
 
 export function PWARegister() {
   const lastUpdateRef = useRef(0);
@@ -17,7 +27,10 @@ export function PWARegister() {
     let cancelled = false;
     let controllerReloadScheduled = false;
     let controllerRetryTimer: number | null = null;
+    let deferredUpdateTimer: number | null = null;
+    let deferredUpdateIdleHandle: number | null = null;
     const hadControllerAtMount = Boolean(navigator.serviceWorker.controller);
+    const idleWindow = window as IdleWindow;
 
     const updateRegistration = async (force = false) => {
       if (cancelled || document.visibilityState !== "visible") return;
@@ -39,6 +52,45 @@ export function PWARegister() {
         await registration.update();
       } catch {
         // The current app session remains usable if an update check fails.
+      }
+    };
+
+    const cancelDeferredUpdate = () => {
+      if (deferredUpdateTimer !== null) {
+        window.clearTimeout(deferredUpdateTimer);
+        deferredUpdateTimer = null;
+      }
+      if (
+        deferredUpdateIdleHandle !== null &&
+        idleWindow.cancelIdleCallback
+      ) {
+        idleWindow.cancelIdleCallback(deferredUpdateIdleHandle);
+        deferredUpdateIdleHandle = null;
+      }
+    };
+
+    const scheduleRegistrationUpdate = (force = false) => {
+      // Browser sessions keep the existing eager update behavior. Only the
+      // installed app defers update work so startup and the first navigation
+      // taps get the main thread/network first.
+      if (!isInstalledStandaloneApp()) {
+        void updateRegistration(force);
+        return;
+      }
+
+      cancelDeferredUpdate();
+      const run = () => {
+        deferredUpdateTimer = null;
+        deferredUpdateIdleHandle = null;
+        if (!cancelled) void updateRegistration(force);
+      };
+
+      if (idleWindow.requestIdleCallback) {
+        deferredUpdateIdleHandle = idleWindow.requestIdleCallback(run, {
+          timeout: APP_UPDATE_IDLE_TIMEOUT_MS,
+        });
+      } else {
+        deferredUpdateTimer = window.setTimeout(run, APP_UPDATE_FALLBACK_MS);
       }
     };
 
@@ -89,7 +141,7 @@ export function PWARegister() {
           scope: "/",
           updateViaCache: "none",
         });
-        if (!cancelled) void updateRegistration(true);
+        if (!cancelled) scheduleRegistrationUpdate(true);
       } catch {
         // The normal Ficonter website remains fully usable.
       }
@@ -103,18 +155,19 @@ export function PWARegister() {
 
     const refreshRegistration = () => {
       if (document.visibilityState === "visible") {
-        // A home-screen app can stay suspended on iOS for hours or days.
-        // Always check the service worker when the app becomes foregrounded.
-        void updateRegistration(true);
+        // A home-screen app can stay suspended on iOS for hours or days. Check
+        // for updates after foregrounding, but never compete with the user's
+        // first route tap or command.
+        scheduleRegistrationUpdate(true);
       }
     };
 
     const handleOnline = () => {
-      void updateRegistration(true);
+      scheduleRegistrationUpdate(true);
     };
 
     const updateTimer = window.setInterval(() => {
-      void updateRegistration(false);
+      scheduleRegistrationUpdate(false);
     }, SERVICE_WORKER_UPDATE_INTERVAL_MS);
 
     navigator.serviceWorker.addEventListener(
@@ -127,6 +180,7 @@ export function PWARegister() {
     return () => {
       cancelled = true;
       window.clearInterval(updateTimer);
+      cancelDeferredUpdate();
       if (controllerRetryTimer !== null) {
         window.clearTimeout(controllerRetryTimer);
       }

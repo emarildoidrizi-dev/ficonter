@@ -150,3 +150,27 @@ html[data-theme] .app-shell .ficonter-auto-contrast::placeholder {
   -webkit-text-fill-color: color-mix(in srgb, var(--ficonter-auto-text) 76%, transparent) !important;
   opacity: 1 !important;
 }
+
+/* Responsive Settings rows already use semantic theme tokens for their light
+   active surface. Keep their text paint deterministic and do not allow a
+   transient runtime auto-contrast value on the button/wrapper to propagate
+   into the label. This is intentionally scoped to responsive app mode only. */
+html[data-ficonter-native-app="true"][data-theme] .app-shell
+  [class*="SettingsWorkspace_sectionButton"],
+html[data-ficonter-native-app="true"][data-theme] .app-shell
+  [class*="SettingsWorkspace_sectionButton"] .ficonter-auto-contrast {
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+html[data-ficonter-native-app="true"][data-theme] .app-shell
+  [class*="SettingsWorkspace_sectionButton"] strong {
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+html[data-ficonter-native-app="true"][data-theme] .app-shell
+  [class*="SettingsWorkspace_sectionButton"] small {
+  color: var(--text-secondary) !important;
+  -webkit-text-fill-color: var(--text-secondary) !important;
+}

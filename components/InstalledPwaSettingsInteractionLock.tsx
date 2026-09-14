@@ -60,6 +60,34 @@ function backButtonFromTarget(target: EventTarget | null) {
     : null;
 }
 
+function clearManagedContrast(scope: Element) {
+  const elements = [
+    scope,
+    ...Array.from(scope.querySelectorAll<HTMLElement>("*")),
+  ];
+
+  for (const element of elements) {
+    if (!(element instanceof HTMLElement)) continue;
+    element.classList.remove("ficonter-auto-contrast");
+    element.style.removeProperty("--ficonter-auto-text");
+  }
+}
+
+function isolateSettingsRowsFromContrastGuard() {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(
+    SECTION_BUTTON_SELECTOR,
+  );
+
+  for (const button of buttons) {
+    // Settings owns these row foregrounds with deterministic authored CSS.
+    // The global ThemeContrastGuard intentionally waits before re-auditing a
+    // changed active row, which can visually repaint a stale selection. Keep
+    // the Settings navigation outside that runtime correction path entirely.
+    button.dataset.ficonterContrastIgnore = "true";
+    clearManagedContrast(button);
+  }
+}
+
 function projectSettingsParentImmediately() {
   const workspace = document.querySelector<HTMLElement>(
     SETTINGS_WORKSPACE_SELECTOR,
@@ -71,6 +99,7 @@ function projectSettingsParentImmediately() {
   );
   if (page) page.dataset.settingsDetail = "false";
 
+  isolateSettingsRowsFromContrastGuard();
   document.documentElement.removeAttribute("data-ficonter-route-loading");
 }
 
@@ -85,11 +114,10 @@ function markSettingsDetailOpen() {
  * Phone Settings interaction contract.
  *
  * SettingsWorkspace remains the only owner of the selected section. This layer
- * only removes browser/WebKit timing from the interaction: a completed tap
- * dispatches the existing React click immediately, and Back reveals the
- * already-mounted Settings parent before history/search-param reconciliation
- * can repaint it. The contract applies to the same <=640px phone runtime used
- * by Settings itself, whether the phone is in browser or installed-PWA mode.
+ * removes browser/WebKit timing from the interaction and isolates Settings row
+ * rendering from the global contrast observer. A completed tap dispatches the
+ * existing React click immediately, while Back reveals the already-mounted
+ * Settings parent before history/search-param reconciliation can repaint it.
  */
 export function InstalledPwaSettingsInteractionLock() {
   useEffect(() => {
@@ -116,6 +144,18 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
 
     document.getElementById(STYLE_ID)?.remove();
     document.head.appendChild(style);
+    isolateSettingsRowsFromContrastGuard();
+
+    const rowObserver = new MutationObserver((records) => {
+      if (!installedPhoneSettingsRuntime()) return;
+
+      for (const record of records) {
+        if (record.type !== "childList" || !record.addedNodes.length) continue;
+        isolateSettingsRowsFromContrastGuard();
+        break;
+      }
+    });
+    rowObserver.observe(document.body, { childList: true, subtree: true });
 
     const resetTap = () => {
       pendingTap = null;
@@ -132,6 +172,8 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
         resetTap();
         return;
       }
+
+      isolateSettingsRowsFromContrastGuard();
 
       pendingTap = {
         pointerId: event.pointerId,
@@ -190,6 +232,7 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
       dispatchingImmediateClick = true;
       tap.button.click();
       dispatchingImmediateClick = false;
+      clearManagedContrast(tap.button);
       markSettingsDetailOpen();
     };
 
@@ -249,6 +292,7 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
     document.addEventListener("click", handleClick, true);
 
     return () => {
+      rowObserver.disconnect();
       document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("pointermove", handlePointerMove, true);
       document.removeEventListener("pointerup", handlePointerUp, true);

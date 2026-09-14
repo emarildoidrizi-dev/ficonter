@@ -39,6 +39,11 @@ const MIN_CONTRAST = 4.5;
 // theme change can never leave stale foreground overrides behind.
 const APP_THEME_SETTLE_AUDIT_DELAY_MS = 190;
 
+// Settings navigation changes its active surface over 80-100ms on responsive
+// layouts. Clear any correction calculated for the previous state immediately,
+// then re-audit once that short transition has settled.
+const MOBILE_SETTINGS_STATE_SETTLE_AUDIT_DELAY_MS = 140;
+
 function parseColor(value: string): Rgba | null {
   if (!value || value === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
 
@@ -267,9 +272,12 @@ export function ThemeContrastGuard() {
     let fullAuditFrame = 0;
     let fullAuditTimer = 0;
     let appSettleAuditTimer = 0;
+    let mobileSettingsAuditTimer = 0;
+    let mobileSettingsAuditFrame = 0;
     let incrementalFrame = 0;
     const adjusted = new Set<HTMLElement>();
     const pendingScopes = new Set<Element>();
+    const pendingMobileSettingsScopes = new Set<Element>();
 
     function removeAdjustment(element: HTMLElement) {
       element.classList.remove("ficonter-auto-contrast");
@@ -318,6 +326,18 @@ export function ThemeContrastGuard() {
 
     function auditScope(scope: ParentNode) {
       for (const element of collectTextElements(scope)) auditElement(element);
+    }
+
+    function clearScopeAdjustments(scope: ParentNode) {
+      for (const element of collectTextElements(scope)) {
+        if (
+          adjusted.has(element) ||
+          element.classList.contains("ficonter-auto-contrast") ||
+          element.style.getPropertyValue("--ficonter-auto-text")
+        ) {
+          removeAdjustment(element);
+        }
+      }
     }
 
     function runFullAudit() {
@@ -386,6 +406,75 @@ export function ThemeContrastGuard() {
       incrementalFrame = window.requestAnimationFrame(runIncrementalAudit);
     }
 
+    function isResponsiveApp() {
+      return root.dataset.ficonterNativeApp === "true";
+    }
+
+    function runMobileSettingsAudit() {
+      mobileSettingsAuditFrame = 0;
+      if (!isResponsiveApp()) {
+        pendingMobileSettingsScopes.clear();
+        return;
+      }
+
+      const scopes = [...pendingMobileSettingsScopes];
+      pendingMobileSettingsScopes.clear();
+      for (const scope of scopes) {
+        if (scope.isConnected) auditScope(scope);
+      }
+    }
+
+    function scheduleMobileSettingsAudit(scope: Element) {
+      if (!isResponsiveApp()) return;
+
+      // The old active/inactive correction is stale as soon as React changes
+      // the Settings row class. Let authored CSS paint the transition, then
+      // calculate a fresh correction against the settled surface.
+      clearScopeAdjustments(scope);
+      pendingMobileSettingsScopes.add(scope);
+
+      if (mobileSettingsAuditTimer) {
+        window.clearTimeout(mobileSettingsAuditTimer);
+      }
+      if (mobileSettingsAuditFrame) {
+        window.cancelAnimationFrame(mobileSettingsAuditFrame);
+        mobileSettingsAuditFrame = 0;
+      }
+
+      mobileSettingsAuditTimer = window.setTimeout(() => {
+        mobileSettingsAuditTimer = 0;
+        if (!isResponsiveApp()) {
+          pendingMobileSettingsScopes.clear();
+          return;
+        }
+        mobileSettingsAuditFrame = window.requestAnimationFrame(
+          runMobileSettingsAudit,
+        );
+      }, MOBILE_SETTINGS_STATE_SETTLE_AUDIT_DELAY_MS);
+    }
+
+    function normalizedClassWithoutAutoContrast(value: string | null) {
+      return (value ?? "")
+        .split(/\s+/)
+        .filter((className) => className && className !== "ficonter-auto-contrast")
+        .sort()
+        .join(" ");
+    }
+
+    function isMeaningfulClassMutation(record: MutationRecord) {
+      if (!(record.target instanceof Element)) return false;
+      return (
+        normalizedClassWithoutAutoContrast(record.oldValue) !==
+        normalizedClassWithoutAutoContrast(record.target.getAttribute("class"))
+      );
+    }
+
+    function isSettingsSectionButton(element: Element) {
+      return Array.from(element.classList).some((className) =>
+        className.includes("SettingsWorkspace_sectionButton"),
+      );
+    }
+
     const rootObserver = new MutationObserver(() => {
       // Installed PWA/app gets a post-transition audit. Browser behavior stays
       // exactly as before and continues to use the existing immediate audit.
@@ -404,18 +493,34 @@ export function ThemeContrastGuard() {
       ],
     });
 
-    // Route changes add a new subtree. Audit only what was added instead of
-    // rescanning every label after every React text mutation.
+    // Route changes add a new subtree. Settings active-state class changes
+    // also need a fresh contrast pass because the row surface itself changes.
     const contentObserver = new MutationObserver((records) => {
       for (const record of records) {
-        for (const node of record.addedNodes) {
-          if (node instanceof Element) scheduleIncrementalAudit(node);
+        if (record.type === "childList") {
+          for (const node of record.addedNodes) {
+            if (node instanceof Element) scheduleIncrementalAudit(node);
+          }
+          continue;
+        }
+
+        if (
+          record.type === "attributes" &&
+          record.attributeName === "class" &&
+          record.target instanceof Element &&
+          isSettingsSectionButton(record.target) &&
+          isMeaningfulClassMutation(record)
+        ) {
+          scheduleMobileSettingsAudit(record.target);
         }
       }
     });
     contentObserver.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+      attributeOldValue: true,
     });
 
     const handleResize = () => scheduleFullAudit(90);
@@ -436,7 +541,10 @@ export function ThemeContrastGuard() {
       if (incrementalFrame) window.cancelAnimationFrame(incrementalFrame);
       if (fullAuditTimer) window.clearTimeout(fullAuditTimer);
       if (appSettleAuditTimer) window.clearTimeout(appSettleAuditTimer);
+      if (mobileSettingsAuditTimer) window.clearTimeout(mobileSettingsAuditTimer);
+      if (mobileSettingsAuditFrame) window.cancelAnimationFrame(mobileSettingsAuditFrame);
       pendingScopes.clear();
+      pendingMobileSettingsScopes.clear();
       clearAdjustments();
     };
   }, []);

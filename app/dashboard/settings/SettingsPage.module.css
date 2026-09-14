@@ -1,0 +1,3 @@
+.settingsRoot :global([class*="SettingsWorkspace_sectionList"]) > :global([class*="SettingsWorkspace_sectionButton"]):first-child {
+  display: none !important;
+}

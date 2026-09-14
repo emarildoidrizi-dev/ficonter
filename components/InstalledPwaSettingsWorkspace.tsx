@@ -230,10 +230,11 @@ export function InstalledPwaSettingsWorkspace(props: Props) {
         ? target.closest<HTMLButtonElement>('button[aria-label="Go back"]')
         : null;
 
-    const handleBackPointerDown = (event: PointerEvent) => {
+    const handleBackPointerUp = (event: PointerEvent) => {
       if (!isBackButton(event.target)) return;
 
-      // Paint the Settings parent immediately and preserve `active` exactly.
+      // Complete Back in the same completed-tap frame. The active section is
+      // intentionally not changed, so its row is already selected on return.
       flushSync(() => setDetailOpen(false));
       setPageDetailState(false);
     };
@@ -257,11 +258,11 @@ export function InstalledPwaSettingsWorkspace(props: Props) {
       window.history.replaceState(window.history.state, "", next);
     };
 
-    document.addEventListener("pointerdown", handleBackPointerDown, true);
+    document.addEventListener("pointerup", handleBackPointerUp, true);
     document.addEventListener("click", handleBackClick, true);
 
     return () => {
-      document.removeEventListener("pointerdown", handleBackPointerDown, true);
+      document.removeEventListener("pointerup", handleBackPointerUp, true);
       document.removeEventListener("click", handleBackClick, true);
     };
   }, [detailOpen, installedPhone]);
@@ -272,6 +273,8 @@ export function InstalledPwaSettingsWorkspace(props: Props) {
     const target = `/dashboard/settings?section=${id}`;
     const current = `${window.location.pathname}${window.location.search}`;
 
+    // This is the single selection authority for the installed phone PWA.
+    // Active highlight and detail visibility are committed before URL history.
     flushSync(() => {
       setActive(id);
       setDetailOpen(true);
@@ -327,6 +330,12 @@ export function InstalledPwaSettingsWorkspace(props: Props) {
     event.preventDefault();
     suppressClickRef.current = id;
     openSection(id);
+
+    // If WebKit suppresses its follow-up click because pointerup was prevented,
+    // do not leave a stale suppression token that could eat a later real tap.
+    window.setTimeout(() => {
+      if (suppressClickRef.current === id) suppressClickRef.current = null;
+    }, 0);
   }
 
   function handleClick(event: React.MouseEvent<HTMLButtonElement>, id: SectionId) {

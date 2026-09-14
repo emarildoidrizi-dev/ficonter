@@ -42,6 +42,21 @@ export function clearFiconterNavigationState(): void {
   root.removeAttribute("data-ficonter-route-intent-at");
 }
 
+function projectSettingsParentImmediately(): void {
+  if (typeof document === "undefined") return;
+
+  const page = document.querySelector<HTMLElement>(".ficonter-settings-page");
+  const workspace = page?.querySelector<HTMLElement>("[data-mobile-detail]");
+
+  if (workspace) {
+    workspace.dataset.mobileDetail = "false";
+  }
+
+  if (page) {
+    page.dataset.settingsDetail = "false";
+  }
+}
+
 function consumeInstalledPhoneSettingsBack(
   target: string,
   current: string,
@@ -65,9 +80,9 @@ function consumeInstalledPhoneSettingsBack(
     return false;
   }
 
-  // A Settings section is an already-mounted local screen in the installed
-  // phone app. Its Back action must return to the Settings parent locally,
-  // rather than asking Next.js to re-render the force-dynamic Settings route.
+  // Settings detail screens are already client-mounted in the installed phone
+  // app. Back must reverse the native history entry created by pushState rather
+  // than launching another force-dynamic Next.js route request.
   if (
     originUrl.pathname !== "/dashboard/settings" ||
     !originUrl.searchParams.has("section") ||
@@ -77,6 +92,20 @@ function consumeInstalledPhoneSettingsBack(
     return false;
   }
 
+  clearFiconterNavigationState();
+
+  // Paint the parent screen in the current interaction frame. React/Next then
+  // reconciles the same state from the native popstate without a visible second
+  // refresh or stale-detail frame.
+  projectSettingsParentImmediately();
+
+  if (window.history.length > 1) {
+    window.history.back();
+    return true;
+  }
+
+  // Defensive standalone-launch fallback: when there is no prior history entry,
+  // normalize the URL locally and leave the already-painted parent visible.
   const localParentUrl = new URL(window.location.href);
   localParentUrl.searchParams.delete("section");
   const parentSearch = localParentUrl.searchParams.toString();
@@ -84,7 +113,6 @@ function consumeInstalledPhoneSettingsBack(
     parentSearch ? `?${parentSearch}` : ""
   }${localParentUrl.hash}`;
 
-  clearFiconterNavigationState();
   window.history.replaceState(window.history.state, "", parentHref);
   return true;
 }
@@ -95,9 +123,9 @@ function consumeInstalledPhoneSettingsBack(
  * Returns false when the tap is a duplicate/accidental rapid second intent.
  * The NavigationSpeedBoost listener owns the timers, retry, and final cleanup.
  *
- * Installed-phone Settings detail Back is also consumed here as a local
- * history/state transition. The caller receives false, so it never reaches
- * router.push and therefore never starts a server-backed Settings refresh.
+ * Installed-phone Settings detail Back is consumed as a native local history
+ * transition. The caller receives false, so it never reaches router.push and
+ * therefore never starts a server-backed Settings refresh.
  */
 export function requestFiconterNavigationIntent(
   target: string,

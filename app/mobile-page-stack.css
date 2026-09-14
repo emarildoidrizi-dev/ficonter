@@ -129,6 +129,16 @@
     [class*="SettingsWorkspace_sectionButton"] > :last-child:not(:first-child) {
     display: block !important;
   }
+
+  /* Settings is already a mounted client workspace. Route-level slide
+     animations only add latency and compositing churn to an in-page state
+     change, so the installed phone app keeps this page fully synchronous. */
+  html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
+    .app-main > .ficonter-settings-page {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -159,17 +169,19 @@ html[data-ficonter-native-app="true"][data-ficonter-device="tablet"]
   transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease !important;
 }
 
-/* V1.15 — immediate phone interaction feedback. */
+/* Installed-phone Settings is intentionally zero-transition. Selection,
+   parent/detail visibility and Back state must paint in the same frame as the
+   interaction; the browser/tablet contracts above remain unchanged. */
 html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   [class*="SettingsWorkspace_sectionButton"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease, transform 80ms ease !important;
+  transition: none !important;
 }
 
 html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   [class*="SettingsWorkspace_sectionButton"]:active {
-  transform: scale(0.985);
+  transform: none !important;
 }
 
 /* V1.16 — iOS/Safari clarity hardening.

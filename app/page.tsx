@@ -439,6 +439,7 @@ export default async function HomePage({
             <Link href="/personal-business">Personal & Business</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/about">About</Link>
+            <Link href="/faq">FAQ</Link>
           </div>
           <div>
             <span className={footerStyles.groupLabel}>Access</span>

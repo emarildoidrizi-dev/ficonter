@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 const settings = fs.readFileSync('components/SettingsWorkspace.tsx', 'utf8');
+const navigationRuntime = fs.readFileSync('lib/navigationRuntime.ts', 'utf8');
 const sidebar = fs.readFileSync('components/Sidebar.tsx', 'utf8');
 const stack = fs.readFileSync('app/mobile-page-stack.css', 'utf8');
 
@@ -11,6 +12,12 @@ const checks = [
   ['Settings no longer calls router.push for section changes', !settings.includes('router.push(target, { scroll: false });')],
   ['Settings synchronizes Back/history URL into local state', settings.includes('const sectionFromUrl = searchParams.get("section")')],
   ['Settings parent restores when section query disappears', settings.includes('setMobileDetailOpen(false);')],
+  ['Installed-phone local Back is standalone-only', navigationRuntime.includes('root.dataset.ficonterDisplayMode !== "standalone"')],
+  ['Installed-phone local Back is phone-only', navigationRuntime.includes('root.dataset.ficonterDevice !== "phone"')],
+  ['Installed-phone Settings detail Back removes only the section query', navigationRuntime.includes('localParentUrl.searchParams.delete("section");')],
+  ['Installed-phone Settings detail Back uses native replaceState', navigationRuntime.includes('window.history.replaceState(window.history.state, "", parentHref);')],
+  ['Installed-phone Settings detail Back blocks router continuation', navigationRuntime.includes('if (consumeInstalledPhoneSettingsBack(target, current, root))') && navigationRuntime.includes('return false;')],
+  ['Local Back is scoped to the Settings parent destination', navigationRuntime.includes('targetUrl.pathname !== "/dashboard/settings"') && navigationRuntime.includes('targetUrl.searchParams.has("section")')],
   ['Same-path Back uses browser history', sidebar.includes('window.history.back();')],
   ['Cross-path Back still uses client router', sidebar.includes('router.push(target, { scroll: false });')],
   ['Phone forward transition is 220ms', stack.includes('ficonter-mobile-page-forward 220ms')],

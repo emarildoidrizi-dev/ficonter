@@ -42,11 +42,62 @@ export function clearFiconterNavigationState(): void {
   root.removeAttribute("data-ficonter-route-intent-at");
 }
 
+function consumeInstalledPhoneSettingsBack(
+  target: string,
+  current: string,
+  root: HTMLElement,
+): boolean {
+  if (
+    root.dataset.ficonterNativeApp !== "true" ||
+    root.dataset.ficonterDevice !== "phone" ||
+    root.dataset.ficonterDisplayMode !== "standalone"
+  ) {
+    return false;
+  }
+
+  let originUrl: URL;
+  let targetUrl: URL;
+
+  try {
+    originUrl = new URL(current, window.location.origin);
+    targetUrl = new URL(target, window.location.origin);
+  } catch {
+    return false;
+  }
+
+  // A Settings section is an already-mounted local screen in the installed
+  // phone app. Its Back action must return to the Settings parent locally,
+  // rather than asking Next.js to re-render the force-dynamic Settings route.
+  if (
+    originUrl.pathname !== "/dashboard/settings" ||
+    !originUrl.searchParams.has("section") ||
+    targetUrl.pathname !== "/dashboard/settings" ||
+    targetUrl.searchParams.has("section")
+  ) {
+    return false;
+  }
+
+  const localParentUrl = new URL(window.location.href);
+  localParentUrl.searchParams.delete("section");
+  const parentSearch = localParentUrl.searchParams.toString();
+  const parentHref = `${localParentUrl.pathname}${
+    parentSearch ? `?${parentSearch}` : ""
+  }${localParentUrl.hash}`;
+
+  clearFiconterNavigationState();
+  window.history.replaceState(window.history.state, "", parentHref);
+  return true;
+}
+
 /**
  * Claims a navigation intent before calling router.push/replace.
  *
  * Returns false when the tap is a duplicate/accidental rapid second intent.
  * The NavigationSpeedBoost listener owns the timers, retry, and final cleanup.
+ *
+ * Installed-phone Settings detail Back is also consumed here as a local
+ * history/state transition. The caller receives false, so it never reaches
+ * router.push and therefore never starts a server-backed Settings refresh.
  */
 export function requestFiconterNavigationIntent(
   target: string,
@@ -58,6 +109,11 @@ export function requestFiconterNavigationIntent(
   if (!target || target === current) return false;
 
   const root = document.documentElement;
+
+  if (consumeInstalledPhoneSettingsBack(target, current, root)) {
+    return false;
+  }
+
   const now = Date.now();
   const existingTarget = root.dataset.ficonterRouteTarget ?? null;
   const existingStartedAt = Number(root.dataset.ficonterRouteIntentAt ?? "0");

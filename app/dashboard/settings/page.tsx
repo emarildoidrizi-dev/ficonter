@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
+import { InstalledPwaSettingsInteractionLock } from "@/components/InstalledPwaSettingsInteractionLock";
 import { PasskeySecuritySettings } from "@/components/PasskeySecuritySettings";
 import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
@@ -159,6 +160,8 @@ export default async function SettingsPage({
       }`}
       data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
+      <InstalledPwaSettingsInteractionLock />
+
       <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>

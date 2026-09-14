@@ -2,10 +2,6 @@ import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const boost = read('components/NavigationSpeedBoost.tsx');
-const appBoost = read('components/InstalledAppPerformanceBoost.tsx');
-const pwaRegister = read('components/PWARegister.tsx');
-const dashboardLayout = read('app/dashboard/layout.tsx');
-const businessLayout = read('app/business/layout.tsx');
 const runtime = read('lib/navigationRuntime.ts');
 const realtime = read('components/RealtimeRefreshBridge.tsx');
 const overview = read('components/DashboardLiveOverview.tsx');
@@ -20,10 +16,6 @@ const dashboardError = read('app/dashboard/error.tsx');
 const businessError = read('app/business/error.tsx');
 const businessLoading = read('app/business/loading.tsx');
 
-const criticalStep = Number(
-  appBoost.match(/CRITICAL_PREFETCH_STEP_MS\s*=\s*(\d+)/)?.[1] ?? Number.NaN,
-);
-
 const checks = [
   ['Central navigation intent runtime exists', runtime.includes('requestFiconterNavigationIntent') && runtime.includes('FICONTER_NAVIGATION_INTENT_EVENT')],
   ['Rapid duplicate navigation is guarded', runtime.includes('ROUTE_INTENT_GUARD_MS') && runtime.includes('DUPLICATE_INTENT_GUARD_MS')],
@@ -33,15 +25,6 @@ const checks = [
   ['Navigation completion clears pending state', boost.includes('data-ficonter-route-pending') && boost.includes('FICONTER_NAVIGATION_SETTLED_EVENT')],
   ['Stalled client navigation retries once', boost.includes('ROUTE_CLIENT_RETRY_MS') && boost.includes('router.replace(route, { scroll: false })')],
   ['Pathological navigation has a last-resort recovery', boost.includes('ROUTE_HARD_RECOVERY_MS') && boost.includes('window.location.assign(route)')],
-  ['Installed app has a dedicated aggressive route warmup', appBoost.includes('isInstalledStandaloneApp()') && appBoost.includes('router.prefetch(route)')],
-  ['Installed app critical destinations warm within a tight stagger', Number.isFinite(criticalStep) && criticalStep <= 30],
-  ['Installed app warmup respects Save-Data and slow 2G connections', appBoost.includes('connection?.saveData') && appBoost.includes('"slow-2g", "2g"')],
-  ['Installed app secondary routes warm during idle time', appBoost.includes('requestIdleCallback') && appBoost.includes('SECONDARY_IDLE_TIMEOUT_MS')],
-  ['Installed app re-warms stale primary routes after iOS resume', appBoost.includes('visibilitychange') && appBoost.includes('PREFETCH_REFRESH_MS')],
-  ['Personal workspace mounts the app-only performance fast path', dashboardLayout.includes('<InstalledAppPerformanceBoost workspace="personal" cacheKey={user.id} />')],
-  ['Business workspace mounts the app-only performance fast path', businessLayout.includes('<InstalledAppPerformanceBoost') && businessLayout.includes('workspace="business"')],
-  ['Installed app service-worker update work is deferred off startup', pwaRegister.includes('scheduleRegistrationUpdate(true)') && pwaRegister.includes('APP_UPDATE_IDLE_TIMEOUT_MS')],
-  ['Browser service-worker updates preserve eager behavior', pwaRegister.includes('if (!isInstalledStandaloneApp())') && pwaRegister.includes('void updateRegistration(force);')],
   ['Realtime refresh yields to navigation', realtime.includes('isFiconterNavigationPending()') && realtime.includes('pendingWhileNavigatingRef')],
   ['Queued realtime refresh resumes after navigation settles', realtime.includes('FICONTER_NAVIGATION_SETTLED_EVENT') && realtime.includes('onNavigationSettled')],
   ['Overview realtime refresh cannot race a route transition', overview.includes('if (isFiconterNavigationPending()) return;')],

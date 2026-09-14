@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 
+import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
-import { InstalledPwaSettingsInteractionLock } from "@/components/InstalledPwaSettingsInteractionLock";
-import { SettingsSupplementalModules } from "@/components/SettingsSupplementalModules";
+import { PasskeySecuritySettings } from "@/components/PasskeySecuritySettings";
+import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -11,7 +12,6 @@ import {
   getCurrentSubscriptionAccess,
   getEffectiveSubscriptionPlanCode,
 } from "@/lib/subscriptionAccess";
-import styles from "./SettingsPage.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -66,6 +66,11 @@ export default async function SettingsPage({
 
   if (!user) redirect("/login");
 
+  const { admin } = await requireAdmin();
+  const isSubscriptionExempt = Boolean(admin);
+  const canManageWallpapers = admin?.role === "super_admin";
+  const canAccessBackupRecovery = isOwnerEmail(user.email);
+
   const query = await searchParams;
   const section = Array.isArray(query?.section)
     ? query.section[0]
@@ -86,51 +91,33 @@ export default async function SettingsPage({
     "subscription",
   ].includes(section ?? "");
 
-  /*
-   * Settings is a force-dynamic authenticated page, but its independent reads
-   * do not need to form a latency waterfall. Start role verification, profile,
-   * subscription presentation data, and verified entitlement resolution in the
-   * same server turn. React cache still deduplicates getCurrentUser/requireAdmin.
-   */
-  const adminPromise = requireAdmin();
-  const subscriptionPromise = supabase
-    .from("subscriptions")
-    .select(
-      "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
-    )
-    .eq("user_id", user.id)
-    .maybeSingle();
-  const profilePromise = supabase
-    .from("profiles")
-    .select("base_currency,birth_date,country,city,address_line1,address_line2,postal_code")
-    .eq("id", user.id)
-    .maybeSingle();
-  const verifiedAccessPromise = getCurrentSubscriptionAccess();
-
-  const [
-    { admin },
-    { data: subscription },
-    { data: profile },
-    verifiedAccess,
-  ] = await Promise.all([
-    adminPromise,
-    subscriptionPromise,
-    profilePromise,
-    verifiedAccessPromise,
-  ]);
-
-  const isSubscriptionExempt = Boolean(admin);
-  const canManageWallpapers = admin?.role === "super_admin";
-  const canAccessBackupRecovery = isOwnerEmail(user.email);
-
   if (isSubscriptionExempt && section === "subscription") {
     redirect("/dashboard/settings?section=security");
   }
+
+  const [
+    { data: subscription },
+    { data: profile },
+  ] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select(
+        "plan_code,status,billing_interval,current_period_end,cancel_at_period_end,provider",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("base_currency,birth_date,country,city,address_line1,address_line2,postal_code")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
 
   const profileSnapshot = (profile as ProfileSnapshot | null) ?? null;
   const subscriptionSnapshot =
     (subscription as SubscriptionSnapshot | null) ?? null;
 
+  const verifiedAccess = await getCurrentSubscriptionAccess();
   const effectivePlanCode = getEffectiveSubscriptionPlanCode(verifiedAccess);
 
   /*
@@ -167,20 +154,18 @@ export default async function SettingsPage({
 
   return (
     <section
-      className={`${styles.settingsRoot} ficonter-settings-page${
+      className={`ficonter-settings-page${
         isSubscriptionExempt ? " ficonter-subscription-exempt-settings" : ""
       }`}
       data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
-      <InstalledPwaSettingsInteractionLock />
-
       <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage account security, financial preferences, notifications,
-            appearance, privacy and subscription settings from one private workspace.
+            Manage your profile, account security and Ficonter preferences from
+            one private workspace.
           </p>
         </div>
       </div>
@@ -204,11 +189,18 @@ export default async function SettingsPage({
           canManageWallpapers={canManageWallpapers}
         />
 
-        <SettingsSupplementalModules
+        <PasskeySecuritySettings />
+
+        {canAccessBackupRecovery ? (
+          <BackupRecoverySettingsGate
+            userId={user.id}
+            email={user.email ?? ""}
+            metadata={metadata}
+          />
+        ) : null}
+
+        <ProfileIdentityDetailsForm
           userId={user.id}
-          email={user.email ?? ""}
-          metadata={metadata}
-          canAccessBackupRecovery={canAccessBackupRecovery}
           initialFullName={fullName}
           initialDisplayName={displayName}
           initialValues={{

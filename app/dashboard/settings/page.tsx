@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
-import { InstalledPwaSettingsInteractionLock } from "@/components/InstalledPwaSettingsInteractionLock";
+import { InstalledPwaSettingsWorkspace } from "@/components/InstalledPwaSettingsWorkspace";
 import { SettingsSupplementalModules } from "@/components/SettingsSupplementalModules";
-import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
@@ -34,12 +33,6 @@ type SubscriptionSnapshot = {
 
 type ProfileSnapshot = {
   base_currency?: string | null;
-  birth_date?: string | null;
-  country?: string | null;
-  city?: string | null;
-  address_line1?: string | null;
-  address_line2?: string | null;
-  postal_code?: string | null;
 };
 
 function hasPaidCancellationGrace(
@@ -70,6 +63,13 @@ export default async function SettingsPage({
   const section = Array.isArray(query?.section)
     ? query.section[0]
     : query?.section;
+
+  // Profile is a dedicated workspace. Old Settings profile links are retained
+  // only as compatibility entry points and never render Profile inside Settings.
+  if (section === "profile") {
+    redirect("/dashboard/profile");
+  }
+
   const requiredValue = Array.isArray(query?.required)
     ? query.required[0]
     : query?.required;
@@ -77,7 +77,6 @@ export default async function SettingsPage({
     ? requiredValue
     : null;
   const hasExplicitSettingsSection = [
-    "profile",
     "security",
     "financial",
     "notifications",
@@ -102,7 +101,7 @@ export default async function SettingsPage({
     .maybeSingle();
   const profilePromise = supabase
     .from("profiles")
-    .select("base_currency,birth_date,country,city,address_line1,address_line2,postal_code")
+    .select("base_currency")
     .eq("id", user.id)
     .maybeSingle();
   const verifiedAccessPromise = getCurrentSubscriptionAccess();
@@ -162,8 +161,6 @@ export default async function SettingsPage({
     : verifiedSubscriptionSnapshot;
 
   const metadata = user.user_metadata ?? {};
-  const fullName = String(metadata.full_name ?? metadata.name ?? "").trim();
-  const displayName = String(metadata.display_name ?? metadata.full_name ?? metadata.name ?? "").trim();
 
   return (
     <section
@@ -172,8 +169,6 @@ export default async function SettingsPage({
       }`}
       data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
-      <InstalledPwaSettingsInteractionLock />
-
       <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
@@ -192,7 +187,7 @@ export default async function SettingsPage({
       ) : null}
 
       <div className="ficonter-settings-workspace-shell">
-        <SettingsWorkspace
+        <InstalledPwaSettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}
           metadata={metadata}
@@ -209,16 +204,6 @@ export default async function SettingsPage({
           email={user.email ?? ""}
           metadata={metadata}
           canAccessBackupRecovery={canAccessBackupRecovery}
-          initialFullName={fullName}
-          initialDisplayName={displayName}
-          initialValues={{
-            birthDate: profileSnapshot?.birth_date ?? "",
-            country: profileSnapshot?.country ?? "",
-            city: profileSnapshot?.city ?? "",
-            addressLine1: profileSnapshot?.address_line1 ?? "",
-            addressLine2: profileSnapshot?.address_line2 ?? "",
-            postalCode: profileSnapshot?.postal_code ?? "",
-          }}
         />
       </div>
     </section>

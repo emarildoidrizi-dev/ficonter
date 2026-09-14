@@ -20,16 +20,7 @@ const BackupRecoverySettingsGate = dynamic(
   { ssr: false, loading: () => null },
 );
 
-const ProfileIdentityDetailsForm = dynamic(
-  () =>
-    import("@/components/ProfileIdentityDetailsForm").then(
-      (module) => module.ProfileIdentityDetailsForm,
-    ),
-  { ssr: false, loading: () => null },
-);
-
 type SectionId =
-  | "profile"
   | "security"
   | "financial"
   | "notifications"
@@ -37,23 +28,11 @@ type SectionId =
   | "privacy"
   | "subscription";
 
-type ProfileIdentityDetails = {
-  birthDate: string;
-  country: string;
-  city: string;
-  addressLine1: string;
-  addressLine2: string;
-  postalCode: string;
-};
-
 type Props = {
   userId: string;
   email: string;
   metadata: Record<string, unknown>;
   canAccessBackupRecovery: boolean;
-  initialFullName: string;
-  initialDisplayName: string;
-  initialValues: ProfileIdentityDetails;
 };
 
 type IOSNavigator = Navigator & {
@@ -63,7 +42,6 @@ type IOSNavigator = Navigator & {
 type RuntimeMode = "pending" | "installed-phone" | "other";
 
 const SECTION_IDS = new Set<SectionId>([
-  "profile",
   "security",
   "financial",
   "notifications",
@@ -111,9 +89,6 @@ export function SettingsSupplementalModules({
   email,
   metadata,
   canAccessBackupRecovery,
-  initialFullName,
-  initialDisplayName,
-  initialValues,
 }: Props) {
   const searchParams = useSearchParams();
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>("pending");
@@ -156,17 +131,6 @@ export function SettingsSupplementalModules({
       );
     }
 
-    if (section === "profile") {
-      return (
-        <ProfileIdentityDetailsForm
-          userId={userId}
-          initialFullName={initialFullName}
-          initialDisplayName={initialDisplayName}
-          initialValues={initialValues}
-        />
-      );
-    }
-
     return null;
   }
 
@@ -181,13 +145,6 @@ export function SettingsSupplementalModules({
           metadata={metadata}
         />
       ) : null}
-
-      <ProfileIdentityDetailsForm
-        userId={userId}
-        initialFullName={initialFullName}
-        initialDisplayName={initialDisplayName}
-        initialValues={initialValues}
-      />
     </>
   );
 }

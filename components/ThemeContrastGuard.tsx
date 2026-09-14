@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  normalizeAppearance,
+  normalizeSurfaceOpacity,
+  resolveAppearance,
+} from "@/lib/interfaceThemes";
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -410,6 +415,54 @@ export function ThemeContrastGuard() {
       return root.dataset.ficonterNativeApp === "true";
     }
 
+    function restoreCommittedSettingsInterface() {
+      if (!isResponsiveApp() || window.location.pathname !== "/dashboard/settings") {
+        return;
+      }
+
+      let storedAppearance = "";
+      let storedDensity = "";
+      let storedBackgroundMotion = "";
+      let storedWallpaperScene = "";
+      let storedSurfaceOpacity = "";
+
+      try {
+        storedAppearance = localStorage.getItem("ficonter-appearance") ?? "";
+        storedDensity = localStorage.getItem("ficonter-density") ?? "";
+        storedBackgroundMotion =
+          localStorage.getItem("ficonter-background-motion") ?? "";
+        storedWallpaperScene =
+          localStorage.getItem("ficonter-wallpaper-scene") ?? "";
+        storedSurfaceOpacity =
+          localStorage.getItem("ficonter-surface-opacity") ?? "";
+      } catch {
+        return;
+      }
+
+      if (!storedAppearance) return;
+
+      const appearance = normalizeAppearance(storedAppearance);
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const resolvedTheme = resolveAppearance(appearance, prefersDark);
+
+      root.dataset.theme = appearance;
+      root.dataset.resolvedTheme = resolvedTheme;
+      root.style.colorScheme = resolvedTheme;
+
+      if (storedDensity) root.dataset.density = storedDensity;
+      if (storedBackgroundMotion) {
+        root.dataset.backgroundMotion = storedBackgroundMotion;
+      }
+      if (storedWallpaperScene) {
+        root.dataset.wallpaperScene = storedWallpaperScene;
+      }
+      if (storedSurfaceOpacity) {
+        const opacity = normalizeSurfaceOpacity(storedSurfaceOpacity);
+        root.dataset.surfaceOpacity = String(opacity);
+        root.style.setProperty("--ficonter-surface-opacity", `${opacity}%`);
+      }
+    }
+
     function runMobileSettingsAudit() {
       mobileSettingsAuditFrame = 0;
       if (!isResponsiveApp()) {
@@ -495,12 +548,28 @@ export function ThemeContrastGuard() {
 
     // Route changes add a new subtree. Settings active-state class changes
     // also need a fresh contrast pass because the row surface itself changes.
+    // Closing a mobile Settings detail is a separate state transition: React
+    // keeps the last section active, so Appearance can otherwise leave preview
+    // root attributes and stale text corrections behind on the menu.
     const contentObserver = new MutationObserver((records) => {
       for (const record of records) {
         if (record.type === "childList") {
           for (const node of record.addedNodes) {
             if (node instanceof Element) scheduleIncrementalAudit(node);
           }
+          continue;
+        }
+
+        if (
+          record.type === "attributes" &&
+          record.attributeName === "data-mobile-detail" &&
+          record.target instanceof HTMLElement &&
+          record.target.dataset.mobileDetail === "false" &&
+          window.location.pathname === "/dashboard/settings"
+        ) {
+          restoreCommittedSettingsInterface();
+          clearAdjustments();
+          scheduleFullAudit(0);
           continue;
         }
 
@@ -519,7 +588,7 @@ export function ThemeContrastGuard() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class"],
+      attributeFilter: ["class", "data-mobile-detail"],
       attributeOldValue: true,
     });
 

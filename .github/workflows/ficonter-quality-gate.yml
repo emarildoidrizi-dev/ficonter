@@ -47,6 +47,9 @@ jobs:
       - name: Verify installed app theme settling
         run: npm run verify:app-theme-settle
 
+      - name: Verify installed app navigation state
+        run: npm run verify:installed-app-navigation
+
       - name: Run legacy compatibility audit
         continue-on-error: true
         run: npm run verify:hardening

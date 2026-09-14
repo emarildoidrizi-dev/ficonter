@@ -2,10 +2,6 @@
 
 import { useEffect } from "react";
 
-type IOSNavigator = Navigator & {
-  standalone?: boolean;
-};
-
 type PendingTap = {
   pointerId: number;
   button: HTMLButtonElement;
@@ -31,14 +27,10 @@ function installedPhoneSettingsRuntime() {
   const root = document.documentElement;
   const rootResolved =
     root.dataset.ficonterNativeApp === "true" &&
-    root.dataset.ficonterDevice === "phone" &&
-    root.dataset.ficonterDisplayMode === "standalone";
+    root.dataset.ficonterDevice === "phone";
 
   if (rootResolved) return true;
 
-  const standalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    Boolean((navigator as IOSNavigator).standalone);
   const width = Math.max(
     1,
     Math.round(
@@ -48,7 +40,12 @@ function installedPhoneSettingsRuntime() {
     ),
   );
 
-  return standalone && width <= 640;
+  // FiconterNativeAppChrome resolves these root attributes in an effect. The
+  // Settings workspace can mount one render earlier, so the physical viewport
+  // is the deterministic fallback for the initial phone render. This also makes
+  // the branch testable from the mobile browser preview while keeping tablet
+  // and desktop behavior untouched.
+  return width <= 640;
 }
 
 function settingsButtonFromTarget(target: EventTarget | null) {
@@ -85,12 +82,14 @@ function markSettingsDetailOpen() {
 }
 
 /**
- * Installed-phone Settings interaction contract.
+ * Phone Settings interaction contract.
  *
  * SettingsWorkspace remains the only owner of the selected section. This layer
- * only removes WebKit timing from the interaction: a completed tap dispatches
- * the existing React click immediately, and Back reveals the already-mounted
- * Settings parent before history/search-param reconciliation can repaint it.
+ * only removes browser/WebKit timing from the interaction: a completed tap
+ * dispatches the existing React click immediately, and Back reveals the
+ * already-mounted Settings parent before history/search-param reconciliation
+ * can repaint it. The contract applies to the same <=640px phone runtime used
+ * by Settings itself, whether the phone is in browser or installed-PWA mode.
  */
 export function InstalledPwaSettingsInteractionLock() {
   useEffect(() => {
@@ -104,13 +103,13 @@ export function InstalledPwaSettingsInteractionLock() {
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-display-mode="standalone"]
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   .ficonter-settings-page [class*="SettingsWorkspace_sectionButton"] {
   transition: none !important;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-html[data-ficonter-native-app="true"][data-ficonter-device="phone"][data-ficonter-display-mode="standalone"]
+html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   .ficonter-settings-page [class*="SettingsWorkspace_sectionButton"]:active {
   transform: none !important;
 }`;

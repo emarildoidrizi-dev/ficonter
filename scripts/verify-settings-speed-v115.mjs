@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const settings = fs.readFileSync('components/SettingsWorkspace.tsx', 'utf8');
 const instantSync = fs.readFileSync('components/InstalledAppSettingsSelectionSync.tsx', 'utf8');
+const runtime = fs.readFileSync('lib/navigationRuntime.ts', 'utf8');
 const sidebar = fs.readFileSync('components/Sidebar.tsx', 'utf8');
 const stack = fs.readFileSync('app/mobile-page-stack.css', 'utf8');
 
@@ -12,10 +13,13 @@ const checks = [
   ['Settings no longer calls router.push for section changes', !settings.includes('router.push(target, { scroll: false });')],
   ['Settings synchronizes Back/history URL into local state', settings.includes('const sectionFromUrl = searchParams.get("section")')],
   ['Settings parent restores when section query disappears', settings.includes('setMobileDetailOpen(false);')],
-  ['Installed app handles Settings Back on pointer-down', instantSync.includes('button[aria-label="Go back"]') && instantSync.includes('back();')],
-  ['Installed app preserves the last selected Settings row on Back', instantSync.includes('let lastSelected: SectionId') && instantSync.includes('setSelection(lastSelected);') && !instantSync.includes('setSelection(null);')],
-  ['Installed app restores parent list immediately on Back', instantSync.includes('parentListOpen = true;') && instantSync.includes('setDetail(false);')],
-  ['Installed app synchronizes popstate without requestAnimationFrame delay', instantSync.includes('window.addEventListener("popstate", onPopState)') && !instantSync.includes('requestAnimationFrame')],
+  ['Installed app handles Settings Back on pointer-down', instantSync.includes('button[aria-label="Go back"]') && instantSync.includes('primeFiconterSettingsParent(lastSelected)')],
+  ['Installed app preserves the selected row on Back', instantSync.includes('setSelection(lastSelected);') && instantSync.includes('showParent();')],
+  ['Settings selection no longer depends on MutationObserver', !instantSync.includes('MutationObserver')],
+  ['Settings selection no longer uses intent timers', !instantSync.includes('intentTimer')],
+  ['Settings selection no longer waits for requestAnimationFrame', !instantSync.includes('requestAnimationFrame')],
+  ['Settings visual state is owned by shared navigation runtime', instantSync.includes('primeFiconterSettingsSection') && runtime.includes('ficonterSettingsSection')],
+  ['Installed Settings styling is standalone phone only', instantSync.includes('data-ficonter-display-mode="standalone"') && instantSync.includes('data-ficonter-device="phone"')],
   ['Settings selected-row visual transitions are disabled in phone app', instantSync.includes('transition: none !important')],
   ['Settings page-stack animation is bypassed in phone app', instantSync.includes('.app-main > .ficonter-settings-page') && instantSync.includes('animation: none !important')],
   ['Same-path Back uses browser history', sidebar.includes('window.history.back();')],

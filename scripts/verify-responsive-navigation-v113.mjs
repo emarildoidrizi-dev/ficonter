@@ -3,30 +3,27 @@ import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const speed = read('components/NavigationSpeedBoost.tsx');
 const settings = read('components/SettingsWorkspace.tsx');
+const pwaSettings = read('components/InstalledPwaSettingsWorkspace.tsx');
 const settingsPage = read('app/dashboard/settings/page.tsx');
 const settingsCss = read('app/dashboard/settings/SettingsPage.module.css');
 const pageStack = read('app/mobile-page-stack.css');
 const profilePage = read('app/dashboard/profile/page.tsx');
-const chrome = read('components/FiconterNativeAppChrome.tsx');
-
-const sectionBlock = settings.slice(settings.indexOf('const sections = ['), settings.indexOf('] as const;', settings.indexOf('const sections = [')) + 11);
-const sectionIdBlock = settings.slice(settings.indexOf('function isSectionId'), settings.indexOf('const sections = ['));
 
 const checks = [
   ['route animation requires native phone device class', speed.includes('root.dataset.ficonterDevice === "phone"')],
-  ['settings route-driven drilldown requires phone', settings.includes('root.dataset.ficonterDevice === "phone"') && settings.includes('if (isNativePhone)')],
-  ['tablet settings uses local state instead of route navigation', settings.includes('Tablet/iPad/desktop-class Settings switches locally') && settings.includes('setActive(id);')],
+  ['browser/tablet Settings workspace remains available', settings.includes('Tablet/iPad/desktop-class Settings switches locally') && settings.includes('setActive(id);')],
   ['phone replacement CSS is device-class scoped', pageStack.includes('data-ficonter-device="phone"') && pageStack.includes('data-mobile-detail="true"')],
   ['tablet keeps settings navigation visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_navigation') && pageStack.includes('display: grid !important;')],
   ['tablet keeps settings detail panel visible', pageStack.includes('data-ficonter-device="tablet"') && pageStack.includes('SettingsWorkspace_panel') && pageStack.includes('display: block !important;')],
   ['legacy second transition stylesheet stays unloaded', !read('app/layout.tsx').includes('mobile-screen-stack.css')],
-  ['Profile remains an internal Settings section for the dedicated Profile route', sectionBlock.includes('id: "profile"') && sectionBlock.indexOf('id: "profile"') < sectionBlock.indexOf('id: "security"')],
-  ['Profile remains accepted as an internal section id', sectionIdBlock.includes('"profile"')],
-  ['Profile is hidden from the Settings menu', settingsCss.includes('SettingsWorkspace_sectionButton') && settingsCss.includes(':first-child') && settingsCss.includes('display: none !important;')],
+  ['installed PWA Settings has no Profile section', !pwaSettings.includes('id: "profile"') && !pwaSettings.includes('label: "Profile"')],
+  ['browser Settings hides the retired Profile row', settingsCss.includes('SettingsWorkspace_sectionList') && settingsCss.includes('button:first-child') && settingsCss.includes('display: none !important;')],
   ['Settings defaults to Account & security when no section is requested', settings.includes(': "security",') && settings.includes('? "security"')],
-  ['Dedicated Profile entry still targets its private Profile section', chrome.includes('href: "/dashboard/settings?section=profile"')],
-  ['Settings landing copy no longer advertises Profile as a Settings option', !settingsPage.includes('Manage your profile, account security')],
-  ['Legacy Profile route permanently redirects into the dedicated Profile section', profilePage.includes('permanentRedirect("/dashboard/settings?section=profile")') && !profilePage.includes('fui-profile-card')],
+  ['old Settings Profile URL redirects to dedicated Profile', settingsPage.includes('if (section === "profile")') && settingsPage.includes('redirect("/dashboard/profile")')],
+  ['Settings landing copy does not advertise Profile', !settingsPage.includes('Manage your profile, account security')],
+  ['Profile is a real page and no longer redirects into Settings', profilePage.includes('<ProfileWorkspace') && !profilePage.includes('permanentRedirect')],
+  ['installed PWA Settings owns its local section history', pwaSettings.includes('window.history.pushState') && pwaSettings.includes('window.history.back()')],
+  ['installed PWA Back preserves active selection', pwaSettings.includes('setDetailOpen(false);') && pwaSettings.includes('Back to the Settings menu deliberately keeps the last active row.')],
 ];
 
 let passed = 0;

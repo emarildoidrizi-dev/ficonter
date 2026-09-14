@@ -20,8 +20,6 @@ import { PersonalPlatformSearchPalette } from "@/components/PersonalPlatformSear
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { InstalledAppPerformanceBoost } from "@/components/InstalledAppPerformanceBoost";
-import { InstalledAppNavigationVisualSync } from "@/components/InstalledAppNavigationVisualSync";
-import { InstalledAppSettingsSelectionSync } from "@/components/InstalledAppSettingsSelectionSync";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { OwnerMusicAppLauncher } from "@/components/OwnerMusicAppLauncher";
@@ -114,7 +112,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <RuntimeStabilityBridge />
         <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />
         <InstalledAppPerformanceBoost workspace="personal" cacheKey={user.id} />
-        <InstalledAppSettingsSelectionSync />
         {isPlatformOwner ? (
           <>
             <OwnerMusicPlayer />
@@ -134,7 +131,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           email={user.email ?? ""}
           avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         />
-        <InstalledAppNavigationVisualSync workspace="personal" />
         <AppMoreAskFiconter available={askFiconterAvailable} />
         <VaultProvider>
           <VaultInactivityGuard />

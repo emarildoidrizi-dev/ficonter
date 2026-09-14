@@ -155,6 +155,27 @@ function setPageDetailState(open: boolean) {
   document.documentElement.removeAttribute("data-ficonter-route-loading");
 }
 
+function replaceSettingsSectionInUrl(section: SectionId | null) {
+  const current = new URL(window.location.href);
+  if (current.pathname !== "/dashboard/settings") return;
+
+  if (section) {
+    current.searchParams.set("section", section);
+  } else {
+    current.searchParams.delete("section");
+  }
+
+  const search = current.searchParams.toString();
+  const next = `${current.pathname}${search ? `?${search}` : ""}${current.hash}`;
+  const now = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (next !== now) {
+    // Internal Settings state must never add a navigation entry. The URL mirrors
+    // the already-committed local UI state and is not an authority for it.
+    window.history.replaceState(window.history.state, "", next);
+  }
+}
+
 export function PhoneSettingsWorkspace(props: Props) {
   const {
     email,
@@ -173,6 +194,7 @@ export function PhoneSettingsWorkspace(props: Props) {
     initialValidSection ?? "security",
   );
   const [detailOpen, setDetailOpen] = useState(Boolean(initialValidSection));
+  const detailOpenRef = useRef(Boolean(initialValidSection));
   const tapRef = useRef<TapState | null>(null);
   const suppressClickRef = useRef<SectionId | null>(null);
 
@@ -205,10 +227,13 @@ export function PhoneSettingsWorkspace(props: Props) {
 
       flushSync(() => {
         if (nextSection) {
+          detailOpenRef.current = true;
           setActive(nextSection);
           setDetailOpen(true);
         } else {
-          // Returning to the Settings menu keeps the section that was just used.
+          // Genuine browser history can reveal the parent, but it never resets
+          // the last active row.
+          detailOpenRef.current = false;
           setDetailOpen(false);
         }
       });
@@ -221,39 +246,53 @@ export function PhoneSettingsWorkspace(props: Props) {
   }, [phoneRuntime, isSubscriptionExempt]);
 
   useEffect(() => {
-    if (!phoneRuntime || !detailOpen) return;
+    if (!phoneRuntime) return;
 
     const findBackButton = (target: EventTarget | null) =>
       target instanceof Element
         ? target.closest<HTMLButtonElement>('button[aria-label="Go back"]')
         : null;
 
-    const handleBackPointerDown = (event: PointerEvent) => {
-      if (!findBackButton(event.target)) return;
+    const isInternalSettingsBack = () => {
+      const current = new URL(window.location.href);
+      return (
+        current.pathname === "/dashboard/settings" &&
+        (detailOpenRef.current || current.searchParams.has("section"))
+      );
+    };
 
-      // Parent visibility is committed in the physical press frame. The URL is
-      // allowed to catch up afterward and never owns the visible selection.
+    const handleBackPointerDown = (event: PointerEvent) => {
+      if (!findBackButton(event.target) || !isInternalSettingsBack()) return;
+
+      // Keep the global app Back system out of the physical press. The Settings
+      // parent is already mounted, so this is only a local visibility change.
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      detailOpenRef.current = false;
       flushSync(() => setDetailOpen(false));
       setPageDetailState(false);
     };
 
     const handleBackClick = (event: MouseEvent) => {
-      if (!findBackButton(event.target)) return;
+      if (!findBackButton(event.target) || !isInternalSettingsBack()) return;
 
+      // This capture listener stays mounted for the full phone Settings session,
+      // even after pointerdown closes the detail. Therefore the app-level Back
+      // handler can never receive this internal Settings click.
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-      const current = new URL(window.location.href);
-      if (current.searchParams.has("section") && window.history.length > 1) {
-        window.history.back();
-        return;
+      if (detailOpenRef.current) {
+        detailOpenRef.current = false;
+        flushSync(() => setDetailOpen(false));
+        setPageDetailState(false);
       }
 
-      current.searchParams.delete("section");
-      const search = current.searchParams.toString();
-      const next = `${current.pathname}${search ? `?${search}` : ""}${current.hash}`;
-      window.history.replaceState(window.history.state, "", next);
+      // No history.back(), router.push() or route transition. The URL is merely
+      // cleaned after the UI state has already been committed.
+      replaceSettingsSectionInUrl(null);
     };
 
     document.addEventListener("pointerdown", handleBackPointerDown, true);
@@ -263,25 +302,23 @@ export function PhoneSettingsWorkspace(props: Props) {
       document.removeEventListener("pointerdown", handleBackPointerDown, true);
       document.removeEventListener("click", handleBackClick, true);
     };
-  }, [detailOpen, phoneRuntime]);
+  }, [phoneRuntime]);
 
   function openSection(id: SectionId) {
     if (isSubscriptionExempt && id === "subscription") return;
 
-    const target = `/dashboard/settings?section=${id}`;
-    const current = `${window.location.pathname}${window.location.search}`;
-
-    // This is the sole visual authority on phones. It commits before history,
+    // This is the sole visual authority on phones. It commits before URL,
     // search params or any route system can participate.
+    detailOpenRef.current = true;
     flushSync(() => {
       setActive(id);
       setDetailOpen(true);
     });
     setPageDetailState(true);
 
-    if (current !== target) {
-      window.history.pushState(window.history.state, "", target);
-    }
+    // A subsection is not a route transition. Mirror the local selection in the
+    // address bar without adding to browser history.
+    replaceSettingsSectionInUrl(id);
   }
 
   function beginTap(event: React.PointerEvent<HTMLButtonElement>, id: SectionId) {

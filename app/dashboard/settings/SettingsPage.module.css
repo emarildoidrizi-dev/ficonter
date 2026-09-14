@@ -1,3 +1,4 @@
-.settingsRoot :global([class*="SettingsWorkspace_sectionList"]) > :global([class*="SettingsWorkspace_sectionButton"]):first-child {
+.settingsRoot :global([class*="SettingsWorkspace_sectionList"] > button:first-child),
+.settingsRoot :global(aside[aria-label="Settings sections"] [class*="SettingsWorkspace_sectionList"] > button:first-child) {
   display: none !important;
 }

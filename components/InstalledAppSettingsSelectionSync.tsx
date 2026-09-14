@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { isInstalledStandaloneApp } from "@/lib/pwaRuntimeRecovery";
+import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
 import {
   currentFiconterSettingsSection,
   primeFiconterSettingsParent,
@@ -55,6 +55,18 @@ function sectionFromReactState() {
     Array.from(button.classList).some((name) => name.includes("sectionActive")),
   );
   return activeButton ? sectionFor(activeButton) : null;
+}
+
+function installedPhoneRuntime() {
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+
+  const root = document.documentElement;
+  const device = root.dataset.ficonterDevice;
+  const phone = device
+    ? device === "phone"
+    : window.matchMedia("(max-width: 640px)").matches;
+
+  return isStandaloneDisplayMode() && phone;
 }
 
 function setDetail(open: boolean) {
@@ -129,19 +141,10 @@ function restoreCommittedTheme() {
 
 export function InstalledAppSettingsSelectionSync() {
   useEffect(() => {
-    const root = document.documentElement;
-    if (
-      !isInstalledStandaloneApp() ||
-      root.dataset.ficonterDevice !== "phone" ||
-      root.dataset.ficonterDisplayMode !== "standalone"
-    ) {
-      return;
-    }
-
     let lastSelected: SectionId =
       sectionFromLocation() ??
-      currentFiconterSettingsSection() ??
       sectionFromReactState() ??
+      currentFiconterSettingsSection() ??
       "security";
 
     const showDetail = (section: SectionId) => {
@@ -155,17 +158,38 @@ export function InstalledAppSettingsSelectionSync() {
       setDetail(false);
     };
 
+    const synchronizeFromLocation = () => {
+      if (!installedPhoneRuntime() || window.location.pathname !== "/dashboard/settings") {
+        return;
+      }
+
+      const route = `${window.location.pathname}${window.location.search}`;
+      const section = sectionFromLocation();
+
+      if (section) {
+        lastSelected = section;
+        primeFiconterSettingsSection(section);
+        settleFiconterNavigationVisual(route);
+        showDetail(section);
+        return;
+      }
+
+      primeFiconterSettingsParent(lastSelected);
+      settleFiconterNavigationVisual(route);
+      showParent();
+    };
+
     const handlePointerDown = (event: PointerEvent) => {
-      if (!(event.target instanceof Element)) return;
+      if (!installedPhoneRuntime() || !(event.target instanceof Element)) return;
 
       const backButton = event.target.closest<HTMLButtonElement>(
         'button[aria-label="Go back"]',
       );
       if (backButton && window.location.pathname === "/dashboard/settings") {
         lastSelected =
-          currentFiconterSettingsSection() ??
-          sectionFromReactState() ??
           sectionFromLocation() ??
+          sectionFromReactState() ??
+          currentFiconterSettingsSection() ??
           lastSelected;
         restoreCommittedTheme();
         primeFiconterSettingsParent(lastSelected);
@@ -186,47 +210,47 @@ export function InstalledAppSettingsSelectionSync() {
       showDetail(section);
     };
 
-    const handlePopState = () => {
-      restoreCommittedTheme();
-      const route = `${window.location.pathname}${window.location.search}`;
-      const section = sectionFromLocation();
-
-      if (section) {
-        lastSelected = section;
-        primeFiconterSettingsSection(section);
-        settleFiconterNavigationVisual(route);
-        showDetail(section);
+    const handleClick = (event: MouseEvent) => {
+      if (
+        !installedPhoneRuntime() ||
+        event.button !== 0 ||
+        !(event.target instanceof Element) ||
+        window.location.pathname !== "/dashboard/settings" ||
+        !sectionFromLocation()
+      ) {
         return;
       }
 
-      primeFiconterSettingsParent(lastSelected);
-      settleFiconterNavigationVisual(route);
-      showParent();
+      const backButton = event.target.closest<HTMLButtonElement>(
+        'button[aria-label="Go back"]',
+      );
+      if (!backButton) return;
+
+      // Settings detail is a local child screen. Its Back action must consume
+      // the history entry created by openSettingsSection instead of letting the
+      // global app stack route to the previously viewed Settings section.
+      event.preventDefault();
+      event.stopPropagation();
+      window.history.back();
     };
 
-    const initialSection = sectionFromLocation();
-    if (initialSection) {
-      lastSelected = initialSection;
-      primeFiconterSettingsSection(initialSection);
-      settleFiconterNavigationVisual(
-        `${window.location.pathname}${window.location.search}`,
-      );
-      showDetail(initialSection);
-    } else {
-      primeFiconterSettingsParent(lastSelected);
-      settleFiconterNavigationVisual(
-        `${window.location.pathname}${window.location.search}`,
-      );
-      showParent();
-    }
+    const handlePopState = () => {
+      if (!installedPhoneRuntime()) return;
+      restoreCommittedTheme();
+      synchronizeFromLocation();
+    };
+
+    synchronizeFromLocation();
 
     document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", handlePopState);
-      delete root.dataset.ficonterSettingsBackSync;
+      delete document.documentElement.dataset.ficonterSettingsBackSync;
     };
   }, []);
 

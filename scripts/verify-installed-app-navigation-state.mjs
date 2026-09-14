@@ -25,7 +25,12 @@ const checks = [
   ['Global controller has no selection requestAnimationFrame', !visualSync.includes('requestAnimationFrame')],
   ['Settings controller has no MutationObserver', !settingsSync.includes('MutationObserver')],
   ['Settings controller has no intent timer', !settingsSync.includes('intentTimer')],
+  ['Settings runtime can initialize before native root flags are written', settingsSync.includes('function installedPhoneRuntime()') && settingsSync.includes('isStandaloneDisplayMode()') && settingsSync.includes('window.matchMedia("(max-width: 640px)").matches')],
+  ['Settings Back resolves the visible section from the URL first', settingsSync.includes('sectionFromLocation() ??\n          sectionFromReactState() ??\n          currentFiconterSettingsSection()')],
   ['Settings Back preserves last selection immediately', settingsSync.includes('primeFiconterSettingsParent(lastSelected)') && settingsSync.includes('setSelection(lastSelected);')],
+  ['Settings detail Back owns click capture before the global app stack', settingsSync.includes('document.addEventListener("click", handleClick, true)') && settingsSync.includes('event.stopPropagation();')],
+  ['Settings detail Back consumes its local history entry', settingsSync.includes('window.history.back();')],
+  ['Settings selection listeners are always attached and runtime-gated per event', settingsSync.includes('if (!installedPhoneRuntime() || !(event.target instanceof Element)) return;') && !settingsSync.includes('!isInstalledStandaloneApp()')],
   ['Personal workspace mounts the global controller', dashboardLayout.includes('<InstalledAppNavigationVisualSync workspace="personal" />')],
   ['Business workspace mounts the global controller', businessLayout.includes('<InstalledAppNavigationVisualSync workspace="business" />')],
 ];

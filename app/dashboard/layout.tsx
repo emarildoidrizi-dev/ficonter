@@ -19,7 +19,6 @@ import { BrowserHeaderLayerPolicy } from "@/components/BrowserHeaderLayerPolicy"
 import { PersonalPlatformSearchPalette } from "@/components/PersonalPlatformSearchPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
-import { InstalledAppPerformanceBoost } from "@/components/InstalledAppPerformanceBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { OwnerMusicAppLauncher } from "@/components/OwnerMusicAppLauncher";
@@ -111,7 +110,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <RealtimeRefreshBridge />
         <RuntimeStabilityBridge />
         <NavigationSpeedBoost workspace="personal" cacheKey={user.id} />
-        <InstalledAppPerformanceBoost workspace="personal" cacheKey={user.id} />
         {isPlatformOwner ? (
           <>
             <OwnerMusicPlayer />

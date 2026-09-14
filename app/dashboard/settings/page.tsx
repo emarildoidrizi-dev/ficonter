@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
+import { InstalledPwaSettingsInteractionLock } from "@/components/InstalledPwaSettingsInteractionLock";
 import { SettingsSupplementalModules } from "@/components/SettingsSupplementalModules";
 import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
@@ -10,6 +11,7 @@ import {
   getCurrentSubscriptionAccess,
   getEffectiveSubscriptionPlanCode,
 } from "@/lib/subscriptionAccess";
+import styles from "./SettingsPage.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -165,18 +167,20 @@ export default async function SettingsPage({
 
   return (
     <section
-      className={`ficonter-settings-page${
+      className={`${styles.settingsRoot} ficonter-settings-page${
         isSubscriptionExempt ? " ficonter-subscription-exempt-settings" : ""
       }`}
       data-settings-detail={hasExplicitSettingsSection ? "true" : "false"}
     >
+      <InstalledPwaSettingsInteractionLock />
+
       <div className="page-heading ficonter-settings-page-heading">
         <div>
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage your profile, account security and Ficonter preferences from
-            one private workspace.
+            Manage account security, financial preferences, notifications,
+            appearance, privacy and subscription settings from one private workspace.
           </p>
         </div>
       </div>

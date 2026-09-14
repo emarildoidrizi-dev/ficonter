@@ -1,0 +1,170 @@
+.root {
+  margin-top: 16px;
+}
+
+.menu {
+  display: grid;
+  gap: 12px;
+}
+
+.accountCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-subtle);
+  color: var(--gold);
+  font-family: Georgia, serif;
+  font-weight: 700;
+}
+
+.accountCopy {
+  min-width: 0;
+}
+
+.accountCopy strong,
+.accountCopy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountCopy strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.accountCopy span {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.sectionList {
+  display: grid;
+  gap: 7px;
+}
+
+.sectionButton {
+  width: 100%;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+.sectionButton:active,
+.sectionButton:hover,
+.sectionButton:focus,
+.sectionButton:focus-visible {
+  transform: none !important;
+  transition: none !important;
+}
+
+.sectionButton strong,
+.sectionButton small {
+  display: block;
+  transition: none !important;
+}
+
+.sectionButton strong {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+  font-size: 13px;
+}
+
+.sectionButton small {
+  margin-top: 3px;
+  color: var(--text-secondary) !important;
+  -webkit-text-fill-color: var(--text-secondary) !important;
+  font-size: 10px;
+}
+
+.sectionButton > svg {
+  color: var(--text-tertiary) !important;
+}
+
+.sectionIcon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: inherit;
+  transition: none !important;
+}
+
+.active {
+  background: var(--solid-bg) !important;
+  color: var(--solid-text) !important;
+  -webkit-text-fill-color: var(--solid-text) !important;
+}
+
+.active strong,
+.active small,
+.active > svg {
+  color: var(--solid-text) !important;
+  -webkit-text-fill-color: var(--solid-text) !important;
+}
+
+.active small {
+  opacity: 0.76;
+}
+
+.active .sectionIcon {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--gold) !important;
+  -webkit-text-fill-color: var(--gold) !important;
+}
+
+.detailHost {
+  display: block;
+}
+
+.detailHost :global([class*="SettingsWorkspace_workspace"]) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  margin-top: 0 !important;
+}
+
+.detailHost :global([class*="SettingsWorkspace_navigation"]) {
+  display: none !important;
+}
+
+.detailHost :global([class*="SettingsWorkspace_panel"]) {
+  display: block !important;
+  min-height: 0 !important;
+}
+
+.hidden {
+  display: none !important;
+}

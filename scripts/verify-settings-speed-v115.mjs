@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 
 const settings = fs.readFileSync('components/SettingsWorkspace.tsx', 'utf8');
+const supplemental = fs.readFileSync('components/SettingsSupplementalModules.tsx', 'utf8');
+const settingsPage = fs.readFileSync('app/dashboard/settings/page.tsx', 'utf8');
 const navigationRuntime = fs.readFileSync('lib/navigationRuntime.ts', 'utf8');
 const sidebar = fs.readFileSync('components/Sidebar.tsx', 'utf8');
 const stack = fs.readFileSync('app/mobile-page-stack.css', 'utf8');
@@ -14,16 +16,22 @@ const checks = [
   ['Settings parent restores when section query disappears', settings.includes('setMobileDetailOpen(false);')],
   ['Installed-phone local Back is standalone-only', navigationRuntime.includes('root.dataset.ficonterDisplayMode !== "standalone"')],
   ['Installed-phone local Back is phone-only', navigationRuntime.includes('root.dataset.ficonterDevice !== "phone"')],
-  ['Installed-phone Settings detail Back removes only the section query', navigationRuntime.includes('localParentUrl.searchParams.delete("section");')],
-  ['Installed-phone Settings detail Back uses native replaceState', navigationRuntime.includes('window.history.replaceState(window.history.state, "", parentHref);')],
+  ['Installed-phone Back paints parent before history reconciliation', navigationRuntime.includes('projectSettingsParentImmediately();') && navigationRuntime.includes('workspace.dataset.mobileDetail = "false";')],
+  ['Installed-phone Settings Back reverses native history', navigationRuntime.includes('window.history.back();')],
+  ['Standalone-launch fallback removes only section query', navigationRuntime.includes('localParentUrl.searchParams.delete("section");')],
   ['Installed-phone Settings detail Back blocks router continuation', navigationRuntime.includes('if (consumeInstalledPhoneSettingsBack(target, current, root))') && navigationRuntime.includes('return false;')],
   ['Local Back is scoped to the Settings parent destination', navigationRuntime.includes('targetUrl.pathname !== "/dashboard/settings"') && navigationRuntime.includes('targetUrl.searchParams.has("section")')],
-  ['Same-path Back uses browser history', sidebar.includes('window.history.back();')],
-  ['Cross-path Back still uses client router', sidebar.includes('router.push(target, { scroll: false });')],
-  ['Phone forward transition is 220ms', stack.includes('ficonter-mobile-page-forward 220ms')],
-  ['Phone back transition is 200ms', stack.includes('ficonter-mobile-page-back 200ms')],
-  ['Phone Settings taps use manipulation touch action', stack.includes('touch-action: manipulation;')],
+  ['Same-path Sidebar Back uses browser history', sidebar.includes('window.history.back();')],
+  ['Cross-path Sidebar Back still uses client router', sidebar.includes('router.push(target, { scroll: false });')],
+  ['Global phone forward transition remains 220ms outside Settings', stack.includes('ficonter-mobile-page-forward 220ms')],
+  ['Global phone back transition remains 200ms outside Settings', stack.includes('ficonter-mobile-page-back 200ms')],
+  ['Installed-phone Settings route animation is disabled', stack.includes('.app-main > .ficonter-settings-page') && stack.includes('animation: none !important;')],
+  ['Installed-phone Settings row transitions are disabled', stack.includes('[class*="SettingsWorkspace_sectionButton"]') && stack.includes('transition: none !important;')],
+  ['Phone Settings taps keep manipulation touch action', stack.includes('touch-action: manipulation;')],
   ['Tablet Settings contract remains present', stack.includes('V1.13 — Tablet/iPad contract.')],
+  ['Settings independent server reads execute in parallel', settingsPage.includes('await Promise.all([') && settingsPage.includes('verifiedAccessPromise')],
+  ['Installed-phone supplemental modules are section-gated', supplemental.includes('runtimeMode === "installed-phone"') && supplemental.includes('section === "security"') && supplemental.includes('section === "profile"') && supplemental.includes('section === "privacy"')],
+  ['Heavy supplemental Settings modules are lazy-loaded', supplemental.includes('dynamic(') && supplemental.includes('{ ssr: false, loading: () => null }')],
 ];
 
 for (const [label, ok] of checks) {

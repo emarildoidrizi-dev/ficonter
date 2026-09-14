@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { flushSync } from "react-dom";
 
 type PendingTap = {
   pointerId: number;
@@ -40,11 +41,6 @@ function installedPhoneSettingsRuntime() {
     ),
   );
 
-  // FiconterNativeAppChrome resolves these root attributes in an effect. The
-  // Settings workspace can mount one render earlier, so the physical viewport
-  // is the deterministic fallback for the initial phone render. This also makes
-  // the branch testable from the mobile browser preview while keeping tablet
-  // and desktop behavior untouched.
   return width <= 640;
 }
 
@@ -58,6 +54,12 @@ function backButtonFromTarget(target: EventTarget | null) {
   return target instanceof Element
     ? target.closest<HTMLButtonElement>(BACK_BUTTON_SELECTOR)
     : null;
+}
+
+function settingsButtons() {
+  return Array.from(
+    document.querySelectorAll<HTMLButtonElement>(SECTION_BUTTON_SELECTOR),
+  );
 }
 
 function clearManagedContrast(scope: Element) {
@@ -74,17 +76,30 @@ function clearManagedContrast(scope: Element) {
 }
 
 function isolateSettingsRowsFromContrastGuard() {
-  const buttons = document.querySelectorAll<HTMLButtonElement>(
-    SECTION_BUTTON_SELECTOR,
-  );
-
-  for (const button of buttons) {
-    // Settings owns these row foregrounds with deterministic authored CSS.
-    // The global ThemeContrastGuard intentionally waits before re-auditing a
-    // changed active row, which can visually repaint a stale selection. Keep
-    // the Settings navigation outside that runtime correction path entirely.
+  for (const button of settingsButtons()) {
     button.dataset.ficonterContrastIgnore = "true";
     clearManagedContrast(button);
+  }
+}
+
+function currentActiveClassName() {
+  for (const button of settingsButtons()) {
+    const className = Array.from(button.classList).find((value) =>
+      value.includes("SettingsWorkspace_sectionActive"),
+    );
+    if (className) return className;
+  }
+  return null;
+}
+
+function projectSelectedRowImmediately(button: HTMLButtonElement) {
+  const activeClassName = currentActiveClassName();
+  if (!activeClassName) return;
+
+  for (const row of settingsButtons()) {
+    if (row === button) row.classList.add(activeClassName);
+    else row.classList.remove(activeClassName);
+    clearManagedContrast(row);
   }
 }
 
@@ -104,6 +119,11 @@ function projectSettingsParentImmediately() {
 }
 
 function markSettingsDetailOpen() {
+  const workspace = document.querySelector<HTMLElement>(
+    SETTINGS_WORKSPACE_SELECTOR,
+  );
+  if (workspace) workspace.dataset.mobileDetail = "true";
+
   const page = document.querySelector<HTMLElement>(
     ".ficonter-settings-page",
   );
@@ -113,11 +133,10 @@ function markSettingsDetailOpen() {
 /**
  * Phone Settings interaction contract.
  *
- * SettingsWorkspace remains the only owner of the selected section. This layer
- * removes browser/WebKit timing from the interaction and isolates Settings row
- * rendering from the global contrast observer. A completed tap dispatches the
- * existing React click immediately, while Back reveals the already-mounted
- * Settings parent before history/search-param reconciliation can repaint it.
+ * The completed tap is committed in one synchronous browser event. The row is
+ * projected immediately, then React's existing Settings click is flush-synced
+ * before the browser gets a chance to paint. No timer, route navigation,
+ * contrast audit or transition sits between the tap and the selected state.
  */
 export function InstalledPwaSettingsInteractionLock() {
   useEffect(() => {
@@ -134,6 +153,7 @@ export function InstalledPwaSettingsInteractionLock() {
 html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
   .ficonter-settings-page [class*="SettingsWorkspace_sectionButton"] {
   transition: none !important;
+  animation: none !important;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -202,8 +222,6 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
       }
 
       if (backButtonFromTarget(event.target)) {
-        // The active row already belongs to the section being left. Reveal the
-        // menu in this completed-tap frame and keep that selection untouched.
         projectSettingsParentImmediately();
         resetTap();
         return;
@@ -229,9 +247,16 @@ html[data-ficonter-native-app="true"][data-ficonter-device="phone"]
 
       suppressedButton = tap.button;
       suppressUntil = performance.now() + NATIVE_CLICK_SUPPRESSION_MS;
+
+      // Paint the intended row immediately, then synchronously commit the
+      // matching React state before this pointer event returns to the browser.
+      projectSelectedRowImmediately(tap.button);
       dispatchingImmediateClick = true;
-      tap.button.click();
+      flushSync(() => {
+        tap.button.click();
+      });
       dispatchingImmediateClick = false;
+
       clearManagedContrast(tap.button);
       markSettingsDetailOpen();
     };

@@ -4,6 +4,7 @@ import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsG
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { PasskeySecuritySettings } from "@/components/PasskeySecuritySettings";
 import { PhoneSettingsWorkspace } from "@/components/PhoneSettingsWorkspace";
+import { ProfileIdentityDetailsForm } from "@/components/ProfileIdentityDetailsForm";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
@@ -11,7 +12,6 @@ import {
   getCurrentSubscriptionAccess,
   getEffectiveSubscriptionPlanCode,
 } from "@/lib/subscriptionAccess";
-import styles from "./SettingsPage.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -34,6 +34,12 @@ type SubscriptionSnapshot = {
 
 type ProfileSnapshot = {
   base_currency?: string | null;
+  birth_date?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  postal_code?: string | null;
 };
 
 function hasPaidCancellationGrace(
@@ -75,14 +81,8 @@ export default async function SettingsPage({
   const requiredFeature = isSubscriptionFeatureKey(requiredValue)
     ? requiredValue
     : null;
-
-  // Profile is a first-class account destination, not a Settings subsection.
-  // Preserve old/deep links without allowing Profile to render inside Settings.
-  if (section === "profile") {
-    redirect("/dashboard/profile");
-  }
-
   const hasExplicitSettingsSection = [
+    "profile",
     "security",
     "financial",
     "notifications",
@@ -108,7 +108,7 @@ export default async function SettingsPage({
       .maybeSingle(),
     supabase
       .from("profiles")
-      .select("base_currency")
+      .select("base_currency,birth_date,country,city,address_line1,address_line2,postal_code")
       .eq("id", user.id)
       .maybeSingle(),
   ]);
@@ -149,6 +149,8 @@ export default async function SettingsPage({
     : verifiedSubscriptionSnapshot;
 
   const metadata = user.user_metadata ?? {};
+  const fullName = String(metadata.full_name ?? metadata.name ?? "").trim();
+  const displayName = String(metadata.display_name ?? metadata.full_name ?? metadata.name ?? "").trim();
 
   return (
     <section
@@ -162,8 +164,8 @@ export default async function SettingsPage({
           <div className="eyebrow">Private preferences</div>
           <h1>Settings</h1>
           <p>
-            Manage account security and Ficonter preferences from one private
-            workspace.
+            Manage your profile, account security and Ficonter preferences from
+            one private workspace.
           </p>
         </div>
       </div>
@@ -174,7 +176,7 @@ export default async function SettingsPage({
         </div>
       ) : null}
 
-      <div className={`ficonter-settings-workspace-shell ${styles.settingsWorkspace}`}>
+      <div className="ficonter-settings-workspace-shell">
         <PhoneSettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}
@@ -196,6 +198,20 @@ export default async function SettingsPage({
             metadata={metadata}
           />
         ) : null}
+
+        <ProfileIdentityDetailsForm
+          userId={user.id}
+          initialFullName={fullName}
+          initialDisplayName={displayName}
+          initialValues={{
+            birthDate: profileSnapshot?.birth_date ?? "",
+            country: profileSnapshot?.country ?? "",
+            city: profileSnapshot?.city ?? "",
+            addressLine1: profileSnapshot?.address_line1 ?? "",
+            addressLine2: profileSnapshot?.address_line2 ?? "",
+            postalCode: profileSnapshot?.postal_code ?? "",
+          }}
+        />
       </div>
     </section>
   );

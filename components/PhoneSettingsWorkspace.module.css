@@ -57,10 +57,6 @@
 .sectionList {
   display: grid;
   gap: 7px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--paper);
 }
 
 .sectionButton {

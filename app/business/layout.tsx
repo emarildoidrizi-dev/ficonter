@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BusinessSidebar } from "@/components/BusinessSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
+import { AppSwipeBackBridge } from "@/components/AppSwipeBackBridge";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
 import { PlatformTransparencyNotice } from "@/components/PlatformTransparencyNotice";
@@ -116,6 +117,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             .filter((item) => item.status !== "archived")
             .map((item) => ({ id: item.id, name: item.name }))}
         />
+        <AppSwipeBackBridge />
         <VaultProvider>
           <VaultNavigationMount workspace="business" />
           <BusinessSidebar

@@ -22,6 +22,8 @@ import {
 } from "@/lib/i18n/config";
 import { localizeEnglishDateTokens } from "@/lib/i18n/dateText";
 import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
+import { RECENT_HELP_FAQ_TRANSLATIONS } from "@/lib/i18n/recentHelpFaqCatalog";
+import { RECENT_UI_TRANSLATIONS } from "@/lib/i18n/recentUiCatalog";
 import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
 
 type LanguageContextValue = {
@@ -142,6 +144,19 @@ function localizeMonthToken(
   );
 }
 
+function translateRecentCatalog(
+  source: string,
+  language: FiconterLanguage,
+): string | null {
+  if (language === "en") return null;
+
+  return (
+    RECENT_UI_TRANSLATIONS[source]?.[language] ??
+    RECENT_HELP_FAQ_TRANSLATIONS[source]?.[language] ??
+    null
+  );
+}
+
 function renderTranslatedText(
   source: string,
   language: FiconterLanguage,
@@ -157,7 +172,9 @@ function renderTranslatedText(
     return `${leading}${localizedMonth}${trailing}`;
   }
 
-  const translated = translateRuntimePhrase(language, normalized);
+  const translated =
+    translateRecentCatalog(normalized, language) ??
+    translateRuntimePhrase(language, normalized);
   const localizedDates = localizeEnglishDateTokens(translated, language);
 
   return localizedDates === normalized

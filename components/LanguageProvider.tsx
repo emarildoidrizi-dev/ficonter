@@ -22,6 +22,7 @@ import {
 } from "@/lib/i18n/config";
 import { localizeEnglishDateTokens } from "@/lib/i18n/dateText";
 import { translateMessage, type TranslationKey } from "@/lib/i18n/messages";
+import { translateRecentUiPhrase } from "@/lib/i18n/recentUiCatalog";
 import { translateRuntimePhrase } from "@/lib/i18n/runtimeTranslator";
 
 type LanguageContextValue = {
@@ -157,7 +158,9 @@ function renderTranslatedText(
     return `${leading}${localizedMonth}${trailing}`;
   }
 
-  const translated = translateRuntimePhrase(language, normalized);
+  const translated =
+    translateRecentUiPhrase(language, normalized) ??
+    translateRuntimePhrase(language, normalized);
   const localizedDates = localizeEnglishDateTokens(translated, language);
 
   return localizedDates === normalized

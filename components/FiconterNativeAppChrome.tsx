@@ -190,7 +190,7 @@ const personalRoutes: RouteItem[] = [
     icon: MessageSquareText,
   },
   {
-    href: "/dashboard/settings?section=profile",
+    href: "/dashboard/profile",
     label: "Profile",
     title: "Profile",
     icon: UserRound,
@@ -842,7 +842,7 @@ export function FiconterNativeAppChrome({
   function openAccount() {
     setDrawerOpen(false);
     setAccountOpen(true);
-    router.prefetch("/dashboard/settings?section=profile");
+    router.prefetch("/dashboard/profile");
   }
 
   function goBackInstant() {
@@ -1312,13 +1312,13 @@ export function FiconterNativeAppChrome({
 
         <div className={styles.accountActions}>
           <Link
-            href="/dashboard/settings?section=profile"
+            href="/dashboard/profile"
             prefetch={true}
             className={styles.accountAction}
             onClick={() => setAccountOpen(false)}
           >
             <span className={styles.accountActionIcon}><UserRound size={19} aria-hidden="true" /></span>
-            <span><strong>Profile</strong><small>Account preferences</small></span>
+            <span><strong>Profile</strong><small>Identity and account details</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
           <Link

@@ -284,7 +284,8 @@
   font-size: 12px;
 }
 
-.contactCard button {
+.contactCard button,
+.contactCard a {
   min-height: 46px;
   display: inline-flex;
   align-items: center;
@@ -298,11 +299,14 @@
   font: inherit;
   font-size: 13px;
   font-weight: 850;
+  text-decoration: none;
   cursor: pointer;
 }
 
 .contactCard button:hover,
-.contactCard button:focus-visible {
+.contactCard button:focus-visible,
+.contactCard a:hover,
+.contactCard a:focus-visible {
   transform: translateY(-1px);
   outline: none;
 }
@@ -343,7 +347,8 @@
     height: 50px;
   }
 
-  .contactCard button {
+  .contactCard button,
+  .contactCard a {
     grid-column: 1 / -1;
     width: 100%;
   }
@@ -351,7 +356,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .contactCard button:hover,
-  .contactCard button:focus-visible {
+  .contactCard button:focus-visible,
+  .contactCard a:hover,
+  .contactCard a:focus-visible {
     transform: none;
   }
 }

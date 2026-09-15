@@ -18,7 +18,6 @@ import { BrowserPlatformSearchHeader } from "@/components/BrowserPlatformSearchH
 import { BrowserHeaderLayerPolicy } from "@/components/BrowserHeaderLayerPolicy";
 import { PersonalPlatformSearchPalette } from "@/components/PersonalPlatformSearchPalette";
 import { FiconterNativeAppChrome } from "@/components/FiconterNativeAppChrome";
-import { PwaSwipeBackBridge } from "@/components/PwaSwipeBackBridge";
 import { NavigationSpeedBoost } from "@/components/NavigationSpeedBoost";
 import { RuntimeStabilityBridge } from "@/components/RuntimeStabilityBridge";
 import { OwnerMusicPlayer } from "@/components/OwnerMusicPlayer";
@@ -130,7 +129,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           email={user.email ?? ""}
           avatarPath={String(user.user_metadata?.avatar_path ?? "")}
         />
-        <PwaSwipeBackBridge />
         <AppMoreAskFiconter available={askFiconterAvailable} />
         <VaultProvider>
           <VaultInactivityGuard />

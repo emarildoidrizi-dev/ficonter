@@ -1,3 +1,0 @@
-.settingsWorkspace :global(aside[aria-label="Settings sections"] > div:last-child > button:first-child) {
-  display: none !important;
-}

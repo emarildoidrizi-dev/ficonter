@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ArrowLeftRight,
   ChartNoAxesCombined,
@@ -222,6 +223,24 @@ export function HelpCenter() {
           ))}
         </div>
       </div>
+
+      <article className={styles.contactCard}>
+        <div className={styles.contactIcon}>
+          <CircleHelp size={24} aria-hidden="true" />
+        </div>
+        <div>
+          <span>FULL FAQ</span>
+          <h2>Explore every FICONTER question and answer.</h2>
+          <p>
+            Open the complete FAQ covering how FICONTER works, privacy and
+            security, financial intelligence, business use, subscriptions and
+            support.
+          </p>
+        </div>
+        <Link href="/faq">
+          Open FAQ <ChevronRight size={17} aria-hidden="true" />
+        </Link>
+      </article>
 
       <article className={styles.contactCard}>
         <div className={styles.contactIcon}>

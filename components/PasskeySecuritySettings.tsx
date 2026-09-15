@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Fingerprint, KeyRound, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
 import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
@@ -34,11 +35,23 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
+function findAccountSecurityTarget(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+
+  const settingsPage = document.querySelector(".ficonter-settings-page");
+  const passwordRecoveryLink = settingsPage?.querySelector<HTMLAnchorElement>(
+    'a[href="/recover-account?mode=password"]',
+  );
+
+  return passwordRecoveryLink?.closest("form")?.parentElement ?? null;
+}
+
 export function PasskeySecuritySettings() {
   const supabase = useMemo(() => createClient(), []);
   const [appMode, setAppMode] = useState(false);
   const [modeResolved, setModeResolved] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [securityTarget, setSecurityTarget] = useState<HTMLElement | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -75,6 +88,31 @@ export function PasskeySecuritySettings() {
       setLoading(false);
     }
   }, [loadPasskeys]);
+
+  useEffect(() => {
+    if (!appMode) {
+      setSecurityTarget(null);
+      return;
+    }
+
+    const settingsPage = document.querySelector(".ficonter-settings-page");
+    if (!settingsPage) {
+      setSecurityTarget(null);
+      return;
+    }
+
+    const resolveTarget = () => {
+      const nextTarget = findAccountSecurityTarget();
+      setSecurityTarget((current) => (current === nextTarget ? current : nextTarget));
+    };
+
+    resolveTarget();
+
+    const observer = new MutationObserver(resolveTarget);
+    observer.observe(settingsPage, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [appMode]);
 
   async function registerPasskey() {
     if (!supported || registering) return;
@@ -152,9 +190,9 @@ export function PasskeySecuritySettings() {
     }
   }
 
-  if (!modeResolved || !appMode) return null;
+  if (!modeResolved || !appMode || !securityTarget) return null;
 
-  return (
+  return createPortal(
     <section className={styles.card} aria-labelledby="ficonter-passkeys-title">
       <div className={styles.heading}>
         <div className={styles.icon}><Fingerprint size={22} aria-hidden="true" /></div>
@@ -275,6 +313,7 @@ export function PasskeySecuritySettings() {
           {message.text}
         </div>
       ) : null}
-    </section>
+    </section>,
+    securityTarget,
   );
 }

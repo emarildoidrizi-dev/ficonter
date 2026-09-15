@@ -1,0 +1,28 @@
+.profileWorkspace {
+  width: 100%;
+}
+
+.profileWorkspace :global([data-mobile-detail]) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  margin-top: 24px;
+}
+
+.profileWorkspace :global([data-mobile-detail] > aside[aria-label="Settings sections"]) {
+  display: none !important;
+}
+
+.profileWorkspace :global([data-mobile-detail] > main) {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The page itself owns the Profile identity. Do not present it as a Settings panel. */
+.profileWorkspace :global([data-mobile-detail] > main > header:first-child) {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .profileWorkspace :global([data-mobile-detail]) {
+    margin-top: 16px;
+  }
+}

@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   CheckCircle2,
   LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
+import { AppAwareAuthBrand, BrowserOnlyHomepageLink } from "@/components/AppAwareAuthNavigation";
 import { AuthForm } from "@/components/AuthForm";
-import { Brand } from "@/components/Brand";
 import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
 import { EmailChangeResultNotice } from "@/components/EmailChangeResultNotice";
 import { LandingHeroShowcase } from "@/components/LandingHeroShowcase";
@@ -39,7 +38,7 @@ export default async function LoginPage({
         <div className={styles.shell}>
           <section className={styles.brandPanel} aria-label="FICONTER secure access introduction">
             <div className={styles.brandTop}>
-              <Brand />
+              <AppAwareAuthBrand />
             </div>
 
             <div className={styles.heroArea}>
@@ -90,9 +89,7 @@ export default async function LoginPage({
               <EmailChangeResultNotice />
               <AuthForm mode="login" betaEntry={betaEntry} entry={entry} />
 
-              <Link className={styles.backLink} href="/">
-                ← Back to homepage
-              </Link>
+              <BrowserOnlyHomepageLink className={styles.backLink} />
             </div>
           </section>
         </div>

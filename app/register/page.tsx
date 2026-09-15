@@ -1,11 +1,10 @@
-import Link from "next/link";
 import {
   CheckCircle2,
   LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
+import { AppAwareAuthBrand, BrowserOnlyHomepageLink } from "@/components/AppAwareAuthNavigation";
 import { AuthForm } from "@/components/AuthForm";
-import { Brand } from "@/components/Brand";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import styles from "../login/login.module.css";
 
@@ -17,7 +16,7 @@ export default async function RegisterPage() {
       <div className={styles.shell}>
         <section className={styles.brandPanel} aria-label="FICONTER registration introduction">
           <div className={styles.brandTop}>
-            <Brand />
+            <AppAwareAuthBrand />
           </div>
 
           <div className={styles.heroArea}>
@@ -95,9 +94,7 @@ export default async function RegisterPage() {
 
             <AuthForm mode="register" betaEntry={betaEntry} />
 
-            <Link className={styles.backLink} href="/">
-              ← Back to homepage
-            </Link>
+            <BrowserOnlyHomepageLink className={styles.backLink} />
           </div>
         </section>
       </div>

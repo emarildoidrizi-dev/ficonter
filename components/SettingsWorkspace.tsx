@@ -9,8 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import PayPalSubscriptionCheckout from "./PayPalSubscriptionCheckout";
 import {
   Bell,
@@ -206,6 +207,39 @@ function isSectionId(value: string | undefined): value is SectionId {
         "subscription",
       ].includes(value),
   );
+}
+
+function isInstalledPhoneSettingsRuntime() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return false;
+  }
+
+  const root = document.documentElement;
+  const standalone =
+    root.dataset.ficonterDisplayMode === "standalone" ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+
+  if (!standalone) return false;
+
+  const width = Math.max(
+    1,
+    Math.round(
+      window.visualViewport?.width ||
+        window.innerWidth ||
+        document.documentElement.clientWidth,
+    ),
+  );
+
+  return root.dataset.ficonterDevice === "phone" || width <= 640;
+}
+
+function setSettingsPageDetailState(open: boolean) {
+  if (typeof document === "undefined") return;
+
+  const page = document.querySelector<HTMLElement>(".ficonter-settings-page");
+  if (page) page.dataset.settingsDetail = open ? "true" : "false";
+  document.documentElement.removeAttribute("data-ficonter-route-loading");
 }
 
 const sections = [
@@ -483,7 +517,6 @@ export function SettingsWorkspace({
 }: Props) {
   const { language, locale } = useLanguage();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const { transactions: decryptedTransactions } = useEncryptedTransactions();
   const { status: vaultStatus } = useVault();
@@ -504,10 +537,12 @@ export function SettingsWorkspace({
         ? initialSection
         : "security",
   );
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(() =>
+  const initialMobileDetailOpen =
     isSectionId(initialSection) &&
-    !(isSubscriptionExempt && initialSection === "subscription"),
-  );
+    !(isSubscriptionExempt && initialSection === "subscription");
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(initialMobileDetailOpen);
+  const mobileDetailOpenRef = useRef(initialMobileDetailOpen);
+  const consumeLocalBackClickRef = useRef(false);
   const [fullName, setFullName] = useState(String(metadata.full_name ?? metadata.name ?? ""));
   const [displayName, setDisplayName] = useState(String(metadata.display_name ?? metadata.full_name ?? ""));
   const [profilePhoto, setProfilePhoto] = useState("");
@@ -572,7 +607,11 @@ export function SettingsWorkspace({
 
   useLayoutEffect(() => {
     if (!isSectionId(initialSection)) {
+      mobileDetailOpenRef.current = false;
       setMobileDetailOpen(false);
+      if (isInstalledPhoneSettingsRuntime()) {
+        setSettingsPageDetailState(false);
+      }
       return;
     }
 
@@ -583,10 +622,14 @@ export function SettingsWorkspace({
         ? "security"
         : initialSection;
 
+    mobileDetailOpenRef.current = true;
     setActive(nextSection);
     setMobileDetailOpen(true);
     setMessage(null);
     setSaveFeedback({});
+    if (isInstalledPhoneSettingsRuntime()) {
+      setSettingsPageDetailState(true);
+    }
   }, [initialSection, isSubscriptionExempt]);
 
   useEffect(() => {
@@ -1504,55 +1547,75 @@ export function SettingsWorkspace({
   }
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (!isInstalledPhoneSettingsRuntime()) return;
 
-    const root = document.documentElement;
-    const isNativePhone =
-      root.dataset.ficonterNativeApp === "true" &&
-      root.dataset.ficonterDevice === "phone";
+    const findBackButton = (target: EventTarget | null) =>
+      target instanceof Element
+        ? target.closest<HTMLButtonElement>('button[aria-label="Go back"]')
+        : null;
 
-    if (!isNativePhone) return;
+    const closeLocalDetail = () => {
+      if (!mobileDetailOpenRef.current) return;
 
-    const sectionFromUrl = searchParams.get("section") ?? undefined;
-    let nextSection: SectionId | null = null;
+      mobileDetailOpenRef.current = false;
+      flushSync(() => setMobileDetailOpen(false));
+      setSettingsPageDetailState(false);
+    };
 
-    if (
-      isSectionId(sectionFromUrl) &&
-      !(isSubscriptionExempt && sectionFromUrl === "subscription")
-    ) {
-      nextSection = sectionFromUrl;
-    }
+    const handleBackPointerDown = (event: PointerEvent) => {
+      if (!findBackButton(event.target) || !mobileDetailOpenRef.current) return;
 
-    if (nextSection) {
-      setActive(nextSection);
-      setMobileDetailOpen(true);
-      return;
-    }
+      // The Settings parent is already mounted. Consume this physical Back press
+      // locally before the global PWA navigation stack gets a chance to route.
+      consumeLocalBackClickRef.current = true;
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      closeLocalDetail();
 
-    setMobileDetailOpen(false);
-  }, [isSubscriptionExempt, searchParams]);
+      window.setTimeout(() => {
+        consumeLocalBackClickRef.current = false;
+      }, 600);
+    };
+
+    const handleBackClick = (event: MouseEvent) => {
+      if (!findBackButton(event.target)) return;
+      if (!consumeLocalBackClickRef.current && !mobileDetailOpenRef.current) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      consumeLocalBackClickRef.current = false;
+      closeLocalDetail();
+    };
+
+    document.addEventListener("pointerdown", handleBackPointerDown, true);
+    document.addEventListener("click", handleBackClick, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleBackPointerDown, true);
+      document.removeEventListener("click", handleBackClick, true);
+    };
+  }, []);
 
   function openSettingsSection(id: SectionId) {
     setMessage(null);
     setSaveFeedback({});
 
-    const root = typeof document !== "undefined" ? document.documentElement : null;
-    const isNativePhone =
-      root?.dataset.ficonterNativeApp === "true" &&
-      root.dataset.ficonterDevice === "phone";
+    if (isInstalledPhoneSettingsRuntime()) {
+      if (active === id && mobileDetailOpenRef.current) return;
 
-    if (isNativePhone) {
-      const target = `/dashboard/settings?section=${id}`;
-      const current = `${window.location.pathname}${window.location.search}`;
+      // Installed-phone Settings has one visual authority: local React state.
+      // Commit it synchronously before any route/history system can participate.
+      mobileDetailOpenRef.current = true;
+      flushSync(() => {
+        setActive(id);
+        setMobileDetailOpen(true);
+      });
+      setSettingsPageDetailState(true);
 
-      if (current === target && active === id && mobileDetailOpen) return;
-
-      // All Settings sections are already mounted in this client workspace.
-      // Switch the visible screen immediately, then update browser history
-      // without asking the server to rebuild the Settings route.
-      setActive(id);
-      setMobileDetailOpen(true);
-      window.history.pushState(null, "", target);
+      // A Settings subsection is not a route transition. Keeping the address
+      // unchanged prevents query-string changes from polluting the global PWA
+      // Back stack and removes the old tap/Back delay loop entirely.
       return;
     }
 

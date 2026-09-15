@@ -1,0 +1,48 @@
+.profileWorkspace {
+  width: 100%;
+}
+
+/*
+ * Profile reuses the proven profile editor from SettingsWorkspace, but Profile
+ * is its own route. The Settings navigation must never appear here.
+ */
+:global(#ficonter-standalone-profile) :global([data-mobile-detail]) {
+  grid-template-columns: minmax(0, 1fr) !important;
+  margin-top: 24px !important;
+}
+
+:global(#ficonter-standalone-profile) :global(aside[aria-label="Settings sections"]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/*
+ * The legacy Settings workspace switches its panel off when the native phone
+ * Settings menu is considered closed. A standalone Profile is not a Settings
+ * menu state, so keep the Profile panel visible regardless of that flag.
+ */
+:global(#ficonter-standalone-profile) :global([data-mobile-detail] > main) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  grid-column: 1 / -1 !important;
+  margin: 0 !important;
+  pointer-events: auto !important;
+}
+
+/* The page heading above owns the Profile identity. */
+:global(#ficonter-standalone-profile) :global([data-mobile-detail] > main > header:first-child) {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  :global(#ficonter-standalone-profile) :global([data-mobile-detail]) {
+    margin-top: 16px !important;
+  }
+}

@@ -1,0 +1,61 @@
+.settingsWorkspace :global(aside[aria-label="Settings sections"] > div:last-child > button:first-child) {
+  display: none !important;
+}
+
+/*
+ * The installed-phone Settings menu is the single navigation surface. Keep its
+ * row colors deterministic so a previously active row can never retain a light
+ * text color after another section becomes active or the detail screen closes.
+ */
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button) {
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button strong) {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button small) {
+  color: var(--text-secondary) !important;
+  -webkit-text-fill-color: var(--text-secondary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button > svg) {
+  color: var(--text-tertiary) !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button[class*="sectionActive"]) {
+  background: var(--solid-bg) !important;
+  color: var(--solid-text) !important;
+  -webkit-text-fill-color: var(--solid-text) !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button[class*="sectionActive"] strong),
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button[class*="sectionActive"] small) {
+  color: var(--solid-text) !important;
+  -webkit-text-fill-color: var(--solid-text) !important;
+}
+
+:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
+  .settingsWorkspace
+  :global(aside[aria-label="Settings sections"] button[class*="sectionActive"] > svg) {
+  color: var(--solid-text) !important;
+}

@@ -7,7 +7,10 @@ import "./publicPersonalBusinessCatalog";
 import "./publicPlatformCatalog";
 import "./publicPrivacyCatalog";
 import "./publicSiteChromeCatalog";
+import "./publicEntryPatchCatalog";
+import "./loginUiCatalog";
 import "./recentAuthenticatedUiCatalog";
+import "./recentRuntimeTemplates";
 import "./publicHelpFaqCatalog";
 
 // This module intentionally contains side-effect registrations only.

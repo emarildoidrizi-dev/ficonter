@@ -210,8 +210,8 @@ export function PlatformTransparencyNotice({
           }`}
           style={{
             width: installed
-              ? "min(390px, calc(100vw - 24px))"
-              : "min(420px, calc(100vw - 32px))",
+              ? "min(340px, calc(100vw - 24px))"
+              : "min(360px, calc(100vw - 32px))",
           }}
           role="status"
           aria-live="polite"
@@ -225,34 +225,39 @@ export function PlatformTransparencyNotice({
             ref={closeButtonRef}
             type="button"
             className={styles.compactCloseButton}
+            style={{ width: 28, height: 28, top: 10, insetInlineEnd: 10 }}
             onClick={close}
             aria-label="Close platform notice"
           >
-            <X size={installed ? 16 : 17} aria-hidden="true" />
+            <X size={15} aria-hidden="true" />
           </button>
 
           {installed ? (
-            <div className={styles.installedContent} style={{ padding: "14px 16px 13px" }}>
-              <div className={styles.installedHeader}>
+            <div className={styles.installedContent} style={{ padding: "11px 13px 10px" }}>
+              <div className={styles.installedHeader} style={{ gap: 8, paddingInlineEnd: 34 }}>
                 <Image
                   className={styles.installedMark}
-                  style={{ width: 30, height: 30 }}
+                  style={{ width: 27, height: 27 }}
                   src="/ficonter-mark.svg"
                   alt=""
-                  width={30}
-                  height={30}
+                  width={27}
+                  height={27}
                   aria-hidden="true"
                 />
                 <div>
-                  <span className={styles.installedBrand}>FICONTER</span>
-                  <span className={styles.installedEyebrow}>Platform transparency notice</span>
+                  <span className={styles.installedBrand} style={{ fontSize: 13 }}>
+                    FICONTER
+                  </span>
+                  <span className={styles.installedEyebrow} style={{ fontSize: 7 }}>
+                    Platform transparency notice
+                  </span>
                 </div>
               </div>
 
               <h2
                 id="ficonter-transparency-title"
                 className={styles.installedTitle}
-                style={{ marginTop: 10, fontSize: 18 }}
+                style={{ marginTop: 8, fontSize: 16 }}
               >
                 FICONTER is ready for use.
               </h2>
@@ -260,38 +265,42 @@ export function PlatformTransparencyNotice({
               <div
                 id="ficonter-transparency-description"
                 className={styles.installedProtection}
-                style={{ marginTop: 9, padding: "8px 10px" }}
+                style={{ marginTop: 7, padding: "7px 8px", gap: 7 }}
               >
-                <ShieldCheck size={16} aria-hidden="true" />
-                <strong>Your financial data remains protected.</strong>
+                <ShieldCheck size={15} aria-hidden="true" />
+                <strong style={{ fontSize: 11 }}>Your financial data remains protected.</strong>
               </div>
             </div>
           ) : (
-            <div className={styles.browserContent} style={{ padding: "20px 22px 17px" }}>
+            <div className={styles.browserContent} style={{ padding: "16px 18px 13px" }}>
               <div
                 className={styles.compactIdentityRow}
-                style={{ marginBottom: 13 }}
+                style={{ marginBottom: 10, gap: 9, paddingInlineEnd: 34 }}
                 aria-label="FICONTER Financial Control Center"
               >
                 <Image
                   className={styles.compactMark}
-                  style={{ width: 32, height: 32 }}
+                  style={{ width: 28, height: 28 }}
                   src="/ficonter-mark.svg"
                   alt=""
-                  width={32}
-                  height={32}
+                  width={28}
+                  height={28}
                   aria-hidden="true"
                 />
                 <div className={styles.compactIdentityText}>
-                  <span className={styles.compactBrandName}>FICONTER</span>
-                  <span className={styles.compactBrandDescriptor}>Platform transparency notice</span>
+                  <span className={styles.compactBrandName} style={{ fontSize: 15 }}>
+                    FICONTER
+                  </span>
+                  <span className={styles.compactBrandDescriptor} style={{ fontSize: 7 }}>
+                    Platform transparency notice
+                  </span>
                 </div>
               </div>
 
               <h2
                 id="ficonter-transparency-title"
                 className={styles.compactTitle}
-                style={{ fontSize: 24 }}
+                style={{ fontSize: 21, paddingInlineEnd: 18 }}
               >
                 FICONTER is ready for use.
               </h2>
@@ -299,12 +308,24 @@ export function PlatformTransparencyNotice({
               <div
                 id="ficonter-transparency-description"
                 className={styles.compactAssurance}
-                style={{ marginTop: 13, padding: "10px 11px", alignItems: "center" }}
+                style={{
+                  marginTop: 10,
+                  padding: "8px 9px",
+                  gap: 8,
+                  alignItems: "center",
+                  borderRadius: 12,
+                }}
               >
-                <div className={styles.compactAssuranceIcon} aria-hidden="true">
-                  <ShieldCheck size={17} />
+                <div
+                  className={styles.compactAssuranceIcon}
+                  style={{ width: 26, height: 26, borderRadius: 8 }}
+                  aria-hidden="true"
+                >
+                  <ShieldCheck size={15} />
                 </div>
-                <strong style={{ margin: 0 }}>Your financial data remains protected.</strong>
+                <strong style={{ margin: 0, fontSize: 11.5 }}>
+                  Your financial data remains protected.
+                </strong>
               </div>
             </div>
           )}

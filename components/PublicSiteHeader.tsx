@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronDown,
   CircleDollarSign,
+  CircleHelp,
   FileText,
   Fingerprint,
   Layers3,
@@ -261,6 +262,7 @@ export function PublicSiteHeader() {
               </div>
 
               <Link className={isActive("/about") ? styles.activeLink : undefined} href="/about">About</Link>
+              <Link className={isActive("/help") ? styles.activeLink : undefined} href="/help">Help</Link>
               <Link className={styles.loginLink} href="/login?entry=brand">Log in</Link>
               <Link className={styles.startButton} href="/register">Start free</Link>
             </nav>
@@ -287,6 +289,7 @@ export function PublicSiteHeader() {
             <Link href="/personal-business"><BriefcaseBusiness size={18} /> <span><strong>Personal & Business</strong><small>Two workspaces, one account</small></span></Link>
             <Link href="/privacy"><LockKeyhole size={18} /> <span><strong>Privacy</strong><small>Trust, control and security</small></span></Link>
             <Link href="/about"><BarChart3 size={18} /> <span><strong>About</strong><small>Why FICONTER exists</small></span></Link>
+            <Link href="/help"><CircleHelp size={18} /> <span><strong>Help</strong><small>Public guidance and support paths</small></span></Link>
             <div className={styles.mobileDivider} />
             <Link href="/login?entry=brand">Log in</Link>
             <Link className={styles.mobileStart} href="/register">Start free</Link>

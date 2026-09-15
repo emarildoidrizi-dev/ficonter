@@ -1,28 +1,42 @@
 .profileWorkspace {
   width: 100%;
-}
-
-.profileWorkspace :global([data-mobile-detail]) {
-  grid-template-columns: minmax(0, 1fr) !important;
   margin-top: 24px;
 }
 
-.profileWorkspace :global([data-mobile-detail] > aside[aria-label="Settings sections"]) {
+/*
+ * Profile reuses the proven profile editor from SettingsWorkspace, but Profile
+ * is its own route. Collapse the inherited workspace to one column and suppress
+ * the Settings navigation in every responsive/PWA rendering mode.
+ */
+.profileWorkspace :global([data-mobile-detail]) {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.profileWorkspace :global(aside[aria-label="Settings sections"]) {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .profileWorkspace :global([data-mobile-detail] > main) {
-  min-width: 0;
-  min-height: 0;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  grid-column: 1 / -1 !important;
+  margin: 0 !important;
 }
 
-/* The page itself owns the Profile identity. Do not present it as a Settings panel. */
-.profileWorkspace :global([data-mobile-detail] > main > header:first-child) {
-  display: none;
+/* The page heading above owns the Profile identity; this is not a Settings panel. */
+.profileWorkspace :global([data-mobile-detail] > main > header) {
+  display: none !important;
 }
 
 @media (max-width: 700px) {
-  .profileWorkspace :global([data-mobile-detail]) {
+  .profileWorkspace {
     margin-top: 16px;
   }
 }

@@ -111,7 +111,6 @@ export const GLOBAL_RUNTIME_TEMPLATES: Record<string, TemplateRow> = {
   "{0} · historical record": row("{0} · historischer Datensatz", "{0} · registro histórico", "{0} · regjistrim historik", "{0} · سجل تاريخي", "{0} · registo histórico", "{0} · record storico", "{0} · историческая запись"),
   "{0} · saved record": row("{0} · gespeicherter Datensatz", "{0} · registro guardado", "{0} · regjistrim i ruajtur", "{0} · سجل محفوظ", "{0} · registo guardado", "{0} · record salvato", "{0} · сохранённая запись"),
   "Carried forward into {0} · save statement to freeze record": row("In {0} vorgetragen · Abrechnung speichern, um den Datensatz festzuhalten", "Arrastrado a {0} · guarda el extracto para fijar el registro", "Bartur në {0} · ruaj deklaratën për ta fiksuar regjistrimin", "مُرحّل إلى {0} · احفظ كشف الحساب لتثبيت السجل", "Transitado para {0} · guarde o extrato para fixar o registo", "Riportato in {0} · salva l'estratto per fissare il record", "Перенесено в {0} · сохраните выписку, чтобы зафиксировать запись"),
-
 };
 
 function escapeRegex(value: string): string {
@@ -136,6 +135,16 @@ function compileTemplate(template: string): RegExp {
 const COMPILED = Object.entries(GLOBAL_RUNTIME_TEMPLATES).map(
   ([source, translations]) => ({ translations, regex: compileTemplate(source) }),
 );
+
+export function registerGlobalRuntimeTemplates(entries: Record<string, TemplateRow>) {
+  Object.assign(GLOBAL_RUNTIME_TEMPLATES, entries);
+  COMPILED.push(
+    ...Object.entries(entries).map(([source, translations]) => ({
+      translations,
+      regex: compileTemplate(source),
+    })),
+  );
+}
 
 export function translateGlobalTemplate(
   language: FiconterLanguage,

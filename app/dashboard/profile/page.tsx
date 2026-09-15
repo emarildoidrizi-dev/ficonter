@@ -51,7 +51,10 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <div className={styles.profileWorkspace}>
+      <div
+        id="ficonter-standalone-profile"
+        className={styles.profileWorkspace}
+      >
         <SettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}

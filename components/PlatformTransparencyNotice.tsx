@@ -12,13 +12,27 @@ const NOTICE_KEYS = {
   public: "ficonter:platform-transparency-notice:2026-09-v1",
   app: "ficonter:platform-transparency-notice:2026-09-v1:app",
 } as const;
-const AUTO_CLOSE_MS = 15_000;
+
+const AUTO_CLOSE_MS = {
+  public: 15_000,
+  browser: 8_000,
+  installed: 6_000,
+} as const;
 
 type TransparencyNoticeScope = keyof typeof NOTICE_KEYS;
+type CompactPresentation = "browser" | "installed";
+type IOSNavigator = Navigator & { standalone?: boolean };
 
 type PlatformTransparencyNoticeProps = {
   scope?: TransparencyNoticeScope;
 };
+
+function isInstalledApp() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as IOSNavigator).standalone)
+  );
+}
 
 export function PlatformTransparencyNotice({
   scope = "public",
@@ -26,11 +40,19 @@ export function PlatformTransparencyNotice({
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [autoClosePaused, setAutoClosePaused] = useState(false);
+  const [compactPresentation, setCompactPresentation] =
+    useState<CompactPresentation>("browser");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const autoCloseTimerRef = useRef<number | null>(null);
-  const remainingAutoCloseMsRef = useRef(AUTO_CLOSE_MS);
+  const remainingAutoCloseMsRef = useRef(AUTO_CLOSE_MS.public);
   const countdownStartedAtRef = useRef<number | null>(null);
   const noticeKey = NOTICE_KEYS[scope];
+  const autoCloseMs =
+    scope === "public"
+      ? AUTO_CLOSE_MS.public
+      : compactPresentation === "installed"
+        ? AUTO_CLOSE_MS.installed
+        : AUTO_CLOSE_MS.browser;
 
   const clearAutoCloseTimer = useCallback(() => {
     if (autoCloseTimerRef.current !== null) {
@@ -91,6 +113,10 @@ export function PlatformTransparencyNotice({
   useEffect(() => {
     setMounted(true);
 
+    if (scope === "app") {
+      setCompactPresentation(isInstalledApp() ? "installed" : "browser");
+    }
+
     try {
       if (window.sessionStorage.getItem(noticeKey) === "dismissed") {
         return;
@@ -101,10 +127,10 @@ export function PlatformTransparencyNotice({
 
     setAutoClosePaused(false);
     setOpen(true);
-  }, [noticeKey]);
+  }, [noticeKey, scope]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || scope !== "public") return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
@@ -124,12 +150,23 @@ export function PlatformTransparencyNotice({
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus?.();
     };
-  }, [close, open]);
+  }, [close, open, scope]);
+
+  useEffect(() => {
+    if (!open || scope === "public") return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [close, open, scope]);
 
   useEffect(() => {
     if (!open) return;
 
-    remainingAutoCloseMsRef.current = AUTO_CLOSE_MS;
+    remainingAutoCloseMsRef.current = autoCloseMs;
     countdownStartedAtRef.current = null;
     setAutoClosePaused(false);
     scheduleAutoClose();
@@ -138,7 +175,7 @@ export function PlatformTransparencyNotice({
       clearAutoCloseTimer();
       countdownStartedAtRef.current = null;
     };
-  }, [clearAutoCloseTimer, open, scheduleAutoClose]);
+  }, [autoCloseMs, clearAutoCloseTimer, open, scheduleAutoClose]);
 
   useEffect(() => {
     if (!open || !autoClosePaused) return;
@@ -156,21 +193,133 @@ export function PlatformTransparencyNotice({
 
   if (!mounted || !open) return null;
 
+  if (scope === "app") {
+    const installed = compactPresentation === "installed";
+
+    return createPortal(
+      <div
+        className={`${styles.compactLayer} ${
+          installed ? styles.installedLayer : styles.browserLayer
+        }`}
+        data-notice-scope="app"
+        data-notice-presentation={compactPresentation}
+      >
+        <section
+          className={`${styles.compactNotice} ${
+            installed ? styles.installedNotice : styles.browserNotice
+          }`}
+          role="status"
+          aria-live="polite"
+          aria-labelledby="ficonter-transparency-title"
+          aria-describedby="ficonter-transparency-description"
+          onPointerDown={pauseAutoClose}
+        >
+          <div className={styles.compactAccent} aria-hidden="true" />
+
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className={styles.compactCloseButton}
+            onClick={close}
+            aria-label="Close platform notice"
+          >
+            <X size={installed ? 17 : 18} aria-hidden="true" />
+          </button>
+
+          {installed ? (
+            <div className={styles.installedContent}>
+              <div className={styles.installedHeader}>
+                <Image
+                  className={styles.installedMark}
+                  src="/ficonter-mark.svg"
+                  alt=""
+                  width={34}
+                  height={34}
+                  aria-hidden="true"
+                />
+                <div>
+                  <span className={styles.installedBrand}>FICONTER</span>
+                  <span className={styles.installedEyebrow}>Platform transparency notice</span>
+                </div>
+              </div>
+
+              <h2 id="ficonter-transparency-title" className={styles.installedTitle}>
+                FICONTER is ready for use.
+              </h2>
+
+              <p id="ficonter-transparency-description" className={styles.installedLead}>
+                FICONTER is available for everyday use and will continue to improve over time.
+              </p>
+
+              <div className={styles.installedProtection}>
+                <ShieldCheck size={17} aria-hidden="true" />
+                <strong>Your financial data remains protected.</strong>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.browserContent}>
+              <div className={styles.compactIdentityRow} aria-label="FICONTER Financial Control Center">
+                <Image
+                  className={styles.compactMark}
+                  src="/ficonter-mark.svg"
+                  alt=""
+                  width={38}
+                  height={38}
+                  aria-hidden="true"
+                />
+                <div className={styles.compactIdentityText}>
+                  <span className={styles.compactBrandName}>FICONTER</span>
+                  <span className={styles.compactBrandDescriptor}>Financial Control Center</span>
+                </div>
+              </div>
+
+              <div className={styles.compactEyebrow}>
+                <Sparkles size={13} aria-hidden="true" />
+                Platform transparency notice
+              </div>
+
+              <h2 id="ficonter-transparency-title" className={styles.compactTitle}>
+                FICONTER is ready for use.
+              </h2>
+
+              <p id="ficonter-transparency-description" className={styles.compactLead}>
+                FICONTER is available for everyday use and will continue to improve over time.
+              </p>
+
+              <div className={styles.compactAssurance}>
+                <div className={styles.compactAssuranceIcon} aria-hidden="true">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <strong>Your financial data remains protected.</strong>
+                  <p>
+                    Platform improvements are designed not to interfere with the financial data you add to your account.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.compactThanks}>
+                Thank you for being part of FICONTER.
+              </div>
+            </div>
+          )}
+
+          <div className={styles.compactProgressTrack} aria-hidden="true">
+            <span
+              className={`${styles.compactProgressBar} ${
+                installed ? styles.installedProgressBar : styles.browserProgressBar
+              }`}
+              style={{ animationPlayState: autoClosePaused ? "paused" : "running" }}
+            />
+          </div>
+        </section>
+      </div>,
+      document.body,
+    );
+  }
+
   return createPortal(
-    <div
-      className={styles.backdrop}
-      data-notice-scope={scope}
-      style={
-        scope === "app"
-          ? {
-              WebkitBackdropFilter: "none",
-              backdropFilter: "none",
-              filter: "none",
-              background: "rgba(16, 32, 37, 0.18)",
-            }
-          : undefined
-      }
-    >
+    <div className={styles.backdrop} data-notice-scope={scope}>
       <section
         className={styles.dialog}
         role="dialog"

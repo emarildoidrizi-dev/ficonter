@@ -10,6 +10,7 @@ import "./publicSiteChromeCatalog";
 import "./publicEntryPatchCatalog";
 import "./loginUiCatalog";
 import "./registerUiCatalog";
+import "./authSharedLabelsCatalog";
 import "./recentAuthenticatedUiCatalog";
 import "./recentRuntimeTemplates";
 import "./publicHelpFaqCatalog";

@@ -3,6 +3,7 @@
 import {
   Bell,
   ChevronRight,
+  CircleUserRound,
   CreditCard,
   Database,
   LockKeyhole,
@@ -46,6 +47,7 @@ type Props = {
 };
 
 type SectionId =
+  | "profile"
   | "security"
   | "financial"
   | "notifications"
@@ -64,6 +66,12 @@ type TapState = {
 const TAP_MOVE_TOLERANCE = 8;
 
 const SECTIONS = [
+  {
+    id: "profile",
+    label: "Profile",
+    description: "Profile photo",
+    icon: CircleUserRound,
+  },
   {
     id: "security",
     label: "Account & security",

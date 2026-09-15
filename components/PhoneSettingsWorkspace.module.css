@@ -165,35 +165,6 @@
   min-height: 0 !important;
 }
 
-/*
- * PhoneSettingsWorkspace is the only Settings navigation owner on phones.
- * SettingsWorkspace is embedded here only as a detail renderer. Its legacy
- * native-phone menu rules are more specific than the generic selectors above,
- * so explicitly override them inside this host. This prevents Account &
- * security (and every other section) from exposing a second Settings menu.
- */
-:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
-  .root
-  .detailHost
-  :global([class*="SettingsWorkspace_workspace"])[data-mobile-detail]
-  :global([class*="SettingsWorkspace_navigation"]) {
-  display: none !important;
-}
-
-:global(html[data-ficonter-native-app="true"][data-ficonter-device="phone"])
-  .root
-  .detailHost
-  :global([class*="SettingsWorkspace_workspace"])[data-mobile-detail]
-  :global([class*="SettingsWorkspace_panel"]) {
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  animation: none !important;
-  transform: none !important;
-}
-
 .hidden {
   display: none !important;
 }

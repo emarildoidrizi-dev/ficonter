@@ -90,11 +90,9 @@ export default async function LoginPage({
               <EmailChangeResultNotice />
               <AuthForm mode="login" betaEntry={betaEntry} entry={entry} />
 
-              {!showEntrance ? (
-                <Link className={styles.backLink} href="/">
-                  ← Back to homepage
-                </Link>
-              ) : null}
+              <Link className={styles.backLink} href="/">
+                ← Back to homepage
+              </Link>
             </div>
           </section>
         </div>

@@ -44,7 +44,7 @@ export function PlatformTransparencyNotice({
     useState<CompactPresentation>("browser");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const autoCloseTimerRef = useRef<number | null>(null);
-  const remainingAutoCloseMsRef = useRef(AUTO_CLOSE_MS.public);
+  const remainingAutoCloseMsRef = useRef<number>(AUTO_CLOSE_MS.public);
   const countdownStartedAtRef = useRef<number | null>(null);
   const noticeKey = NOTICE_KEYS[scope];
   const autoCloseMs =

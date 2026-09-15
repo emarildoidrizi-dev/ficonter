@@ -1,18 +1,25 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-
-const HISTORY_GUARD_KEY = "__ficonterPwaBackGuard";
 
 type IOSNavigator = Navigator & {
   standalone?: boolean;
 };
 
-type GuardState = {
-  href: string;
-  pathname: string;
+type SwipeSession = {
+  active: boolean;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  backButton: HTMLButtonElement | null;
 };
+
+const EDGE_START_PX = 30;
+const MIN_BACK_SWIPE_PX = 64;
+const MAX_VERTICAL_DRIFT_PX = 80;
+const HORIZONTAL_DOMINANCE = 1.12;
 
 function isInstalledPhonePwa() {
   if (typeof window === "undefined") return false;
@@ -46,36 +53,6 @@ function isAppRoute(pathname: string) {
   return pathname.startsWith("/dashboard") || pathname.startsWith("/business");
 }
 
-function locationHref() {
-  return `${window.location.pathname}${window.location.search}`;
-}
-
-function readGuardState(value: unknown): GuardState | null {
-  if (!value || typeof value !== "object") return null;
-
-  const guard = (value as Record<string, unknown>)[HISTORY_GUARD_KEY];
-  if (!guard || typeof guard !== "object") return null;
-
-  const href = (guard as Record<string, unknown>).href;
-  const pathname = (guard as Record<string, unknown>).pathname;
-
-  if (typeof href !== "string" || typeof pathname !== "string") return null;
-  return { href, pathname };
-}
-
-function guardedHistoryState(href: string) {
-  const current = window.history.state;
-  const base = current && typeof current === "object" ? current : {};
-
-  return {
-    ...base,
-    [HISTORY_GUARD_KEY]: {
-      href,
-      pathname: window.location.pathname,
-    } satisfies GuardState,
-  };
-}
-
 function findVisibleBackButton() {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement>('button[aria-label="Go back"]'),
@@ -86,88 +63,122 @@ function findVisibleBackButton() {
   });
 }
 
+function emptySession(): SwipeSession {
+  return {
+    active: false,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+    backButton: null,
+  };
+}
+
 /**
- * Keeps the installed phone PWA's native edge-back gesture aligned with
- * FICONTER's in-app Back contract.
+ * Owns the installed-phone PWA's left-edge Back gesture before WebKit can
+ * expose the browser-history snapshot underneath the current screen.
  *
- * iOS/browser history is not the visual-state authority. A same-page guard
- * absorbs the platform gesture first. Query-only/local-detail history steps
- * (for example Settings detail -> Settings menu) are allowed to resolve
- * naturally. Otherwise the gesture delegates to the same Go back button the
- * user would tap, so page-specific Back interception remains authoritative.
+ * The gesture does not mutate history itself. It delegates to FICONTER's
+ * existing visible Back button, so page-specific interception (Settings,
+ * dialogs, nested flows) remains the single navigation authority.
  */
 export function PwaSwipeBackBridge() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const armedRef = useRef(false);
-  const guardedHrefRef = useRef("");
-
-  const search = searchParams.toString();
-  const routeHref = search ? `${pathname}?${search}` : pathname;
+  const sessionRef = useRef<SwipeSession>(emptySession());
 
   useEffect(() => {
     if (!isInstalledPhonePwa() || !isAppRoute(pathname)) {
-      armedRef.current = false;
-      guardedHrefRef.current = "";
+      sessionRef.current = emptySession();
       return;
     }
 
-    const armGuard = (href = locationHref()) => {
-      if (!isInstalledPhonePwa() || !isAppRoute(window.location.pathname)) {
-        armedRef.current = false;
-        return;
-      }
-
-      const existingGuard = readGuardState(window.history.state);
-      const nextState = guardedHistoryState(href);
-
-      // A query/local-detail update can replace the current URL while keeping
-      // the same route entry. Keep that guard in place and only refresh its
-      // metadata. A different pathname needs its own duplicate entry so a
-      // native edge swipe cannot jump directly to the previous app route.
-      if (existingGuard?.pathname === window.location.pathname) {
-        window.history.replaceState(nextState, "", window.location.href);
-      } else {
-        window.history.pushState(nextState, "", window.location.href);
-      }
-
-      guardedHrefRef.current = href;
-      armedRef.current = true;
+    const reset = () => {
+      sessionRef.current = emptySession();
     };
 
-    guardedHrefRef.current = routeHref;
-    armGuard(routeHref);
+    const handleTouchStart = (event: TouchEvent) => {
+      reset();
 
-    const handleNativeBack = () => {
-      if (!armedRef.current || !isInstalledPhonePwa()) return;
+      if (!isInstalledPhonePwa() || !isAppRoute(window.location.pathname)) return;
+      if (event.touches.length !== 1) return;
 
-      const guardedHref = guardedHrefRef.current;
-      const destinationHref = locationHref();
-      armedRef.current = false;
+      const touch = event.touches[0];
+      if (touch.clientX > EDGE_START_PX) return;
 
-      // Immediately protect the destination again. pushState does not emit a
-      // popstate event, so this cannot recurse.
-      armGuard(destinationHref);
+      const backButton = findVisibleBackButton();
+      if (!backButton) return;
 
-      // If browser history already exposed a meaningful parent state on the
-      // same app page (e.g. ?section=appearance -> Settings menu), do not take
-      // a second Back step. The page's own popstate/state synchronization owns
-      // that transition.
-      if (destinationHref !== guardedHref) return;
+      sessionRef.current = {
+        active: true,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastY: touch.clientY,
+        backButton,
+      };
 
-      // A pure guard pop leaves the URL unchanged. Delegate to the same Back
-      // control used by the PWA header so local page handlers (Settings,
-      // dialogs, nested flows) get first refusal before route navigation.
-      queueMicrotask(() => {
-        findVisibleBackButton()?.click();
-      });
+      // This has to happen on touchstart, not after popstate. Otherwise iOS
+      // can paint the previous history entry for a frame during its native
+      // interactive Back gesture before FICONTER gets control.
+      if (event.cancelable) event.preventDefault();
     };
 
-    window.addEventListener("popstate", handleNativeBack);
+    const handleTouchMove = (event: TouchEvent) => {
+      const session = sessionRef.current;
+      if (!session.active || event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+      session.lastX = touch.clientX;
+      session.lastY = touch.clientY;
+
+      if (event.cancelable) event.preventDefault();
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const session = sessionRef.current;
+      if (!session.active) return;
+
+      const touch = event.changedTouches[0];
+      const endX = touch?.clientX ?? session.lastX;
+      const endY = touch?.clientY ?? session.lastY;
+      const deltaX = endX - session.startX;
+      const deltaY = endY - session.startY;
+      const horizontalEnough =
+        deltaX >= MIN_BACK_SWIPE_PX &&
+        Math.abs(deltaY) <= MAX_VERTICAL_DRIFT_PX &&
+        deltaX >= Math.abs(deltaY) * HORIZONTAL_DOMINANCE;
+      const backButton = session.backButton;
+
+      reset();
+      if (event.cancelable) event.preventDefault();
+
+      if (!horizontalEnough || !backButton?.isConnected) return;
+
+      // Run after the touch sequence has fully settled. Programmatic click
+      // reaches the exact same Settings/local Back interception and global
+      // navigation stack as a physical tap on the header Back control.
+      queueMicrotask(() => backButton.click());
+    };
+
+    const handleTouchCancel = () => reset();
+
+    const options: AddEventListenerOptions = {
+      capture: true,
+      passive: false,
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, options);
+    document.addEventListener("touchmove", handleTouchMove, options);
+    document.addEventListener("touchend", handleTouchEnd, options);
+    document.addEventListener("touchcancel", handleTouchCancel, options);
+
     return () => {
-      window.removeEventListener("popstate", handleNativeBack);
+      document.removeEventListener("touchstart", handleTouchStart, options);
+      document.removeEventListener("touchmove", handleTouchMove, options);
+      document.removeEventListener("touchend", handleTouchEnd, options);
+      document.removeEventListener("touchcancel", handleTouchCancel, options);
     };
-  }, [pathname, routeHref]);
+  }, [pathname]);
 
   return null;
 }

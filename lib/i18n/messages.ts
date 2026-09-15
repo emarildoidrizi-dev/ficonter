@@ -1,5 +1,6 @@
 import type { FiconterLanguage } from "./config";
 import "./registerCategoryTranslations";
+import "./registerRecentLocalization";
 
 export type TranslationKey = keyof typeof englishMessages;
 

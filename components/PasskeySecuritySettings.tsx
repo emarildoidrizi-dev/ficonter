@@ -35,20 +35,28 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-function findAccountSecurityPanel(): HTMLElement | null {
+function findAccountSecurityStack(): HTMLElement | null {
   if (typeof document === "undefined") return null;
 
   const panels = Array.from(
     document.querySelectorAll<HTMLElement>('[data-mobile-detail] > main'),
   );
-
-  return (
+  const panel =
     panels.find(
-      (panel) =>
-        panel.querySelector("header h2")?.textContent?.trim() ===
+      (candidate) =>
+        candidate.querySelector("header h2")?.textContent?.trim() ===
         "Account & security",
-    ) ?? null
+    ) ?? null;
+
+  if (!panel) return null;
+
+  const passwordHeading = Array.from(panel.querySelectorAll<HTMLHeadingElement>("h3")).find(
+    (heading) => heading.textContent?.trim() === "Change password",
   );
+  const passwordCard = passwordHeading?.closest("form");
+  const stack = passwordCard?.parentElement;
+
+  return stack instanceof HTMLElement ? stack : null;
 }
 
 export function PasskeySecuritySettings() {
@@ -62,7 +70,7 @@ export function PasskeySecuritySettings() {
   const [registering, setRegistering] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [securityPanel, setSecurityPanel] = useState<HTMLElement | null>(null);
+  const [securityStack, setSecurityStack] = useState<HTMLElement | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const loadPasskeys = useCallback(async () => {
@@ -96,13 +104,13 @@ export function PasskeySecuritySettings() {
 
   useEffect(() => {
     if (!modeResolved || !appMode || typeof document === "undefined") {
-      setSecurityPanel(null);
+      setSecurityStack(null);
       return;
     }
 
     const synchronizeHost = () => {
-      const next = findAccountSecurityPanel();
-      setSecurityPanel((current) => (current === next ? current : next));
+      const next = findAccountSecurityStack();
+      setSecurityStack((current) => (current === next ? current : next));
     };
 
     synchronizeHost();
@@ -193,7 +201,7 @@ export function PasskeySecuritySettings() {
     }
   }
 
-  if (!modeResolved || !appMode || !securityPanel) return null;
+  if (!modeResolved || !appMode || !securityStack) return null;
 
   return createPortal(
     <section className={styles.card} aria-labelledby="ficonter-passkeys-title">
@@ -318,6 +326,6 @@ export function PasskeySecuritySettings() {
         </div>
       ) : null}
     </section>,
-    securityPanel,
+    securityStack,
   );
 }

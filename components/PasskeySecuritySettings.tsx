@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Fingerprint, KeyRound, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
 import { isStandaloneDisplayMode } from "@/lib/pwaRuntimeRecovery";
@@ -34,6 +35,22 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
+function findAccountSecurityPanel(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+
+  const panels = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-mobile-detail] > main'),
+  );
+
+  return (
+    panels.find(
+      (panel) =>
+        panel.querySelector("header h2")?.textContent?.trim() ===
+        "Account & security",
+    ) ?? null
+  );
+}
+
 export function PasskeySecuritySettings() {
   const supabase = useMemo(() => createClient(), []);
   const [appMode, setAppMode] = useState(false);
@@ -45,6 +62,7 @@ export function PasskeySecuritySettings() {
   const [registering, setRegistering] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [securityPanel, setSecurityPanel] = useState<HTMLElement | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const loadPasskeys = useCallback(async () => {
@@ -75,6 +93,29 @@ export function PasskeySecuritySettings() {
       setLoading(false);
     }
   }, [loadPasskeys]);
+
+  useEffect(() => {
+    if (!modeResolved || !appMode || typeof document === "undefined") {
+      setSecurityPanel(null);
+      return;
+    }
+
+    const synchronizeHost = () => {
+      const next = findAccountSecurityPanel();
+      setSecurityPanel((current) => (current === next ? current : next));
+    };
+
+    synchronizeHost();
+
+    const observer = new MutationObserver(synchronizeHost);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+
+    return () => observer.disconnect();
+  }, [appMode, modeResolved]);
 
   async function registerPasskey() {
     if (!supported || registering) return;
@@ -152,18 +193,19 @@ export function PasskeySecuritySettings() {
     }
   }
 
-  if (!modeResolved || !appMode) return null;
+  if (!modeResolved || !appMode || !securityPanel) return null;
 
-  return (
+  return createPortal(
     <section className={styles.card} aria-labelledby="ficonter-passkeys-title">
       <div className={styles.heading}>
         <div className={styles.icon}><Fingerprint size={22} aria-hidden="true" /></div>
         <div>
-          <div className={styles.eyebrow}>App security</div>
-          <h3 id="ficonter-passkeys-title">Face ID & passkeys</h3>
+          <div className={styles.eyebrow}>Sign-in & authentication</div>
+          <h3 id="ficonter-passkeys-title">Passkeys & biometrics</h3>
           <p>
-            Add a passkey for the installed FICONTER app. On supported devices you can use
-            Face ID, Touch ID, or the device authenticator without exposing biometric data to FICONTER.
+            Manage passkeys for the installed FICONTER app. On supported devices,
+            Face ID, Touch ID, or the device authenticator can unlock your passkey.
+            FICONTER never receives or stores your biometric data.
           </p>
         </div>
       </div>
@@ -275,6 +317,7 @@ export function PasskeySecuritySettings() {
           {message.text}
         </div>
       ) : null}
-    </section>
+    </section>,
+    securityPanel,
   );
 }

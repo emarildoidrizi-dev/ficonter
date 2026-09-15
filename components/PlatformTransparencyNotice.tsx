@@ -208,6 +208,11 @@ export function PlatformTransparencyNotice({
           className={`${styles.compactNotice} ${
             installed ? styles.installedNotice : styles.browserNotice
           }`}
+          style={{
+            width: installed
+              ? "min(390px, calc(100vw - 24px))"
+              : "min(420px, calc(100vw - 32px))",
+          }}
           role="status"
           aria-live="polite"
           aria-labelledby="ficonter-transparency-title"
@@ -223,18 +228,19 @@ export function PlatformTransparencyNotice({
             onClick={close}
             aria-label="Close platform notice"
           >
-            <X size={installed ? 17 : 18} aria-hidden="true" />
+            <X size={installed ? 16 : 17} aria-hidden="true" />
           </button>
 
           {installed ? (
-            <div className={styles.installedContent}>
+            <div className={styles.installedContent} style={{ padding: "14px 16px 13px" }}>
               <div className={styles.installedHeader}>
                 <Image
                   className={styles.installedMark}
+                  style={{ width: 30, height: 30 }}
                   src="/ficonter-mark.svg"
                   alt=""
-                  width={34}
-                  height={34}
+                  width={30}
+                  height={30}
                   aria-hidden="true"
                 />
                 <div>
@@ -243,63 +249,62 @@ export function PlatformTransparencyNotice({
                 </div>
               </div>
 
-              <h2 id="ficonter-transparency-title" className={styles.installedTitle}>
+              <h2
+                id="ficonter-transparency-title"
+                className={styles.installedTitle}
+                style={{ marginTop: 10, fontSize: 18 }}
+              >
                 FICONTER is ready for use.
               </h2>
 
-              <p id="ficonter-transparency-description" className={styles.installedLead}>
-                FICONTER is available for everyday use and will continue to improve over time.
-              </p>
-
-              <div className={styles.installedProtection}>
-                <ShieldCheck size={17} aria-hidden="true" />
+              <div
+                id="ficonter-transparency-description"
+                className={styles.installedProtection}
+                style={{ marginTop: 9, padding: "8px 10px" }}
+              >
+                <ShieldCheck size={16} aria-hidden="true" />
                 <strong>Your financial data remains protected.</strong>
               </div>
             </div>
           ) : (
-            <div className={styles.browserContent}>
-              <div className={styles.compactIdentityRow} aria-label="FICONTER Financial Control Center">
+            <div className={styles.browserContent} style={{ padding: "20px 22px 17px" }}>
+              <div
+                className={styles.compactIdentityRow}
+                style={{ marginBottom: 13 }}
+                aria-label="FICONTER Financial Control Center"
+              >
                 <Image
                   className={styles.compactMark}
+                  style={{ width: 32, height: 32 }}
                   src="/ficonter-mark.svg"
                   alt=""
-                  width={38}
-                  height={38}
+                  width={32}
+                  height={32}
                   aria-hidden="true"
                 />
                 <div className={styles.compactIdentityText}>
                   <span className={styles.compactBrandName}>FICONTER</span>
-                  <span className={styles.compactBrandDescriptor}>Financial Control Center</span>
+                  <span className={styles.compactBrandDescriptor}>Platform transparency notice</span>
                 </div>
               </div>
 
-              <div className={styles.compactEyebrow}>
-                <Sparkles size={13} aria-hidden="true" />
-                Platform transparency notice
-              </div>
-
-              <h2 id="ficonter-transparency-title" className={styles.compactTitle}>
+              <h2
+                id="ficonter-transparency-title"
+                className={styles.compactTitle}
+                style={{ fontSize: 24 }}
+              >
                 FICONTER is ready for use.
               </h2>
 
-              <p id="ficonter-transparency-description" className={styles.compactLead}>
-                FICONTER is available for everyday use and will continue to improve over time.
-              </p>
-
-              <div className={styles.compactAssurance}>
+              <div
+                id="ficonter-transparency-description"
+                className={styles.compactAssurance}
+                style={{ marginTop: 13, padding: "10px 11px", alignItems: "center" }}
+              >
                 <div className={styles.compactAssuranceIcon} aria-hidden="true">
-                  <ShieldCheck size={18} />
+                  <ShieldCheck size={17} />
                 </div>
-                <div>
-                  <strong>Your financial data remains protected.</strong>
-                  <p>
-                    Platform improvements are designed not to interfere with the financial data you add to your account.
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.compactThanks}>
-                Thank you for being part of FICONTER.
+                <strong style={{ margin: 0 }}>Your financial data remains protected.</strong>
               </div>
             </div>
           )}

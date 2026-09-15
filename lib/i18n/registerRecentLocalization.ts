@@ -9,6 +9,7 @@ import "./publicPrivacyCatalog";
 import "./publicSiteChromeCatalog";
 import "./publicEntryPatchCatalog";
 import "./loginUiCatalog";
+import "./registerUiCatalog";
 import "./recentAuthenticatedUiCatalog";
 import "./recentRuntimeTemplates";
 import "./publicHelpFaqCatalog";

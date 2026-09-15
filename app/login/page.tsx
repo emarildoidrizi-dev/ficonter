@@ -1,14 +1,8 @@
 import { redirect } from "next/navigation";
-import {
-  CheckCircle2,
-  LockKeyhole,
-  ShieldCheck,
-} from "lucide-react";
-import { AppAwareAuthBrand, BrowserOnlyHomepageLink } from "@/components/AppAwareAuthNavigation";
+import { BrowserOnlyHomepageLink } from "@/components/AppAwareAuthNavigation";
 import { AuthForm } from "@/components/AuthForm";
 import { BrandedLoginEntrance } from "@/components/BrandedLoginEntrance";
 import { EmailChangeResultNotice } from "@/components/EmailChangeResultNotice";
-import { LandingHeroShowcase } from "@/components/LandingHeroShowcase";
 import { isFiconterBetaEntryEnvironment } from "@/lib/betaDomainGate";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { normalizeAuthEntry } from "@/lib/auth/recovery";
@@ -35,48 +29,18 @@ export default async function LoginPage({
       {showEntrance ? <BrandedLoginEntrance /> : null}
 
       <main className={styles.page}>
-        <div className={styles.shell}>
-          <section className={styles.brandPanel} aria-label="FICONTER secure access introduction">
-            <div className={styles.brandTop}>
-              <AppAwareAuthBrand />
-            </div>
-
-            <div className={styles.heroArea}>
-              <div className={styles.eyebrow}>
-                <span className={styles.eyebrowDot} aria-hidden="true" />
-                {betaEntry ? "FICONTER Beta access" : "Secure access"}
-              </div>
-
-              <h1>
-                {betaEntry
-                  ? "A clearer way into your financial world."
-                  : "Return to your financial world."}
-              </h1>
-
-              <p>
-                {betaEntry
-                  ? "Organize, understand and plan your financial life in one private workspace."
-                  : "Continue exactly where you left off, with your personal and business finances kept clear, private and connected."}
-              </p>
-
-              <div className={styles.assurances} aria-label="FICONTER account protections">
-                <span><ShieldCheck size={16} aria-hidden="true" /> Private workspace</span>
-                <span><LockKeyhole size={16} aria-hidden="true" /> Secure authentication</span>
-                <span><CheckCircle2 size={16} aria-hidden="true" /> Personal & business</span>
-              </div>
-
-              <div className={styles.preview} aria-label="FICONTER rotating workspace preview">
-                <LandingHeroShowcase />
-              </div>
-            </div>
-
-            <div className={styles.brandFoot}>
-              <ShieldCheck size={15} aria-hidden="true" />
-              Your financial workspace remains private by design.
-            </div>
-          </section>
-
-          <section className={styles.formSide} aria-label="FICONTER login form">
+        <div
+          className={styles.shell}
+          style={{
+            gridTemplateColumns: "minmax(0, 1fr)",
+            maxWidth: 720,
+          }}
+        >
+          <section
+            className={styles.formSide}
+            aria-label="FICONTER login form"
+            style={{ minHeight: "calc(100svh - 32px)" }}
+          >
             <div className={styles.authCard}>
               {!betaEntry ? (
                 <div className={styles.formIntro}>

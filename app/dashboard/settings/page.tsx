@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BackupRecoverySettingsGate } from "@/components/BackupRecoverySettingsGate";
 import { CustomerSubscriptionManager } from "@/components/CustomerSubscriptionManager";
 import { PasskeySecuritySettings } from "@/components/PasskeySecuritySettings";
-import { PhoneSettingsWorkspace } from "@/components/PhoneSettingsWorkspace";
+import { SettingsWorkspace } from "@/components/SettingsWorkspace";
 import { isOwnerEmail, requireAdmin } from "@/lib/admin/access";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { isSubscriptionFeatureKey } from "@/lib/subscriptionNavigation";
@@ -175,7 +175,7 @@ export default async function SettingsPage({
       ) : null}
 
       <div className={`ficonter-settings-workspace-shell ${styles.settingsWorkspace}`}>
-        <PhoneSettingsWorkspace
+        <SettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}
           metadata={metadata}

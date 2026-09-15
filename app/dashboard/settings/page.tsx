@@ -11,6 +11,7 @@ import {
   getCurrentSubscriptionAccess,
   getEffectiveSubscriptionPlanCode,
 } from "@/lib/subscriptionAccess";
+import styles from "./SettingsPage.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -173,7 +174,7 @@ export default async function SettingsPage({
         </div>
       ) : null}
 
-      <div className="ficonter-settings-workspace-shell">
+      <div className={`ficonter-settings-workspace-shell ${styles.settingsWorkspace}`}>
         <PhoneSettingsWorkspace
           userId={user.id}
           email={user.email ?? ""}
